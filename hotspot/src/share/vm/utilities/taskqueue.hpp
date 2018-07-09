@@ -63,10 +63,11 @@ public:
 public:
   inline TaskQueueStats()       { reset(); }
 
-  inline void record_push()     { ++_stats[push]; }
-  inline void record_pop()      { ++_stats[pop]; }
-  inline void record_pop_slow() { record_pop(); ++_stats[pop_slow]; }
-  inline void record_steal(bool success);
+  inline void record_push()          { ++_stats[push]; }
+  inline void record_pop()           { ++_stats[pop]; }
+  inline void record_pop_slow()      { record_pop(); ++_stats[pop_slow]; }
+  inline void record_steal_attempt() { ++_stats[steal_attempt]; }
+  inline void record_steal()         { ++_stats[steal]; }
   inline void record_overflow(size_t new_length);
 
   TaskQueueStats & operator +=(const TaskQueueStats & addend);
@@ -88,11 +89,6 @@ private:
   size_t                    _stats[last_stat_id];
   static const char * const _names[last_stat_id];
 };
-
-void TaskQueueStats::record_steal(bool success) {
-  ++_stats[steal_attempt];
-  if (success) ++_stats[steal];
-}
 
 void TaskQueueStats::record_overflow(size_t new_len) {
   ++_stats[overflow];
@@ -552,8 +548,9 @@ GenericTaskQueueSet<T, F>::queue(uint i) {
 template<class T, MEMFLAGS F> bool
 GenericTaskQueueSet<T, F>::steal(uint queue_num, int* seed, E& t) {
   for (uint i = 0; i < 2 * _n; i++) {
+    TASKQUEUE_STATS_ONLY(queue(queue_num)->stats.record_steal_attempt());
     if (steal_best_of_2(queue_num, seed, t)) {
-      TASKQUEUE_STATS_ONLY(queue(queue_num)->stats.record_steal(true));
+      TASKQUEUE_STATS_ONLY(queue(queue_num)->stats.record_steal());
       return true;
     }
   }
