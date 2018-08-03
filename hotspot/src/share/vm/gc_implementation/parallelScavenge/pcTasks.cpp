@@ -219,12 +219,12 @@ void StealMarkingTask::do_it(GCTaskManager* manager, uint which) {
   ObjArrayTask task;
   int random_seed = 17;
   do {
-    while (ParCompactionManager::steal_objarray(which, &random_seed, task)) {
+    while (ParCompactionManager::steal_objarray(which, task)) {
       ObjArrayKlass* k = (ObjArrayKlass*)task.obj()->klass();
       k->oop_follow_contents(cm, task.obj(), task.index());
       cm->follow_marking_stacks();
     }
-    while (ParCompactionManager::steal(which, &random_seed, obj)) {
+    while (ParCompactionManager::steal(which, obj)) {
       obj->follow_contents(cm);
       cm->follow_marking_stacks();
     }
@@ -286,7 +286,7 @@ void StealRegionCompactionTask::do_it(GCTaskManager* manager, uint which) {
   // setting the termination flag
 
   while(true) {
-    if (ParCompactionManager::steal(which, &random_seed, region_index)) {
+    if (ParCompactionManager::steal(which, region_index)) {
       PSParallelCompact::fill_and_update_region(cm, region_index);
       cm->drain_region_stacks();
     } else {

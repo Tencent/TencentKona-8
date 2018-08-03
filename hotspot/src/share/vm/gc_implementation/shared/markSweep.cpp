@@ -163,5 +163,4 @@ void MarkSweep::trace(const char* msg) {
   if (TraceMarkSweep)
     gclog_or_tty->print("%s", msg);
 }
-
 #endif
