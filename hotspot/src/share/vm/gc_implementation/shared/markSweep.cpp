@@ -430,8 +430,6 @@ void PMSMarkTask::do_steal_work(uint worker_id) {
   elapsedTimer timer;
   timer.start();
   NamedThread* thr = Thread::current()->as_Named_thread();
-  int seed = 17;
-  int objarray_seed = 17;
   int num_steals = 0;
   ObjTaskQueue* task_queue = (ObjTaskQueue*) thr->_pms_task_queue;
   ObjArrayTaskQueue* objarray_task_queue = (ObjArrayTaskQueue*) thr->_pms_objarray_task_queue;
@@ -442,14 +440,14 @@ void PMSMarkTask::do_steal_work(uint worker_id) {
   do {
     assert(task_queue->is_empty(), "Task queue should be empty before work stealing");
     assert(objarray_task_queue->is_empty(), "Task queue should be empty before work stealing");
-    while (_task_queues->steal(worker_id, &seed, obj)) {
+    while (_task_queues->steal(worker_id, obj)) {
       num_steals++;
       assert(obj->is_oop(), "Santiy check");
       assert(MarkSweep::is_object_marked(obj), "Must be already marked");
       obj->follow_contents();
       MarkSweep::follow_stack();
     }
-    while (_objarray_task_queues->steal(worker_id, &objarray_seed, task)) {
+    while (_objarray_task_queues->steal(worker_id, task)) {
       num_steals++;
       ObjArrayKlass* k = (ObjArrayKlass*)task.obj()->klass();
       k->oop_follow_contents(task.obj(), task.index());
@@ -535,7 +533,6 @@ void PMSParAdjustTask::work(uint worker_id) {
 void PMSParAdjustTask::do_steal_work(uint worker_id) {
   elapsedTimer timer;
   timer.start();
-  int seed = 17;
   int num_steals = 0;
   PMSRegionTaskQueue* task_queue = _task_queues->queue(worker_id);
   assert(task_queue == _task_queues->queue(worker_id), "Sanity check");
@@ -543,7 +540,7 @@ void PMSParAdjustTask::do_steal_work(uint worker_id) {
   PMSRegion* r;
   do {
     assert(task_queue->is_empty(), "Task queue should be empty before work stealing");
-    while (_task_queues->steal(worker_id, &seed, r)) {
+    while (_task_queues->steal(worker_id, r)) {
       num_steals++;
       mark_bit_map->iterate(_cl,
                             mark_bit_map->addr_to_bit(r->start()),
@@ -823,8 +820,6 @@ class PMSRefProcTask : public AbstractGangTask {
     elapsedTimer timer;
     timer.start();
     NamedThread* thr = Thread::current()->as_Named_thread();
-    int seed = 17;
-    int objarray_seed = 17;
     int num_steals = 0;
     ObjTaskQueue* task_queue = (ObjTaskQueue*) thr->_pms_task_queue;
     ObjArrayTaskQueue* objarray_task_queue = (ObjArrayTaskQueue*) thr->_pms_objarray_task_queue;
@@ -835,14 +830,14 @@ class PMSRefProcTask : public AbstractGangTask {
     do {
       assert(task_queue->is_empty(), "Task queue should be empty before work stealing");
       assert(objarray_task_queue->is_empty(), "Task queue should be empty before work stealing");
-      while (_task_queues->steal(worker_id, &seed, obj)) {
+      while (_task_queues->steal(worker_id, obj)) {
         num_steals++;
         assert(obj->is_oop(), "Santiy check");
         assert(MarkSweep::is_object_marked(obj), "Must be already marked");
         obj->follow_contents();
         MarkSweep::follow_stack();
       }
-      while (_objarray_task_queues->steal(worker_id, &objarray_seed, task)) {
+      while (_objarray_task_queues->steal(worker_id, task)) {
         num_steals++;
         ObjArrayKlass* k = (ObjArrayKlass*)task.obj()->klass();
         k->oop_follow_contents(task.obj(), task.index());

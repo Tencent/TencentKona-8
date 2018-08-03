@@ -1068,7 +1068,7 @@ class PMSForwardTask_##class_name : public AbstractGangTask {                   
     do {                                                                        \
       assert(task_queue->is_empty(),                                            \
              "Task queue should be empty before work stealing");                \
-      while (_task_queues->steal(worker_id, &seed, r)) {                        \
+      while (_task_queues->steal(worker_id, r)) {                               \
         num_steals++;                                                           \
         PMSPerRegionForwardClosure_##class_name cl(_mark_bit_map, r);           \
         _mark_bit_map->iterate(&cl,                                             \
