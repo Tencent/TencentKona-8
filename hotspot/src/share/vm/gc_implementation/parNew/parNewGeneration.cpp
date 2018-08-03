@@ -553,7 +553,6 @@ void ParEvacuateFollowersClosure::do_void() {
 
     // attempt to steal work from promoted.
     if (task_queues()->steal(par_scan_state()->thread_num(),
-                             par_scan_state()->hash_seed(),
                              obj_to_scan)) {
       bool res = work_q->push(obj_to_scan);
       assert(res, "Empty queue should have room for a push.");
