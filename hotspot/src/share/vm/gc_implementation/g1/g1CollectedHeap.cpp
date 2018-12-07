@@ -4611,7 +4611,7 @@ protected:
   G1ParScanThreadState** _pss;
   RefToScanQueueSet*     _queues;
   G1RootProcessor*       _root_processor;
-  ParallelTaskTerminator _terminator;
+  TaskTerminator         _terminator;
   uint _n_workers;
 
   Mutex _stats_lock;
@@ -4634,7 +4634,7 @@ public:
     return queues()->queue(i);
   }
 
-  ParallelTaskTerminator* terminator() { return &_terminator; }
+  ParallelTaskTerminator* terminator() { return _terminator.terminator(); }
 
   virtual void set_for_termination(int active_workers) {
     _root_processor->set_num_workers(active_workers);
@@ -4749,7 +4749,7 @@ public:
       size_t evac_term_attempts = 0;
       {
         double start = os::elapsedTime();
-        G1ParEvacuateFollowersClosure evac(_g1h, pss, _queues, &_terminator);
+        G1ParEvacuateFollowersClosure evac(_g1h, pss, _queues, _terminator.terminator());
         evac.do_void();
 
         evac_term_attempts = evac.term_attempts();

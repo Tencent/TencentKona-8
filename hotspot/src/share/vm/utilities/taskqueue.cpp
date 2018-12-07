@@ -29,6 +29,7 @@
 #include "utilities/debug.hpp"
 #include "utilities/stack.inline.hpp"
 #include "utilities/taskqueue.hpp"
+#include "gc_implementation/shared/owstTaskTerminator.hpp"
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
@@ -135,7 +136,7 @@ bool
 ParallelTaskTerminator::offer_termination(TerminatorTerminator* terminator) {
   assert(_n_threads > 0, "Initialization is incorrect");
   assert(_offered_termination < _n_threads, "Invariant");
-  Atomic::inc(&_offered_termination);
+  Atomic::inc((volatile jint*)&_offered_termination);
 
   uint yield_count = 0;
   // Number of hard spin loops done since last yield
@@ -213,7 +214,7 @@ ParallelTaskTerminator::offer_termination(TerminatorTerminator* terminator) {
 #endif
       if (peek_in_queue_set() ||
           (terminator != NULL && terminator->should_exit_termination())) {
-        Atomic::dec(&_offered_termination);
+        Atomic::dec((volatile jint*)&_offered_termination);
         assert(_offered_termination < _n_threads, "Invariant");
         return false;
       }
@@ -249,4 +250,25 @@ bool ObjArrayTask::is_valid() const {
 void ParallelTaskTerminator::reset_for_reuse(int n_threads) {
   reset_for_reuse();
   _n_threads = n_threads;
+}
+
+TaskTerminator::TaskTerminator(uint n_threads, TaskQueueSetSuper* queue_set) :
+  _terminator(UseOWSTTaskTerminator ? new OWSTTaskTerminator(n_threads, queue_set)
+                                    : new ParallelTaskTerminator(n_threads, queue_set)) {
+}
+
+TaskTerminator::~TaskTerminator() {
+  if (_terminator != NULL) {
+    delete _terminator;
+  }
+}
+
+// Move assignment
+TaskTerminator& TaskTerminator::operator=(const TaskTerminator& o) {
+  if (_terminator != NULL) {
+    delete _terminator;
+  }
+  _terminator = o.terminator();
+  const_cast<TaskTerminator&>(o)._terminator = NULL;
+  return *this;
 }
