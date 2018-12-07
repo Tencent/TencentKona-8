@@ -41,6 +41,7 @@
 #include "gc_implementation/shared/gcTrace.hpp"
 #include "gc_implementation/shared/gcTraceTime.hpp"
 #include "gc_implementation/shared/isGCActiveMark.hpp"
+#include "gc_implementation/shared/owstTaskTerminator.hpp"
 #include "gc_interface/collectedHeap.inline.hpp"
 #include "memory/allocation.hpp"
 #include "memory/cardTableRS.hpp"
@@ -3884,7 +3885,7 @@ bool CMSCollector::markFromRootsWork(bool asynch) {
 // Forward decl
 class CMSConcMarkingTask;
 
-class CMSConcMarkingTerminator: public ParallelTaskTerminator {
+class CMSConcMarkingParallelTerminator: public ParallelTaskTerminator {
   CMSCollector*       _collector;
   CMSConcMarkingTask* _task;
  public:
@@ -3894,13 +3895,52 @@ class CMSConcMarkingTerminator: public ParallelTaskTerminator {
   // "queue_set" is a set of work queues of other threads.
   // "collector" is the CMS collector associated with this task terminator.
   // "yield" indicates whether we need the gang as a whole to yield.
-  CMSConcMarkingTerminator(int n_threads, TaskQueueSetSuper* queue_set, CMSCollector* collector) :
+  CMSConcMarkingParallelTerminator(int n_threads, TaskQueueSetSuper* queue_set, CMSCollector* collector) :
     ParallelTaskTerminator(n_threads, queue_set),
     _collector(collector) { }
 
   void set_task(CMSConcMarkingTask* task) {
     _task = task;
   }
+};
+
+class CMSConcMarkingOWSTTerminator: public OWSTTaskTerminator {
+  CMSCollector*       _collector;
+  CMSConcMarkingTask* _task;
+ public:
+  virtual void yield();
+
+  // "n_threads" is the number of threads to be terminated.
+  // "queue_set" is a set of work queues of other threads.
+  // "collector" is the CMS collector associated with this task terminator.
+  // "yield" indicates whether we need the gang as a whole to yield.
+  CMSConcMarkingOWSTTerminator(int n_threads, TaskQueueSetSuper* queue_set, CMSCollector* collector) :
+    OWSTTaskTerminator(n_threads, queue_set),
+    _collector(collector) { }
+
+  void set_task(CMSConcMarkingTask* task) {
+    _task = task;
+  }
+};
+
+class CMSConcMarkingTaskTerminator {
+ private:
+  ParallelTaskTerminator* _term;
+ public:
+  CMSConcMarkingTaskTerminator(int n_threads, TaskQueueSetSuper* queue_set, CMSCollector* collector) {
+    if (UseOWSTTaskTerminator) {
+      _term = new CMSConcMarkingOWSTTerminator(n_threads, queue_set, collector);
+    } else {
+      _term = new CMSConcMarkingParallelTerminator(n_threads, queue_set, collector);
+    }
+  }
+  ~CMSConcMarkingTaskTerminator() {
+    assert(_term != NULL, "Must not be NULL");
+    delete _term;
+  }
+
+  void set_task(CMSConcMarkingTask* task);
+  ParallelTaskTerminator* terminator() const { return _term; }
 };
 
 class CMSConcMarkingTerminatorTerminator: public TerminatorTerminator {
@@ -3931,7 +3971,7 @@ class CMSConcMarkingTask: public YieldingFlexibleGangTask {
   OopTaskQueueSet*  _task_queues;
 
   // Termination (and yielding) support
-  CMSConcMarkingTerminator _term;
+  CMSConcMarkingTaskTerminator _term;
   CMSConcMarkingTerminatorTerminator _term_term;
 
  public:
@@ -3961,7 +4001,7 @@ class CMSConcMarkingTask: public YieldingFlexibleGangTask {
 
   HeapWord** global_finger_addr() { return &_global_finger; }
 
-  CMSConcMarkingTerminator* terminator() { return &_term; }
+  ParallelTaskTerminator* terminator() { return _term.terminator(); }
 
   virtual void set_for_termination(int active_workers) {
     terminator()->reset_for_reuse(active_workers);
@@ -3980,7 +4020,7 @@ class CMSConcMarkingTask: public YieldingFlexibleGangTask {
   void reset(HeapWord* ra) {
     assert(_global_finger >= _cms_space->end(),  "Postcondition of ::work(i)");
     _restart_addr = _global_finger = ra;
-    _term.reset_for_reuse();
+    _term.terminator()->reset_for_reuse();
   }
 
   static bool get_work_from_overflow_stack(CMSMarkStack* ovflw_stk,
@@ -4001,7 +4041,7 @@ bool CMSConcMarkingTerminatorTerminator::should_exit_termination() {
   // thread has yielded.
 }
 
-void CMSConcMarkingTerminator::yield() {
+void CMSConcMarkingParallelTerminator::yield() {
   if (_task->should_yield()) {
     _task->yield();
   } else {
@@ -4009,6 +4049,21 @@ void CMSConcMarkingTerminator::yield() {
   }
 }
 
+void CMSConcMarkingOWSTTerminator::yield() {
+  if (_task->should_yield()) {
+    _task->yield();
+  } else {
+    OWSTTaskTerminator::yield();
+  }
+}
+
+void CMSConcMarkingTaskTerminator::set_task(CMSConcMarkingTask* task) {
+  if (UseOWSTTaskTerminator) {
+    ((CMSConcMarkingOWSTTerminator*)_term)->set_task(task);
+  } else {
+    ((CMSConcMarkingParallelTerminator*)_term)->set_task(task);
+  }
+}
 ////////////////////////////////////////////////////////////////
 // Concurrent Marking Algorithm Sketch
 ////////////////////////////////////////////////////////////////
@@ -5286,7 +5341,7 @@ class CMSParRemarkTask: public CMSParMarkTask {
 
   // The per-thread work queues, available here for stealing.
   OopTaskQueueSet*       _task_queues;
-  ParallelTaskTerminator _term;
+  TaskTerminator         _term;
 
  public:
   // A value of 0 passed to n_workers will cause the number of
@@ -5305,7 +5360,7 @@ class CMSParRemarkTask: public CMSParMarkTask {
 
   OopTaskQueue* work_queue(int i) { return task_queues()->queue(i); }
 
-  ParallelTaskTerminator* terminator() { return &_term; }
+  ParallelTaskTerminator* terminator() { return _term.terminator(); }
   int n_workers() { return _n_workers; }
 
   void work(uint worker_id);

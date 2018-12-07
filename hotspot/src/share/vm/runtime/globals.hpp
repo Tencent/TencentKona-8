@@ -2016,6 +2016,10 @@ class CommandLineFlags {
   develop(uintx, PromotionFailureALotInterval, 5,                           \
           "Total collections between promotion failures alot")              \
                                                                             \
+  diagnostic(bool, UseOWSTTaskTerminator, true,                             \
+          "Use Optimized Work Stealing Threads task termination "           \
+          "protocol")                                                       \
+                                                                            \
   experimental(uintx, WorkStealingSleepMillis, 1,                           \
           "Sleep time when sleep is used for yields")                       \
                                                                             \
