@@ -4728,7 +4728,7 @@ protected:
   G1CollectedHeap*       _g1h;
   RefToScanQueueSet      *_queues;
   G1RootProcessor*       _root_processor;
-  ParallelTaskTerminator _terminator;
+  TaskTerminator         _terminator;
   uint _n_workers;
 
   Mutex _stats_lock;
@@ -4750,7 +4750,7 @@ public:
     return queues()->queue(i);
   }
 
-  ParallelTaskTerminator* terminator() { return &_terminator; }
+  ParallelTaskTerminator* terminator() { return _terminator.terminator(); }
 
   virtual void set_for_termination(int active_workers) {
     _root_processor->set_num_workers(active_workers);
@@ -4865,7 +4865,7 @@ public:
 
       {
         double start = os::elapsedTime();
-        G1ParEvacuateFollowersClosure evac(_g1h, &pss, _queues, &_terminator);
+        G1ParEvacuateFollowersClosure evac(_g1h, &pss, _queues, _terminator.terminator());
         evac.do_void();
         double elapsed_sec = os::elapsedTime() - start;
         double term_sec = pss.term_time();
@@ -5562,8 +5562,8 @@ public:
 void G1STWRefProcTaskExecutor::execute(ProcessTask& proc_task) {
   assert(_workers != NULL, "Need parallel worker threads.");
 
-  ParallelTaskTerminator terminator(_active_workers, _queues);
-  G1STWRefProcTaskProxy proc_task_proxy(proc_task, _g1h, _queues, &terminator);
+  TaskTerminator terminator(_active_workers, _queues);
+  G1STWRefProcTaskProxy proc_task_proxy(proc_task, _g1h, _queues, terminator.terminator());
 
   _g1h->set_par_threads(_active_workers);
   _workers->run_task(&proc_task_proxy);
@@ -5611,7 +5611,7 @@ class G1ParPreserveCMReferentsTask: public AbstractGangTask {
 protected:
   G1CollectedHeap* _g1h;
   RefToScanQueueSet      *_queues;
-  ParallelTaskTerminator _terminator;
+  TaskTerminator _terminator;
   uint _n_workers;
 
 public:
@@ -5683,7 +5683,7 @@ public:
     }
 
     // Drain the queue - which may cause stealing
-    G1ParEvacuateFollowersClosure drain_queue(_g1h, &pss, _queues, &_terminator);
+    G1ParEvacuateFollowersClosure drain_queue(_g1h, &pss, _queues, _terminator.terminator());
     drain_queue.do_void();
     // Allocation buffers were retired at the end of G1ParEvacuateFollowersClosure
     assert(pss.queue_is_empty(), "should be");
