@@ -297,6 +297,12 @@ inline bool CMTask::is_below_finger(oop obj, HeapWord* global_finger) const {
   return objAddr < global_finger;
 }
 
+inline void CMTask::abort_marking_if_regular_check_fail() {
+  if (!regular_clock_call()) {
+    set_has_aborted();
+  }
+}
+
 inline void CMTask::make_reference_grey(oop obj, HeapRegion* hr) {
   if (_cm->par_mark_and_count(obj, hr, _marked_bytes_array, _card_bm)) {
 
