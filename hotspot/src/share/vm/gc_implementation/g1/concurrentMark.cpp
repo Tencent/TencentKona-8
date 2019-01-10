@@ -3736,7 +3736,9 @@ void CMTask::reset(CMBitMap* nextMarkBitMap) {
 }
 
 bool CMTask::should_exit_termination() {
-  regular_clock_call();
+  if (!regular_clock_call()) {
+    return true;
+  }
   // This is called when we are in the termination protocol. We should
   // quit if, for some reason, this task wants to abort or the global
   // stack is not empty (this means that we can get work from it).
@@ -3747,11 +3749,11 @@ void CMTask::reached_limit() {
   assert(_words_scanned >= _words_scanned_limit ||
          _refs_reached >= _refs_reached_limit ,
          "shouldn't have been called otherwise");
-  regular_clock_call();
+  abort_marking_if_regular_check_fail();
 }
 
-void CMTask::regular_clock_call() {
-  if (has_aborted()) return;
+bool CMTask::regular_clock_call() {
+  if (has_aborted()) return false;
 
   // First, we need to recalculate the words scanned and refs reached
   // limits for the next clock call.
@@ -3761,20 +3763,18 @@ void CMTask::regular_clock_call() {
 
   // (1) If an overflow has been flagged, then we abort.
   if (_cm->has_overflown()) {
-    set_has_aborted();
-    return;
+    return false;
   }
 
   // If we are not concurrent (i.e. we're doing remark) we don't need
   // to check anything else. The other steps are only needed during
   // the concurrent marking phase.
-  if (!concurrent()) return;
+  if (!concurrent()) return true;
 
   // (2) If marking has been aborted for Full GC, then we also abort.
   if (_cm->has_aborted()) {
-    set_has_aborted();
     statsOnly( ++_aborted_cm_aborted );
-    return;
+    return false;
   }
 
   double curr_time_ms = os::elapsedVTime() * 1000.0;
@@ -3807,19 +3807,17 @@ void CMTask::regular_clock_call() {
   if (SuspendibleThreadSet::should_yield()) {
     // We should yield. To do this we abort the task. The caller is
     // responsible for yielding.
-    set_has_aborted();
     statsOnly( ++_aborted_yield );
-    return;
+    return false;
   }
 
   // (5) We check whether we've reached our time quota. If we have,
   // then we abort.
   double elapsed_time_ms = curr_time_ms - _start_time_ms;
   if (elapsed_time_ms > _time_target_ms) {
-    set_has_aborted();
     _has_timed_out = true;
     statsOnly( ++_aborted_timed_out );
-    return;
+    return false;
   }
 
   // (6) Finally, we check whether there are enough completed STAB
@@ -3832,10 +3830,10 @@ void CMTask::regular_clock_call() {
     }
     // we do need to process SATB buffers, we'll abort and restart
     // the marking task to do so
-    set_has_aborted();
     statsOnly( ++_aborted_satb );
-    return;
+    return false;
   }
+  return true;
 }
 
 void CMTask::recalculate_limits() {
@@ -4049,7 +4047,7 @@ void CMTask::drain_satb_buffers() {
       gclog_or_tty->print_cr("[%u] processed an SATB buffer", _worker_id);
     }
     statsOnly( ++_satb_buffers_processed );
-    regular_clock_call();
+    abort_marking_if_regular_check_fail();
   }
 
   _draining_satb_buffers = false;
@@ -4335,7 +4333,7 @@ void CMTask::do_marking_step(double time_target_ms,
       // If the iteration is successful, give up the region.
       if (mr.is_empty()) {
         giveup_current_region();
-        regular_clock_call();
+        abort_marking_if_regular_check_fail();
       } else if (_curr_region->isHumongous() && mr.start() == _curr_region->bottom()) {
         if (_nextMarkBitMap->isMarked(mr.start())) {
           // The object is marked - apply the closure
@@ -4345,10 +4343,10 @@ void CMTask::do_marking_step(double time_target_ms,
         // Even if this task aborted while scanning the humongous object
         // we can (and should) give up the current region.
         giveup_current_region();
-        regular_clock_call();
+        abort_marking_if_regular_check_fail();
       } else if (_nextMarkBitMap->iterate(&bitmap_closure, mr)) {
         giveup_current_region();
-        regular_clock_call();
+        abort_marking_if_regular_check_fail();
       } else {
         assert(has_aborted(), "currently the only way to do so");
         // The only way to abort the bitmap iteration is to return
@@ -4416,7 +4414,7 @@ void CMTask::do_marking_step(double time_target_ms,
       // block of empty regions. So we need to call the regular clock
       // method once round the loop to make sure it's called
       // frequently enough.
-      regular_clock_call();
+      abort_marking_if_regular_check_fail();
     }
 
     if (!has_aborted() && _curr_region == NULL) {
@@ -4488,7 +4486,7 @@ void CMTask::do_marking_step(double time_target_ms,
   if (do_termination && !has_aborted()) {
     if (_cm->force_overflow()->should_force()) {
       _cm->set_has_overflown();
-      regular_clock_call();
+      abort_marking_if_regular_check_fail();
     }
   }
 
