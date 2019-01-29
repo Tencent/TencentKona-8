@@ -63,6 +63,13 @@ bool OWSTTaskTerminator::offer_termination(TerminatorTerminator* terminator) {
         return true;
       } else {
         _blocker->lock_without_safepoint_check();
+        // There is possibility that termination is reached between dropping the lock
+        // before returning from do_spin_master_work() and acquiring lock above.
+        if (_offered_termination == _n_threads) {
+          _blocker->unlock();
+          assert(!peek_in_queue_set(), "Precondition");
+          return true;
+        }
       }
     } else {
       _blocker->wait(true, WorkStealingSleepMillis);
@@ -171,9 +178,9 @@ bool OWSTTaskTerminator::do_spin_master_work(TerminatorTerminator* terminator) {
             locker.notify();
           }
         }
+        _spin_master = NULL;
+        return false;
       }
-      _spin_master = NULL;
-      return false;
     }
   }
 }
