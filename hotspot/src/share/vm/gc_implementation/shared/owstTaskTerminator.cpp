@@ -36,6 +36,7 @@ bool OWSTTaskTerminator::offer_termination(TerminatorTerminator* terminator) {
   // Single worker, done
   if (_n_threads == 1) {
     _offered_termination = 1;
+    assert(!peek_in_queue_set(), "Precondition");
     return true;
   }
 
@@ -45,6 +46,7 @@ bool OWSTTaskTerminator::offer_termination(TerminatorTerminator* terminator) {
   if (_offered_termination == _n_threads) {
     _blocker->notify_all();
     _blocker->unlock();
+    assert(!peek_in_queue_set(), "Precondition");
     return true;
   }
 
@@ -57,6 +59,7 @@ bool OWSTTaskTerminator::offer_termination(TerminatorTerminator* terminator) {
 
       if (do_spin_master_work(terminator)) {
         assert(_offered_termination == _n_threads, "termination condition");
+        assert(!peek_in_queue_set(), "Precondition");
         return true;
       } else {
         _blocker->lock_without_safepoint_check();
@@ -66,12 +69,14 @@ bool OWSTTaskTerminator::offer_termination(TerminatorTerminator* terminator) {
 
       if (_offered_termination == _n_threads) {
         _blocker->unlock();
+        assert(!peek_in_queue_set(), "Precondition");
         return true;
       }
     }
 
     size_t tasks = tasks_in_queue_set();
     if (exit_termination(tasks, terminator)) {
+      assert_lock_strong(_blocker);
       _offered_termination--;
       _blocker->unlock();
       return false;
@@ -151,19 +156,24 @@ bool OWSTTaskTerminator::do_spin_master_work(TerminatorTerminator* terminator) {
       _total_peeks++;
 #endif
     size_t tasks = tasks_in_queue_set();
-    if (exit_termination(tasks, terminator)) {
+    bool exit = exit_termination(tasks, terminator);
+    {
       MonitorLockerEx locker(_blocker, Mutex::_no_safepoint_check_flag);
-      if (tasks >= _offered_termination - 1) {
-        locker.notify_all();
-      } else {
-        for (; tasks > 1; tasks--) {
-          locker.notify();
+      // Termination condition reached
+      if (_offered_termination == _n_threads) {
+        _spin_master = NULL;
+        return true;
+      } else if (exit) {
+        if (tasks >= _offered_termination - 1) {
+          locker.notify_all();
+        } else {
+          for (; tasks > 1; tasks--) {
+            locker.notify();
+          }
         }
       }
       _spin_master = NULL;
       return false;
-    } else if (_offered_termination == _n_threads) {
-      return true;
     }
   }
 }
