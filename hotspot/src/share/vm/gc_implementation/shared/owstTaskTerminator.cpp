@@ -178,9 +178,9 @@ bool OWSTTaskTerminator::do_spin_master_work(TerminatorTerminator* terminator) {
             locker.notify();
           }
         }
+        _spin_master = NULL;
+        return false;
       }
-      _spin_master = NULL;
-      return false;
     }
   }
 }
