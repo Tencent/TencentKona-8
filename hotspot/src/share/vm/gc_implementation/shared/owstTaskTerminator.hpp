@@ -55,6 +55,7 @@ public:
   }
 
   virtual ~OWSTTaskTerminator() {
+    assert(_spin_master == NULL, "Should have been reset");
     assert(_blocker != NULL, "Can not be NULL");
     delete _blocker;
   }
