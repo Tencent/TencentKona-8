@@ -118,6 +118,11 @@ ParallelTaskTerminator(int n_threads, TaskQueueSetSuper* queue_set) :
   _queue_set(queue_set),
   _offered_termination(0) {}
 
+ParallelTaskTerminator::~ParallelTaskTerminator() {
+  assert(_offered_termination == 0 || !peek_in_queue_set(), "Precondition");
+  assert(_offered_termination == 0 || _offered_termination == _n_threads, "Terminated or aborted" );
+}
+
 bool ParallelTaskTerminator::peek_in_queue_set() {
   return _queue_set->peek();
 }
@@ -162,6 +167,7 @@ ParallelTaskTerminator::offer_termination(TerminatorTerminator* terminator) {
     assert(_offered_termination <= _n_threads, "Invariant");
     // Are all threads offering termination?
     if (_offered_termination == _n_threads) {
+      assert(!peek_in_queue_set(), "Precondition");
       return true;
     } else {
       // Look for more work.
@@ -214,12 +220,27 @@ ParallelTaskTerminator::offer_termination(TerminatorTerminator* terminator) {
 #endif
       if (peek_in_queue_set() ||
           (terminator != NULL && terminator->should_exit_termination())) {
-        Atomic::dec((volatile jint*)&_offered_termination);
-        assert(_offered_termination < _n_threads, "Invariant");
-        return false;
+        return complete_or_exit_termination();
       }
     }
   }
+}
+
+bool ParallelTaskTerminator::complete_or_exit_termination() {
+  // If termination is ever reached, terminator should stay in such state,
+  // so that all threads see the same state
+  uint current_offered = _offered_termination;
+  uint expected_value;
+  do {
+    if (current_offered == _n_threads) {
+      assert(!peek_in_queue_set(), "Precondition");
+      return true;
+    }
+    expected_value = current_offered;
+  } while ((current_offered = Atomic::cmpxchg(current_offered - 1, &_offered_termination, current_offered)) != expected_value);
+
+  assert(_offered_termination < _n_threads, "Invariant");
+  return false;
 }
 
 #ifdef TRACESPINNING
