@@ -5768,3 +5768,7 @@ data/src/share/vm/runtime/monitorChunk.hpp.i
 data/build/windows/projectfiles/tiered/ADLCompiler.dsp.i
 data/build/solaris/makefiles/mapfile-vers-jsig.i
 data/test/runtime/7107135/TestMT.java.i
+data/test/compiler/c1/TestGotoIf.jasm.i
+data/test/compiler/c1/TestGotoIfMain.java.i
+data/test/compiler/c2/TestIfWithDeadRegion.java.i
+data/src/cpu/ppc/vm/macroAssembler_ppc_sha.cpp.i

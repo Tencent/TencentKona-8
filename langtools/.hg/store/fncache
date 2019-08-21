@@ -7191,3 +7191,5 @@ data/test/tools/javac/lambda/MethodReference68.java.i
 data/test/tools/javac/6734819/T6734819c.out.i
 data/test/tools/javac/generics/wildcards/neg/CastFail2.java.i
 data/test/tools/javac/diags/examples/CantApplySymbolFragment.java.i
+data/test/ProblemList.txt.i
+data/test/TEST.groups.i
