@@ -28219,3 +28219,10 @@ data/src/share/classes/sun/tools/tree/AssignUnsignedShiftRightExpression.java.i
 data/test/java/lang/ref/OOMEInReferenceHandler.java.i
 data/src/share/classes/java/security/cert/CertPathValidator.java.i
 data/src/share/classes/java/beans/beancontext/BeanContextProxy.java.i
+data/test/java/awt/FontMetrics/MaxAdvanceIsMax.java.i
+data/test/java/nio/channels/AsynchronousSocketChannel/CompletionHandlerRelease.java.i
+data/test/java/awt/font/TextLayout/FontGlyphCompare.java.i
+data/test/java/lang/ClassLoader/forNameLeak/test.policy.i
+data/test/javax/crypto/Cipher/EmptyFinalBuffer.java.i
+data/test/java/lang/ClassLoader/forNameLeak/ClassForName.java.i
+data/test/java/lang/ClassLoader/forNameLeak/ClassForNameLeak.java.i

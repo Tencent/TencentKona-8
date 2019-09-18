@@ -28226,3 +28226,12 @@ data/test/java/lang/ClassLoader/forNameLeak/test.policy.i
 data/test/javax/crypto/Cipher/EmptyFinalBuffer.java.i
 data/test/java/lang/ClassLoader/forNameLeak/ClassForName.java.i
 data/test/java/lang/ClassLoader/forNameLeak/ClassForNameLeak.java.i
+data/test/java/io/LineNumberReader/MarkSplitCRLF.java.i
+data/test/sun/security/ec/SignatureDigestTruncate.java.i
+data/test/java/text/Format/NumberFormat/TestPeruCurrencyFormat.java.i
+data/test/java/awt/FontClass/FontSize1Test.java.i
+data/src/solaris/native/sun/security/smartcardio/MUSCLE/wintypes.h.i
+data/test/lib/testlibrary/jdk/testlibrary/Convert.java.i
+data/test/javax/swing/SwingUtilities/TestTextPosInPrint.java.i
+data/src/share/classes/com/sun/crypto/provider/RangeUtil.java.i
+data/src/share/classes/com/sun/crypto/provider/Preconditions.java.i

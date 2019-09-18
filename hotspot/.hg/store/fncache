@@ -5772,3 +5772,12 @@ data/test/compiler/c1/TestGotoIf.jasm.i
 data/test/compiler/c1/TestGotoIfMain.java.i
 data/test/compiler/c2/TestIfWithDeadRegion.java.i
 data/src/cpu/ppc/vm/macroAssembler_ppc_sha.cpp.i
+data/test/compiler/rangechecks/RangeCheckEliminationScaleNotOne.java.i
+data/test/runtime/RedefineTests/test8178870.sh.i
+data/test/runtime/RedefineTests/libRedefineDoubleDelete.c.i
+data/test/compiler/c2/Test8217359.java.i
+data/test/runtime/VtableTests/VTableTest.java.i
+data/test/compiler/loopopts/superword/TestNegBaseOffset.java.i
+data/test/compiler/escapeAnalysis/TestGetClass.java.i
+data/test/runtime/VtableTests/pkg/A.java.i
+data/test/runtime/RedefineTests/RedefineDoubleDelete.java.i
