@@ -186,16 +186,12 @@ public final class BerDecoder extends Ber {
       *</pre></blockquote>
       */
     private int parseIntWithTag(int tag) throws DecodeException {
+
+
         if (parseByte() != tag) {
-            // Ber could have been reset;
-            String s;
-            if (offset > 0) {
-                s = Integer.toString(buf[offset - 1] & 0xff);
-            } else {
-                s = "Empty tag";
-            }
             throw new DecodeException("Encountered ASN.1 tag " +
-                s + " (expected tag " + Integer.toString(tag) + ")");
+                Integer.toString(buf[offset - 1] & 0xff) +
+                " (expected tag " + Integer.toString(tag) + ")");
         }
 
         int len = parseLength();

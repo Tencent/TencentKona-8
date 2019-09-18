@@ -210,7 +210,6 @@ Java_sun_nio_ch_FileDispatcherImpl_write0(JNIEnv *env, jclass clazz, jobject fdo
 
     if ((h == INVALID_HANDLE_VALUE) || (result == 0)) {
         JNU_ThrowIOExceptionWithLastError(env, "Write failed");
-        return IOS_THROWN;
     }
 
     return convertReturnVal(env, (jint)written, JNI_FALSE);
@@ -259,7 +258,6 @@ Java_sun_nio_ch_FileDispatcherImpl_writev0(JNIEnv *env, jclass clazz, jobject fd
 
     if ((h == INVALID_HANDLE_VALUE) || (result == 0)) {
         JNU_ThrowIOExceptionWithLastError(env, "Write failed");
-        return IOS_THROWN;
     }
 
     return convertLongReturnVal(env, totalWritten, JNI_FALSE);

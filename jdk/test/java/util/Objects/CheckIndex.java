@@ -23,12 +23,13 @@
 
 /**
  * @test
- * @summary com.sun.crypto.provider.Preconditions.checkIndex tests
+ * @summary Objects.checkIndex/jdk.internal.util.Preconditions.checkIndex tests
  * @run testng CheckIndex
  * @bug 8135248 8142493 8155794
+ * @modules java.base/jdk.internal.util
  */
 
-import com.sun.crypto.provider.Preconditions;
+import jdk.internal.util.Preconditions;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 

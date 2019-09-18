@@ -27,7 +27,6 @@
  * @summary javadoc should have a javax.tools.Tool service provider
  * @build APITest
  * @run main GetTask_DocletClassTest
- * @key randomness
  */
 
 import com.sun.javadoc.DocErrorReporter;

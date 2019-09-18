@@ -1170,43 +1170,45 @@ void BCEscapeAnalyzer::iterate_blocks(Arena *arena) {
   }
 }
 
-void BCEscapeAnalyzer::do_analysis() {
+bool BCEscapeAnalyzer::do_analysis() {
   Arena* arena = CURRENT_ENV->arena();
   // identify basic blocks
   _methodBlocks = _method->get_method_blocks();
 
   iterate_blocks(arena);
+  // TEMPORARY
+  return true;
 }
 
 vmIntrinsics::ID BCEscapeAnalyzer::known_intrinsic() {
   vmIntrinsics::ID iid = method()->intrinsic_id();
+
   if (iid == vmIntrinsics::_getClass ||
       iid ==  vmIntrinsics::_fillInStackTrace ||
-      iid == vmIntrinsics::_hashCode) {
+      iid == vmIntrinsics::_hashCode)
     return iid;
-  } else {
+  else
     return vmIntrinsics::_none;
-  }
 }
 
-void BCEscapeAnalyzer::compute_escape_for_intrinsic(vmIntrinsics::ID iid) {
+bool BCEscapeAnalyzer::compute_escape_for_intrinsic(vmIntrinsics::ID iid) {
   ArgumentMap arg;
   arg.clear();
   switch (iid) {
-    case vmIntrinsics::_getClass:
-      _return_local = false;
-      _return_allocated = false;
-      break;
-    case vmIntrinsics::_fillInStackTrace:
-      arg.set(0); // 'this'
-      set_returned(arg);
-      break;
-    case vmIntrinsics::_hashCode:
-      // initialized state is correct
-      break;
+  case vmIntrinsics::_getClass:
+    _return_local = false;
+    break;
+  case vmIntrinsics::_fillInStackTrace:
+    arg.set(0); // 'this'
+    set_returned(arg);
+    break;
+  case vmIntrinsics::_hashCode:
+    // initialized state is correct
+    break;
   default:
     assert(false, "unexpected intrinsic");
   }
+  return true;
 }
 
 void BCEscapeAnalyzer::initialize() {
@@ -1277,7 +1279,7 @@ void BCEscapeAnalyzer::compute_escape_info() {
   vmIntrinsics::ID iid = known_intrinsic();
 
   // check if method can be analyzed
-  if (iid == vmIntrinsics::_none && (method()->is_abstract() || method()->is_native() || !method()->holder()->is_initialized()
+  if (iid ==  vmIntrinsics::_none && (method()->is_abstract() || method()->is_native() || !method()->holder()->is_initialized()
       || _level > MaxBCEAEstimateLevel
       || method()->code_size() > MaxBCEAEstimateSize)) {
     if (BCEATraceLevel >= 1) {
@@ -1310,6 +1312,8 @@ void BCEscapeAnalyzer::compute_escape_info() {
     tty->print_cr(" (%d bytes)", method()->code_size());
   }
 
+  bool success;
+
   initialize();
 
   // Do not scan method if it has no object parameters and
@@ -1325,9 +1329,9 @@ void BCEscapeAnalyzer::compute_escape_info() {
   }
 
   if (iid != vmIntrinsics::_none)
-    compute_escape_for_intrinsic(iid);
+    success = compute_escape_for_intrinsic(iid);
   else {
-    do_analysis();
+    success = do_analysis();
   }
 
   // don't store interprocedural escape information if it introduces

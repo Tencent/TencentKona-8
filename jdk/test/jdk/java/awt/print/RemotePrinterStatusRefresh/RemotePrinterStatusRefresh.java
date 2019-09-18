@@ -23,10 +23,10 @@
 
 /*
  * @test
- * @bug 8153732 8212202 8221263 8221412 8222108
+ * @bug 8153732 8212202 8221263 8221412
  * @requires (os.family == "Windows")
  * @summary Windows remote printer changes do not reflect in lookupPrintServices()
- * @run main/manual/othervm -Dsun.java2d.print.minRefreshTime=120 RemotePrinterStatusRefresh
+ * @run main/manual RemotePrinterStatusRefresh
  */
 
 import java.awt.BorderLayout;
@@ -62,9 +62,6 @@ import javax.swing.Timer;
 import static javax.swing.BorderFactory.createTitledBorder;
 
 public class RemotePrinterStatusRefresh extends WindowAdapter {
-
-    private static final long DEFAULT_REFRESH_TIME = 240L;
-    private static final long MINIMAL_REFRESH_TIME = 120L;
 
     private static final long refreshTime = getRefreshTime();
 
@@ -184,7 +181,7 @@ public class RemotePrinterStatusRefresh extends WindowAdapter {
                     +          "configured printers.\n"
                     + "Step 1: Add or Remove a network printer using "
                     +          "Windows Control Panel.\n"
-                    + "Step 2: Wait for 2\u20134 minutes after adding or removing.\n"
+                    + "Step 2: Wait for 4 minutes after adding or removing.\n"
                     + "             \"Next printer refresh in\" gives you a "
                     +          "rough estimation on when update will happen.\n"
                     + "Step 3: Click Refresh."
@@ -198,7 +195,7 @@ public class RemotePrinterStatusRefresh extends WindowAdapter {
                     + "Step 5: Click Pass if the list of printers is correctly "
                     +          "updated.\n"
                     + "Step 6: If the list is not updated, wait for another "
-                    +          "2\u20134 minutes, and then click Refresh again.\n"
+                    +          "4 minutes, and then click Refresh again.\n"
                     + "Step 7: If the list does not update, click Fail.\n"
                     + "\n"
                     + "You have to click Refresh to enable Pass and Fail buttons. "
@@ -218,13 +215,12 @@ public class RemotePrinterStatusRefresh extends WindowAdapter {
 
     private static long getRefreshTime() {
         String refreshTime =
-                System.getProperty("sun.java2d.print.minRefreshTime",
-                                   Long.toString(DEFAULT_REFRESH_TIME));
+                System.getProperty("sun.java2d.print.minRefreshTime", "240");
         try {
             long value = Long.parseLong(refreshTime);
-            return value < MINIMAL_REFRESH_TIME ? MINIMAL_REFRESH_TIME : value;
+            return value < 240L ? 240L : value;
         } catch (NumberFormatException e) {
-            return DEFAULT_REFRESH_TIME;
+            return 240L;
         }
     }
 

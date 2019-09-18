@@ -148,8 +148,6 @@
 #undef  P11_ENABLE_C_GETFUNCTIONSTATUS
 #undef  P11_ENABLE_C_CANCELFUNCTION
 #undef  P11_ENABLE_C_WAITFORSLOTEVENT
-#define P11_ENABLE_GETNATIVEKEYINFO
-#define P11_ENABLE_CREATENATIVEKEY
 
 /* include the platform dependent part of the header */
 #include "p11_md.h"

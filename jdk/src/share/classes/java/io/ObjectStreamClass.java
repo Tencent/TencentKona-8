@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1996, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1996, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2371,7 +2371,7 @@ public class ObjectStreamClass implements Serializable {
      */
     private static class FieldReflectorKey extends WeakReference<Class<?>> {
 
-        private final String[] sigs;
+        private final String sigs;
         private final int hash;
         private final boolean nullClass;
 
@@ -2380,13 +2380,13 @@ public class ObjectStreamClass implements Serializable {
         {
             super(cl, queue);
             nullClass = (cl == null);
-            sigs = new String[2 * fields.length];
-            for (int i = 0, j = 0; i < fields.length; i++) {
+            StringBuilder sbuf = new StringBuilder();
+            for (int i = 0; i < fields.length; i++) {
                 ObjectStreamField f = fields[i];
-                sigs[j++] = f.getName();
-                sigs[j++] = f.getSignature();
+                sbuf.append(f.getName()).append(f.getSignature());
             }
-            hash = System.identityHashCode(cl) + Arrays.hashCode(sigs);
+            sigs = sbuf.toString();
+            hash = System.identityHashCode(cl) + sigs.hashCode();
         }
 
         public int hashCode() {
@@ -2404,7 +2404,7 @@ public class ObjectStreamClass implements Serializable {
                 return (nullClass ? other.nullClass
                                   : ((referent = get()) != null) &&
                                     (referent == other.get())) &&
-                        Arrays.equals(sigs, other.sigs);
+                    sigs.equals(other.sigs);
             } else {
                 return false;
             }

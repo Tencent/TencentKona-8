@@ -147,13 +147,12 @@ public final class P11TlsMasterSecretGenerator extends KeyGeneratorSpi {
         }
 
         Session session = null;
-        long p11KeyID = p11Key.getKeyID();
         try {
             session = token.getObjSession();
             CK_ATTRIBUTE[] attributes = token.getAttributes(O_GENERATE,
                 CKO_SECRET_KEY, CKK_GENERIC_SECRET, new CK_ATTRIBUTE[0]);
             long keyID = token.p11.C_DeriveKey(session.id(),
-                    ckMechanism, p11KeyID, attributes);
+                    ckMechanism, p11Key.keyID, attributes);
             int major, minor;
             if (ckVersion == null) {
                 major = -1;
@@ -162,12 +161,12 @@ public final class P11TlsMasterSecretGenerator extends KeyGeneratorSpi {
                 major = ckVersion.major;
                 minor = ckVersion.minor;
             }
-            return P11Key.masterSecretKey(session, keyID,
+            SecretKey key = P11Key.masterSecretKey(session, keyID,
                 "TlsMasterSecret", 48 << 3, attributes, major, minor);
+            return key;
         } catch (Exception e) {
             throw new ProviderException("Could not generate key", e);
         } finally {
-            p11Key.releaseKeyID();
             token.releaseSession(session);
         }
     }

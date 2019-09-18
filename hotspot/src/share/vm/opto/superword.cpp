@@ -482,9 +482,7 @@ bool SuperWord::ref_is_alignable(SWPointer& p) {
   if (init_nd->is_Con() && p.invar() == NULL) {
     int init = init_nd->bottom_type()->is_int()->get_con();
     int init_offset = init * p.scale_in_bytes() + offset;
-    if (init_offset < 0) { // negative offset from object start?
-      return false;        // may happen in dead loop
-    }
+    assert(init_offset >= 0, "positive offset from object start");
     if (vw % span == 0) {
       // If vm is a multiple of span, we use formula (1).
       if (span > 0) {

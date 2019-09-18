@@ -5163,7 +5163,9 @@ bool os::dir_is_empty(const char* path) {
 
   /* Scan the directory */
   bool result = true;
-  while (result && (ptr = readdir(dir)) != NULL) {
+  char buf[sizeof(struct dirent) + MAX_PATH];
+  struct dirent *dbuf = (struct dirent *) buf;
+  while (result && (ptr = readdir(dir, dbuf)) != NULL) {
     if (strcmp(ptr->d_name, ".") != 0 && strcmp(ptr->d_name, "..") != 0) {
       result = false;
     }

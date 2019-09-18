@@ -255,6 +255,9 @@ public abstract class ClassLoader {
         new ProtectionDomain(new CodeSource(null, (Certificate[]) null),
                              null, this, null);
 
+    // The initiating protection domains for all classes loaded by this loader
+    private final Set<ProtectionDomain> domains;
+
     // Invoked by the VM to record every loaded class with this loader.
     void addClass(Class<?> c) {
         classes.addElement(c);
@@ -278,11 +281,14 @@ public abstract class ClassLoader {
         if (ParallelLoaders.isRegistered(this.getClass())) {
             parallelLockMap = new ConcurrentHashMap<>();
             package2certs = new ConcurrentHashMap<>();
+            domains =
+                Collections.synchronizedSet(new HashSet<ProtectionDomain>());
             assertionLock = new Object();
         } else {
             // no finer-grained lock; lock on the classloader instance
             parallelLockMap = null;
             package2certs = new Hashtable<>();
+            domains = new HashSet<>();
             assertionLock = this;
         }
     }
@@ -499,6 +505,7 @@ public abstract class ClassLoader {
                 }, new AccessControlContext(new ProtectionDomain[] {pd}));
             }
         }
+        domains.add(pd);
     }
 
     /**

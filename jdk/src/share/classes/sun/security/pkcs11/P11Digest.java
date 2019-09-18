@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2003, 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -140,8 +140,7 @@ final class P11Digest extends MessageDigestSpi implements Cloneable {
         token.ensureValid();
 
         if (session != null) {
-            if (state == S_INIT && token.explicitCancel == true
-                    && session.hasObjects() == false) {
+            if (state == S_INIT && token.explicitCancel == true) {
                 session = token.killSession(session);
             } else {
                 session = token.releaseSession(session);
@@ -251,7 +250,6 @@ final class P11Digest extends MessageDigestSpi implements Cloneable {
         }
 
         fetchSession();
-        long p11KeyID = p11Key.getKeyID();
         try {
             if (state == S_BUFFERED) {
                 token.p11.C_DigestInit(session.id(), mechanism);
@@ -262,12 +260,10 @@ final class P11Digest extends MessageDigestSpi implements Cloneable {
                 token.p11.C_DigestUpdate(session.id(), 0, buffer, 0, bufOfs);
                 bufOfs = 0;
             }
-            token.p11.C_DigestKey(session.id(), p11KeyID);
+            token.p11.C_DigestKey(session.id(), p11Key.keyID);
         } catch (PKCS11Exception e) {
             engineReset();
             throw new ProviderException("update(SecretKey) failed", e);
-        } finally {
-            p11Key.releaseKeyID();
         }
     }
 

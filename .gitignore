@@ -1,0 +1,10 @@
+# Editor directories and files
+.idea
+.hg
+.jcheck
+.hgignore
+.hgtags
+*.suo
+*.ntvs*
+*.njsproj
+*.sln

@@ -30,6 +30,7 @@ import java.io.*;
 import java.security.*;
 import javax.crypto.*;
 import static com.sun.crypto.provider.AESConstants.AES_BLOCK_SIZE;
+import sun.security.util.ArrayUtil;
 
 
 /**
@@ -423,12 +424,12 @@ final class GaloisCounterMode extends FeedbackCipher {
     int encrypt(byte[] in, int inOfs, int len, byte[] out, int outOfs) {
         checkDataLength(processed, len);
 
-        RangeUtil.blockSizeCheck(len, blockSize);
+        ArrayUtil.blockSizeCheck(len, blockSize);
         processAAD();
 
         if (len > 0) {
-            RangeUtil.nullAndBoundsCheck(in, inOfs, len);
-            RangeUtil.nullAndBoundsCheck(out, outOfs, len);
+            ArrayUtil.nullAndBoundsCheck(in, inOfs, len);
+            ArrayUtil.nullAndBoundsCheck(out, outOfs, len);
 
             gctrPAndC.update(in, inOfs, len, out, outOfs);
             processed += len;
@@ -455,7 +456,7 @@ final class GaloisCounterMode extends FeedbackCipher {
                 ("Can't fit both data and tag into one buffer");
         }
         try {
-            RangeUtil.nullAndBoundsCheck(out, outOfs,
+            ArrayUtil.nullAndBoundsCheck(out, outOfs,
                 (len + tagLenBytes));
         } catch (ArrayIndexOutOfBoundsException aiobe) {
             throw new ShortBufferException("Output buffer too small");
@@ -465,7 +466,7 @@ final class GaloisCounterMode extends FeedbackCipher {
 
         processAAD();
         if (len > 0) {
-            RangeUtil.nullAndBoundsCheck(in, inOfs, len);
+            ArrayUtil.nullAndBoundsCheck(in, inOfs, len);
 
             doLastBlock(in, inOfs, len, out, outOfs, true);
         }
@@ -502,14 +503,14 @@ final class GaloisCounterMode extends FeedbackCipher {
     int decrypt(byte[] in, int inOfs, int len, byte[] out, int outOfs) {
         checkDataLength(ibuffer.size(), len);
 
-        RangeUtil.blockSizeCheck(len, blockSize);
+        ArrayUtil.blockSizeCheck(len, blockSize);
         processAAD();
 
         if (len > 0) {
             // store internally until decryptFinal is called because
             // spec mentioned that only return recovered data after tag
             // is successfully verified
-            RangeUtil.nullAndBoundsCheck(in, inOfs, len);
+            ArrayUtil.nullAndBoundsCheck(in, inOfs, len);
             ibuffer.write(in, inOfs, len);
         }
         return 0;
@@ -544,7 +545,7 @@ final class GaloisCounterMode extends FeedbackCipher {
         checkDataLength(ibuffer.size(), (len - tagLenBytes));
 
         try {
-            RangeUtil.nullAndBoundsCheck(out, outOfs,
+            ArrayUtil.nullAndBoundsCheck(out, outOfs,
                 (ibuffer.size() + len) - tagLenBytes);
         } catch (ArrayIndexOutOfBoundsException aiobe) {
             throw new ShortBufferException("Output buffer too small");
@@ -552,7 +553,7 @@ final class GaloisCounterMode extends FeedbackCipher {
 
         processAAD();
 
-        RangeUtil.nullAndBoundsCheck(in, inOfs, len);
+        ArrayUtil.nullAndBoundsCheck(in, inOfs, len);
 
         // get the trailing tag bytes from 'in'
         byte[] tag = new byte[tagLenBytes];

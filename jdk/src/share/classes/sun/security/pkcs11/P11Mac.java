@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2003, 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package sun.security.pkcs11;
 
+import java.util.*;
 import java.nio.ByteBuffer;
 
 import java.security.*;
@@ -53,11 +54,26 @@ import static sun.security.pkcs11.wrapper.PKCS11Constants.*;
  */
 final class P11Mac extends MacSpi {
 
+    /* unitialized, all fields except session have arbitrary values */
+    private final static int S_UNINIT   = 1;
+
+    /* session initialized, no data processed yet */
+    private final static int S_RESET    = 2;
+
+    /* session initialized, data processed */
+    private final static int S_UPDATE   = 3;
+
+    /* transitional state after doFinal() before we go to S_UNINIT */
+    private final static int S_DOFINAL  = 4;
+
     // token instance
     private final Token token;
 
     // algorithm name
     private final String algorithm;
+
+    // mechanism id
+    private final long mechanism;
 
     // mechanism object
     private final CK_MECHANISM ckMechanism;
@@ -71,8 +87,8 @@ final class P11Mac extends MacSpi {
     // associated session, if any
     private Session session;
 
-    // initialization status
-    private boolean initialized;
+    // state, one of S_* above
+    private int state;
 
     // one byte buffer for the update(byte) method, initialized on demand
     private byte[] oneByte;
@@ -82,6 +98,7 @@ final class P11Mac extends MacSpi {
         super();
         this.token = token;
         this.algorithm = algorithm;
+        this.mechanism = mechanism;
         Long params = null;
         switch ((int)mechanism) {
         case (int)CKM_MD5_HMAC:
@@ -114,65 +131,47 @@ final class P11Mac extends MacSpi {
             throw new ProviderException("Unknown mechanism: " + mechanism);
         }
         ckMechanism = new CK_MECHANISM(mechanism, params);
+        state = S_UNINIT;
+        initialize();
     }
 
-    // reset the states to the pre-initialized values
-    private void reset(boolean doCancel) {
-        if (!initialized) {
-            return;
-        }
-        initialized = false;
-        try {
-            if (session == null) {
-                return;
-            }
-            if (doCancel && token.explicitCancel) {
-                cancelOperation();
-            }
-        } finally {
-            p11Key.releaseKeyID();
-            session = token.releaseSession(session);
+    private void ensureInitialized() throws PKCS11Exception {
+        token.ensureValid();
+        if (state == S_UNINIT) {
+            initialize();
         }
     }
 
     private void cancelOperation() {
         token.ensureValid();
-        if (session.hasObjects() == false) {
-            session = token.killSession(session);
+        if (state == S_UNINIT) {
             return;
-        } else {
-            try {
-                token.p11.C_SignFinal(session.id(), 0);
-            } catch (PKCS11Exception e) {
-                throw new ProviderException("Cancel failed", e);
-            }
         }
-    }
-
-    private void ensureInitialized() throws PKCS11Exception {
-        if (!initialized) {
-            initialize();
+        state = S_UNINIT;
+        if ((session == null) || (token.explicitCancel == false)) {
+            return;
+        }
+        try {
+            token.p11.C_SignFinal(session.id(), 0);
+        } catch (PKCS11Exception e) {
+            throw new ProviderException("Cancel failed", e);
         }
     }
 
     private void initialize() throws PKCS11Exception {
-        if (p11Key == null) {
-            throw new ProviderException(
-                    "Operation cannot be performed without calling engineInit first");
+        if (state == S_RESET) {
+            return;
         }
-        token.ensureValid();
-        long p11KeyID = p11Key.getKeyID();
-        try {
-            if (session == null) {
-                session = token.getOpSession();
-            }
-            token.p11.C_SignInit(session.id(), ckMechanism, p11KeyID);
-        } catch (PKCS11Exception e) {
-            p11Key.releaseKeyID();
-            session = token.releaseSession(session);
-            throw e;
+        if (session == null) {
+            session = token.getOpSession();
         }
-        initialized = true;
+        if (p11Key != null) {
+            token.p11.C_SignInit
+                (session.id(), ckMechanism, p11Key.keyID);
+            state = S_RESET;
+        } else {
+            state = S_UNINIT;
+        }
     }
 
     // see JCE spec
@@ -182,7 +181,18 @@ final class P11Mac extends MacSpi {
 
     // see JCE spec
     protected void engineReset() {
-        reset(true);
+        // the framework insists on calling reset() after doFinal(),
+        // but we prefer to take care of reinitialization ourselves
+        if (state == S_DOFINAL) {
+            state = S_UNINIT;
+            return;
+        }
+        cancelOperation();
+        try {
+            initialize();
+        } catch (PKCS11Exception e) {
+            throw new ProviderException("reset() failed, ", e);
+        }
     }
 
     // see JCE spec
@@ -192,7 +202,7 @@ final class P11Mac extends MacSpi {
             throw new InvalidAlgorithmParameterException
                 ("Parameters not supported");
         }
-        reset(true);
+        cancelOperation();
         p11Key = P11SecretKeyFactory.convertKey(token, key, algorithm);
         try {
             initialize();
@@ -205,12 +215,13 @@ final class P11Mac extends MacSpi {
     protected byte[] engineDoFinal() {
         try {
             ensureInitialized();
-            return token.p11.C_SignFinal(session.id(), 0);
+            byte[] mac = token.p11.C_SignFinal(session.id(), 0);
+            state = S_DOFINAL;
+            return mac;
         } catch (PKCS11Exception e) {
-            reset(true);
             throw new ProviderException("doFinal() failed", e);
         } finally {
-            reset(false);
+            session = token.releaseSession(session);
         }
     }
 
@@ -228,6 +239,7 @@ final class P11Mac extends MacSpi {
         try {
             ensureInitialized();
             token.p11.C_SignUpdate(session.id(), 0, b, ofs, len);
+            state = S_UPDATE;
         } catch (PKCS11Exception e) {
             throw new ProviderException("update() failed", e);
         }
@@ -249,6 +261,7 @@ final class P11Mac extends MacSpi {
             int ofs = byteBuffer.position();
             token.p11.C_SignUpdate(session.id(), addr + ofs, null, 0, len);
             byteBuffer.position(ofs + len);
+            state = S_UPDATE;
         } catch (PKCS11Exception e) {
             throw new ProviderException("update() failed", e);
         }

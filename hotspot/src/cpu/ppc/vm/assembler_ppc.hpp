@@ -2000,8 +2000,7 @@ class Assembler : public AbstractAssembler {
   inline void vsbox(       VectorRegister d, VectorRegister a);
 
   // SHA (introduced with Power 8)
-  inline void vshasigmad(VectorRegister d, VectorRegister a, bool st, int six);
-  inline void vshasigmaw(VectorRegister d, VectorRegister a, bool st, int six);
+  // Not yet implemented.
 
   // Vector Binary Polynomial Multiplication (introduced with Power 8)
   inline void vpmsumb(  VectorRegister d, VectorRegister a, VectorRegister b);
@@ -2096,11 +2095,6 @@ class Assembler : public AbstractAssembler {
   inline void stvxl( VectorRegister d, Register s2);
   inline void lvsl(  VectorRegister d, Register s2);
   inline void lvsr(  VectorRegister d, Register s2);
-
-  // Endianess specific concatenation of 2 loaded vectors.
-  inline void load_perm(VectorRegister perm, Register addr);
-  inline void vec_perm(VectorRegister first_dest, VectorRegister second, VectorRegister perm);
-  inline void vec_perm(VectorRegister dest, VectorRegister first, VectorRegister second, VectorRegister perm);
 
   // RegisterOrConstant versions.
   // These emitters choose between the versions using two registers and

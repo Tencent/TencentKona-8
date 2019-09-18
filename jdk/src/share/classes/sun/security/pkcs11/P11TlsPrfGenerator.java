@@ -143,36 +143,34 @@ final class P11TlsPrfGenerator extends KeyGeneratorSpi {
                         Functions.getHashMechId(spec.getPRFHashAlg()),
                         spec.getOutputLength(), ulServerOrClient);
                 Session session = null;
-                long keyID = p11Key.getKeyID();
                 try {
                     session = token.getOpSession();
                     token.p11.C_SignInit(session.id(),
-                            new CK_MECHANISM(mechanism, params), keyID);
+                            new CK_MECHANISM(mechanism, params), p11Key.keyID);
                     token.p11.C_SignUpdate(session.id(), 0, seed, 0, seed.length);
                     byte[] out = token.p11.C_SignFinal
                             (session.id(), spec.getOutputLength());
-                    return new SecretKeySpec(out, "TlsPrf");
+                    k = new SecretKeySpec(out, "TlsPrf");
                 } catch (PKCS11Exception e) {
                     throw new ProviderException("Could not calculate PRF", e);
                 } finally {
-                    p11Key.releaseKeyID();
                     token.releaseSession(session);
                 }
             } else {
                 throw new ProviderException("Only Finished message authentication code"+
                         " generation supported for TLS 1.2.");
             }
+            return k;
         }
 
         byte[] label = P11Util.getBytesUTF8(spec.getLabel());
 
         if (mechanism == CKM_NSS_TLS_PRF_GENERAL) {
             Session session = null;
-            long keyID = p11Key.getKeyID();
             try {
                 session = token.getOpSession();
                 token.p11.C_SignInit
-                        (session.id(), new CK_MECHANISM(mechanism), keyID);
+                    (session.id(), new CK_MECHANISM(mechanism), p11Key.keyID);
                 token.p11.C_SignUpdate(session.id(), 0, label, 0, label.length);
                 token.p11.C_SignUpdate(session.id(), 0, seed, 0, seed.length);
                 byte[] out = token.p11.C_SignFinal
@@ -181,7 +179,6 @@ final class P11TlsPrfGenerator extends KeyGeneratorSpi {
             } catch (PKCS11Exception e) {
                 throw new ProviderException("Could not calculate PRF", e);
             } finally {
-                p11Key.releaseKeyID();
                 token.releaseSession(session);
             }
         }
@@ -192,16 +189,15 @@ final class P11TlsPrfGenerator extends KeyGeneratorSpi {
         CK_TLS_PRF_PARAMS params = new CK_TLS_PRF_PARAMS(seed, label, out);
 
         Session session = null;
-        long keyID = p11Key.getKeyID();
         try {
             session = token.getOpSession();
-            token.p11.C_DeriveKey(session.id(),
-                new CK_MECHANISM(mechanism, params), keyID, null);
+            long keyID = token.p11.C_DeriveKey(session.id(),
+                new CK_MECHANISM(mechanism, params), p11Key.keyID, null);
+            // ignore keyID, returned PRF bytes are in 'out'
             return new SecretKeySpec(out, "TlsPrf");
         } catch (PKCS11Exception e) {
             throw new ProviderException("Could not calculate PRF", e);
         } finally {
-            p11Key.releaseKeyID();
             token.releaseSession(session);
         }
     }

@@ -119,11 +119,11 @@ TEST_ROOT := $(shell pwd)
 
 # Root of all test results
 ifdef ALT_OUTPUTDIR
-  ABS_BUILD_ROOT = $(ALT_OUTPUTDIR)
+  ABS_BUILD_ROOT = $(ALT_OUTPUTDIR)/$(PLATFORM)-$(ARCH)
 else
   ABS_BUILD_ROOT = $(TEST_ROOT)/../build/$(PLATFORM)-$(ARCH)
 endif
-ABS_TEST_OUTPUT_DIR = $(ABS_BUILD_ROOT)/testoutput/$(UNIQUE_DIR)
+ABS_TEST_OUTPUT_DIR = $(ABS_BUILD_ROOT)/testoutput
 
 # Expect JPRT to set PRODUCT_HOME (the product or jdk in this case to test)
 ifndef PRODUCT_HOME
@@ -267,7 +267,7 @@ JTREG_BASIC_OPTIONS += -agentvm
 # Only run automatic tests
 JTREG_BASIC_OPTIONS += -a
 # Report details on all failed or error tests, times too
-JTREG_BASIC_OPTIONS += -v:fail,error,summary
+JTREG_BASIC_OPTIONS += -v:fail,error,time
 # Retain all files for failing tests
 JTREG_BASIC_OPTIONS += -retain:fail,error
 # Ignore tests are not run and completely silent about it

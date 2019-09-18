@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,9 +23,9 @@
 
 /*
  * @test
- * @bug 8040211 8191404 8203872 8222980
+ * @bug 8040211 8191404 8203872
  * @summary Checks the IANA language subtag registry data update
- *          (LSR Revision: 2019-04-03) with Locale and Locale.LanguageRange
+ *          (LSR Revision: 2018-04-23) with Locale and Locale.LanguageRange
  *          class methods.
  * @run main Bug8040211
  */
@@ -115,6 +115,7 @@ public class Bug8040211 {
         expected.add(new LanguageRange("taj", 0.9));
         expected.add(new LanguageRange("tsf", 0.9));
         expected.add(new LanguageRange("ar-hyw", 0.8));
+        expected.add(new LanguageRange("ar-arevmda", 0.8));
         expected.add(new LanguageRange("yug", 0.5));
         expected.add(new LanguageRange("yuu", 0.5));
         expected.add(new LanguageRange("gfx", 0.4));
@@ -187,7 +188,7 @@ public class Bug8040211 {
         List<Locale> tagList = generateLocales(tags);
         String actualLocales
                 = showLocales(Locale.filter(priorityList, tagList, mode));
-        String expectedLocales = "mtm-RU, ymt-RU, en-GB-oxendict, nts, pij";
+        String expectedLocales = "mtm-RU, ymt-RU, en-GB-oxendict, nts, pij, ar-arevela";
 
         if (!expectedLocales.equals(actualLocales)) {
             error = true;
