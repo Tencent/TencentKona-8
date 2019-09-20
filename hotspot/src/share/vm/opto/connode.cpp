@@ -1083,7 +1083,11 @@ Node *ConvI2LNode::Ideal(PhaseGVN *phase, bool can_reshape) {
     assert(rxlo == (int)rxlo && rxhi == (int)rxhi, "x should not overflow");
     assert(rylo == (int)rylo && ryhi == (int)ryhi, "y should not overflow");
     Node* cx = phase->C->constrained_convI2L(phase, x, TypeInt::make(rxlo, rxhi, widen), NULL);
+    Node* hook = new (phase->C) Node(1);
+    hook->init_req(0, cx);  // Add a use to cx to prevent him from dying
     Node* cy = phase->C->constrained_convI2L(phase, y, TypeInt::make(rylo, ryhi, widen), NULL);
+    hook->del_req(0);  // Just yank bogus edge
+    hook->destruct();
     switch (op) {
     case Op_AddI:  return new (phase->C) AddLNode(cx, cy);
     case Op_SubI:  return new (phase->C) SubLNode(cx, cy);
