@@ -34,21 +34,8 @@
 #define CounterGet()              (gethrtime()/1000)
 #define Counter2Micros(counts)    (counts)
 #else  /* ! HAVE_GETHRTIME */
-/*
- * Add gethrtime() implementation for launch time debug on Linux.
- */
-#include <time.h>
-
-#define  gethrtime() ({                             \
-  uint64_t result;                                  \
-  struct timespec ts;                               \
-  clock_gettime( CLOCK_MONOTONIC, &ts);             \
-  result = 1000000000LL * (uint64_t)ts.tv_sec;      \
-  result += ts.tv_nsec;                             \
-  result;})
-
-#define CounterGet()              (gethrtime()/1000)
-#define Counter2Micros(counts)    (counts)
+#define CounterGet()              (0)
+#define Counter2Micros(counts)    (1)
 #endif /* HAVE_GETHRTIME */
 
 /* pointer to environment */
