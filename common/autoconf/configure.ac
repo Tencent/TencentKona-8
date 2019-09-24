@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -97,6 +97,9 @@ JDKOPT_SETUP_JDK_VARIANT
 JDKOPT_SETUP_JVM_INTERPRETER
 JDKOPT_SETUP_JVM_VARIANTS
 JDKOPT_SETUP_DEBUG_LEVEL
+
+# Enable default CDS ARCHIVE
+JDKOPT_ENABLE_DISABLE_CDS_ARCHIVE
 
 # With basic setup done, call the custom early hook.
 CUSTOM_EARLY_HOOK

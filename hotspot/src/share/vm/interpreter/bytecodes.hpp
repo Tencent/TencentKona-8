@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -286,7 +286,20 @@ class Bytecodes: AllStatic {
     // special handling of signature-polymorphic methods:
     _invokehandle         ,
 
-    _shouldnotreachhere,      // For debugging
+    // These bytecodes are rewritten at CDS dump time, so that we can prevent them from being
+    // rewritten at run time. This way, the ConstMethods can be placed in the CDS ReadOnly
+    // section, and RewriteByteCodes/RewriteFrequentPairs can rewrite non-CDS bytecodes
+    // at run time.
+    //
+    // Rewritten at CDS dump time to | Original bytecode
+    // _invoke_virtual rewritten on sparc, will be disabled if UseSharedSpaces turned on.
+    // ------------------------------+------------------
+    _nofast_getfield      ,          //  <- _getfield
+    _nofast_putfield      ,          //  <- _putfield
+    _nofast_aload_0       ,          //  <- _aload_0
+    _nofast_iload         ,          //  <- _iload
+
+    _shouldnotreachhere   ,          // For debugging
 
     // Platform specific JVM bytecodes
 #ifdef TARGET_ARCH_x86

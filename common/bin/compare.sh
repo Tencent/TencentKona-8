@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -290,6 +290,7 @@ compare_general_files() {
         ! -name "ct.sym" ! -name "*.diz" ! -name "*.dll" \
         ! -name "*.pdb" ! -name "*.exp" ! -name "*.ilk" \
         ! -name "*.lib" ! -name "*.war" ! -name "JavaControlPanel" \
+        ! -name "classes.jsa" \
         | $GREP -v "./bin/"  | $SORT | $FILTER)
 
     echo General files...

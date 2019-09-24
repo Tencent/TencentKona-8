@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -601,7 +601,7 @@ class Arguments : AllStatic {
   static char* get_ext_dirs() { return _java_ext_dirs->value(); }
   static char* get_appclasspath() { return _java_class_path->value(); }
   static void  fix_appclasspath();
-
+  static char* get_default_shared_archive_path();
   // Operation modi
   static Mode mode()                { return _mode; }
   static bool is_interpreter_only() { return mode() == _int; }

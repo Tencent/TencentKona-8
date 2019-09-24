@@ -137,6 +137,20 @@ WB_ENTRY(jintArray, WB_GetLookupCacheMatches(JNIEnv* env, jobject o, jobject loa
   return result;
 WB_END
 
+WB_ENTRY(jobject, WB_GetDefaultArchivePath(JNIEnv* env, jobject wb))
+  const char* p = Arguments::get_default_shared_archive_path();
+  ThreadToNativeFromVM ttn(thread);
+  jstring path_string = env->NewStringUTF(p);
+
+  CHECK_JNI_EXCEPTION_(env, NULL);
+
+  return path_string;
+WB_END
+
+WB_ENTRY(jboolean, WB_IsSharingEnabled(JNIEnv* env, jobject wb))
+  return UseSharedSpaces;
+WB_END
+
 WB_ENTRY(void, WB_AddToBootstrapClassLoaderSearch(JNIEnv* env, jobject o, jstring segment)) {
 #if INCLUDE_JVMTI
   ResourceMark rm;
@@ -1077,6 +1091,10 @@ static JNINativeMethod methods[] = {
   {CC"classKnownToNotExist",
                            CC"(Ljava/lang/ClassLoader;Ljava/lang/String;)Z",(void*)&WB_ClassKnownToNotExist},
   {CC"getLookupCacheURLs", CC"(Ljava/lang/ClassLoader;)[Ljava/net/URL;",    (void*)&WB_GetLookupCacheURLs},
+  {CC"getDefaultArchivePath",             CC"()Ljava/lang/String;",
+                                                      (void*)&WB_GetDefaultArchivePath},
+  {CC"isSharingEnabled",   CC"()Z",                   (void*)&WB_IsSharingEnabled},
+ 
   {CC"getLookupCacheMatches", CC"(Ljava/lang/ClassLoader;Ljava/lang/String;)[I",
                                                       (void*)&WB_GetLookupCacheMatches},
   {CC"parseCommandLine",

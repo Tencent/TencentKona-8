@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -103,16 +103,20 @@ bool SharedPathsMiscInfo::check() {
       trace_class_path("[ok");
     }
   }
-
   return true;
 }
 
-bool SharedPathsMiscInfo::check(jint type, const char* path) {
+bool SharedPathsMiscInfo::check(jint type, const char* path_to_check) {
+  char path[JVM_MAXPATHLEN];
+
+  if(!os::correct_cds_path(path_to_check, path, JVM_MAXPATHLEN)) {
+    return fail("[Classpath is invalid", path_to_check);
+  }
   switch (type) {
   case BOOT:
     if (strcmp(path, Arguments::get_sysclasspath()) != 0) {
-      return fail("[BOOT classpath mismatch, actual: -Dsun.boot.class.path=", Arguments::get_sysclasspath());
-    }
+       return fail("[BOOT classpath mismatch, actual: -Dsun.boot.class.path=", Arguments::get_sysclasspath());
+     }
     break;
   case NON_EXIST: // fall-through
   case REQUIRED:

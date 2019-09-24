@@ -878,6 +878,7 @@ OUTPUT_ROOT
 CONF_NAME
 SPEC
 DEVKIT_LIB_DIR
+BUILD_CDS_ARCHIVE
 BUILD_VARIANT_RELEASE
 DEBUG_CLASSFILES
 FASTDEBUG
@@ -1041,6 +1042,7 @@ with_jvm_interpreter
 with_jvm_variants
 enable_debug
 with_debug_level
+enable_cds_archive
 with_devkit
 with_sys_root
 with_sysroot
@@ -1835,6 +1837,8 @@ Optional Features:
                           [disabled]
   --enable-debug          set the debug level to fastdebug (shorthand for
                           --with-debug-level=fastdebug) [disabled]
+  --disable-cds-archive   Set to disable generation of a default CDS archive
+                          in the product image [enabled]
   --disable-headful       disable building headful support (graphical UI
                           support) [enabled]
   --enable-hotspot-test-in-build
@@ -3960,6 +3964,15 @@ pkgadd_help() {
 
 
 
+
+################################################################################
+#
+# Disable the default CDS archive generation
+#   cross compilation - disabled
+#
+
+
+
 # Support for customization of the build process. Some build files
 # will include counterparts from this location, if they exist. This allows
 # for a degree of customization of the build targets and the rules/recipes
@@ -4376,7 +4389,7 @@ VS_SDK_PLATFORM_NAME_2017=
 #CUSTOM_AUTOCONF_INCLUDE
 
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1556533111
+DATE_WHEN_GENERATED=1566460822
 
 ###############################################################################
 #
@@ -14749,6 +14762,41 @@ $as_echo "$DEBUG_LEVEL" >&6; }
 
 
 
+
+
+
+
+# Enable default CDS ARCHIVE
+
+  # Check whether --enable-cds-archive was given.
+if test "${enable_cds_archive+set}" = set; then :
+  enableval=$enable_cds_archive;
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if a default CDS archive should be generated" >&5
+$as_echo_n "checking if a default CDS archive should be generated... " >&6; }
+  if test "x$COMPILE_TYPE" = "xcross"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, not possible with cross compilation" >&5
+$as_echo "no, not possible with cross compilation" >&6; }
+    BUILD_CDS_ARCHIVE="false"
+  elif test "x$enable_cds_archive" = "xyes"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes, forced" >&5
+$as_echo "yes, forced" >&6; }
+    BUILD_CDS_ARCHIVE="true"
+  elif test "x$enable_cds_archive" = "x"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+    BUILD_CDS_ARCHIVE="true"
+  elif test "x$enable_cds_archive" = "xno"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, forced" >&5
+$as_echo "no, forced" >&6; }
+    BUILD_CDS_ARCHIVE="false"
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    as_fn_error $? "--enable-cds_archive can only be yes/no or empty" "$LINENO" 5
+  fi
 
 
 

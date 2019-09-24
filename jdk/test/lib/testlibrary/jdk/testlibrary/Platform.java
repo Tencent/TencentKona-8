@@ -99,5 +99,4 @@ public class Platform {
     public static String getOsArch() {
         return osArch;
     }
-
 }
