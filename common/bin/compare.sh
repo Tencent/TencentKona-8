@@ -290,6 +290,7 @@ compare_general_files() {
         ! -name "ct.sym" ! -name "*.diz" ! -name "*.dll" \
         ! -name "*.pdb" ! -name "*.exp" ! -name "*.ilk" \
         ! -name "*.lib" ! -name "*.war" ! -name "JavaControlPanel" \
+        ! -name "classes.jsa" \
         | $GREP -v "./bin/"  | $SORT | $FILTER)
 
     echo General files...

@@ -1595,7 +1595,7 @@ void Arguments::set_ergonomics_flags() {
   // unless it is asked for.  Future work: either add bytecode rewriting
   // at link time, or rewrite bytecodes in non-shared methods.
   if (!DumpSharedSpaces && !RequireSharedSpaces &&
-      (FLAG_IS_DEFAULT(UseSharedSpaces) || !UseSharedSpaces)) {
+      !UseSharedSpaces) {
     no_shared_spaces("COMPILER2 default: -Xshare:auto | off, have to manually setup to on.");
   }
 #endif
@@ -3831,22 +3831,27 @@ static void force_serial_gc() {
 
 // Sharing support
 // Construct the path to the archive
+char* Arguments::get_default_shared_archive_path() {
+  char *default_archive_path;
+  char jvm_path[JVM_MAXPATHLEN];
+  os::jvm_path(jvm_path, sizeof(jvm_path));
+  char *end = strrchr(jvm_path, *os::file_separator());
+  if (end != NULL) *end = '\0';
+  size_t jvm_path_len = strlen(jvm_path);
+  size_t file_sep_len = strlen(os::file_separator());
+  const size_t len = jvm_path_len + file_sep_len + 20;
+  default_archive_path = NEW_C_HEAP_ARRAY(char, len, mtInternal);
+  if (default_archive_path != NULL) {
+    jio_snprintf(default_archive_path, len, "%s%sclasses.jsa",
+      jvm_path, os::file_separator());
+  }
+  return default_archive_path;
+}
+
 static char* get_shared_archive_path() {
   char *shared_archive_path;
   if (SharedArchiveFile == NULL) {
-    char jvm_path[JVM_MAXPATHLEN];
-    os::jvm_path(jvm_path, sizeof(jvm_path));
-    char *end = strrchr(jvm_path, *os::file_separator());
-    if (end != NULL) *end = '\0';
-    size_t jvm_path_len = strlen(jvm_path);
-    size_t file_sep_len = strlen(os::file_separator());
-    shared_archive_path = NEW_C_HEAP_ARRAY(char, jvm_path_len +
-        file_sep_len + 20, mtInternal);
-    if (shared_archive_path != NULL) {
-      strncpy(shared_archive_path, jvm_path, jvm_path_len + 1);
-      strncat(shared_archive_path, os::file_separator(), file_sep_len);
-      strncat(shared_archive_path, "classes.jsa", 11);
-    }
+    shared_archive_path = Arguments::get_default_shared_archive_path();
   } else {
     shared_archive_path = NEW_C_HEAP_ARRAY(char, strlen(SharedArchiveFile) + 1, mtInternal);
     if (shared_archive_path != NULL) {

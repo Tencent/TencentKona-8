@@ -609,6 +609,9 @@ LIBZIP_CAN_USE_MMAP:=@LIBZIP_CAN_USE_MMAP@
 MSVCR_DLL:=@MSVCR_DLL@
 MSVCP_DLL:=@MSVCP_DLL@
 UCRT_DLL_DIR:=@UCRT_DLL_DIR@
+# CDS_ARCHIVE
+BUILD_CDS_ARCHIVE:=@BUILD_CDS_ARCHIVE@
+
 
 
 # ADD_SRCS takes a single argument with source roots
@@ -694,7 +697,6 @@ INSTALL_SYSCONFDIR=@sysconfdir@
 #
 # Misc
 #
-
 # Name of Service Agent library
 SALIB_NAME=@SALIB_NAME@
 

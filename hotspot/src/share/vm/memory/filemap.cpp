@@ -263,13 +263,14 @@ bool FileMapInfo::validate_classpath_entry_table() {
       tty->print_cr("[Checking shared classpath entry: %s]", name);
     }
     if (os::stat(name, &st) != 0) {
-      fail_continue("Required classpath entry does not exist: %s", name);
-      ok = false;
+     // The validation is disabled due to runtime path may inconsistent with CDS Archives.
+     // fail_continue("Required classpath entry does not exist: %s", name);
+     // ok = false;
     } else if (ent->is_dir()) {
-      if (!os::dir_is_empty(name)) {
-        fail_continue("directory is not empty: %s", name);
-        ok = false;
-      }
+    // if (!os::dir_is_empty(name)) {
+    // fail_continue("directory is not empty: %s", name);
+    // ok = false;
+    // }
     } else {
       if (ent->_timestamp != st.st_mtime ||
           ent->_filesize != st.st_size) {

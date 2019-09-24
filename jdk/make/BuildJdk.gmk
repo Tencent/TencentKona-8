@@ -103,6 +103,10 @@ images:
         ifeq ($(OPENJDK_TARGET_OS), macosx)
 	  +$(MAKE) -f Bundles.gmk
         endif
+        ifeq ($(BUILD_CDS_ARCHIVE), true)
+	  echo Creating CDS archive for jdk image
+	  $(JDK_IMAGE_DIR)/bin/java -Xshare:dump -Xmx128M -Xms128M
+        endif
 
 overlay-images:
 	+$(MAKE) -f CompileLaunchers.gmk OVERLAY_IMAGES=true

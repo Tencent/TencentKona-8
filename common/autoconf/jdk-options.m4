@@ -741,6 +741,39 @@ AC_DEFUN_ONCE([JDKOPT_SETUP_DEBUG_SYMBOLS],
   AC_SUBST(ZIP_DEBUGINFO_FILES)
 ])
 
+
+################################################################################
+#
+# Disable the default CDS archive generation
+#   cross compilation - disabled
+#
+AC_DEFUN_ONCE([JDKOPT_ENABLE_DISABLE_CDS_ARCHIVE],
+[
+  AC_ARG_ENABLE([cds-archive], [AS_HELP_STRING([--disable-cds-archive],
+      [Set to disable generation of a default CDS archive in the product image @<:@enabled@:>@])])
+
+  AC_MSG_CHECKING([if a default CDS archive should be generated])
+  if test "x$COMPILE_TYPE" = "xcross"; then
+    AC_MSG_RESULT([no, not possible with cross compilation])
+    BUILD_CDS_ARCHIVE="false"
+  elif test "x$enable_cds_archive" = "xyes"; then
+    AC_MSG_RESULT([yes, forced])
+    BUILD_CDS_ARCHIVE="true"
+  elif test "x$enable_cds_archive" = "x"; then
+    AC_MSG_RESULT([yes])
+    BUILD_CDS_ARCHIVE="true"
+  elif test "x$enable_cds_archive" = "xno"; then
+    AC_MSG_RESULT([no, forced])
+    BUILD_CDS_ARCHIVE="false"
+  else
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([--enable-cds_archive can only be yes/no or empty])
+  fi
+
+  AC_SUBST(BUILD_CDS_ARCHIVE)
+])
+
+
 # Support for customization of the build process. Some build files
 # will include counterparts from this location, if they exist. This allows
 # for a degree of customization of the build targets and the rules/recipes

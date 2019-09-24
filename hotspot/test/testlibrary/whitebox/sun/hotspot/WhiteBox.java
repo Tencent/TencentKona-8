@@ -235,6 +235,8 @@ public class WhiteBox {
     return offset;
   }
 
+  public native String  getDefaultArchivePath();
+  public native boolean isSharingEnabled();
   // Class Data Sharing
   public native boolean isSharedClass(Class<?> c);
 

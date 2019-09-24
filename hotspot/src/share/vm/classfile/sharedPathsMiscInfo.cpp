@@ -103,16 +103,81 @@ bool SharedPathsMiscInfo::check() {
       trace_class_path("[ok");
     }
   }
-
   return true;
 }
 
-bool SharedPathsMiscInfo::check(jint type, const char* path) {
+bool SharedPathsMiscInfo::replace_jh(char* path, const char* rjh, char* ret) {
+  if (path == NULL || ret == NULL) {
+     return false;
+  }
+  char* p = path;
+  char* entry = path;
+  ret[0] = '\0';
+  while (p!= NULL && *p != '\0') {
+    p = strchr(entry, os::path_separator()[0]);
+    if (p != NULL) {
+      *p = '\0';
+    }
+    char* q = entry + strlen(entry);
+    while (q != entry) {
+      if (*q != os::file_separator()[0] && q > entry) {
+        q--;
+      }
+      if (q <= entry) {
+        return false;
+      }
+
+      if ((strncmp(q+1, "jre", 3)==0) && (q[4] == os::file_separator()[0])) {
+        strncat(ret, rjh, strlen(rjh));
+        strncat(ret, q+4, strlen(q));
+        break;
+      } else {
+       q--;
+      }
+    }
+
+    if (p != NULL) {
+      strncat(ret, os::path_separator(), 1);
+      entry = ++p;
+    } else {
+      break;
+    }
+  }
+  return true;
+}
+
+bool SharedPathsMiscInfo::check(jint type, const char* path_to_check) {
+  char fake_jh[JVM_MAXPATHLEN];
+  char tpath[JVM_MAXPATHLEN];
+  char path[JVM_MAXPATHLEN];
+
+  strcpy(tpath, path_to_check);
+  strcpy(fake_jh, path_to_check);
+  char* p = strstr(fake_jh, os::path_separator());
+  if (p != NULL) {
+    *p = '\0';
+    // find the last "/jre/"
+    p = fake_jh;
+    while ((p = strrchr(fake_jh, os::file_separator()[0])) && p != NULL) {
+      if ((strncmp(p+1, "jre", 3) == 0) && (p[4] == '\0')) {
+        break;
+      }
+      *p = '\0';
+    }
+  }
+
+  if (strncmp(fake_jh, Arguments::get_java_home(), strlen(Arguments::get_java_home())) != 0) {
+    if (!replace_jh(tpath, Arguments::get_java_home(), path)) {
+      strcpy(path, path_to_check);
+    }
+  } else {
+      strcpy(path, path_to_check);
+  }
   switch (type) {
   case BOOT:
     if (strcmp(path, Arguments::get_sysclasspath()) != 0) {
-      return fail("[BOOT classpath mismatch, actual: -Dsun.boot.class.path=", Arguments::get_sysclasspath());
-    }
+       return fail("[BOOT classpath mismatch, actual: -Dsun.boot.class.path=", Arguments::get_sysclasspath());
+     }
     break;
   case NON_EXIST: // fall-through
   case REQUIRED:
