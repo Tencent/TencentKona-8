@@ -1989,15 +1989,8 @@ jint Arguments::set_aggressive_heap_flags() {
   return JNI_OK;
 }
 
-// This must be called after ergonomics because we want bytecode rewriting
-// if the server compiler is used, or if UseSharedSpaces is disabled.
+// This must be called after ergonomics.
 void Arguments::set_bytecode_flags() {
-  // Better not attempt to store into a read-only space.
-  if (UseSharedSpaces) {
-    FLAG_SET_DEFAULT(RewriteBytecodes, false);
-    FLAG_SET_DEFAULT(RewriteFrequentPairs, false);
-  }
-
   if (!RewriteBytecodes) {
     FLAG_SET_DEFAULT(RewriteFrequentPairs, false);
   }

@@ -475,8 +475,16 @@ void TemplateTable::locals_index(Register reg, int offset) {
 
 
 void TemplateTable::iload() {
+  iload_internal();
+}
+
+void TemplateTable::nofast_iload() {
+  iload_internal(may_not_rewrite);
+}
+
+void TemplateTable::iload_internal(RewriteControl rc) {
   transition(vtos, itos);
-  if (RewriteFrequentPairs) {
+  if (RewriteFrequentPairs && rc == may_rewrite) {
     Label rewrite, done;
 
     // get next byte
@@ -750,6 +758,15 @@ void TemplateTable::aload(int n) {
 
 
 void TemplateTable::aload_0() {
+  aload_0_internal();
+}
+
+void TemplateTable::nofast_aload_0() {
+  aload_0_internal(may_not_rewrite);
+}
+
+void TemplateTable::aload_0_internal(RewriteControl rc) {
+
   transition(vtos, atos);
   // According to bytecode histograms, the pairs:
   //
@@ -770,7 +787,7 @@ void TemplateTable::aload_0() {
   //   aload_0, aload_1
   //   aload_0, iload_1
   // These bytecodes with a small amount of code are most profitable to rewrite
-  if (RewriteFrequentPairs) {
+  if (RewriteFrequentPairs && rc == may_rewrite) {
     Label rewrite, done;
     // get next byte
     __ load_unsigned_byte(rbx, at_bcp(Bytecodes::length_for(Bytecodes::_aload_0)));
@@ -2100,14 +2117,20 @@ void TemplateTable::resolve_cache_and_index(int byte_no,
   assert_different_registers(Rcache, index, temp);
 
   Label resolved;
+   Bytecodes::Code code = bytecode();
+   switch (code) {
+   case Bytecodes::_nofast_getfield: code = Bytecodes::_getfield; break;
+   case Bytecodes::_nofast_putfield: code = Bytecodes::_putfield; break;
+   }
+
     assert(byte_no == f1_byte || byte_no == f2_byte, "byte_no out of range");
     __ get_cache_and_index_and_bytecode_at_bcp(Rcache, index, temp, byte_no, 1, index_size);
-    __ cmpl(temp, (int) bytecode());  // have we resolved this bytecode?
+    __ cmpl(temp, code);  // have we resolved this bytecode?
     __ jcc(Assembler::equal, resolved);
 
   // resolve first time through
   address entry;
-  switch (bytecode()) {
+  switch (code) {
     case Bytecodes::_getstatic      : // fall through
     case Bytecodes::_putstatic      : // fall through
     case Bytecodes::_getfield       : // fall through
@@ -2119,10 +2142,10 @@ void TemplateTable::resolve_cache_and_index(int byte_no,
     case Bytecodes::_invokehandle   : entry = CAST_FROM_FN_PTR(address, InterpreterRuntime::resolve_invokehandle);   break;
     case Bytecodes::_invokedynamic  : entry = CAST_FROM_FN_PTR(address, InterpreterRuntime::resolve_invokedynamic);  break;
     default:
-      fatal(err_msg("unexpected bytecode: %s", Bytecodes::name(bytecode())));
+      fatal(err_msg("unexpected bytecode: %s", Bytecodes::name(code)));
       break;
   }
-  __ movl(temp, (int)bytecode());
+  __ movl(temp, code);
   __ call_VM(noreg, entry, temp);
   // Update registers with resolved info
   __ get_cache_and_index_at_bcp(Rcache, index, 1, index_size);
@@ -2235,7 +2258,7 @@ void TemplateTable::pop_and_check_object(Register r) {
   __ verify_oop(r);
 }
 
-void TemplateTable::getfield_or_static(int byte_no, bool is_static) {
+void TemplateTable::getfield_or_static(int byte_no, bool is_static, RewriteControl rc) {
   transition(vtos, vtos);
 
   const Register cache = rcx;
@@ -2264,7 +2287,7 @@ void TemplateTable::getfield_or_static(int byte_no, bool is_static) {
   __ load_signed_byte(rax, lo );
   __ push(btos);
   // Rewrite bytecode to be faster
-  if (!is_static) {
+  if (!is_static && rc == may_rewrite) {
     patch_bytecode(Bytecodes::_fast_bgetfield, rcx, rbx);
   }
   __ jmp(Done);
@@ -2278,7 +2301,7 @@ void TemplateTable::getfield_or_static(int byte_no, bool is_static) {
   __ load_signed_byte(rax, lo);
   __ push(ztos);
   // Rewrite bytecode to be faster
-  if (!is_static) {
+  if (!is_static && rc == may_rewrite) {
     // use btos rewriting, no truncating to t/f bit is needed for getfield.
     patch_bytecode(Bytecodes::_fast_bgetfield, rcx, rbx);
   }
@@ -2293,7 +2316,7 @@ void TemplateTable::getfield_or_static(int byte_no, bool is_static) {
   __ movl(rax, lo );
   __ push(itos);
   // Rewrite bytecode to be faster
-  if (!is_static) {
+  if (!is_static && rc == may_rewrite) {
     patch_bytecode(Bytecodes::_fast_igetfield, rcx, rbx);
   }
   __ jmp(Done);
@@ -2305,7 +2328,7 @@ void TemplateTable::getfield_or_static(int byte_no, bool is_static) {
 
   __ movl(rax, lo );
   __ push(atos);
-  if (!is_static) {
+  if (!is_static && rc == may_rewrite) {
     patch_bytecode(Bytecodes::_fast_agetfield, rcx, rbx);
   }
   __ jmp(Done);
@@ -2317,7 +2340,7 @@ void TemplateTable::getfield_or_static(int byte_no, bool is_static) {
 
   __ load_unsigned_short(rax, lo );
   __ push(ctos);
-  if (!is_static) {
+  if (!is_static && rc == may_rewrite) {
     patch_bytecode(Bytecodes::_fast_cgetfield, rcx, rbx);
   }
   __ jmp(Done);
@@ -2329,7 +2352,7 @@ void TemplateTable::getfield_or_static(int byte_no, bool is_static) {
 
   __ load_signed_short(rax, lo );
   __ push(stos);
-  if (!is_static) {
+  if (!is_static && rc == may_rewrite) {
     patch_bytecode(Bytecodes::_fast_sgetfield, rcx, rbx);
   }
   __ jmp(Done);
@@ -2358,7 +2381,7 @@ void TemplateTable::getfield_or_static(int byte_no, bool is_static) {
 
   __ fld_s(lo);
   __ push(ftos);
-  if (!is_static) {
+  if (!is_static && rc == may_rewrite) {
     patch_bytecode(Bytecodes::_fast_fgetfield, rcx, rbx);
   }
   __ jmp(Done);
@@ -2370,7 +2393,7 @@ void TemplateTable::getfield_or_static(int byte_no, bool is_static) {
 
   __ fld_d(lo);
   __ push(dtos);
-  if (!is_static) {
+  if (!is_static && rc == may_rewrite) {
     patch_bytecode(Bytecodes::_fast_dgetfield, rcx, rbx);
   }
   __ jmpb(Done);
@@ -2389,6 +2412,9 @@ void TemplateTable::getfield(int byte_no) {
   getfield_or_static(byte_no, false);
 }
 
+void TemplateTable::nofast_getfield(int byte_no) {
+  getfield_or_static(byte_no, false, may_not_rewrite);
+}
 
 void TemplateTable::getstatic(int byte_no) {
   getfield_or_static(byte_no, true);
@@ -2460,7 +2486,7 @@ void TemplateTable::jvmti_post_field_mod(Register cache, Register index, bool is
 }
 
 
-void TemplateTable::putfield_or_static(int byte_no, bool is_static) {
+void TemplateTable::putfield_or_static(int byte_no, bool is_static, RewriteControl rc) {
   transition(vtos, vtos);
 
   const Register cache = rcx;
@@ -2497,7 +2523,7 @@ void TemplateTable::putfield_or_static(int byte_no, bool is_static) {
     __ pop(btos);
     if (!is_static) pop_and_check_object(obj);
     __ movb(lo, rax);
-    if (!is_static) {
+    if (!is_static && rc == may_rewrite) {
       patch_bytecode(Bytecodes::_fast_bputfield, rcx, rbx, true, byte_no);
     }
     __ jmp(Done);
@@ -2513,7 +2539,7 @@ void TemplateTable::putfield_or_static(int byte_no, bool is_static) {
     if (!is_static) pop_and_check_object(obj);
     __ andl(rax, 0x1);
     __ movb(lo, rax);
-    if (!is_static) {
+    if (!is_static && rc == may_rewrite) {
       patch_bytecode(Bytecodes::_fast_zputfield, rcx, rbx, true, byte_no);
     }
     __ jmp(Done);
@@ -2528,7 +2554,7 @@ void TemplateTable::putfield_or_static(int byte_no, bool is_static) {
     __ pop(itos);
     if (!is_static) pop_and_check_object(obj);
     __ movl(lo, rax);
-    if (!is_static) {
+    if (!is_static && rc == may_rewrite) {
       patch_bytecode(Bytecodes::_fast_iputfield, rcx, rbx, true, byte_no);
     }
     __ jmp(Done);
@@ -2543,7 +2569,7 @@ void TemplateTable::putfield_or_static(int byte_no, bool is_static) {
     __ pop(atos);
     if (!is_static) pop_and_check_object(obj);
     do_oop_store(_masm, lo, rax, _bs->kind(), false);
-    if (!is_static) {
+    if (!is_static && rc == may_rewrite) {
       patch_bytecode(Bytecodes::_fast_aputfield, rcx, rbx, true, byte_no);
     }
     __ jmp(Done);
@@ -2558,7 +2584,7 @@ void TemplateTable::putfield_or_static(int byte_no, bool is_static) {
     __ pop(ctos);
     if (!is_static) pop_and_check_object(obj);
     __ movw(lo, rax);
-    if (!is_static) {
+    if (!is_static && rc == may_rewrite) {
       patch_bytecode(Bytecodes::_fast_cputfield, rcx, rbx, true, byte_no);
     }
     __ jmp(Done);
@@ -2573,7 +2599,7 @@ void TemplateTable::putfield_or_static(int byte_no, bool is_static) {
     __ pop(stos);
     if (!is_static) pop_and_check_object(obj);
     __ movw(lo, rax);
-    if (!is_static) {
+    if (!is_static && rc == may_rewrite) {
       patch_bytecode(Bytecodes::_fast_sputfield, rcx, rbx, true, byte_no);
     }
     __ jmp(Done);
@@ -2610,7 +2636,7 @@ void TemplateTable::putfield_or_static(int byte_no, bool is_static) {
     if (!is_static) pop_and_check_object(obj);
     NOT_LP64(__ movptr(hi, rdx));
     __ movptr(lo, rax);
-    if (!is_static) {
+    if (!is_static && rc == may_rewrite) {
       patch_bytecode(Bytecodes::_fast_lputfield, rcx, rbx, true, byte_no);
     }
     __ jmp(notVolatile);
@@ -2625,7 +2651,7 @@ void TemplateTable::putfield_or_static(int byte_no, bool is_static) {
     __ pop(ftos);
     if (!is_static) pop_and_check_object(obj);
     __ fstp_s(lo);
-    if (!is_static) {
+    if (!is_static && rc == may_rewrite) {
       patch_bytecode(Bytecodes::_fast_fputfield, rcx, rbx, true, byte_no);
     }
     __ jmp(Done);
@@ -2642,7 +2668,7 @@ void TemplateTable::putfield_or_static(int byte_no, bool is_static) {
     __ pop(dtos);
     if (!is_static) pop_and_check_object(obj);
     __ fstp_d(lo);
-    if (!is_static) {
+    if (!is_static && rc == may_rewrite) {
       patch_bytecode(Bytecodes::_fast_dputfield, rcx, rbx, true, byte_no);
     }
     __ jmp(Done);
@@ -2668,6 +2694,9 @@ void TemplateTable::putfield(int byte_no) {
   putfield_or_static(byte_no, false);
 }
 
+void TemplateTable::nofast_putfield(int byte_no) {
+  putfield_or_static(byte_no, false, may_not_rewrite);
+}
 
 void TemplateTable::putstatic(int byte_no) {
   putfield_or_static(byte_no, true);
