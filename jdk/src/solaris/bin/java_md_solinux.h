@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,8 +34,23 @@
 #define CounterGet()              (gethrtime()/1000)
 #define Counter2Micros(counts)    (counts)
 #else  /* ! HAVE_GETHRTIME */
-#define CounterGet()              (0)
-#define Counter2Micros(counts)    (1)
+/*
+ * Add gethrtime() implementation for launch time debug on Linux.
+ */
+#include <sys/time.h>
+#define  gethrtime() ({                             \
+  uint64_t result;                                  \
+  struct timeval tv;                                \
+  if (gettimeofday( &tv, NULL) == -1) {             \
+    result = 0;                                     \
+  } else {                                          \
+    result = 1000000LL * (uint64_t)tv.tv_sec;       \
+    result += (uint64_t)tv.tv_usec;                 \
+  }                                                 \
+  result;})
+
+#define CounterGet()              (gethrtime())
+#define Counter2Micros(counts)    (counts)
 #endif /* HAVE_GETHRTIME */
 
 /* pointer to environment */
