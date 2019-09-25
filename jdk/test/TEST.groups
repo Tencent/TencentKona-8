@@ -1,4 +1,4 @@
-#  Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+#  Copyright (c) 2013, 2019 Oracle and/or its affiliates. All rights reserved.
 #  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 #  This code is free software; you can redistribute it and/or modify it
@@ -18,6 +18,62 @@
 #  Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
 #  or visit www.oracle.com if you need additional information or have any
 #  questions.
+#
+
+###############################################################################
+#
+# Tiered testing definitions
+#
+jdk_local = \
+    java/util/TimeZone/HongKong.java \
+    java/util/Calendar/CalendarRegression.java \
+    java/util/Calendar/JapanEraNameCompatTest.java
+ 
+jdk_all = \
+    :jdk_tier1 \
+    :jdk_tier2 \
+    -:jdk_local \
+    -:jdk_problematic
+
+jdk_tier1 = \
+    :jdk_lang \
+    :jdk_util \
+    :jdk_math \
+    :jdk_jdi \
+    -:jdk_local
+
+jdk_tier2 = \
+    :jdk_io \
+    :jdk_nio \
+    :jdk_net \
+    :jdk_rmi \
+    :jdk_time \
+    :jdk_security \
+    :jdk_text \
+    :core_tools \
+    :jdk_other \
+    :jdk_svc
+
+jdk_problematic = \
+  sun/tools/jstatd/TestJstatdDefaults.java \
+  sun/tools/jstatd/TestJstatdExternalRegistry.java \
+  sun/tools/jstatd/TestJstatdPort.java \
+  sun/tools/jstatd/TestJstatdPortAndServer.java \
+  sun/tools/jstatd/TestJstatdServer.java \
+  com/sun/management/DiagnosticCommandMBean/DcmdMBeanPermissionsTest.java \
+  java/rmi/Naming/legalRegistryNames/LegalRegistryNames.java \
+  java/text/BreakIterator/BreakIteratorTest.java \
+  java/text/Format/DateFormat/DateFormatTest.java \
+  java/text/Format/DateFormat/NonGregorianFormatTest.java \
+  java/text/Format/MessageFormat/LargeMessageFormat.java \
+  java/text/Format/NumberFormat/NumberRegression.java \
+  java/text/Format/NumberFormat/NumberTest.java \
+  sun/text/IntHashtable/Bug4170614Test.sh
+ 
+
+###############################################################################
+#
+# Other test definitions; generally smaller granularity than tiers
 #
 
 # java.lang package and VM runtime support

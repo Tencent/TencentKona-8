@@ -1,5 +1,5 @@
 #
-# Copyright (c) 1995, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 1995, 2019, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -123,7 +123,7 @@ ifdef ALT_OUTPUTDIR
 else
   ABS_BUILD_ROOT = $(TEST_ROOT)/../build/$(PLATFORM)-$(ARCH)
 endif
-ABS_TEST_OUTPUT_DIR = $(ABS_BUILD_ROOT)/testoutput
+ABS_TEST_OUTPUT_DIR = $(ABS_BUILD_ROOT)/testoutput/$(UNIQUE_DIR)
 
 # Expect JPRT to set PRODUCT_HOME (the product or jdk in this case to test)
 ifndef PRODUCT_HOME
@@ -218,7 +218,7 @@ BUNDLE_UP_AND_EXIT = \
 ################################################################
 
 # Default make rule (runs jtreg_tests)
-all: hotspot_all
+all: hotspot_all hotspot_problem hotspot_standalone
 	@$(ECHO) "Testing completed successfully"
 
 # Support "hotspot_" prefixed test make targets (too)
@@ -267,7 +267,7 @@ JTREG_BASIC_OPTIONS += -agentvm
 # Only run automatic tests
 JTREG_BASIC_OPTIONS += -a
 # Report details on all failed or error tests, times too
-JTREG_BASIC_OPTIONS += -v:fail,error,time
+JTREG_BASIC_OPTIONS += -v:fail,error,summary
 # Retain all files for failing tests
 JTREG_BASIC_OPTIONS += -retain:fail,error
 # Ignore tests are not run and completely silent about it

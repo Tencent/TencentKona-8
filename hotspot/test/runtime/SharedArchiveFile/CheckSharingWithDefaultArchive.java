@@ -26,16 +26,13 @@
  * @summary Sharing should be enabled by default on supported platform/binaries.
  *          No -Xshare:dump is needed. No -Xshare:auto or -Xshare:on in needed.
  *          Verify a set of well-known shared classes.
- * @requires vm.cds
- * @library /test/lib
- * @modules java.base/jdk.internal.misc
- *          java.management
- * @build sun.hotspot.WhiteBox
- * @run driver ClassFileInstaller sun.hotspot.WhiteBox
+ * @library /testlibrary /testlibrary/whitebox
+ * @build CheckSharingWithDefaultArchive
+ * @run main ClassFileInstaller sun.hotspot.WhiteBox
  * @run main/othervm -Xbootclasspath/a:. -XX:+UnlockDiagnosticVMOptions
  *      -XX:+WhiteBoxAPI CheckSharingWithDefaultArchive -showversion
  */
-import jdk.test.lib.Platform;
+import com.oracle.java.testlibrary.*;
 import sun.hotspot.WhiteBox;
 
 public class CheckSharingWithDefaultArchive {

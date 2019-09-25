@@ -1,12 +1,11 @@
+###########################################################################
 #
-# Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2015, 2019 Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 only, as
-# published by the Free Software Foundation.  Oracle designates this
-# particular file as subject to the "Classpath" exception as provided
-# by Oracle in the LICENSE file that accompanied this code.
+# published by the Free Software Foundation.
 #
 # This code is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -22,17 +21,10 @@
 # or visit www.oracle.com if you need additional information or have any
 # questions.
 #
+###########################################################################
 
-JDK_MAJOR_VERSION=1
-JDK_MINOR_VERSION=8
-JDK_MICRO_VERSION=0
-JDK_UPDATE_VERSION=
-LAUNCHER_NAME=openjdk
-PRODUCT_NAME=OpenJDK
-PRODUCT_SUFFIX="Runtime Environment"
-JDK_RC_PLATFORM_NAME=Platform
-COMPANY_NAME="Tencent Company"
+# No langtools tests are on the problem list.
 
-# Might need better names for these
-MACOSX_BUNDLE_NAME_BASE="OpenJDK"
-MACOSX_BUNDLE_ID_BASE="net.java.openjdk"
+# failed at tier1.
+tools/javac/diags/CheckExamples.java              generic-all
+tools/javac/fatalErrors/NoJavaLangTest.java       generic-all

@@ -28,5 +28,5 @@
 
 # Don't put quotes (fail windows build).
 HOTSPOT_VM_DISTRO=Java HotSpot(TM)
-COMPANY_NAME=Tencent Company
+COMPANY_NAME=Oracle Company
 PRODUCT_NAME=Java(TM) Platform SE
