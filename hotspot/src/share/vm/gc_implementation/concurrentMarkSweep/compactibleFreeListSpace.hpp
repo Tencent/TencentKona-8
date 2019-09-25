@@ -308,6 +308,8 @@ class CompactibleFreeListSpace: public CompactibleSpace {
   HeapWord* nearLargestChunk() const { return _nearLargestChunk; }
   void set_nearLargestChunk(HeapWord* v) { _nearLargestChunk = v; }
 
+  virtual bool isCompactibleFreeListSpace() { return true; }
+
   // Set CMS global values
   static void set_cms_values();
 
@@ -494,8 +496,10 @@ class CompactibleFreeListSpace: public CompactibleSpace {
 
   // Support for compaction
   void prepare_for_compaction(CompactPoint* cp);
+  void pms_prepare_for_compaction_work(CompactPoint* cp);
   void adjust_pointers();
   void compact();
+  void pms_compact_work();
   // reset the space to reflect the fact that a compaction of the
   // space has been done.
   virtual void reset_after_compaction();

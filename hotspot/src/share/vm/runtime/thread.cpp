@@ -1209,6 +1209,8 @@ void JavaThread::allocate_threadObj(Handle thread_group, char* thread_name, bool
 NamedThread::NamedThread() : Thread() {
   _name = NULL;
   _processed_thread = NULL;
+
+  reset_pms_data();
 }
 
 NamedThread::~NamedThread() {

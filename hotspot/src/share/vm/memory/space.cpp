@@ -25,6 +25,7 @@
 #include "precompiled.hpp"
 #include "classfile/systemDictionary.hpp"
 #include "classfile/vmSymbols.hpp"
+#include "gc_implementation/shared/gcTraceTime.hpp"
 #include "gc_implementation/shared/liveRange.hpp"
 #include "gc_implementation/shared/markSweep.hpp"
 #include "gc_implementation/shared/spaceDecorator.hpp"
@@ -445,9 +446,19 @@ void CompactibleSpace::prepare_for_compaction(CompactPoint* cp) {
   SCAN_AND_FORWARD(cp, end, block_is_obj, block_size);
 }
 
+#define contiguous_space_obj_size(q) oop(q)->size()
+DECLARE_PMS_SPECIALIZED_CODE(ContiguousSpace, contiguous_space_obj_size);
+
 // Faster object search.
 void ContiguousSpace::prepare_for_compaction(CompactPoint* cp) {
-  SCAN_AND_FORWARD(cp, top, block_is_always_obj, obj_size);
+  if (!CMSParallelFullGC) {
+    SCAN_AND_FORWARD(cp, top, block_is_always_obj, obj_size);
+    return;
+  }
+
+  // The parallel version (CMSParallelFullGC). Some adaptations
+  // of SCAN_AND_FORWARD()
+  pms_prepare_for_compaction_work(cp);
 }
 
 void Space::adjust_pointers() {
@@ -491,11 +502,83 @@ void CompactibleSpace::adjust_pointers() {
     return;   // Nothing to do.
   }
 
-  SCAN_AND_ADJUST_POINTERS(adjust_obj_size);
+  if (!CMSParallelFullGC) {
+    SCAN_AND_ADJUST_POINTERS(adjust_obj_size);
+    return;
+  }
+
+  // The parallel version (CMSParallelFullGC). Some adaptations
+  // of SCAN_AND_ADJUST_POINTERS().
+  pms_adjust_pointers_work();
+}
+
+// The parallel version of adjust_pointers() for parallel mark
+// sweep. This code is shared between ContiguousSpace (YG) and the
+// CompactibleFreeListSpace (OG and PG).
+void CompactibleSpace::pms_adjust_pointers_work() {
+  assert(CMSParallelFullGC, "Used only if CMSParallelFullGC");
+  if (_beginning_of_live < _end_of_live) { // Unless there is no live object
+    PMSMarkBitMap* mark_bit_map = MarkSweep::pms_mark_bit_map();
+    PMSAdjustClosure adjust_cl(mark_bit_map);
+    GenCollectedHeap* gch = GenCollectedHeap::heap();
+    PMSRegionTaskQueueSet* task_queues = MarkSweep::pms_region_task_queues();
+    WorkGang* workers = gch->workers();
+    int n_workers = workers->total_workers();
+    PMSRegionArray* regions = MarkSweep::pms_region_array_set()->region_array_for(this);
+    assert(regions != NULL && regions->space() == this, "Must be this space");
+    PMSRegion* start_r = regions->region_for_addr(_beginning_of_live);
+    PMSRegion* end_r = regions->region_for_addr(_end_of_live - 1); // _end_of_live is exclusive
+    if (LogCMSParallelFullGC) {
+      gclog_or_tty->print_cr("bottom=" PTR_FORMAT ", "
+                             "end=" PTR_FORMAT ", "
+                             "start_r=" PTR_FORMAT "-" PTR_FORMAT ", "
+                             "end_r=" PTR_FORMAT "-" PTR_FORMAT ", "
+                             "_beginning_of_live=" PTR_FORMAT ", "
+                             "_end_of_live=" PTR_FORMAT "",
+                             bottom(), end(),
+                             start_r->start(), start_r->end(),
+                             end_r->start(), end_r->end(),
+                             _beginning_of_live, _end_of_live);
+    }
+    assert(start_r->start() <= _beginning_of_live &&
+           _beginning_of_live < start_r->end(), "Must include it");
+    assert(end_r->start() <= (_end_of_live - 1) &&
+           (_end_of_live - 1) < end_r->end(), "Must include it");
+    assert(bottom() <= start_r->start() &&
+           end_r->end() <= end(), "Must include it");
+    int i = 0;
+    // Push regions into the task queues in a round robin
+    // fashion. In a reverse order so that the processing happens in
+    // a forward direction (it's a LIFO stack).
+    for (PMSRegion* r = end_r; r >= start_r; r--) {
+      task_queues->queue(i)->push(r);
+      i = (i + 1) % n_workers;
+    }
+    PMSParAdjustTask tsk(n_workers, workers,
+                         task_queues, &adjust_cl);
+    GCTraceTime tm1("par-adjust-pointers",
+                    (PrintGC && Verbose) || LogCMSParallelFullGC,
+                    true, NULL, GCId::undefined());
+    gch->set_par_threads(n_workers);
+    if (n_workers > 1) {
+      workers->run_task(&tsk);
+    } else {
+      tsk.work(0);
+    }
+    gch->set_par_threads(0);  // 0 ==> non-parallel.
+  }
 }
 
 void CompactibleSpace::compact() {
-  SCAN_AND_COMPACT(obj_size);
+  if (!CMSParallelFullGC) {
+    SCAN_AND_COMPACT(obj_size);
+    return;
+  }
+
+  // The parallel version (CMSParallelFullGC). Some adaptations
+  // of SCAN_AND_COMPACT().
+
+  pms_compact_work();
 }
 
 void Space::print_short() const { print_short_on(tty); }

@@ -697,6 +697,11 @@ void GenCollectedHeap::process_roots(bool activate_scope,
     DEBUG_ONLY(CodeCache::asserted_non_scavengable_nmethods_do(&assert_code_is_non_scavengable));
   }
 
+  if (CMSParallelFullGC && !activate_scope &&
+      (strong_roots == &MarkSweep::follow_root_closure)) {
+    // Clear the mark stack on CMS full GC.
+    MarkSweep::follow_stack();
+  }
 }
 
 void GenCollectedHeap::gen_process_roots(int level,

@@ -79,6 +79,7 @@ class jvmtiDeferredLocalVariableSet;
 class GCTaskQueue;
 class ThreadClosure;
 class IdealGraphPrinter;
+class NamedThread;
 
 class Metadata;
 template <class T, MEMFLAGS F> class ChunkedList;
@@ -316,6 +317,7 @@ class Thread: public ThreadShadow {
   // Generally will be true only of VM thread and parallel GC WorkGang
   // threads.
   virtual bool is_GC_task_thread() const             { return false; }
+  virtual bool is_GangWorker_thread() const          { return false; }
   virtual bool is_Watcher_thread() const             { return false; }
   virtual bool is_ConcurrentGC_thread() const        { return false; }
   virtual bool is_Named_thread() const               { return false; }
@@ -653,6 +655,11 @@ protected:
   static void muxAcquire  (volatile intptr_t * Lock, const char * Name) ;
   static void muxAcquireW (volatile intptr_t * Lock, ParkEvent * ev) ;
   static void muxRelease  (volatile intptr_t * Lock) ;
+
+  NamedThread* as_Named_thread() {
+    assert(is_Named_thread(), "Must be a NamedThread");
+    return (NamedThread*) this;
+  }
 };
 
 // Inline implementation of Thread::current()
@@ -698,6 +705,35 @@ class NamedThread: public Thread {
   virtual char* name() const { return _name == NULL ? (char*)"Unknown Thread" : _name; }
   JavaThread *processed_thread() { return _processed_thread; }
   void set_processed_thread(JavaThread *thread) { _processed_thread = thread; }
+
+  // Support for parallel Mark Sweep
+  // Should be OopTaskQueue* but use void* to break the dependency cycle
+  void*                           _pms_task_queue;
+  void*                           _pms_objarray_task_queue;
+  // Should be Stack<markOop>* but use void* to break the dependency cycle
+  void*                           _pms_preserved_mark_stack;
+  // Should be Stack<oop>* but use void* to break the dependency cycle
+  void*                           _pms_preserved_oop_stack;
+  size_t                          _pms_preserved_count;
+  size_t                          _pms_preserved_count_max;
+  // Should be PreservedMark* but use void* to break the dependency cycle
+  void*                           _pms_preserved_marks;
+  // Should be Stack<Klass*>* but use void* to break the dependency cycle
+  void*                           _pms_revisit_klass_stack;
+  // Should be Stack<DataLayout*>* but use void* to break the dependency cycle
+  void*                           _pms_revisit_mdo_stack;
+
+  void reset_pms_data() {
+    _pms_task_queue = NULL;
+    _pms_objarray_task_queue = NULL;
+    _pms_preserved_mark_stack = NULL;
+    _pms_preserved_oop_stack = NULL;
+    _pms_preserved_count = 0;
+    _pms_preserved_count_max = 0;
+    _pms_preserved_marks = NULL;
+    _pms_revisit_klass_stack = NULL;
+    _pms_revisit_mdo_stack = NULL;
+  }
 };
 
 // Worker threads are named and have an id of an assigned work.

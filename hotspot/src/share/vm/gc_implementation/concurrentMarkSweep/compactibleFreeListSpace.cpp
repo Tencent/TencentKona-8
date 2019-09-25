@@ -27,6 +27,7 @@
 #include "gc_implementation/concurrentMarkSweep/compactibleFreeListSpace.hpp"
 #include "gc_implementation/concurrentMarkSweep/concurrentMarkSweepGeneration.inline.hpp"
 #include "gc_implementation/concurrentMarkSweep/concurrentMarkSweepThread.hpp"
+#include "gc_implementation/shared/gcTraceTime.hpp"
 #include "gc_implementation/shared/liveRange.hpp"
 #include "gc_implementation/shared/spaceDecorator.hpp"
 #include "gc_interface/collectedHeap.inline.hpp"
@@ -2096,7 +2097,15 @@ bool CompactibleFreeListSpace::should_concurrent_collect() const {
 
 // Support for compaction
 
+#define cfls_obj_size(q) CompactibleFreeListSpace::adjustObjectSize(oop(q)->size())
+DECLARE_PMS_SPECIALIZED_CODE(CompactibleFreeListSpace, cfls_obj_size);
+
 void CompactibleFreeListSpace::prepare_for_compaction(CompactPoint* cp) {
+  if (CMSParallelFullGC) {
+    // The parallel version (CMSParallelFullGC).
+    pms_prepare_for_compaction_work(cp);
+    return;
+  }
   SCAN_AND_FORWARD(cp,end,block_is_obj,block_size);
   // prepare_for_compaction() uses the space between live objects
   // so that later phase can skip dead space quickly.  So verification
@@ -2107,6 +2116,11 @@ void CompactibleFreeListSpace::prepare_for_compaction(CompactPoint* cp) {
 #define adjust_obj_size(s) adjustObjectSize(s)
 
 void CompactibleFreeListSpace::adjust_pointers() {
+  if (CMSParallelFullGC) {
+    // The parallel version (CMSParallelFullGC).
+    pms_adjust_pointers_work();
+    return;
+  }
   // In other versions of adjust_pointers(), a bail out
   // based on the amount of live data in the generation
   // (i.e., if 0, bail out) may be used.
@@ -2118,6 +2132,11 @@ void CompactibleFreeListSpace::adjust_pointers() {
 }
 
 void CompactibleFreeListSpace::compact() {
+  if (CMSParallelFullGC) {
+    // The parallel version (CMSParallelFullGC).
+    pms_compact_work();
+    return;
+  }
   SCAN_AND_COMPACT(obj_size);
 }
 

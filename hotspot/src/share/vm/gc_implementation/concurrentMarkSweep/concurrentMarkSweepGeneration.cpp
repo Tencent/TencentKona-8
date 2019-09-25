@@ -560,7 +560,8 @@ CMSCollector::CMSCollector(ConcurrentMarkSweepGeneration* cmsGen,
   _abort_preclean(false),
   _start_sampling(false),
   _between_prologue_and_epilogue(false),
-  _markBitMap(0, Mutex::leaf + 1, "CMS_markBitMap_lock"),
+  _markBitMap(0, Mutex::leaf + 1, "CMS_markBitMap_lock",
+              CMSParallelFullGC && ShareCMSMarkBitMapWithParallelFullGC),
   _modUnionTable((CardTableModRefBS::card_shift - LogHeapWordSize),
                  -1 /* lock-free */, "No_lock" /* dummy */),
   _modUnionClosure(&_modUnionTable),
@@ -2048,12 +2049,14 @@ void CMSCollector::do_compaction_work(bool clear_all_soft_refs) {
   // Temporarily, clear the "is_alive_non_header" field of the
   // reference processor.
   ReferenceProcessorIsAliveMutator rp_mut_closure(ref_processor(), NULL);
-  // Temporarily make reference _processing_ single threaded (non-MT).
-  ReferenceProcessorMTProcMutator rp_mut_mt_processing(ref_processor(), false);
+  // Temporarily make reference _processing_ single threaded or MT as
+  // per CMSParallelFullGC
+  ReferenceProcessorMTProcMutator rp_mut_mt_processing(ref_processor(), CMSParallelFullGC);
   // Temporarily make refs discovery atomic
   ReferenceProcessorAtomicMutator rp_mut_atomic(ref_processor(), true);
-  // Temporarily make reference _discovery_ single threaded (non-MT)
-  ReferenceProcessorMTDiscoveryMutator rp_mut_discovery(ref_processor(), false);
+  // Temporarily make reference _discovery_ single threaded or MT as
+  // per CMSParallelFullGC
+  ReferenceProcessorMTDiscoveryMutator rp_mut_discovery(ref_processor(), CMSParallelFullGC);
 
   ref_processor()->set_enqueuing_is_done(false);
   ref_processor()->enable_discovery(false /*verify_disabled*/, false /*check_no_refs*/);
@@ -6735,10 +6738,12 @@ HeapWord* CMSCollector::next_card_start_after_block(HeapWord* addr) const {
 // Construct a CMS bit map infrastructure, but don't create the
 // bit vector itself. That is done by a separate call CMSBitMap::allocate()
 // further below.
-CMSBitMap::CMSBitMap(int shifter, int mutex_rank, const char* mutex_name):
+CMSBitMap::CMSBitMap(int shifter, int mutex_rank, const char* mutex_name,
+                     bool allocate_for_entire_heap):
   _bm(),
   _shifter(shifter),
-  _lock(mutex_rank >= 0 ? new Mutex(mutex_rank, mutex_name, true) : NULL)
+  _lock(mutex_rank >= 0 ? new Mutex(mutex_rank, mutex_name, true) : NULL),
+  _allocate_for_entire_heap(allocate_for_entire_heap)
 {
   _bmStartWord = 0;
   _bmWordSize  = 0;
@@ -6747,8 +6752,24 @@ CMSBitMap::CMSBitMap(int shifter, int mutex_rank, const char* mutex_name):
 bool CMSBitMap::allocate(MemRegion mr) {
   _bmStartWord = mr.start();
   _bmWordSize  = mr.word_size();
-  ReservedSpace brs(ReservedSpace::allocation_align_size_up(
-                     (_bmWordSize >> (_shifter + LogBitsPerByte)) + 1));
+  size_t reserved_size;
+  MemRegion heap_mr = GenCollectedHeap::heap()->reserved_region();
+  size_t heapWordSize = heap_mr.word_size();
+  if (!_allocate_for_entire_heap) {
+    reserved_size = ReservedSpace::allocation_align_size_up(
+        (_bmWordSize >> (_shifter + LogBitsPerByte)) + 1);
+  } else {
+    // Allocate a bit map memory large enough to cover the entire heap
+    // (as opposed to the OG and PG only.)
+    assert(CMSParallelFullGC && ShareCMSMarkBitMapWithParallelFullGC,
+           "Otherwise this code must not reachable.");
+    assert(_shifter == 0, "Valid only for the mark bit map, not the mod union table.");
+    assert(heap_mr.contains(mr),
+           "The give MR (OG and PG) must be part of the heap");
+    reserved_size = ReservedSpace::allocation_align_size_up(
+        (heapWordSize >> (_shifter + LogBitsPerByte)) + 1);
+  }
+  ReservedSpace brs(reserved_size);
   if (!brs.is_reserved()) {
     warning("CMS bit map allocation failure");
     return false;
@@ -6761,14 +6782,52 @@ bool CMSBitMap::allocate(MemRegion mr) {
   }
   assert(_virtual_space.committed_size() == brs.size(),
          "didn't reserve backing store for all of CMS bit map?");
-  _bm.set_map((BitMap::bm_word_t*)_virtual_space.low());
-  assert(_virtual_space.committed_size() << (_shifter + LogBitsPerByte) >=
-         _bmWordSize, "inconsistency in bit map sizing");
+  if (!_allocate_for_entire_heap) {
+    _bm.set_map((BitMap::bm_word_t*)_virtual_space.low());
+    assert(_virtual_space.committed_size() << (_shifter + LogBitsPerByte) >=
+           _bmWordSize, "inconsistency in bit map sizing");
+  } else {
+    // First, verify that there is no alignment issue between the
+    // heap, the generation boundaries, and the bit map because each
+    // word in the bit map covers BitsPerWord heap words.
+    assert(CMSParallelFullGC && ShareCMSMarkBitMapWithParallelFullGC,
+           "Otherwise this code must not reachable.");
+    assert(_shifter == 0, "Valid only for the mark bit map, not the mod union table.");
+    assert((((intptr_t) heap_mr.start()) % BitsPerWord) == 0,
+           "Assume the heap base is aligned by BitsPerWord");
+    assert((((intptr_t) _bmStartWord) % BitsPerWord) == 0,
+           "Assume the yg-og boundary is aligned by BitsPerWord");
+    assert(heapWordSize % BitsPerByte == 0,
+           "heap_mr.word_size() should be aligned by BitsPerByte");
+    assert(_bmWordSize % BitsPerByte == 0,
+           "_bmWordSize should be aligned by BitsPerByte");
+    // Second, let _bm point to the OG and PG portion of the allocated
+    // memory.
+    size_t payload_size = (_bmWordSize >> (_shifter + LogBitsPerByte));
+    size_t total_size = (heapWordSize >> (_shifter + LogBitsPerByte));
+    size_t non_payload_size = total_size - payload_size;
+    _bm.set_map((BitMap::bm_word_t*)(_virtual_space.low() + non_payload_size));
+    assert(_virtual_space.committed_size() << (_shifter + LogBitsPerByte) >=
+           heapWordSize, "inconsistency in bit map sizing");
+  }
   _bm.set_size(_bmWordSize >> _shifter);
 
   // bm.clear(); // can we rely on getting zero'd memory? verify below
   assert(isAllClear(),
          "Expected zero'd memory from ReservedSpace constructor");
+#ifdef ASSERT
+  if (CMSParallelFullGC && ShareCMSMarkBitMapWithParallelFullGC) {
+    // The above isAllClear() checks only for the portion visible to
+    // _bm (OG and PG). Check that the entire backing memory including
+    // the YG portion is all zero.
+    char* brs_base = brs.base();
+    size_t brs_size = brs.size();
+    for (size_t p = 0; p < brs_size; p++) {
+      char* a = brs_base + p;
+      assert(*a == 0, "The backing memory of the CMSBitMap must be all zero at init.");
+    }
+  }
+#endif
   assert(_bm.size() == heapWordDiffToOffsetDiff(sizeInWords()),
          "consistency check");
   return true;

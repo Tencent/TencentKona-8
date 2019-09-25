@@ -83,12 +83,27 @@ class CMSBitMap VALUE_OBJ_CLASS_SPEC {
   const int _shifter;       // shifts to convert HeapWord to bit position
   VirtualSpace _virtual_space; // underlying the bit map
   BitMap    _bm;            // the bit map itself
+
+  // If true, allocate the backing bit map so that it covers the YG in
+  // addition to the OG and the PG. This is used to share the
+  // underlying bit map (RAM) between the concurrent collector and the
+  // parallel full GC under CMSParallelFullGC if
+  // ShareCMSMarkBitMapWithParallelFullGC is true.
+  bool      _allocate_for_entire_heap;
  public:
   Mutex* const _lock;       // mutex protecting _bm;
 
  public:
   // constructor
-  CMSBitMap(int shifter, int mutex_rank, const char* mutex_name);
+  CMSBitMap(int shifter, int mutex_rank, const char* mutex_name,
+            bool allocate_for_entire_heap = false);
+
+  MemRegion vspace_mr() {
+    assert(_virtual_space.reserved_size() == _virtual_space.committed_size(),
+           "Must be fully committed by initialize().");
+    return MemRegion((HeapWord*)_virtual_space.low_boundary(),
+                     (HeapWord*)_virtual_space.high_boundary());
+  }
 
   // allocates the actual storage for the map
   bool allocate(MemRegion mr);
@@ -1144,6 +1159,7 @@ class ConcurrentMarkSweepGeneration: public CardGeneration {
                                 FreeBlockDictionary<FreeChunk>::DictionaryChoice);
 
   // Accessors
+  static CMSCollector* the_cms_collector() { return _collector; }
   CMSCollector* collector() const { return _collector; }
   static void set_collector(CMSCollector* collector) {
     assert(_collector == NULL, "already set");

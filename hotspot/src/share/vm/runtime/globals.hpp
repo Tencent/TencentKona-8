@@ -1815,6 +1815,22 @@ class CommandLineFlags {
           "Print the eden and the survivor chunks used for the parallel "   \
           "initial mark or remark of the eden/survivor spaces")             \
                                                                             \
+  product(bool, CMSParallelFullGC, true,                                   \
+         "Use parallel full GC under CMS.")                                 \
+                                                                            \
+  develop(bool, ShareCMSMarkBitMapWithParallelFullGC, true,                 \
+         "Share the underlying mark bit map memory between the "            \
+         "concurrent GC and the parallel STW full GC under CMS. If false, " \
+         "the parallel STW full GC allocates its own bit map. Effective "   \
+         "when +CMSParallelFullGC. ")                                       \
+                                                                            \
+  develop(uintx, CMSParallelFullGCHeapRegionSize, 1 * M,                    \
+          "The size of the heap region which is the unit of "               \
+          "parallelism under CMSParallelFullGC.")                           \
+                                                                            \
+  diagnostic(bool, LogCMSParallelFullGC, false,                             \
+          "Log activities related to CMSParallelFullGC.")                   \
+                                                                            \
   product(bool, CMSConcurrentMTEnabled, true,                               \
           "Whether multi-threaded concurrent work enabled "                 \
           "(effective only if ParNewGC)")                                   \

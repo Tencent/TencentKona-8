@@ -255,6 +255,13 @@ class Space: public CHeapObj<mtGC> {
     return NULL;
   }
 
+  // IF "this" is a CompactibleSpace, return it, else return NULL.
+  virtual CompactibleSpace* toCompactibleSpace() {
+    return NULL;
+  }
+
+  virtual bool isCompactibleFreeListSpace() { return false; }
+
   // Debugging
   virtual void verify() const = 0;
 };
@@ -343,6 +350,10 @@ public:
 class CompactibleSpace: public Space {
   friend class VMStructs;
   friend class CompactibleFreeListSpace;
+  friend class PMSPerRegionForwardClosure_ContiguousSpace;
+  friend class PMSPerRegionForwardClosure_CompactibleFreeListSpace;
+  friend class PMSFindRegionSplitPointClosure;
+  friend class ContiguousSpace;
 private:
   HeapWord* _compaction_top;
   CompactibleSpace* _next_compaction_space;
@@ -391,10 +402,13 @@ public:
   // this phase as if the final copy had occurred; if so, "cp->threshold"
   // indicates when the next such action should be taken.
   virtual void prepare_for_compaction(CompactPoint* cp);
+  virtual void pms_prepare_for_compaction_work(CompactPoint* cp) = 0;
   // MarkSweep support phase3
   virtual void adjust_pointers();
+  void pms_adjust_pointers_work();
   // MarkSweep support phase4
   virtual void compact();
+  virtual void pms_compact_work() = 0;
 
   // The maximum percentage of objects that can be dead in the compacted
   // live part of a compacted space ("deadwood" support.)
@@ -425,10 +439,30 @@ public:
   // Return a size with adjusments as required of the space.
   virtual size_t adjust_object_size_v(size_t size) const { return size; }
 
+  // Checked dynamic downcasts.
+  virtual CompactibleSpace* toCompactibleSpace() {
+    return this;
+  }
+
+  void set_live_range_for_compaction(HeapWord* beginning_of_live,
+                                     HeapWord* end_of_live,
+                                     HeapWord* first_moved) {
+    _beginning_of_live = beginning_of_live;
+    _end_of_live = end_of_live;
+    _first_moved = first_moved;
+  }
+
+  HeapWord* first_dead()        { return _first_dead; }
+  HeapWord* end_of_live()       { return _end_of_live; }
+  HeapWord* beginning_of_live() { return _beginning_of_live; }
+  HeapWord* first_moved()       { return _first_moved; }
+
 protected:
   // Used during compaction.
   HeapWord* _first_dead;
   HeapWord* _end_of_live;
+  HeapWord* _beginning_of_live;
+  HeapWord* _first_moved;
 
   // Minimum size of a free block.
   virtual size_t minimum_free_block_size() const { return 0; }
@@ -623,6 +657,8 @@ class ContiguousSpace: public CompactibleSpace {
   // space.
   void allocate_temporary_filler(int factor);
 
+  void pms_prepare_for_compaction_work(CompactPoint* cp);
+  void pms_compact_work();
 };
 
 

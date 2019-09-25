@@ -67,7 +67,10 @@ inline void BlockOffsetSharedArray::check_reducing_assertion(bool reducing) {
            Thread::current()->is_VM_thread() ||
            Thread::current()->is_ConcurrentGC_thread() ||
            ((!Thread::current()->is_ConcurrentGC_thread()) &&
-            ParGCRareEvent_lock->owned_by_self()), "Crack");
+            ParGCRareEvent_lock->owned_by_self()) ||
+           // Under PMS, the worker threads, as opposed to the VM thread will update BOT.
+           (Thread::current()->is_GangWorker_thread() && CMSParallelFullGC),
+           "Crack");
 }
 
 //////////////////////////////////////////////////////////////////////////

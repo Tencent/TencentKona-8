@@ -48,6 +48,15 @@ class GenMarkSweep : public MarkSweep {
   // Temporary data structures for traversal and storing/restoring marks
   static void allocate_stacks();
   static void deallocate_stacks();
+
+  static void assert_marking_stack_empty();
+
+  static ObjTaskQueueSet*        _pms_task_queues;
+  static ObjArrayTaskQueueSet*   _pms_objarray_task_queues;
+  static ObjTaskQueue*           _pms_vm_thread_task_queue;
+  static ObjArrayTaskQueue*      _pms_vm_thread_objarray_task_queue;
+  static bool                    _pms_task_queues_initialized;
+  static void initialize_pms_task_queues();
 };
 
 #endif // SHARE_VM_MEMORY_GENMARKSWEEP_HPP

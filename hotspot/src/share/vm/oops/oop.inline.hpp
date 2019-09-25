@@ -613,7 +613,13 @@ inline bool oopDesc::is_unlocked_oop() const {
 #endif // PRODUCT
 
 inline void oopDesc::follow_contents(void) {
-  assert (is_gc_marked(), "should be marked");
+#ifdef ASSERT
+  if (!CMSParallelFullGC) {
+    assert (is_gc_marked(), "should be marked");
+  } else {
+    assert(MarkSweep::is_object_marked(this), "should be marked");
+  }
+#endif
   klass()->oop_follow_contents(this);
 }
 

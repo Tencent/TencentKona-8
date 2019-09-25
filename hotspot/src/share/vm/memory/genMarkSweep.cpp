@@ -158,6 +158,38 @@ void GenMarkSweep::invoke_at_safepoint(int level, ReferenceProcessor* rp, bool c
   gch->trace_heap_after_gc(_gc_tracer);
 }
 
+typedef OverflowTaskQueue<oop, mtGC>                      ObjTaskQueue;
+typedef GenericTaskQueueSet<ObjTaskQueue, mtGC>           ObjTaskQueueSet;
+typedef OverflowTaskQueue<ObjArrayTask, mtGC>             ObjArrayTaskQueue;
+typedef GenericTaskQueueSet<ObjArrayTaskQueue, mtGC>      ObjArrayTaskQueueSet;
+
+ObjTaskQueueSet*      GenMarkSweep::_pms_task_queues = NULL;
+ObjArrayTaskQueueSet* GenMarkSweep::_pms_objarray_task_queues = NULL;
+ObjTaskQueue*         GenMarkSweep::_pms_vm_thread_task_queue = NULL;
+ObjArrayTaskQueue*    GenMarkSweep::_pms_vm_thread_objarray_task_queue = NULL;
+bool                  GenMarkSweep::_pms_task_queues_initialized = false;
+
+// Initialize data structures for PMS.
+void GenMarkSweep::initialize_pms_task_queues() {
+  GenCollectedHeap* gch = GenCollectedHeap::heap();
+  WorkGang* work_gang = gch->workers();
+  int n_workers = work_gang->total_workers();
+  _pms_task_queues = new ObjTaskQueueSet(n_workers);
+  _pms_objarray_task_queues = new ObjArrayTaskQueueSet(n_workers);
+  for (int i = 0; i < n_workers; i++) {
+    ObjTaskQueue* q = new ObjTaskQueue();
+    _pms_task_queues->register_queue(i, q);
+    _pms_task_queues->queue(i)->initialize();
+    ObjArrayTaskQueue* oaq = new ObjArrayTaskQueue();
+    _pms_objarray_task_queues->register_queue(i, oaq);
+    _pms_objarray_task_queues->queue(i)->initialize();
+  }
+  _pms_vm_thread_task_queue = new ObjTaskQueue();
+  _pms_vm_thread_task_queue->initialize();
+  _pms_vm_thread_objarray_task_queue = new ObjArrayTaskQueue();
+  _pms_vm_thread_objarray_task_queue->initialize();
+}
+
 void GenMarkSweep::allocate_stacks() {
   GenCollectedHeap* gch = GenCollectedHeap::heap();
   // Scratch request on behalf of oldest generation; will do no
@@ -175,6 +207,73 @@ void GenMarkSweep::allocate_stacks() {
 
   _preserved_marks = (PreservedMark*)scratch;
   _preserved_count = 0;
+
+  if (CMSParallelFullGC) {
+    if (!_pms_task_queues_initialized) {
+      _pms_task_queues_initialized = true;
+      initialize_pms_task_queues();
+    }
+
+    // Split evenly the scratch memory among the vm thread and the
+    // worker threads.
+    WorkGang* work_gang = gch->workers();
+    int n_workers = work_gang->total_workers();
+    PreservedMark* preserved_marks_top = _preserved_marks;
+    size_t preserved_count_max_per_thread = _preserved_count_max / (1 + n_workers);
+
+    NamedThread* vm_thread = Thread::current()->as_Named_thread();
+    assert(vm_thread->is_VM_thread(), "Must be run by the VM thread");
+    vm_thread->_pms_task_queue = _pms_vm_thread_task_queue;
+    vm_thread->_pms_objarray_task_queue = _pms_vm_thread_objarray_task_queue;
+    // Assign the statically allocated data structures to the VM
+    // thread and avoid allocating a new set for the VM thread.
+    vm_thread->_pms_preserved_mark_stack = &_preserved_mark_stack;
+    vm_thread->_pms_preserved_oop_stack = &_preserved_oop_stack;
+    vm_thread->_pms_preserved_count = _preserved_count;
+    vm_thread->_pms_preserved_count_max = preserved_count_max_per_thread;
+    vm_thread->_pms_preserved_marks = preserved_marks_top;
+    preserved_marks_top += preserved_count_max_per_thread;
+
+    // allocate per-thread marking_stack and objarray_stack here.
+    for (int i = 0; i < n_workers; i++) {
+      GangWorker* worker = work_gang->gang_worker(i);
+      // typedef to workaround NEW_C_HEAP_OBJ macro, which can not deal with ','
+      typedef Stack<markOop, mtGC> GCMarkOopStack;
+      typedef Stack<oop, mtGC> GCOopStack;
+      // A ResourceStack might be a good choice here, but since there's no precedent of its
+      // use anywhere else in HotSpot, it may not be reliable. Instead, allocate a Stack
+      // with NEW_C_HEAP_OBJ, and call the constructor explicitly.
+      worker->_pms_preserved_mark_stack = NEW_C_HEAP_OBJ(GCMarkOopStack, mtGC);
+      new (worker->_pms_preserved_mark_stack) Stack<markOop, mtGC>();
+      worker->_pms_preserved_oop_stack = NEW_C_HEAP_OBJ(GCOopStack, mtGC);
+      new (worker->_pms_preserved_oop_stack) Stack<oop, mtGC>();
+      worker->_pms_preserved_count = 0;
+      worker->_pms_preserved_count_max = preserved_count_max_per_thread;
+      worker->_pms_preserved_marks = preserved_marks_top;
+      preserved_marks_top += preserved_count_max_per_thread;
+    }
+    // Note _preserved_marks and _preserved_count_max aren't directly used
+    // by the marking code if CMSParallelFullGC.
+    assert(preserved_marks_top <= _preserved_marks + _preserved_count_max,
+           "buffer overrun");
+
+    assert(_pms_mark_bit_map != NULL, "the mark bit map must be initialized at this point.");
+    if (ShareCMSMarkBitMapWithParallelFullGC) {
+      // Clear it before the GC because it's shared and can be dirty
+      // here.
+      _pms_mark_bit_map->clear();
+    } else {
+      // If the mark bit map isn't shared, clear it at the end of GC.
+      assert(_pms_mark_bit_map->isAllClear(),
+             "Must have been cleared at the last invocation or at initialization.");
+    }
+    _pms_mark_counter = 0;
+
+    assert(_pms_region_array_set == NULL, "Must be NULL");
+    // Create region arrays before marking.
+    // We are in a ResourceMark in CMSCollector::do_collection().
+    _pms_region_array_set = new PMSRegionArraySet();
+  }
 }
 
 
@@ -188,12 +287,75 @@ void GenMarkSweep::deallocate_stacks() {
   _preserved_oop_stack.clear(true);
   _marking_stack.clear();
   _objarray_stack.clear(true);
+
+  if (CMSParallelFullGC) {
+    assert_marking_stack_empty();
+
+    NamedThread* vm_thread = Thread::current()->as_Named_thread();
+    assert(vm_thread->is_VM_thread(), "Must be run by the main CMS thread");
+    vm_thread->reset_pms_data();
+
+    // clear per-thread marking_stack and objarray_stack here.
+    GenCollectedHeap* gch = GenCollectedHeap::heap();
+    WorkGang* work_gang = gch->workers();
+    int n_workers = work_gang->total_workers();
+    for (int i = 0; i < n_workers; i++) {
+      GangWorker* worker = work_gang->gang_worker(i);
+      // typedef to workaround FREE_C_HEAP_ARRAY macro, which can not deal
+      // with ','
+      typedef Stack<markOop, mtGC> GCMarkOopStack;
+      typedef Stack<oop, mtGC> GCOopStack;
+      // Call the Stack destructor which is the clear function
+      // since FREE_C_HEAP_ARRAY doesn't.
+      ((Stack<markOop, mtGC>*)worker->_pms_preserved_mark_stack)->clear(true);
+      ((Stack<oop, mtGC>*)worker->_pms_preserved_oop_stack)->clear(true);
+      // Free the allocated memory
+      FREE_C_HEAP_ARRAY(GCMarkOopStack, worker->_pms_preserved_mark_stack, mtGC);
+      FREE_C_HEAP_ARRAY(GCOopStack, worker->_pms_preserved_oop_stack, mtGC);
+      worker->_pms_preserved_mark_stack = NULL;
+      worker->_pms_preserved_oop_stack = NULL;
+
+      worker->reset_pms_data();
+    }
+
+    if (!ShareCMSMarkBitMapWithParallelFullGC) {
+      _pms_mark_bit_map->clear();
+    }
+    _pms_region_array_set->cleanup();
+    _pms_region_array_set = NULL;
+    _pms_mark_counter = 0;
+  }
+}
+
+void GenMarkSweep::assert_marking_stack_empty() {
+#ifdef ASSERT
+  if (!CMSParallelFullGC) {
+    assert(_marking_stack.is_empty(), "just drained");
+    assert(_objarray_stack.is_empty(), "just drained");
+  } else {
+    NamedThread* thr = Thread::current()->as_Named_thread();
+    assert(thr->is_VM_thread(), "Must be run by the main CMS thread");
+    assert(((ObjTaskQueue*)thr->_pms_task_queue)->is_empty(), "just drained");
+    assert(((ObjArrayTaskQueue*)thr->_pms_objarray_task_queue)->is_empty(), "just drained");
+    // Check that all the per-thread marking stacks are empty here.
+    GenCollectedHeap* gch = GenCollectedHeap::heap();
+    WorkGang* work_gang = gch->workers();
+    int n_workers = work_gang->total_workers();
+    for (int i = 0; i < n_workers; i++) {
+      GangWorker* worker = work_gang->gang_worker(i);
+      assert(((ObjTaskQueue*)worker->_pms_task_queue)->is_empty(), "just drained");
+      assert(((ObjArrayTaskQueue*)worker->_pms_objarray_task_queue)->is_empty(), "just drained");
+    }
+  }
+#endif // ASSERT
 }
 
 void GenMarkSweep::mark_sweep_phase1(int level,
                                   bool clear_all_softrefs) {
   // Recursively traverse all live objects and mark them
-  GCTraceTime tm("phase 1", PrintGC && Verbose, true, _gc_timer, _gc_tracer->gc_id());
+  GCTraceTime tm("phase 1",
+                 PrintGC && (Verbose || LogCMSParallelFullGC),
+                 true, _gc_timer, _gc_tracer->gc_id());
   trace(" 1");
 
   GenCollectedHeap* gch = GenCollectedHeap::heap();
@@ -207,7 +369,11 @@ void GenMarkSweep::mark_sweep_phase1(int level,
   // Need new claim bits before marking starts.
   ClassLoaderDataGraph::clear_claimed_marks();
 
-  gch->gen_process_roots(level,
+  {
+    GCTraceTime tm1("marking", PrintGC && (Verbose || LogCMSParallelFullGC),
+                    true, NULL, _gc_tracer->gc_id());
+    if (!CMSParallelFullGC) {
+      gch->gen_process_roots(level,
                          false, // Younger gens are not roots.
                          true,  // activate StrongRootsScope
                          GenCollectedHeap::SO_None,
@@ -215,24 +381,73 @@ void GenMarkSweep::mark_sweep_phase1(int level,
                          &follow_root_closure,
                          &follow_root_closure,
                          &follow_cld_closure);
+    } else {
+      GenCollectedHeap* gch = GenCollectedHeap::heap();
+      WorkGang* workers = gch->workers();
+      assert(workers != NULL, "Need parallel worker threads.");
+      int n_workers = workers->total_workers();
+
+
+
+      PMSMarkTask tsk(level, n_workers, workers, _pms_task_queues,
+                      _pms_objarray_task_queues);
+
+      // Set up for parallel process_strong_roots work.
+      gch->set_par_threads(n_workers);
+
+      if (n_workers > 1) {
+        // Make sure refs discovery MT-safe
+        assert(ref_processor()->discovery_is_mt(),
+               "Ref discovery must already be set to MT-safe");
+        GenCollectedHeap::StrongRootsScope srs(gch);
+        workers->run_task(&tsk);
+      } else {
+        GenCollectedHeap::StrongRootsScope srs(gch);
+        tsk.work(0);
+      }
+      gch->set_par_threads(0);  // 0 ==> non-parallel.
+    }
+  }
+
+  assert_marking_stack_empty();
 
   // Process reference objects found during marking
   {
+    GCTraceTime tm2("ref processing", PrintGC && (Verbose || LogCMSParallelFullGC),
+                    true, NULL, _gc_tracer->gc_id());
     ref_processor()->setup_policy(clear_all_softrefs);
-    const ReferenceProcessorStats& stats =
-      ref_processor()->process_discovered_references(
-        &is_alive, &keep_alive, &follow_stack_closure, NULL, _gc_timer, _gc_tracer->gc_id());
-    gc_tracer()->report_gc_reference_stats(stats);
+
+    if (ref_processor()->processing_is_mt()) {
+      assert(CMSParallelFullGC, "CMSParallelFullGC must be true");
+      PMSRefProcTaskExecutor task_executor(_pms_task_queues, _pms_objarray_task_queues);
+      const ReferenceProcessorStats& stats =
+        ref_processor()->process_discovered_references(
+          &is_alive, &keep_alive, &follow_stack_closure, &task_executor, _gc_timer, _gc_tracer->gc_id());
+      gc_tracer()->report_gc_reference_stats(stats);
+
+    } else {
+      assert(!CMSParallelFullGC, "CMSParallelFullGC must be false");
+      const ReferenceProcessorStats& stats =
+        ref_processor()->process_discovered_references(
+          &is_alive, &keep_alive, &follow_stack_closure, NULL, _gc_timer, _gc_tracer->gc_id());
+      gc_tracer()->report_gc_reference_stats(stats);
+
+    }
+    assert_marking_stack_empty();
   }
 
   // This is the point where the entire marking should have completed.
-  assert(_marking_stack.is_empty(), "Marking should have completed");
+  assert_marking_stack_empty();
+
+  GCTraceTime tm3("class unloading", PrintGC && (Verbose || LogCMSParallelFullGC),
+                  true, NULL, _gc_tracer->gc_id());
 
   // Unload classes and purge the SystemDictionary.
   bool purged_class = SystemDictionary::do_unloading(&is_alive);
 
   // Unload nmethods.
   CodeCache::do_unloading(&is_alive, purged_class);
+  assert_marking_stack_empty();
 
   // Prune dead klasses from subklass/sibling/implementor lists.
   Klass::clean_weak_klass_links(&is_alive);
@@ -242,6 +457,14 @@ void GenMarkSweep::mark_sweep_phase1(int level,
 
   // Clean up unreferenced symbols in symbol table.
   SymbolTable::unlink();
+
+#ifdef ASSERT
+  if (CMSParallelFullGC) {
+    // This is expensive!  Verify that the region live sizes computed
+    // during marking match what the mark bit map says.
+    MarkSweep::pms_region_array_set()->verify_live_size();
+  }
+#endif
 
   gc_tracer()->report_object_count_after_gc(&is_alive);
 }
@@ -263,7 +486,8 @@ void GenMarkSweep::mark_sweep_phase2() {
 
   GenCollectedHeap* gch = GenCollectedHeap::heap();
 
-  GCTraceTime tm("phase 2", PrintGC && Verbose, true, _gc_timer, _gc_tracer->gc_id());
+  GCTraceTime tm("phase 2", PrintGC && (Verbose || LogCMSParallelFullGC),
+                 true, _gc_timer, _gc_tracer->gc_id());
   trace("2");
 
   gch->prepare_for_compaction();
@@ -272,6 +496,11 @@ void GenMarkSweep::mark_sweep_phase2() {
 class GenAdjustPointersClosure: public GenCollectedHeap::GenClosure {
 public:
   void do_generation(Generation* gen) {
+    GCTraceTime tm("per-gen-adjust", PrintGC && (Verbose || LogCMSParallelFullGC),
+                   true, NULL, GCId::undefined());
+    if (LogCMSParallelFullGC) {
+      gclog_or_tty->print_cr("%s", gen->name());
+    }
     gen->adjust_pointers();
   }
 };
@@ -280,7 +509,8 @@ void GenMarkSweep::mark_sweep_phase3(int level) {
   GenCollectedHeap* gch = GenCollectedHeap::heap();
 
   // Adjust the pointers to reflect the new locations
-  GCTraceTime tm("phase 3", PrintGC && Verbose, true, _gc_timer, _gc_tracer->gc_id());
+  GCTraceTime tm("phase 3", PrintGC && (Verbose || LogCMSParallelFullGC),
+                 true, _gc_timer, _gc_tracer->gc_id());
   trace("3");
 
   // Need new claim bits for the pointer adjustment tracing.
@@ -292,20 +522,61 @@ void GenMarkSweep::mark_sweep_phase3(int level) {
   // are run.
   adjust_pointer_closure.set_orig_generation(gch->get_gen(level));
 
-  gch->gen_process_roots(level,
-                         false, // Younger gens are not roots.
-                         true,  // activate StrongRootsScope
-                         GenCollectedHeap::SO_AllCodeCache,
-                         GenCollectedHeap::StrongAndWeakRoots,
-                         &adjust_pointer_closure,
-                         &adjust_pointer_closure,
-                         &adjust_cld_closure);
+  {
+    GCTraceTime tm("adjust-strong-roots",
+                   (PrintGC && Verbose) || LogCMSParallelFullGC,
+                   true, NULL, _gc_tracer->gc_id());
+    if (!CMSParallelFullGC) {
+      gch->gen_process_roots(level,
+                             false, // Younger gens are not roots.
+                             true,  // activate StrongRootsScope
+                             GenCollectedHeap::SO_AllCodeCache,
+                             GenCollectedHeap::StrongAndWeakRoots,
+                             &adjust_pointer_closure,
+                             &adjust_pointer_closure,
+                             &adjust_cld_closure);
+    } else {
+      WorkGang* workers = gch->workers();
+      assert(workers != NULL, "Need parallel worker threads.");
+      int n_workers = workers->total_workers();
+      PMSAdjustRootsTask tsk(level, n_workers, workers);
+      // Set up for parallel process_strong_roots work.
+      gch->set_par_threads(n_workers);
+      if (n_workers > 1) {
+        GenCollectedHeap::StrongRootsScope srs(gch);
+        workers->run_task(&tsk);
+      } else {
+        GenCollectedHeap::StrongRootsScope srs(gch);
+        tsk.work(0);
+      }
+      gch->set_par_threads(0);  // 0 ==> non-parallel.
+    }
+  }
 
-  gch->gen_process_weak_roots(&adjust_pointer_closure);
 
-  adjust_marks();
-  GenAdjustPointersClosure blk;
-  gch->generation_iterate(&blk, true);
+  {
+    GCTraceTime tm("adjust-weak-roots",
+                   PrintGC && (Verbose || LogCMSParallelFullGC),
+                   true, NULL, _gc_tracer->gc_id());
+    // Now adjust pointers in remaining weak roots.  (All of which should
+    // have been cleared if they pointed to non-surviving objects.)
+    gch->gen_process_weak_roots(&adjust_pointer_closure);
+  }
+
+  {
+    GCTraceTime tm("adjust-preserved-marks",
+                   PrintGC && (Verbose || LogCMSParallelFullGC),
+                   true, NULL, _gc_tracer->gc_id());
+    adjust_marks();
+  }
+
+  {
+    GCTraceTime tm("adjust-heap",
+                   PrintGC && (Verbose || LogCMSParallelFullGC),
+                   true, NULL, _gc_tracer->gc_id());
+    GenAdjustPointersClosure blk;
+    gch->generation_iterate(&blk, true);
+  }
 }
 
 class GenCompactClosure: public GenCollectedHeap::GenClosure {
@@ -329,7 +600,8 @@ void GenMarkSweep::mark_sweep_phase4() {
   // to use a higher index (saved from phase2) when verifying perm_gen.
   GenCollectedHeap* gch = GenCollectedHeap::heap();
 
-  GCTraceTime tm("phase 4", PrintGC && Verbose, true, _gc_timer, _gc_tracer->gc_id());
+  GCTraceTime tm("phase 4", PrintGC && (Verbose || LogCMSParallelFullGC),
+                 true, _gc_timer, _gc_tracer->gc_id());
   trace("4");
 
   GenCompactClosure blk;

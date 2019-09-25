@@ -269,6 +269,7 @@ public:
   // Predicate for Thread
   virtual bool is_GC_task_thread() const;
   virtual bool is_ConcurrentGC_thread() const;
+  virtual bool is_GangWorker_thread() const { return true; }
   // Printing
   void print_on(outputStream* st) const;
   virtual void print() const { print_on(tty); }

@@ -178,6 +178,9 @@ class G1OffsetTableContigSpace: public CompactibleSpace {
   HeapWord* block_start_const(const void* p) const;
 
   void prepare_for_compaction(CompactPoint* cp);
+  // These methods are only called with CMS GC.
+  void pms_prepare_for_compaction_work(CompactPoint* cp) { ShouldNotReachHere(); }
+  void pms_compact_work() { ShouldNotReachHere();}
 
   // Add offset table update.
   virtual HeapWord* allocate(size_t word_size);
