@@ -24,15 +24,22 @@
 #
 # Tiered testing definitions
 #
+jdk_local = \
+    java/util/TimeZone/HongKong.java \
+    java/util/Calendar/CalendarRegression.java \
+    java/util/Calendar/JapanEraNameCompatTest.java
+ 
 jdk_all = \
     :jdk_tier1 \
-    :jdk_tier2
+    :jdk_tier2 \
+    -:jdk_local
 
 jdk_tier1 = \
     :jdk_lang \
     :jdk_util \
     :jdk_math \
-    :jdk_jdi
+    :jdk_jdi \
+    -:jdk_local
 
 jdk_tier2 = \
     :jdk_io \

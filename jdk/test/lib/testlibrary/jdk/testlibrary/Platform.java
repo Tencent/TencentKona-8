@@ -100,16 +100,4 @@ public class Platform {
         return osArch;
     }
 
-    public static boolean isDefaultCDSArchiveSupported() {
-        return (is64bit()  &&
-                isServer() &&
-                (isLinux()   ||
-                 isOSX()     ||
-                 isSolaris() ||
-                 isWindows()) &&
-                !isZero()    &&
-                !isMinimal() &&
-                !isAArch64() &&
-                !isARM());
-    }
 }

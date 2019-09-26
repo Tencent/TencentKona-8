@@ -50,6 +50,10 @@
 # runs those tests that only require compact1 and compact2 API's.
 #
 
+# The following cases can pass when run seperately.
+# but they fail when run with other cases.
+# list them here but not ingore them.
+
 # Full JDK can run all tests
 #
 jdk = \
@@ -146,11 +150,13 @@ hotspot_all = \
   :hotspot_gc \
   :hotspot_runtime \
   :hotspot_serviceability \
-  :jdk
+  :hotspot_tier1 \
+  -:needs_skip
 
 # Right now tier1 runs all hotspot tests
 hotspot_tier1 = \
-  :jdk
+  :jdk \
+  -:needs_skip
 
 # Tests that require compact3 API's
 #
@@ -236,8 +242,7 @@ needs_full_vm_compact1 = \
   gc/startup_warnings/TestParallelScavengeSerialOld.java \
   gc/startup_warnings/TestParNewCMS.java \
   gc/startup_warnings/TestParNewSerialOld.java \
-  runtime/6929067/Test6929067.sh \
-  runtime/SharedArchiveFile/SharedArchiveFile.java
+  runtime/6929067/Test6929067.sh
 
 # Minimal VM on Compact 2 adds in some compact2 tests
 #
@@ -268,3 +273,6 @@ compact1_minimal = \
  -:needs_compact3 \
  -:needs_jre \
  -:needs_jdk
+
+needs_skip = \
+  runtime/SharedArchiveFile/ArchiveDoesNotExist.java

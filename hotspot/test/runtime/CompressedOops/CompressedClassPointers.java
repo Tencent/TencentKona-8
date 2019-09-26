@@ -37,6 +37,7 @@ public class CompressedClassPointers {
             "-XX:+UnlockDiagnosticVMOptions",
             "-XX:SharedBaseAddress=8g",
             "-Xmx128m",
+            "-Xshare:off",
             "-XX:+PrintCompressedOopsMode",
             "-XX:+VerifyBeforeGC", "-version");
         OutputAnalyzer output = new OutputAnalyzer(pb.start());
@@ -49,6 +50,7 @@ public class CompressedClassPointers {
             "-XX:+UnlockDiagnosticVMOptions",
             "-XX:CompressedClassSpaceSize=3g",
             "-Xmx128m",
+            "-Xshare:off",
             "-XX:+PrintCompressedOopsMode",
             "-XX:+VerifyBeforeGC", "-version");
         OutputAnalyzer output = new OutputAnalyzer(pb.start());

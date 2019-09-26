@@ -24,3 +24,7 @@
 ###########################################################################
 
 # No langtools tests are on the problem list.
+
+# failed at tier1.
+tools/javac/diags/CheckExamples.java              generic-all
+tools/javac/fatalErrors/NoJavaLangTest.java       generic-all

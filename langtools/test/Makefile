@@ -546,6 +546,21 @@ BUNDLE_UP_AND_EXIT = \
   $(TESTEXIT) \
 )
 
+# Problematic tests to be excluded
+#PROBLEM_LISTS=$(call MixedDirs,$(wildcard ProblemList.txt closed/ProblemList.txt))
+
+# # Create exclude list for this platform and arch
+#ifdef NO_EXCLUDES
+#  JTREG_EXCLUSIONS =
+#else
+#  JTREG_EXCLUSIONS = $(PROBLEM_LISTS:%=-exclude:%)
+#endif
+
+# convert list of directories to dos paths
+# define MixedDirs
+# $(foreach i,$1,$(shell $(GETMIXEDPATH) "${i}"))
+# endef
+
 prep-tier1:
 	@$(MKDIR) -p $(ABS_TEST_OUTPUT_DIR)
 
@@ -563,6 +578,7 @@ jtreg-tests-tier1: check-jtreg prep-tier1 FRC
               -jdk:$(shell $(GETMIXEDPATH) "$(TESTJAVA)")                    \
 	  $(JAVA_ARGS:%=-vmoption:%) \
 	  $(JTREG_OPTIONS) \
+	  $(JTREG_EXCLUSIONS) \
 	  :langtools_tier1 \
 	  ) ;                                                                \
 	  $(BUNDLE_UP_AND_EXIT)                                              \
