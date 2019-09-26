@@ -255,9 +255,9 @@ DEFAULT_TESTDIRS = .
 TESTDIRS = $(DEFAULT_TESTDIRS)
 
 # Root of all test results
-TEST_OUTPUT_DIR = $(TEST_ROOT)/../build/$(PLATFORM)-$(ARCH)/test/langtools
+TEST_OUTPUT_DIR = $(TEST_ROOT)/../build
 ifdef ALT_OUTPUTDIR
-  ABS_OUTPUTDIR := $(shell cd $(ALT_OUTPUTDIR) && pwd $(CYGPATH))
+  ABS_OUTPUTDIR := $(shell cd $(ALT_OUTPUTDIR) && pwd $(CYGPATH))/$(PLATFORM)-$(ARCH)
 else
   ABS_OUTPUTDIR := $(shell mkdir -p $(TEST_OUTPUT_DIR); cd $(TEST_OUTPUT_DIR) && pwd $(CYGPATH))
 endif
