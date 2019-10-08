@@ -28,5 +28,5 @@
 #
 
 # Don't put quotes (fail windows build).
-HOTSPOT_VM_DISTRO=TencentJDK
-PRODUCT_NAME=TencentJDK
+HOTSPOT_VM_DISTRO=OpenJDK
+PRODUCT_NAME=OpenJDK

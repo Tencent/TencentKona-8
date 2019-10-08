@@ -725,3 +725,8 @@ JRE_BUNDLE_DIR=$(IMAGES_OUTPUTDIR)/$(JRE_BUNDLE_SUBDIR)
 
 # Include the custom-spec.gmk file if it exists
 -include $(dir @SPEC@)/custom-spec.gmk
+
+# Include TencentJDK version information
+DISTRO_NAME=TencentJDK
+COMPANY_NAME=Tencent
+DISTRO_VERSION=8.0.1
