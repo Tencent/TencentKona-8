@@ -325,6 +325,7 @@ jtreg-tests: check-jtreg FRC
           -jdk:$(TESTJAVA) \
           $(JAVA_ARGS:%=-vmoption:%) \
 	  $(JTREG_OPTIONS) \
+	  $(JTREG_EXCLUSIONS) \
           $(JTREG_TESTDIRS) \
 	|| ( $(call EXIT_IF_FATAL,$(FATAL_JTREG_EXIT)) ; \
 	    echo $$status > $(JTREG_OUTPUT_DIR)/status.txt \

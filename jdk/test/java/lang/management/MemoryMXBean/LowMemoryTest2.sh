@@ -55,9 +55,9 @@ go() {
 # Also we set the max metaspace to 8MB - otherwise the test takes too
 # long to run. 
 
-go -noclassgc -XX:MaxMetaspaceSize=16m -XX:+UseSerialGC LowMemoryTest2
-go -noclassgc -XX:MaxMetaspaceSize=16m -XX:+UseParallelGC LowMemoryTest2
-go -noclassgc -XX:MaxMetaspaceSize=16m -XX:+UseParNewGC -XX:+UseConcMarkSweepGC LowMemoryTest2
+go -noclassgc -Xshare:off -XX:MaxMetaspaceSize=16m -XX:+UseSerialGC LowMemoryTest2
+go -noclassgc -Xshare:off -XX:MaxMetaspaceSize=16m -XX:+UseParallelGC LowMemoryTest2
+go -noclassgc -Xshare:off -XX:MaxMetaspaceSize=16m -XX:+UseParNewGC -XX:+UseConcMarkSweepGC LowMemoryTest2
 
 # Test class metaspace - might hit MaxMetaspaceSize instead if
 # UseCompressedClassPointers is off or if 32 bit.

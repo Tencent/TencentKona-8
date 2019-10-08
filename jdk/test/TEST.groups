@@ -32,7 +32,8 @@ jdk_local = \
 jdk_all = \
     :jdk_tier1 \
     :jdk_tier2 \
-    -:jdk_local
+    -:jdk_local \
+    -:jdk_skip
 
 jdk_tier1 = \
     :jdk_lang \
@@ -52,6 +53,25 @@ jdk_tier2 = \
     :core_tools \
     :jdk_other \
     :jdk_svc
+
+jdk_skip = \
+  java/security/KeyStore/PKCS12/StoreTrustedCertKeytool.java \
+  sun/tools/jstatd/TestJstatdDefaults.java \
+  sun/tools/jstatd/TestJstatdExternalRegistry.java \
+  sun/tools/jstatd/TestJstatdPort.java \
+  sun/tools/jstatd/TestJstatdPortAndServer.java \
+  sun/tools/jstatd/TestJstatdServer.java \
+  com/sun/management/DiagnosticCommandMBean/DcmdMBeanPermissionsTest.java \
+  com/sun/tools/attach/StartManagementAgent.java \
+  java/rmi/Naming/legalRegistryNames/LegalRegistryNames.java \
+  java/text/BreakIterator/BreakIteratorTest.java \
+  java/text/Format/DateFormat/DateFormatTest.java \
+  java/text/Format/DateFormat/NonGregorianFormatTest.java \
+  java/text/Format/MessageFormat/LargeMessageFormat.java \
+  java/text/Format/NumberFormat/NumberRegression.java \
+  java/text/Format/NumberFormat/NumberTest.java \
+  sun/text/IntHashtable/Bug4170614Test.sh
+ 
 
 ###############################################################################
 #
