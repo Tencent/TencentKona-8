@@ -588,22 +588,29 @@ public abstract class Executable extends AccessibleObject
         return AnnotationParser.toArray(declaredAnnotations());
     }
 
-    private transient Map<Class<? extends Annotation>, Annotation> declaredAnnotations;
+    private transient volatile Map<Class<? extends Annotation>, Annotation> declaredAnnotations;
 
-    private synchronized  Map<Class<? extends Annotation>, Annotation> declaredAnnotations() {
-        if (declaredAnnotations == null) {
-            Executable root = getRoot();
-            if (root != null) {
-                declaredAnnotations = root.declaredAnnotations();
-            } else {
-                declaredAnnotations = AnnotationParser.parseAnnotations(
-                    getAnnotationBytes(),
-                    sun.misc.SharedSecrets.getJavaLangAccess().
-                    getConstantPool(getDeclaringClass()),
-                    getDeclaringClass());
+    private Map<Class<? extends Annotation>, Annotation> declaredAnnotations() {
+        Map<Class<? extends Annotation>, Annotation> declAnnos;
+        if ((declAnnos = declaredAnnotations) == null) {
+            synchronized (this) {
+                if ((declAnnos = declaredAnnotations) == null) {
+                    Executable root = getRoot();
+                    if (root != null) {
+                        declAnnos = root.declaredAnnotations();
+                    } else {
+                        declAnnos = AnnotationParser.parseAnnotations(
+                                getAnnotationBytes(),
+                                sun.misc.SharedSecrets.getJavaLangAccess().
+                                        getConstantPool(getDeclaringClass()),
+                                getDeclaringClass()
+                        );
+                    }
+                    declaredAnnotations = declAnnos;
+                }
             }
         }
-        return declaredAnnotations;
+        return declAnnos;
     }
 
     /**
