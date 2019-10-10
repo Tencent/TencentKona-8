@@ -55,14 +55,12 @@ jdk_tier2 = \
     :jdk_svc
 
 jdk_skip = \
-  java/security/KeyStore/PKCS12/StoreTrustedCertKeytool.java \
   sun/tools/jstatd/TestJstatdDefaults.java \
   sun/tools/jstatd/TestJstatdExternalRegistry.java \
   sun/tools/jstatd/TestJstatdPort.java \
   sun/tools/jstatd/TestJstatdPortAndServer.java \
   sun/tools/jstatd/TestJstatdServer.java \
   com/sun/management/DiagnosticCommandMBean/DcmdMBeanPermissionsTest.java \
-  com/sun/tools/attach/StartManagementAgent.java \
   java/rmi/Naming/legalRegistryNames/LegalRegistryNames.java \
   java/text/BreakIterator/BreakIteratorTest.java \
   java/text/Format/DateFormat/DateFormatTest.java \

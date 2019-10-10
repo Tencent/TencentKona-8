@@ -151,12 +151,31 @@ hotspot_all = \
   :hotspot_runtime \
   :hotspot_serviceability \
   :hotspot_tier1 \
-  -:needs_skip
+  -:needs_skip \
+  -:hotspot_problem \
+  -:hotspot_standalone
 
 # Right now tier1 runs all hotspot tests
 hotspot_tier1 = \
   :jdk \
   -:needs_skip
+
+# The following tests fail when runt with all.
+# but they pass when run standalone
+hotspot_problem = \
+    compiler/rtm/locking/TestRTMAbortThreshold.java \
+    compiler/rtm/locking/TestRTMDeoptOnHighAbortRatio.java \
+    compiler/rtm/locking/TestRTMDeoptOnLowAbortRatio.java \
+    compiler/rtm/locking/TestRTMLockingCalculationDelay.java \
+    compiler/rtm/locking/TestRTMLockingThreshold.java \
+    compiler/rtm/locking/TestRTMTotalCountIncrRate.java \
+    compiler/rtm/locking/TestUseRTMAfterLockInflation.java \
+    compiler/rtm/locking/TestUseRTMForInflatedLocks.java \
+    compiler/rtm/locking/TestUseRTMForStackLocks.java \
+    compiler/rtm/method_options/TestUseRTMLockElidingOption.java
+
+hotspot_standalone = \
+    serviceability/sa/jmap-hashcode/Test8028623.java
 
 # Tests that require compact3 API's
 #

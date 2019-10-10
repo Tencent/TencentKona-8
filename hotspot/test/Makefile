@@ -218,7 +218,7 @@ BUNDLE_UP_AND_EXIT = \
 ################################################################
 
 # Default make rule (runs jtreg_tests)
-all: hotspot_all
+all: hotspot_all hotspot_problem hotspot_standalone
 	@$(ECHO) "Testing completed successfully"
 
 # Support "hotspot_" prefixed test make targets (too)
