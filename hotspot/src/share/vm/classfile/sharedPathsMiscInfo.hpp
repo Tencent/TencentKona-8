@@ -67,8 +67,6 @@ protected:
     ClassLoader::trace_class_path(tty, msg, name);
   }
 
-  bool replace_jh(char* path, const char* rjh, char* ret);
-
 protected:
   static bool fail(const char* msg, const char* name = NULL);
   virtual bool check(jint type, const char* path);

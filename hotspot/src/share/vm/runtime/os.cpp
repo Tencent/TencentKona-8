@@ -1596,6 +1596,86 @@ void os::realign_memory(char *addr, size_t bytes, size_t alignment_hint) {
   pd_realign_memory(addr, bytes, alignment_hint);
 }
 
+bool os::replace_jh(char* path, const char* real_java_home, char* ret) {
+  if (path == NULL || ret == NULL) {
+     return false;
+  }
+  char* p = path;
+  char* entry = path;
+  ret[0] = '\0';
+  while (p!= NULL && *p != '\0') {
+    p = strchr(entry, os::path_separator()[0]);
+    if (p != NULL) {
+      *p = '\0';
+    }
+    char* q = entry + strlen(entry);
+    while (q != entry) {
+      if (*q != os::file_separator()[0] && q > entry) {
+        q--;
+      }
+      if (q <= entry) {
+        return false;
+      }
+
+      if ((strncmp(q+1, "jre", 3)==0) && (q[4] == os::file_separator()[0])) {
+        strncat(ret, real_java_home, strlen(real_java_home));
+        strncat(ret, q+4, strlen(q));
+        break;
+      } else {
+       q--;
+      }
+    }
+
+    if (p != NULL) {
+      strncat(ret, os::path_separator(), 1);
+      entry = ++p;
+    } else {
+      break;
+    }
+  }
+  return true;
+}
+
+bool os::correct_cds_path(const char* origin_path, char* result, const int result_array_length) {
+  char fake_jh[JVM_MAXPATHLEN];
+  char tpath[JVM_MAXPATHLEN];
+
+  if(origin_path == NULL) {
+    return false;
+  }
+
+  int origin_length = strlen(origin_path);
+  if (origin_length==0 || origin_length > result_array_length) {
+    return false;
+  }
+
+  assert(origin_length <= JVM_MAXPATHLEN, "Invalid path");
+
+  strcpy(tpath, origin_path);
+  strcpy(fake_jh, origin_path);
+  char* p = strstr(fake_jh, os::path_separator());
+  if (p != NULL) {
+    *p = '\0';
+    // find the last "/jre/"
+    p = fake_jh;
+    while ((p = strrchr(fake_jh, os::file_separator()[0])) && p != NULL) {
+      if ((strncmp(p+1, "jre", 3) == 0) && (p[4] == '\0')) {
+        break;
+      }
+      *p = '\0';
+    }
+  }
+
+  if (strncmp(fake_jh, Arguments::get_java_home(), strlen(Arguments::get_java_home())) != 0) {
+    if (!replace_jh(tpath, Arguments::get_java_home(), result)) {
+      strcpy(result, origin_path);
+    }
+  } else {
+      strcpy(result, origin_path);
+  }
+  return true;
+}
+
 #ifndef TARGET_OS_FAMILY_windows
 /* try to switch state from state "from" to state "to"
  * returns the state set after the method is complete

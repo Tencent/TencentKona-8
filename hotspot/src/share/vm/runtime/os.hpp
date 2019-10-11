@@ -359,6 +359,8 @@ class os: AllStatic {
   static void   free_memory(char *addr, size_t bytes, size_t alignment_hint);
   static void   realign_memory(char *addr, size_t bytes, size_t alignment_hint);
 
+  static bool   replace_jh(char* path, const char* real_java_home, char* ret);
+  static bool   correct_cds_path(const char* origin_path, char* result, const int result_array_length);
   // NUMA-specific interface
   static bool   numa_has_static_binding();
   static bool   numa_has_group_homing();

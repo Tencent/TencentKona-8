@@ -257,22 +257,27 @@ bool FileMapInfo::validate_classpath_entry_table() {
   for (int i=0; i<count; i++) {
     SharedClassPathEntry* ent = shared_classpath(i);
     struct stat st;
-    const char* name = ent->_name;
+    const char* org_name = ent->_name;
     bool ok = true;
+    char name[JVM_MAXPATHLEN];
+
+    if (!os::correct_cds_path(org_name, name, JVM_MAXPATHLEN)) {
+      fail_continue("[Classpath is invalid", org_name);
+      return false;
+    }
     if (TraceClassPaths || (TraceClassLoading && Verbose)) {
       tty->print_cr("[Checking shared classpath entry: %s]", name);
     }
     if (os::stat(name, &st) != 0) {
-     // The validation is disabled due to runtime path may inconsistent with CDS Archives.
-     // fail_continue("Required classpath entry does not exist: %s", name);
-     // ok = false;
+      fail_continue("Required classpath entry does not exist: %s", name);
+      ok = false;
     } else if (ent->is_dir()) {
-    // if (!os::dir_is_empty(name)) {
-    // fail_continue("directory is not empty: %s", name);
-    // ok = false;
-    // }
+      if (!os::dir_is_empty(name)) {
+        fail_continue("directory is not empty: %s", name);
+        ok = false;
+      }
     } else {
-      if (ent->_timestamp != st.st_mtime ||
+      if (/*ent->_timestamp != st.st_mtime ||*/
           ent->_filesize != st.st_size) {
         ok = false;
         if (PrintSharedArchiveAndExit) {
