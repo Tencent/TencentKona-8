@@ -28,7 +28,15 @@ jdk_local = \
     java/util/TimeZone/HongKong.java \
     java/util/Calendar/CalendarRegression.java \
     java/util/Calendar/JapanEraNameCompatTest.java
- 
+
+
+jdk_fail = \
+    java/lang/SecurityManager/CheckPackageAccess.java \
+    javax/net/ssl/ciphersuites/DisabledAlgorithms.java \
+    sun/security/ssl/sanity/interop/ClientJSSEServerJSSE.java \
+    sun/util/calendar/zi/TestZoneInfo310.java \
+    tools/launcher/VersionCheck.java
+
 jdk_all = \
     :jdk_tier1 \
     :jdk_tier2 \
