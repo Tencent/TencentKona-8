@@ -28,7 +28,7 @@ jdk_local = \
     java/util/TimeZone/HongKong.java \
     java/util/Calendar/CalendarRegression.java \
     java/util/Calendar/JapanEraNameCompatTest.java
- 
+
 jdk_all = \
     :jdk_tier1 \
     :jdk_tier2 \
@@ -55,21 +55,23 @@ jdk_tier2 = \
     :jdk_svc
 
 jdk_problematic = \
-  sun/tools/jstatd/TestJstatdDefaults.java \
-  sun/tools/jstatd/TestJstatdExternalRegistry.java \
-  sun/tools/jstatd/TestJstatdPort.java \
-  sun/tools/jstatd/TestJstatdPortAndServer.java \
-  sun/tools/jstatd/TestJstatdServer.java \
-  com/sun/management/DiagnosticCommandMBean/DcmdMBeanPermissionsTest.java \
-  java/rmi/Naming/legalRegistryNames/LegalRegistryNames.java \
-  java/text/BreakIterator/BreakIteratorTest.java \
-  java/text/Format/DateFormat/DateFormatTest.java \
-  java/text/Format/DateFormat/NonGregorianFormatTest.java \
-  java/text/Format/MessageFormat/LargeMessageFormat.java \
-  java/text/Format/NumberFormat/NumberRegression.java \
-  java/text/Format/NumberFormat/NumberTest.java \
-  sun/text/IntHashtable/Bug4170614Test.sh
- 
+    sun/tools/jstatd/TestJstatdDefaults.java \
+    sun/tools/jstatd/TestJstatdExternalRegistry.java \
+    sun/tools/jstatd/TestJstatdPort.java \
+    sun/tools/jstatd/TestJstatdPortAndServer.java \
+    sun/tools/jstatd/TestJstatdServer.java \
+    com/sun/management/DiagnosticCommandMBean/DcmdMBeanPermissionsTest.java \
+    java/rmi/Naming/legalRegistryNames/LegalRegistryNames.java \
+    java/text/BreakIterator/BreakIteratorTest.java \
+    java/text/Format/DateFormat/DateFormatTest.java \
+    java/text/Format/DateFormat/NonGregorianFormatTest.java \
+    java/text/Format/MessageFormat/LargeMessageFormat.java \
+    java/text/Format/NumberFormat/NumberRegression.java \
+    java/text/Format/NumberFormat/NumberTest.java \
+    sun/text/IntHashtable/Bug4170614Test.sh \
+    javax/net/ssl/ciphersuites/DisabledAlgorithms.java \
+    sun/security/ssl/sanity/interop/ClientJSSEServerJSSE.java \
+    sun/util/calendar/zi/TestZoneInfo310.java
 
 ###############################################################################
 #

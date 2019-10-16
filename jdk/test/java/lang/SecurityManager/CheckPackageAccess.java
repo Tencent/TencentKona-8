@@ -89,7 +89,10 @@ public class CheckPackageAccess {
         "jdk.nashorn.internal.",
         "jdk.nashorn.tools.",
         "jdk.xml.internal.",
-        "com.sun.activation.registries."
+        "com.sun.activation.registries.",
+        "jdk.jfr.events.",
+        "jdk.jfr.internal.",
+        "jdk.management.jfr.internal."
     };
 
     public static void main(String[] args) throws Exception {
