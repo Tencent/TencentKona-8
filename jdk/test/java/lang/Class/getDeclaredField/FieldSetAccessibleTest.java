@@ -192,6 +192,10 @@ public class FieldSetAccessibleTest {
                 System.out.println("Skipping "+ s);
                 return false;
             }
+            if (s.startsWith("jdk/jfr/event")) {
+                System.out.println("Skipping jfr.event" + s);
+                return false;
+            }
             final Class<?> c = Class.forName(
                     s.replace('/', '.').substring(0, s.length() - 6),
                     false,

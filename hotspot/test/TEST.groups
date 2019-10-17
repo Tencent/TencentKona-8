@@ -103,10 +103,6 @@ needs_jdk = \
   serviceability/dcmd/DynLibDcmdTest.java \
   testlibrary_tests/
 
-hotspot_fail = \
-  runtime/EnableTracing/TestEnableTracing.java
-
-
 # JRE adds further tests to compact3
 #
 jre = \
@@ -297,4 +293,5 @@ compact1_minimal = \
  -:needs_jdk
 
 needs_skip = \
-  runtime/SharedArchiveFile/ArchiveDoesNotExist.java
+  runtime/SharedArchiveFile/ArchiveDoesNotExist.java \
+  runtime/EnableTracing/TestEnableTracing.java
