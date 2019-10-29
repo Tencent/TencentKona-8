@@ -221,6 +221,7 @@ class HandleArea: public Arena {
   friend class NoHandleMark;
   friend class ResetNoHandleMark;
 #ifdef ASSERT
+public:
   int _handle_mark_nesting;
   int _no_handle_mark_nesting;
 #endif
@@ -228,6 +229,11 @@ class HandleArea: public Arena {
  public:
   // Constructor
   HandleArea(HandleArea* prev) : Arena(mtThread, Chunk::tiny_size) {
+    debug_only(_handle_mark_nesting    = 0);
+    debug_only(_no_handle_mark_nesting = 0);
+    _prev = prev;
+  }
+  HandleArea(HandleArea* prev, size_t init_size) : Arena(mtThread,init_size) {
     debug_only(_handle_mark_nesting    = 0);
     debug_only(_no_handle_mark_nesting = 0);
     _prev = prev;
@@ -301,6 +307,7 @@ class HandleMark {
  public:
   HandleMark();                            // see handles_inline.hpp
   HandleMark(Thread* thread)                      { initialize(thread); }
+  HandleMark(Thread* thread, HandleArea* area, HandleMark* last_handle_mark);
   ~HandleMark();
 
   // Functions used by HandleMarkCleaner

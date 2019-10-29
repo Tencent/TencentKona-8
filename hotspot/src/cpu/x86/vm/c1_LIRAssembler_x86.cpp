@@ -451,6 +451,9 @@ int LIR_Assembler::emit_unwind_handler() {
     monitor_address(0, FrameMap::rax_opr);
     stub = new MonitorExitStub(FrameMap::rax_opr, true, 0);
     __ unlock_object(rdi, rsi, rax, *stub->entry());
+    if (CouroutineCheckMonitrAtYield > 0) {
+      LP64_ONLY(__ addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), -1));
+    }
     __ bind(*stub->continuation());
   }
 
@@ -3581,9 +3584,15 @@ void LIR_Assembler::emit_lock(LIR_OpLock* op) {
       add_debug_info_for_null_check(null_check_offset, op->info());
     }
     // done
+    if (CouroutineCheckMonitrAtYield > 0) {
+      LP64_ONLY(__ addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1));
+    }
   } else if (op->code() == lir_unlock) {
     assert(BasicLock::displaced_header_offset_in_bytes() == 0, "lock_reg must point to the displaced header");
     __ unlock_object(hdr, obj, lock, *op->stub()->entry());
+    if (CouroutineCheckMonitrAtYield > 0) {
+      LP64_ONLY(__ addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), -1));
+    }
   } else {
     Unimplemented();
   }
