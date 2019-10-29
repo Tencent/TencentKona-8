@@ -70,6 +70,8 @@ class JavaCallWrapper: StackObj {
   // Construction/destruction
    JavaCallWrapper(methodHandle callee_method, Handle receiver, JavaValue* result, TRAPS);
   ~JavaCallWrapper();
+  void ClearForCoro();
+  void initialize(JavaThread* thread, JNIHandleBlock* handles, Method* callee_method, oop receiver, JavaValue* result);
 
   // Accessors
   JavaThread*      thread() const           { return _thread; }
