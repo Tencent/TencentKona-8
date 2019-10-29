@@ -1276,7 +1276,7 @@ class CommandLineFlags {
   product(bool, RestrictContended, true,                                    \
           "Restrict @Contended to trusted classes")                         \
                                                                             \
-  product(bool, UseBiasedLocking, true,                                     \
+  product(bool, UseBiasedLocking, false,                                     \
           "Enable biased locking in JVM")                                   \
                                                                             \
   product(intx, BiasedLockingStartupDelay, 4000,                            \
@@ -2578,6 +2578,14 @@ class CommandLineFlags {
   develop(bool, GenerateSynchronizationCode, true,                          \
           "generate locking/unlocking code for synchronized methods and "   \
           "monitors")                                                       \
+                                                                            \
+  product(uintx, CouroutineCheckMonitrAtYield, 1,                           \
+          "Check if java monitor is locked when coroutine yield, "          \
+          "now only support Linux X86_64 platform "                         \
+          "0 off"                                                           \
+          "1 log error message when found"                                  \
+          "2 throw Illegal Monitor Exception: NYI"                          \
+          "3 abort with stack inforamtion")                                 \
                                                                             \
   develop(bool, GenerateCompilerNullChecks, true,                           \
           "Generate explicit null checks for loads/stores/calls")           \
@@ -3987,6 +3995,12 @@ class CommandLineFlags {
           "(Unstable, Solaris-specific) Thread interrupt before or with "   \
           "EINTR for I/O operations results in OS_INTRPT. The default "     \
           "value of this flag is true for JDK 6 and earlier")               \
+                                                                            \
+  product(uintx, DefaultCoroutineStackSize, 4*8*8*K,                          \
+        "Default size of the stack that is associated with new coroutines") \
+                                                                            \
+  product(uintx, MaxFreeCoroutinesCacheSize, 20,                            \
+          "The number of free coroutine stacks a thread can keep")          \
                                                                             \
   diagnostic(bool, WhiteBoxAPI, false,                                      \
           "Enable internal testing APIs")                                   \

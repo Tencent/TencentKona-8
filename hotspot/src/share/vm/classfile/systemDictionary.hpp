@@ -195,6 +195,10 @@ class SymbolPropertyTable;
   do_klass(Short_klass,                                 java_lang_Short,                           Pre                 ) \
   do_klass(Integer_klass,                               java_lang_Integer,                         Pre                 ) \
   do_klass(Long_klass,                                  java_lang_Long,                            Pre                 ) \
+                                                                                                                         \
+  /* Stack manipulation classes */                                                                                       \
+  do_klass(coroutine_support_klass,                     java_dyn_CoroutineSupport,                 Opt                 ) \
+  do_klass(coroutine_base_klass,                        java_dyn_CoroutineBase,                    Opt                 ) \
   /*end*/
 
 
