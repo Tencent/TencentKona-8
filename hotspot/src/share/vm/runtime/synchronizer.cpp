@@ -171,6 +171,7 @@ void ObjectSynchronizer::fast_enter(Handle obj, BasicLock* lock, bool attempt_re
     if (!SafepointSynchronize::is_at_safepoint()) {
       BiasedLocking::Condition cond = BiasedLocking::revoke_and_rebias(obj, attempt_rebias, THREAD);
       if (cond == BiasedLocking::BIAS_REVOKED_AND_REBIASED) {
+        THREAD->inc_locks_acquired();
         return;
       }
     } else {
@@ -201,6 +202,7 @@ void ObjectSynchronizer::fast_exit(oop object, BasicLock* lock, TRAPS) {
         assert(((oop)(m->object()))->mark() == mark, "invariant") ;
         assert(m->is_entered(THREAD), "invariant") ;
      }
+     THREAD->dec_locks_acquired();
      return ;
   }
 
@@ -212,6 +214,7 @@ void ObjectSynchronizer::fast_exit(oop object, BasicLock* lock, TRAPS) {
      assert (dhw->is_neutral(), "invariant") ;
      if ((markOop) Atomic::cmpxchg_ptr (dhw, object->mark_addr(), mark) == mark) {
         TEVENT (fast_exit: release stacklock) ;
+        THREAD->dec_locks_acquired();
         return;
      }
   }
@@ -219,6 +222,7 @@ void ObjectSynchronizer::fast_exit(oop object, BasicLock* lock, TRAPS) {
   ObjectSynchronizer::inflate(THREAD,
                               object,
                               inflate_cause_vm_internal)->exit(true, THREAD);
+  THREAD->dec_locks_acquired();
 }
 
 // -----------------------------------------------------------------------------
@@ -236,6 +240,7 @@ void ObjectSynchronizer::slow_enter(Handle obj, BasicLock* lock, TRAPS) {
     lock->set_displaced_header(mark);
     if (mark == (markOop) Atomic::cmpxchg_ptr(lock, obj()->mark_addr(), mark)) {
       TEVENT (slow_enter: release stacklock) ;
+      THREAD->inc_locks_acquired();
       return ;
     }
     // Fall through to inflate() ...
@@ -244,6 +249,7 @@ void ObjectSynchronizer::slow_enter(Handle obj, BasicLock* lock, TRAPS) {
     assert(lock != mark->locker(), "must not re-lock the same lock");
     assert(lock != (BasicLock*)obj->mark(), "don't relock with same BasicLock");
     lock->set_displaced_header(NULL);
+    THREAD->inc_locks_acquired();
     return;
   }
 
@@ -263,6 +269,7 @@ void ObjectSynchronizer::slow_enter(Handle obj, BasicLock* lock, TRAPS) {
   ObjectSynchronizer::inflate(THREAD,
                               obj(),
                               inflate_cause_monitor_enter)->enter(THREAD);
+  THREAD->inc_locks_acquired();
 }
 
 // This routine is used to handle interpreter/compiler slow case
@@ -296,7 +303,9 @@ intptr_t ObjectSynchronizer::complete_exit(Handle obj, TRAPS) {
                                                        obj(),
                                                        inflate_cause_vm_internal);
 
-  return monitor->complete_exit(THREAD);
+  intptr_t recursive = monitor->complete_exit(THREAD);
+  THREAD->dec_locks_acquired();
+  return recursive;
 }
 
 // NOTE: must use heavy weight monitor to handle complete_exit/reenter()
@@ -312,6 +321,7 @@ void ObjectSynchronizer::reenter(Handle obj, intptr_t recursion, TRAPS) {
                                                        inflate_cause_vm_internal);
 
   monitor->reenter(recursion, THREAD);
+  THREAD->inc_locks_acquired();
 }
 // -----------------------------------------------------------------------------
 // JNI locks on java objects
@@ -325,6 +335,7 @@ void ObjectSynchronizer::jni_enter(Handle obj, TRAPS) { // possible entry from j
   }
   THREAD->set_current_pending_monitor_is_from_java(false);
   ObjectSynchronizer::inflate(THREAD, obj(), inflate_cause_jni_enter)->enter(THREAD);
+  THREAD->inc_locks_acquired();
   THREAD->set_current_pending_monitor_is_from_java(true);
 }
 
@@ -336,7 +347,11 @@ bool ObjectSynchronizer::jni_try_enter(Handle obj, Thread* THREAD) {
   }
 
   ObjectMonitor* monitor = ObjectSynchronizer::inflate_helper(obj());
-  return monitor->try_enter(THREAD);
+  bool succ = monitor->try_enter(THREAD);
+  if (succ) {
+    THREAD->inc_locks_acquired();
+  }
+  return succ;
 }
 
 
@@ -357,6 +372,7 @@ void ObjectSynchronizer::jni_exit(oop obj, Thread* THREAD) {
   // monitor->check(CHECK); must exit even if an exception is pending.
   if (monitor->check(THREAD)) {
      monitor->exit(true, THREAD);
+     THREAD->dec_locks_acquired();
   }
 }
 

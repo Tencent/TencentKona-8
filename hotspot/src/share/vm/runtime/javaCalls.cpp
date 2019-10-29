@@ -40,7 +40,7 @@
 #include "runtime/signature.hpp"
 #include "runtime/stubRoutines.hpp"
 #include "runtime/thread.inline.hpp"
-
+#include "runtime/coroutine.hpp"
 // -----------------------------------------------------
 // Implementation of JavaCallWrapper
 
@@ -107,7 +107,48 @@ JavaCallWrapper::JavaCallWrapper(methodHandle callee_method, Handle receiver, Ja
   }
 }
 
+void JavaCallWrapper::initialize(JavaThread* thread, JNIHandleBlock* handles, Method* callee_method, oop receiver, JavaValue* result) {
+  _thread = thread;
+  _handles = handles;
+  _callee_method = callee_method;
+  _receiver = receiver;
+  _result = result;
+  _anchor.clear();
+}
 
+
+void JavaCallWrapper::ClearForCoro()
+{
+  assert(_thread == JavaThread::current(), "must still be the same thread");
+
+  // restore previous handle block & Java frame linkage
+  JNIHandleBlock *_old_handles = _thread->active_handles();
+  _thread->set_active_handles(_handles);
+
+  _thread->frame_anchor()->zap();
+
+  debug_only(_thread->dec_java_call_counter());
+
+  if (_anchor.last_Java_sp() == NULL) {
+    _thread->set_base_of_stack_pointer(NULL);
+  }
+
+  //[zcye] coroclear happend in native call cannot set thread state to _thread_in_vm
+  // Old thread-local info. has been restored. We are not back in the VM.
+  //ThreadStateTransition::transition_from_java(_thread, _thread_in_vm);
+
+  // State has been restored now make the anchor frame visible for the profiler.
+  // Do this after the transition because this allows us to put an assert
+  // the Java->vm transition which checks to see that stack is not walkable
+  // on sparc/ia64 which will catch violations of the reseting of last_Java_frame
+  // invariants (i.e. _flags always cleared on return to Java)
+
+  _thread->frame_anchor()->copy(&_anchor);
+
+  // Release handles after we are marked as being inside the VM again, since this
+  // operation might block
+  JNIHandleBlock::release_block(_old_handles, _thread);
+}
 JavaCallWrapper::~JavaCallWrapper() {
   assert(_thread == JavaThread::current(), "must still be the same thread");
 
@@ -200,8 +241,10 @@ void JavaCalls::call_virtual(JavaValue* result, KlassHandle spec_klass, Symbol* 
   methodHandle method = callinfo.selected_method();
   assert(method.not_null(), "should have thrown exception");
 
+  Coroutine::SetCallInfo(THREAD,&callinfo);
   // Invoke the method
   JavaCalls::call(result, method, args, CHECK);
+  Coroutine::SetCallInfo(THREAD,NULL);
 }
 
 
@@ -422,6 +465,7 @@ void JavaCalls::call_helper(JavaValue* result, methodHandle* m, JavaCallArgument
 
   // do call
   { JavaCallWrapper link(method, receiver, result, CHECK);
+    Coroutine::SetJavaCallWrapper(thread,&link);
     { HandleMark hm(thread);  // HandleMark used by HandleMarkCleaner
 
       StubRoutines::call_stub()(
@@ -442,6 +486,7 @@ void JavaCalls::call_helper(JavaValue* result, methodHandle* m, JavaCallArgument
         thread->set_vm_result((oop) result->get_jobject());
       }
     }
+	Coroutine::SetJavaCallWrapper(thread,NULL);
   } // Exit JavaCallWrapper (can block - potential return oop must be preserved)
 
   // Check if a thread stop or suspend should be executed

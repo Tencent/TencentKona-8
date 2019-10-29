@@ -1439,6 +1439,24 @@ class InjectedField {
   CLASSLOADER_INJECTED_FIELDS(macro)        \
   MEMBERNAME_INJECTED_FIELDS(macro)
 
+class java_dyn_CoroutineBase: AllStatic {
+private:
+  // Note that to reduce dependencies on the JDK we compute these offsets at run-time.
+  static int data_offset;
+
+  static void compute_offsets();
+
+public:
+  // Accessors
+  static jlong data(oop obj);
+  static void set_data(oop obj, jlong value);
+
+  static int get_data_offset()    { return data_offset; }
+
+  // Debugging
+  friend class JavaClasses;
+};
+
 // Interface to hard-coded offset checking
 
 class JavaClasses : AllStatic {

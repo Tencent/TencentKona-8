@@ -49,6 +49,7 @@
 #include "prims/privilegedStack.hpp"
 #include "runtime/arguments.hpp"
 #include "runtime/biasedLocking.hpp"
+#include "runtime/coroutine.hpp"
 #include "runtime/deoptimization.hpp"
 #include "runtime/fprofiler.hpp"
 #include "runtime/frame.inline.hpp"
@@ -262,6 +263,7 @@ Thread::Thread() {
   omFreeProvision = 32 ;
   omInUseList = NULL ;
   omInUseCount = 0 ;
+  locksAcquired = 0;
 
 #ifdef ASSERT
   _visited_for_critical_count = false;
@@ -1448,7 +1450,7 @@ void WatcherThread::print_on(outputStream* st) const {
 
 void JavaThread::initialize() {
   // Initialize fields
-
+  _current_coroutine = NULL;
   // Set the claimed par_id to UINT_MAX (ie not claiming any par_ids)
   set_claimed_par_id(UINT_MAX);
 
@@ -1486,6 +1488,13 @@ void JavaThread::initialize() {
   _interp_only_mode    = 0;
   _special_runtime_exit_condition = _no_async_condition;
   _pending_async_exception = NULL;
+  
+  _coroutine_stack_cache = NULL;
+  _coroutine_stack_cache_size = 0;
+  
+  _coroutine_stack_list = NULL;
+  _coroutine_list = NULL;
+
   _thread_stat = NULL;
   _thread_stat = new ThreadStatistics();
   _blocked_on_compilation = false;
@@ -1620,6 +1629,26 @@ JavaThread::JavaThread(ThreadFunction entry_point, size_t stack_sz) :
 }
 
 JavaThread::~JavaThread() {
+
+  while (coroutine_stack_cache() != NULL) {
+    CoroutineStack* stack = coroutine_stack_cache();
+    stack->remove_from_list(coroutine_stack_cache());
+    CoroutineStack::free_stack(stack, this);
+  }
+
+  while(coroutine_list() != NULL)
+  {
+	  Coroutine* coro = coroutine_list();
+	  Coroutine::free_coroutine(coro,this);
+  }
+
+  while (coroutine_stack_list() != NULL)
+  {
+      CoroutineStack* stack = coroutine_stack_list();
+      stack->remove_from_list(coroutine_stack_list());
+      CoroutineStack::free_stack(stack, this);
+  }
+
   if (TraceThreadEvents) {
       tty->print_cr("terminate thread %p", this);
   }
@@ -1668,6 +1697,8 @@ void JavaThread::run() {
 
   // Record real stack base and size.
   this->record_stack_base_and_size();
+
+  this->initialize_coroutine_support();
 
   // Initialize thread local storage; set before calling MutexLocker
   this->initialize_thread_local_storage();
@@ -1894,6 +1925,10 @@ void JavaThread::exit(bool destroy_vm, ExitType exit_type) {
     assert(!this->has_pending_exception(), "release_monitors should have cleared");
   }
 
+  if (CouroutineCheckMonitrAtYield > 0) {
+    guarantee(this->locksAcquired == 0, "java monitor not release before exit");
+  }
+
   // These things needs to be done while we are still a Java Thread. Make sure that thread
   // is in a consistent state, in case GC happens
   assert(_privileged_stack_top == NULL, "must be NULL when we get here");
@@ -2025,22 +2060,37 @@ JavaThread* JavaThread::active() {
 }
 
 bool JavaThread::is_lock_owned(address adr) const {
-  if (Thread::is_lock_owned(adr)) return true;
-
-  for (MonitorChunk* chunk = monitor_chunks(); chunk != NULL; chunk = chunk->next()) {
-    if (chunk->contains(adr)) return true;
+  if (_current_coroutine->is_thread_coroutine()) {
+    bool res = Thread::is_lock_owned(adr);
+    assert(res == _current_coroutine->is_lock_owned(adr), "thread coroutine has different with thread");
+    if (res) {
+      return true;
+    }
+    assert(_current_coroutine->monitor_chunks() == NULL, "thread coroutine should not have monitor block");
+    for (MonitorChunk* chunk = monitor_chunks(); chunk != NULL; chunk = chunk->next()) {
+      if (chunk->contains(adr)) return true;
+    }
+  } else if (_current_coroutine->is_lock_owned(adr)) {
+    return true;
   }
-
   return false;
 }
 
 
 void JavaThread::add_monitor_chunk(MonitorChunk* chunk) {
+  if (!_current_coroutine->is_thread_coroutine()) {
+    _current_coroutine->add_monitor_chunk(chunk);
+    return;
+  }
   chunk->set_next(monitor_chunks());
   set_monitor_chunks(chunk);
 }
 
 void JavaThread::remove_monitor_chunk(MonitorChunk* chunk) {
+  if (!_current_coroutine->is_thread_coroutine()) {
+    _current_coroutine->remove_monitor_chunk(chunk);
+    return;
+  }
   guarantee(monitor_chunks() != NULL, "must be non empty");
   if (monitor_chunks() == chunk) {
     set_monitor_chunks(chunk->next());
@@ -2623,6 +2673,12 @@ void JavaThread::frames_do(void f(frame*, const RegisterMap* map)) {
     frame* fr = fst.current();
     f(fr, fst.register_map());
   }
+  // traverse the coroutine stack frames
+  Coroutine* current = _coroutine_list;
+  do {
+    current->frames_do(f);
+    current = current->next();
+  } while (current != _coroutine_list);
 }
 
 
@@ -2785,6 +2841,13 @@ void JavaThread::oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) 
       fst.current()->oops_do(f, cld_f, cf, fst.register_map());
     }
   }
+  
+
+  Coroutine* current = _coroutine_list;
+  do {
+    current->oops_do(f, cld_f, cf);
+    current = current->next();
+  } while (current != _coroutine_list);
 
   // callee_target is never live across a gc point so NULL it here should
   // it still contain a methdOop.
@@ -2825,6 +2888,12 @@ void JavaThread::nmethods_do(CodeBlobClosure* cf) {
       fst.current()->nmethods_do(cf);
     }
   }
+
+  Coroutine* current = _coroutine_list;
+  do {
+    current->nmethods_do(cf);
+    current = current->next();
+  } while (current != _coroutine_list);
 }
 
 void JavaThread::metadata_do(void f(Metadata*)) {
@@ -2841,6 +2910,13 @@ void JavaThread::metadata_do(void f(Metadata*)) {
       ct->env()->metadata_do(f);
     }
   }
+
+  Coroutine* current = _coroutine_list;
+  do {
+    current->metadata_do(f);
+    current = current->next();
+  } while (current != _coroutine_list);
+
 }
 
 // Printing
@@ -2869,6 +2945,16 @@ void JavaThread::print_thread_state() const {
   print_thread_state_on(tty);
 };
 #endif // PRODUCT
+void JavaThread::print_coroutine_on(outputStream* st, bool printstack) const
+{
+	Coroutine* current = _coroutine_list;
+	do {
+		current->print_on(st);
+		if(printstack)
+			current->print_stack_on(st);
+		current = current->next();
+	} while (current != _coroutine_list);
+}
 
 // Called by Threads::print() for VM_PrintThreads operation
 void JavaThread::print_on(outputStream *st, bool print_extended_info) const {
@@ -3442,6 +3528,7 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   // stacksize. This adjusted size is what is used to figure the placement
   // of the guard pages.
   main_thread->record_stack_base_and_size();
+  main_thread->initialize_coroutine_support();
   main_thread->initialize_thread_local_storage();
 
   main_thread->set_active_handles(JNIHandleBlock::allocate_block());
@@ -4399,6 +4486,10 @@ void Threads::print_on(outputStream* st, bool print_stacks,
         p->print_stack_on(st);
       }
     }
+	st->cr();
+	st->print_cr("Print all Coroutines:");
+	st->cr();
+	p->print_coroutine_on(st, print_stacks);
     st->cr();
 #if INCLUDE_ALL_GCS
     if (print_concurrent_locks) {
@@ -4740,3 +4831,18 @@ void Threads::verify() {
   VMThread* thread = VMThread::vm_thread();
   if (thread != NULL) thread->verify();
 }
+
+void JavaThread::initialize_coroutine_support() {
+  CoroutineStack::create_thread_stack(this)->insert_into_list(_coroutine_stack_list);
+  char buff[64];
+#ifdef TARGET_OS_FAMILY_windows
+  _snprintf(buff, sizeof(buff), INTPTR_FORMAT "_thread_coroutine", this);
+#else
+  snprintf(buff, sizeof(buff), INTPTR_FORMAT "_thread_coroutine", this);
+#endif
+  buff[63] = '\0';
+  Coroutine::create_thread_coroutine(buff,this, _coroutine_stack_list)->insert_into_list(_coroutine_list);
+  _current_coroutine = _coroutine_list;
+}
+
+

@@ -763,7 +763,13 @@ void InterpreterMacroAssembler::lock_object(Register lock_reg) {
             CAST_FROM_FN_PTR(address, InterpreterRuntime::monitorenter),
             lock_reg);
 
+    if (CouroutineCheckMonitrAtYield > 0) {
+      subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
+    }
     bind(done);
+    if (CouroutineCheckMonitrAtYield > 0) {
+      addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
+    }
   }
 }
 
@@ -833,8 +839,14 @@ void InterpreterMacroAssembler::unlock_object(Register lock_reg) {
             CAST_FROM_FN_PTR(address, InterpreterRuntime::monitorexit),
             lock_reg);
 
+    if (CouroutineCheckMonitrAtYield > 0) {
+      addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
+    }
     bind(done);
 
+    if (CouroutineCheckMonitrAtYield > 0) {
+      subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
+    }
     restore_bcp();
   }
 }

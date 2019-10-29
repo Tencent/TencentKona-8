@@ -3083,6 +3083,22 @@ static void thread_entry(JavaThread* thread, TRAPS) {
   HandleMark hm(THREAD);
   Handle obj(THREAD, thread->threadObj());
   JavaValue result(T_VOID);
+
+  if (SystemDictionary::coroutine_support_klass() != NULL) {
+    InstanceKlass::cast(SystemDictionary::Class_klass())->initialize(CHECK);
+    InstanceKlass::cast(SystemDictionary::coroutine_support_klass())->initialize(CHECK);
+    JavaCalls::call_virtual(&result,
+                            obj,
+                            KlassHandle(THREAD, SystemDictionary::Thread_klass()),
+                            vmSymbols::initializeCoroutineSupport_method_name(),
+                            vmSymbols::void_method_signature(),
+                            THREAD);
+    if (THREAD->has_pending_exception()) {
+      java_lang_Throwable::print_stack_trace(THREAD->pending_exception(), tty);
+      THREAD->clear_pending_exception();
+      vm_abort(false);
+    }
+  }
   JavaCalls::call_virtual(&result,
                           obj,
                           KlassHandle(THREAD, SystemDictionary::Thread_klass()),

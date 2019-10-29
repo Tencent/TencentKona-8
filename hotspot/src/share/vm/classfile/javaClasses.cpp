@@ -3312,6 +3312,25 @@ void java_nio_Buffer::compute_offsets() {
   compute_offset(_limit_offset, k, vmSymbols::limit_name(), vmSymbols::int_signature());
 }
 
+/* stack manipulation */
+
+int java_dyn_CoroutineBase::data_offset = 0;
+
+void java_dyn_CoroutineBase::compute_offsets() {
+  Klass* k = SystemDictionary::coroutine_base_klass();
+  if (k != NULL) {
+    compute_offset(data_offset,    k, vmSymbols::data_name(),    vmSymbols::long_signature());
+  }
+}
+
+jlong java_dyn_CoroutineBase::data(oop obj) {
+  return obj->long_field(data_offset);
+}
+
+void java_dyn_CoroutineBase::set_data(oop obj, jlong value) {
+  obj->long_field_put(data_offset, value);
+}
+
 void java_util_concurrent_locks_AbstractOwnableSynchronizer::initialize(TRAPS) {
   if (_owner_offset != 0) return;
 
@@ -3421,6 +3440,8 @@ void JavaClasses::compute_offsets() {
 
   // generated interpreter code wants to know about the offsets we just computed:
   AbstractAssembler::update_delayed_values();
+
+  java_dyn_CoroutineBase::compute_offsets();
 }
 
 #ifndef PRODUCT

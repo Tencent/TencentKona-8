@@ -90,6 +90,9 @@ DEBUG_ONLY(class ResourceMark;)
 
 class WorkerThread;
 
+class Coroutine;
+class CoroutineStack;
+
 // Class hierarchy
 // - Thread
 //   - NamedThread
@@ -287,6 +290,13 @@ class Thread: public ThreadShadow {
   int omFreeProvision;                          // reload chunk size
   ObjectMonitor* omInUseList;                   // SLL to track monitors in circulation
   int omInUseCount;                             // length of omInUseList
+  int locksAcquired;                            // number of locks acquired by this thread
+  void inc_locks_acquired()                     {
+    if (CouroutineCheckMonitrAtYield > 0) { locksAcquired++; assert(locksAcquired >= 1, "invalid state"); }
+  }
+  void dec_locks_acquired()                     {
+    if (CouroutineCheckMonitrAtYield > 0) {locksAcquired--; assert(locksAcquired >= 0, "invalid state"); }
+  }
 
 #ifdef ASSERT
  private:
@@ -611,6 +621,10 @@ protected:
   void leaving_jvmti_env_iteration()             { --_jvmti_env_iteration_count; }
   bool is_inside_jvmti_env_iteration()           { return _jvmti_env_iteration_count > 0; }
 
+  static ByteSize resource_area_offset()         { return byte_offset_of(Thread, _resource_area); }
+  static ByteSize handle_area_offset()           { return byte_offset_of(Thread, _handle_area); }
+  static ByteSize last_handle_mark_offset()      { return byte_offset_of(Thread, _last_handle_mark); }
+
   // Code generation
   static ByteSize exception_file_offset()        { return byte_offset_of(Thread, _exception_file   ); }
   static ByteSize exception_line_offset()        { return byte_offset_of(Thread, _exception_line   ); }
@@ -618,7 +632,9 @@ protected:
 
   static ByteSize stack_base_offset()            { return byte_offset_of(Thread, _stack_base ); }
   static ByteSize stack_size_offset()            { return byte_offset_of(Thread, _stack_size ); }
+  static ByteSize metadata_handles_offset()      { return byte_offset_of(Thread, _metadata_handles); }
 
+  static ByteSize locksAcquired_offset()         { return byte_offset_of(Thread, locksAcquired); }
 #define TLAB_FIELD_OFFSET(name) \
   static ByteSize tlab_##name##_offset()         { return byte_offset_of(Thread, _tlab) + ThreadLocalAllocBuffer::name##_offset(); }
 
@@ -972,6 +988,29 @@ class JavaThread: public Thread {
   // _frames_to_pop_failed_realloc frames, the ones that reference
   // failed reallocations.
   int _frames_to_pop_failed_realloc;
+
+  // coroutine support
+  CoroutineStack*   _coroutine_stack_cache;
+  uintx             _coroutine_stack_cache_size;
+  CoroutineStack*   _coroutine_stack_list;
+  Coroutine*        _coroutine_list;
+
+  intptr_t          _coroutine_temp;
+  Coroutine*        _current_coroutine;
+
+ public:
+
+  Coroutine* current_coroutine()                 { return _current_coroutine;}
+  CoroutineStack*& coroutine_stack_cache()       { return _coroutine_stack_cache; }
+  uintx& coroutine_stack_cache_size()            { return _coroutine_stack_cache_size; }
+  CoroutineStack*& coroutine_stack_list()        { return _coroutine_stack_list; }
+  Coroutine*& coroutine_list()                   { return _coroutine_list; }
+
+  static ByteSize coroutine_temp_offset()        { return byte_offset_of(JavaThread, _coroutine_temp); }
+  
+  void initialize_coroutine_support();
+
+ private:
 
 #ifndef PRODUCT
   int _jmp_ring_index;
@@ -1403,6 +1442,10 @@ class JavaThread: public Thread {
   static ByteSize is_method_handle_return_offset() { return byte_offset_of(JavaThread, _is_method_handle_return); }
   static ByteSize stack_guard_state_offset()     { return byte_offset_of(JavaThread, _stack_guard_state   ); }
   static ByteSize suspend_flags_offset()         { return byte_offset_of(JavaThread, _suspend_flags       ); }
+  static ByteSize current_coro_offset()          { return byte_offset_of(JavaThread,_current_coroutine    ); }
+#ifdef ASSERT
+  static ByteSize java_call_counter_offset()     { return byte_offset_of(JavaThread, _java_call_counter); }
+#endif
 
   static ByteSize do_not_unlock_if_synchronized_offset() { return byte_offset_of(JavaThread, _do_not_unlock_if_synchronized); }
   static ByteSize should_post_on_exceptions_flag_offset() {
@@ -1493,6 +1536,7 @@ class JavaThread: public Thread {
   char* name() const { return (char*)get_thread_name(); }
   void print_on(outputStream* st, bool print_extended_info) const;
   void print_on(outputStream* st) const { print_on(st, false); }
+  void print_coroutine_on(outputStream* st,bool printstack) const;
   void print() const { print_on(tty); }
   void print_value();
   void print_thread_state_on(outputStream* ) const      PRODUCT_RETURN;

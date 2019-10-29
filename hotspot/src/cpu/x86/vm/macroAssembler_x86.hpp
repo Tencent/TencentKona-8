@@ -602,6 +602,14 @@ class MacroAssembler: public Assembler {
   // prints msg and continues
   void warn(const char* msg);
 
+  static void testwarn(const char* msg, char* coro);
+
+  void zcyewarn(const char* msg,Register coro);
+
+  void ReclaimJavaCallStack(Register old_coroutine);
+
+  void TerminateCoroutine(Register coroutine);
+
   // dumps registers and other state
   void print_state();
 
