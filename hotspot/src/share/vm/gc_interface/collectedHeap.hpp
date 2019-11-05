@@ -319,6 +319,10 @@ class CollectedHeap : public CHeapObj<mtInternal> {
   inline static oop obj_allocate(KlassHandle klass, int size, TRAPS);
   inline static oop array_allocate(KlassHandle klass, int size, int length, TRAPS);
   inline static oop array_allocate_nozero(KlassHandle klass, int size, int length, TRAPS);
+ private:
+  inline static void check_array_size(int size, int length, TRAPS);
+
+ public:
 
   inline static void post_allocation_install_obj_klass(KlassHandle klass,
                                                        oop obj);
