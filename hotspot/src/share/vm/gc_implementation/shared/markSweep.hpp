@@ -321,8 +321,8 @@ class PMSRegion {
       delete _monitor;
     }
     if (_destinations != NULL) {
-      size_t len = _destinations->length();
-      for (size_t i = 0; i < len; i++) {
+      int len = _destinations->length();
+      for (int i = 0; i < len; i++) {
         delete _destinations->at(i);
       }
     }
@@ -349,8 +349,8 @@ class PMSRegion {
   }
   RegionDest* find_destination(HeapWord* addr) {
     assert(_mr.start() <= addr && addr < _mr.end(), "Must be in the region");
-    size_t len = _destinations->length();
-    for (size_t i = 0; i < len; i++) {
+    int len = _destinations->length();
+    for (int i = 0; i < len; i++) {
       RegionDest* d = _destinations->at(i);
       if (d->_from_mr.contains(addr)) {
         return d;
@@ -601,7 +601,7 @@ class PMSRegionArraySet : public ResourceObj {
     GrowableArray<Space*>* spaces = cl.spaces();
     // Five spaces (eden, s0, s1, OG, and PG.)
     assert(spaces->length() == N_SPACES, "wrong number of spaces");
-    for (size_t i = 0; i < N_SPACES; i++) {
+    for (int i = 0; i < N_SPACES; i++) {
       Space* s = spaces->at(i);
       CompactibleSpace* cs = s->toCompactibleSpace();
       assert(cs != NULL, "Must be a CompactibleSpace");
@@ -615,12 +615,12 @@ class PMSRegionArraySet : public ResourceObj {
       _spaces[1] = tmp;
     }
 #ifdef ASSERT
-    for (size_t i = 0; i < N_SPACES - 1; i++) {
+    for (int i = 0; i < N_SPACES - 1; i++) {
       assert(_spaces[i]->bottom() < _spaces[i + 1]->bottom(),
              "The spaces must be in the ascending address order");
     }
 #endif
-    for (size_t i = 0; i < N_SPACES; i++) {
+    for (int i = 0; i < N_SPACES; i++) {
       _arrays[i] = PMSRegionArray(_spaces[i], CMSParallelFullGCHeapRegionSize);
       _space_bottoms[i] = _spaces[i]->bottom();
     }
@@ -629,7 +629,7 @@ class PMSRegionArraySet : public ResourceObj {
   // Because this object is resource-allocated, a destructor won't be
   // called. Use this function to reclaim resources.
   void cleanup() {
-    for (size_t i = 0; i < N_SPACES; i++) {
+    for (int i = 0; i < N_SPACES; i++) {
       _arrays[i].cleanup();
     }
   }
@@ -637,7 +637,7 @@ class PMSRegionArraySet : public ResourceObj {
   CompactibleSpace* cms_space() { return _spaces[CMS_SPACE]; }
 
   inline PMSRegionArray* region_array_for(HeapWord* addr) {
-    for (size_t i = 0; i < N_SPACES; i++) {
+    for (int i = 0; i < N_SPACES; i++) {
       PMSRegionArray* ra = &_arrays[i];
       if (ra->contains(addr)) {
         return ra;
@@ -668,7 +668,7 @@ class PMSRegionArraySet : public ResourceObj {
   }
 
   PMSRegionArray* region_array_for(Space* space) {
-    for (size_t i = 0; i < N_SPACES; i++) {
+    for (int i = 0; i < N_SPACES; i++) {
       PMSRegionArray* ra = &_arrays[i];
       if (ra->space() == space) {
         return ra;

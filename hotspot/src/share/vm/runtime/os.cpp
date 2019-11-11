@@ -1644,7 +1644,7 @@ bool os::correct_cds_path(const char* origin_path, char* result, const int resul
     return false;
   }
 
-  int origin_length = strlen(origin_path);
+  int origin_length = (int)strlen(origin_path);
   if (origin_length==0 || origin_length > result_array_length) {
     return false;
   }

@@ -620,8 +620,8 @@ void PMSParEvacTask::work(uint worker_id) {
 
         // Wait until all the dependency regions have been evacuated.
         GrowableArray<PMSRegion*>* deps = r->dependencies();
-        size_t n_deps = deps->length();
-        for (size_t i = 0; i < n_deps; i++) {
+        int n_deps = deps->length();
+        for (int i = 0; i < n_deps; i++) {
           PMSRegion* depr = deps->at(i);
           MutexLockerEx ml(depr->_monitor, Mutex::_no_safepoint_check_flag);
           // Block until the dependency region is evacuated
@@ -683,8 +683,8 @@ void PMSRegionArray::compute_compact_dependencies() {
   PMSRegion* last_r = region_for_addr(_space->end_of_live() - 1);
   for (PMSRegion* r = first_r; r <= last_r; r++) {
     GrowableArray<PMSRegion::RegionDest*>* dests = r->destinations();
-    size_t n_dests = dests->length();
-    for (size_t i = 0; i < n_dests; i++) {
+    int n_dests = dests->length();
+    for (int i = 0; i < n_dests; i++) {
       PMSRegion::RegionDest* d = dests->at(i);
       CompactibleSpace* to_space = d->_to_space;
       PMSRegionArray* to_space_regions = MarkSweep::pms_region_array_set()->region_array_for(to_space);
