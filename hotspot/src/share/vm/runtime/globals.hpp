@@ -1819,7 +1819,7 @@ class CommandLineFlags {
           "Print the eden and the survivor chunks used for the parallel "   \
           "initial mark or remark of the eden/survivor spaces")             \
                                                                             \
-  product(bool, CMSParallelFullGC, true,                                   \
+  product(bool, CMSParallelFullGC, false,                                   \
          "Use parallel full GC under CMS.")                                 \
                                                                             \
   develop(bool, ShareCMSMarkBitMapWithParallelFullGC, true,                 \
