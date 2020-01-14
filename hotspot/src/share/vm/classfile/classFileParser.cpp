@@ -4217,8 +4217,14 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
       ResourceMark rm;
       // print in a single call to reduce interleaving of output
       if (cfs->source() != NULL) {
-        tty->print("[Loaded %s from %s]\n", this_klass->external_name(),
+        if (PrintClassLoadingDetails) {
+          tty->date_stamp(true);
+          tty->print(" [Loaded %s from %s by classloader: %s (%p)]\n", this_klass->external_name(),
+                   cfs->source(), (class_loader.is_null() ? "bootstrap" : InstanceKlass::cast(class_loader->klass())->external_name()), class_loader);
+        }else {
+          tty->print("[Loaded %s from %s]\n", this_klass->external_name(),
                    cfs->source());
+        }
       } else if (class_loader.is_null()) {
         Klass* caller =
             THREAD->is_Java_thread()

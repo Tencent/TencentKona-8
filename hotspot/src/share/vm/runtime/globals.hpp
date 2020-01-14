@@ -913,6 +913,9 @@ class CommandLineFlags {
   product(ccstrlist, OnOutOfMemoryError, "",                                \
           "Run user-defined commands on first java.lang.OutOfMemoryError")  \
                                                                             \
+  manageable(bool, PrintClassLoadingDetails, false,                         \
+          "Print class loading details when enable TraceClassLoading")      \
+                                                                            \
   manageable(bool, HeapDumpBeforeFullGC, false,                             \
           "Dump heap to file before any major stop-the-world GC")           \
                                                                             \
