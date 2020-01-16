@@ -917,7 +917,8 @@ class CommandLineFlags {
           "Run user-defined commands on first java.lang.OutOfMemoryError")  \
                                                                             \
   manageable(bool, PrintClassLoadingDetails, false,                         \
-          "Print class loading details when enable TraceClassLoading")      \
+          "Print additional date stamps and effective class loaders"        \
+          " when TraceClassLoading is on")                                  \
                                                                             \
   manageable(bool, HeapDumpBeforeFullGC, false,                             \
           "Dump heap to file before any major stop-the-world GC")           \
