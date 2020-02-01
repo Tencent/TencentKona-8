@@ -194,10 +194,19 @@ void VM_Version::initialize() {
     FLAG_SET_DEFAULT(UseAESIntrinsics, false);
   }
 
-#else
-  if (UseAES) {
-    warning("AES instructions are not available on this CPU");
-    FLAG_SET_DEFAULT(UseAES, false);
+  if (UseGHASHIntrinsics) {
+    warning("GHASH intrinsics are not available on this CPU");
+    FLAG_SET_DEFAULT(UseGHASHIntrinsics, false);
+  }
+
+  if (has_vshasig()) {
+    if (FLAG_IS_DEFAULT(UseSHA)) {
+      UseSHA = true;
+    }
+  } else if (UseSHA) {
+    if (!FLAG_IS_DEFAULT(UseSHA))
+      warning("SHA instructions are not available on this CPU");
+    FLAG_SET_DEFAULT(UseSHA, false);
   }
   if (UseAESIntrinsics) {
     if (!FLAG_IS_DEFAULT(UseAESIntrinsics))
