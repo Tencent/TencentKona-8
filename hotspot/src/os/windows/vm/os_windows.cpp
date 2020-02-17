@@ -3512,6 +3512,7 @@ bool os::unguard_memory(char* addr, size_t bytes) {
 
 void os::pd_realign_memory(char *addr, size_t bytes, size_t alignment_hint) { }
 void os::pd_free_memory(char *addr, size_t bytes, size_t alignment_hint) { }
+void os::pd_free_heap_physical_memory(char *addr, size_t bytes) { }
 void os::numa_make_global(char *addr, size_t bytes)    { }
 void os::numa_make_local(char *addr, size_t bytes, int lgrp_hint)    { }
 bool os::numa_topology_changed()                       { return false; }

@@ -2217,6 +2217,33 @@ void ConcurrentMark::completeCleanup() {
                                _cleanup_list.length());
       }
 
+      if (FreeHeapPhysicalMemory) {
+        size_t free_heap_physical_memory_total_byte_size =0;
+        double start_sec = os::elapsedTime();
+        int tmp_free_list_length = 0;
+        int should_be_freed_region_length = 0;
+        int diff = 0;
+        //free regions physical memory
+        HeapRegion* cur = tmp_free_list.head();
+        //to calculate the first region in the middle of the tmp_free_list
+        diff = (int)(((100 - G1SecondaryFreeListFreeMemoryThresholdPercent) * tmp_free_list.length()) / 100) / 2;
+        //region num to be free physical memroy
+        should_be_freed_region_length = 
+           tmp_free_list.length() * G1SecondaryFreeListFreeMemoryThresholdPercent / 100;
+        //forward cur to the right region
+        for (int i = 0; i < diff && cur != NULL; i++) {
+          cur = cur->next();
+        }
+
+        for (int i = 0; i < should_be_freed_region_length && cur != NULL; i++) {
+          free_heap_physical_memory_total_byte_size += cur->capacity();
+          os::free_heap_physical_memory(((char*)cur->bottom()), cur->capacity());
+          cur = cur->next();
+        }
+        double end_sec = os::elapsedTime();
+        g1h->add_heap_physical_memory_free_info(end_sec - start_sec, free_heap_physical_memory_total_byte_size, should_be_freed_region_length);
+      }
+
       {
         MutexLockerEx x(SecondaryFreeList_lock, Mutex::_no_safepoint_check_flag);
         g1h->secondary_free_list_add(&tmp_free_list);
