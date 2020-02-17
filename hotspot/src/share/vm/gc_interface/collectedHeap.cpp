@@ -582,6 +582,34 @@ void CollectedHeap::post_full_gc_dump(GCTimer* timer) {
   }
 }
 
+void  CollectedHeap::free_heap_physical_memory_after_fullgc(void* start, void* end) {
+  double start_sec = os::elapsedTime();
+  //UseLargePages
+  size_t page_size = os::vm_page_size();
+  guarantee ((size_t)end % page_size == 0, "Invariant") ;
+  char* start_address = (char*)align_ptr_up(start, page_size);
+  //overflow?
+  size_t length = (size_t)end - (size_t)start_address;
+  guarantee (length % page_size == 0, "Invariant") ;
+  _free_heap_physical_memory_total_byte_size = length;
+  os::free_heap_physical_memory(start_address, length);
+  double end_sec = os::elapsedTime();
+  _free_heap_physical_memory_time_sec = end_sec - start_sec;
+
+  return;
+}
+
+void CollectedHeap::print_heap_physical_memory_free_info() {
+  if (PrintGCDetails) {
+    gclog_or_tty->print(", [free physical memory: " SIZE_FORMAT " KB, %3.7f secs]",\
+            _free_heap_physical_memory_total_byte_size / K,
+            _free_heap_physical_memory_time_sec);
+  }
+  //reset
+  _free_heap_physical_memory_time_sec = 0;
+  _free_heap_physical_memory_total_byte_size = 0;
+}
+
 /////////////// Unit tests ///////////////
 
 #ifndef PRODUCT

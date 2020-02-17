@@ -276,6 +276,10 @@ void CompactibleFreeListSpace::reset(MemRegion mr) {
     // Everything's allocated until proven otherwise.
     _bt.set_unallocated_block(end());
   }
+  if (FreeHeapPhysicalMemory) {
+    _gen->free_heap_physical_memory_after_fullgc(mr.start(), mr.end());
+  }
+  
   if (!mr.is_empty()) {
     assert(mr.word_size() >= MinChunkSize, "Chunk size is too small");
     _bt.single_block(mr.start(), mr.word_size());

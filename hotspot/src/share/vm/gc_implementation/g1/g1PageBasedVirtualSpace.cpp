@@ -229,7 +229,11 @@ void G1PageBasedVirtualSpace::uncommit_internal(size_t start_page, size_t end_pa
             err_msg("Given start page " SIZE_FORMAT " is larger or equal to end page " SIZE_FORMAT, start_page, end_page));
 
   char* start_addr = page_start(start_page);
-  os::uncommit_memory(start_addr, pointer_delta(bounded_end_addr(end_page), start_addr, sizeof(char)));
+  bool res = os::uncommit_memory(start_addr, pointer_delta(bounded_end_addr(end_page), start_addr, sizeof(char)));
+  //should madvise the physical memory only after uncommit operation succeed
+  if (res && FreeHeapPhysicalMemory) {
+    os::free_heap_physical_memory(start_addr, pointer_delta(bounded_end_addr(end_page), start_addr, sizeof(char)));
+  }
 }
 
 void G1PageBasedVirtualSpace::uncommit(size_t start_page, size_t size_in_pages) {

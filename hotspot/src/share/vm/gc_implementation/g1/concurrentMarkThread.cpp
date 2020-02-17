@@ -228,8 +228,10 @@ void ConcurrentMarkThread::run() {
         double cleanup_end_sec = os::elapsedTime();
         if (G1Log::fine()) {
           gclog_or_tty->gclog_stamp(cm()->concurrent_gc_id());
-          gclog_or_tty->print_cr("[GC concurrent-cleanup-end, %1.7lf secs]",
+          gclog_or_tty->print("[GC concurrent-cleanup-end, %1.7lf secs]",
                                  cleanup_end_sec - cleanup_start_sec);
+          g1h->print_heap_physical_memory_free_info();
+          gclog_or_tty->cr();
         }
       }
       guarantee(cm()->cleanup_list_is_empty(),

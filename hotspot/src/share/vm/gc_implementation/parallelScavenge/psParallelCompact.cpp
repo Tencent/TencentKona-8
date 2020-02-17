@@ -2100,6 +2100,11 @@ bool PSParallelCompact::invoke_no_policy(bool maximum_heap_compaction) {
 
     // Let the size policy know we're done
     size_policy->major_collection_end(old_gen->used_in_bytes(), gc_cause);
+    if (FreeHeapPhysicalMemory) {
+      void* start = old_gen->object_space()->top();
+      void* end = old_gen->object_space()->end();
+      heap->free_heap_physical_memory_after_fullgc(start, end);
+    }
 
     if (UseAdaptiveSizePolicy) {
       if (PrintAdaptiveSizePolicy) {
@@ -2193,6 +2198,9 @@ bool PSParallelCompact::invoke_no_policy(bool maximum_heap_compaction) {
         MetaspaceAux::print_metaspace_change(pre_gc_values.metadata_used());
       } else {
         heap->print_heap_change(pre_gc_values.heap_used());
+      }
+      if (FreeHeapPhysicalMemory) {
+        heap->print_heap_physical_memory_free_info();
       }
     }
 
