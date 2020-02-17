@@ -172,6 +172,10 @@ public:
     }
     return hr;
   }
+  
+  FreeRegionList* free_list() {
+    return &_free_list;
+  }
 
   inline void allocate_free_regions_starting_at(uint first, uint num_regions);
 

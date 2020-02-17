@@ -127,6 +127,11 @@ bool PSVirtualSpace::shrink_by(size_t bytes) {
   bool result = special() || os::uncommit_memory(base_addr, bytes);
   if (result) {
     _committed_high_addr -= bytes;
+    if (FreeHeapPhysicalMemory) {
+      //should try to madvise virtual memory [base_addr, base_addr + bytes] 
+      //only after os::uncommit_memory succeed
+      os::free_heap_physical_memory(base_addr, bytes);
+    }
   }
 
   return result;

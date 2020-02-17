@@ -78,6 +78,10 @@
           "Target duration of individual concurrent marking steps "         \
           "in milliseconds.")                                               \
                                                                             \
+  product(double, G1FreeOldMemoryThresholdPercentAfterFullGC, 70,           \
+          "Target percent to free old generation physical memory "          \
+          "after FullGC.")                                                  \
+                                                                            \
   product(intx, G1RefProcDrainInterval, 10,                                 \
           "The number of discovered reference objects to process before "   \
           "draining concurrent marking work queues.")                       \
@@ -232,6 +236,10 @@
           "The number of regions we will add to the secondary free list "   \
           "at every append operation")                                      \
                                                                             \
+  product(double, G1SecondaryFreeListFreeMemoryThresholdPercent, 50,        \
+          "Target percent of heap regions that will be recycled by"         \
+          "concurrent gc.")                                                 \
+									    \
   develop(bool, G1ConcRegionFreeingVerbose, false,                          \
           "Enables verboseness during concurrent region freeing")           \
                                                                             \

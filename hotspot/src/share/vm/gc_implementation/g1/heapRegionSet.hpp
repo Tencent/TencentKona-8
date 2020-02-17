@@ -228,6 +228,14 @@ public:
 
   void verify_list();
 
+  HeapRegion* head() {
+    return _head;
+  }
+
+  HeapRegion* tail() {
+    return _tail;
+  }
+
 #ifdef ASSERT
   bool contains(HeapRegion* hr) const {
     return hr->containing_set() == this;
