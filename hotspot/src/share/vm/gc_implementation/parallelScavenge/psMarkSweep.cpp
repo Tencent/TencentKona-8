@@ -265,6 +265,11 @@ bool PSMarkSweep::invoke_no_policy(bool clear_all_softrefs) {
 
     // Let the size policy know we're done
     size_policy->major_collection_end(old_gen->used_in_bytes(), gc_cause);
+    if (FreeHeapPhysicalMemory) {
+      void* start = old_gen->object_space()->top();
+      void* end = old_gen->object_space()->end();
+      heap->free_heap_physical_memory_after_fullgc(start, end);
+    }
 
     if (UseAdaptiveSizePolicy) {
 
@@ -360,6 +365,9 @@ bool PSMarkSweep::invoke_no_policy(bool clear_all_softrefs) {
       heap->print_heap_change(prev_used);
       if (PrintGCDetails) {
         MetaspaceAux::print_metaspace_change(metadata_prev_used);
+      }
+      if (FreeHeapPhysicalMemory) {
+        heap->print_heap_physical_memory_free_info();
       }
     }
 

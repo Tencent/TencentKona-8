@@ -1529,6 +1529,11 @@ bool G1CollectedHeap::do_collection(bool explicit_gc,
       gc_epilogue(true);
     }
 
+    if (FreeHeapPhysicalMemory) {
+        //should free heap memory
+        free_heap_physical_memory_after_fullgc();
+    }
+
     if (G1Log::finer()) {
       g1_policy()->print_detailed_heap_transition(true /* full */);
     }
@@ -1537,6 +1542,7 @@ bool G1CollectedHeap::do_collection(bool explicit_gc,
     trace_heap_after_gc(gc_tracer);
 
     post_full_gc_dump(gc_timer);
+
 
     gc_timer->register_gc_end();
     gc_tracer->report_gc_end(gc_timer->gc_end(), gc_timer->time_partitions());
@@ -1784,6 +1790,47 @@ bool G1CollectedHeap::expand(size_t expand_bytes) {
     }
   }
   return regions_to_expand > 0;
+}
+
+void G1CollectedHeap::free_heap_physical_memory_after_fullgc() {
+  double start_sec = os::elapsedTime();
+  int num_free_regions = _hrm.num_free_regions();
+  //max regions will be used by mutator and if used regions has exceeded 
+  //this, will trigger expand or gc for free regions
+  int max_young_region_num = (int)_g1_policy->young_list_target_length();
+  int current_young_region_num = young_list()->length();
+  //after fullgc, young_ist may be empty mostly
+  int diff = max_young_region_num - current_young_region_num;
+  //how many regions will be used for old gen in the _free_list freed by FullGC
+  int old_heap_region_num = num_free_regions - diff;
+  if (old_heap_region_num <= 0) {
+    return;
+  }
+  FreeRegionList* free_list = _hrm.free_list();
+  int free_list_length = free_list->length();
+  int reclaim_region_count = (int)((free_list_length - diff) * G1FreeOldMemoryThresholdPercentAfterFullGC) / 100;
+
+  /* free_list is a double linked list sorted by region index, young generation will get regions from tail,
+   * while old gen get region from head, for performance, we skip the young region and free the second part
+   * of the old heap region
+   */
+  HeapRegion* tail = free_list->tail();
+  //forward to the right region
+  for (int i = 0; i < diff && tail != NULL; i++) {
+    tail = tail->prev();
+  }
+  HeapRegion* cur = tail;
+
+  guarantee (cur != NULL, "Invariant") ;
+  for (int i = 0; i < reclaim_region_count && cur != NULL; i++) {
+    _free_heap_physical_memory_total_byte_size += cur->capacity();
+    os::free_heap_physical_memory(((char*)cur->bottom()), cur->capacity());
+    cur = cur->prev();
+  }
+  _reclaim_region_count = reclaim_region_count;
+  double end_sec = os::elapsedTime();
+  _free_heap_physical_memory_time_sec = end_sec - start_sec;
+  return;
 }
 
 void G1CollectedHeap::shrink_helper(size_t shrink_bytes) {
@@ -7022,4 +7069,24 @@ public:
 void G1CollectedHeap::rebuild_strong_code_roots() {
   RebuildStrongCodeRootClosure blob_cl(this);
   CodeCache::blobs_do(&blob_cl);
+}
+
+void G1CollectedHeap::print_heap_physical_memory_free_info() {
+    if (PrintGCDetails) {
+        gclog_or_tty->print(", [free physical memory: " SIZE_FORMAT " KB, " SIZE_FORMAT " regions, %3.7f secs]",\
+            _free_heap_physical_memory_total_byte_size / K,_reclaim_region_count,
+                _free_heap_physical_memory_time_sec);
+    }
+    //reset
+    _free_heap_physical_memory_time_sec = 0;
+    _free_heap_physical_memory_total_byte_size = 0;
+    _reclaim_region_count = 0;
+}
+
+
+void G1CollectedHeap::add_heap_physical_memory_free_info(double free_heap_physical_memory_time_sec,
+        size_t free_heap_physical_memory_total_byte_size,int reclaim_region_count){
+    _free_heap_physical_memory_time_sec += free_heap_physical_memory_time_sec;
+    _free_heap_physical_memory_total_byte_size += free_heap_physical_memory_total_byte_size;
+    _reclaim_region_count += reclaim_region_count;
 }
