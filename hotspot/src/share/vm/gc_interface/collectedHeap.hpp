@@ -97,6 +97,7 @@ class CollectedHeap : public CHeapObj<mtInternal> {
   // Used in support of ReduceInitialCardMarks; only consulted if COMPILER2 is being used
   bool _defer_initial_card_mark;
 
+
  protected:
   MemRegion _reserved;
   BarrierSet* _barrier_set;
@@ -114,6 +115,9 @@ class CollectedHeap : public CHeapObj<mtInternal> {
   GCCause::Cause _gc_lastcause;
   PerfStringVariable* _perf_gc_cause;
   PerfStringVariable* _perf_gc_lastcause;
+
+  double _free_heap_physical_memory_time_sec;
+  size_t _free_heap_physical_memory_total_byte_size;
 
   // Constructor
   CollectedHeap();
@@ -323,6 +327,8 @@ class CollectedHeap : public CHeapObj<mtInternal> {
   inline static void check_array_size(int size, int length, TRAPS);
 
  public:
+  void free_heap_physical_memory_after_fullgc(void* start, void* end);
+  virtual void print_heap_physical_memory_free_info();
 
   inline static void post_allocation_install_obj_klass(KlassHandle klass,
                                                        oop obj);

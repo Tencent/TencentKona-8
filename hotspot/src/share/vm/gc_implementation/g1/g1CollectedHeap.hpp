@@ -233,6 +233,8 @@ private:
   // It keeps track of the humongous regions.
   HeapRegionSet _humongous_set;
 
+  int _reclaim_region_count;
+
   void eagerly_reclaim_humongous_regions();
 
   // The number of regions we could create by expansion.
@@ -647,6 +649,12 @@ public:
   // false otherwise.
   // (Rounds up to a HeapRegion boundary.)
   bool expand(size_t expand_bytes);
+
+  void free_heap_physical_memory_after_fullgc();
+  virtual void print_heap_physical_memory_free_info();
+  void add_heap_physical_memory_free_info(double free_heap_physical_memory_time_sec,
+          size_t free_heap_physical_memory_total_byte_size,
+          int reclaim_region_count);
 
   // Returns the PLAB statistics for a given destination.
   inline PLABStats* alloc_buffer_stats(InCSetState dest);

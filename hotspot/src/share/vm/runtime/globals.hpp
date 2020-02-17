@@ -3280,6 +3280,9 @@ class CommandLineFlags {
              "Desired size of array space allocation before "               \
              "printing a warning")                                          \
                                                                             \
+  product(bool, FreeHeapPhysicalMemory, false,                              \
+             "Free physical memory after fullgc or shrink operation")    \
+                                                                            \
   product(intx, SoftRefLRUPolicyMSPerMB, 1000,                              \
           "Number of milliseconds per MB of free space in the heap")        \
                                                                             \

@@ -1197,6 +1197,12 @@ class ConcurrentMarkSweepGeneration: public CardGeneration {
   // Grow generation to reserved size.
   bool grow_to_reserved();
 
+  //free heap memory
+  void free_heap_physical_memory_after_fullgc(void* start, void* end) {
+    GenCollectedHeap* gch = GenCollectedHeap::heap();
+    gch->free_heap_physical_memory_after_fullgc(start, end);
+  }
+
   void clear_expansion_cause() { _expansion_cause = CMSExpansionCause::_no_expansion; }
 
   // Space enquiries

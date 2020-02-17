@@ -2681,6 +2681,10 @@ void os::pd_free_memory(char* addr, size_t bytes, size_t alignment_hint) {
   }
 }
 
+//to be implemented
+void os::pd_free_heap_physical_memory(char *addr, size_t bytes) {
+}
+
 bool os::pd_create_stack_guard_pages(char* addr, size_t size) {
   return os::commit_memory(addr, size, !ExecMem);
 }

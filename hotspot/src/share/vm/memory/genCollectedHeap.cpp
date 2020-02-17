@@ -555,6 +555,9 @@ void GenCollectedHeap::do_collection(bool  full,
       // Print metaspace info for full GC with PrintGCDetails flag.
       if (complete) {
         MetaspaceAux::print_metaspace_change(metadata_prev_used);
+        if (FreeHeapPhysicalMemory) {
+          print_heap_physical_memory_free_info();
+        }
       }
     }
 
