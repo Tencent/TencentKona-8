@@ -277,7 +277,7 @@ bool FileMapInfo::validate_classpath_entry_table() {
         ok = false;
       }
     } else {
-      if (/*ent->_timestamp != st.st_mtime ||*/
+      if (ent->_timestamp != st.st_mtime ||
           ent->_filesize != st.st_size) {
         ok = false;
         if (PrintSharedArchiveAndExit) {
