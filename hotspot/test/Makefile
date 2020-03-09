@@ -119,7 +119,7 @@ TEST_ROOT := $(shell pwd)
 
 # Root of all test results
 ifdef ALT_OUTPUTDIR
-  ABS_BUILD_ROOT = $(ALT_OUTPUTDIR)/$(PLATFORM)-$(ARCH)
+  ABS_BUILD_ROOT = $(ALT_OUTPUTDIR)
 else
   ABS_BUILD_ROOT = $(TEST_ROOT)/../build/$(PLATFORM)-$(ARCH)
 endif
