@@ -912,24 +912,20 @@ int SystemProcessInterface::SystemProcesses::ProcessIterator::current(SystemProc
 }
 
 int SystemProcessInterface::SystemProcesses::ProcessIterator::next_process() {
-  char* dbuf = NULL;
   if (!is_valid()) {
     return OS_ERR;
   }
-  dbuf = NEW_C_HEAP_ARRAY(char, os::readdir_buf_size(NULL), mtInternal);
 
   do {
-    _entry = os::readdir(_dir, (struct dirent *)dbuf);
+    _entry = os::readdir(_dir);
     if (_entry == NULL) {
       // Error or reached end.  Could use errno to distinguish those cases.
       _valid = false;
-      FREE_C_HEAP_ARRAY(char, dbuf, mtInternal);
       return OS_ERR;
     }
   } while(!is_valid_entry(_entry));
 
   _valid = true;
-  FREE_C_HEAP_ARRAY(char, dbuf, mtInternal);
   return OS_OK;
 }
 
