@@ -689,6 +689,7 @@ MACOSX_VERSION_MIN
 FDLIBM_CFLAGS
 NO_LIFETIME_DSE_CFLAG
 NO_DELETE_NULL_POINTER_CHECKS_CFLAG
+LEGACY_EXTRA_ASFLAGS
 LEGACY_EXTRA_LDFLAGS
 LEGACY_EXTRA_CXXFLAGS
 LEGACY_EXTRA_CFLAGS
@@ -1090,6 +1091,7 @@ with_jtreg
 with_extra_cflags
 with_extra_cxxflags
 with_extra_ldflags
+with_extra_asflags
 enable_debug_symbols
 enable_zip_debug_info
 with_native_debug_symbols
@@ -1966,6 +1968,7 @@ Optional Packages:
   --with-extra-cflags     extra flags to be used when compiling jdk c-files
   --with-extra-cxxflags   extra flags to be used when compiling jdk c++-files
   --with-extra-ldflags    extra flags to be used when linking jdk
+  --with-extra-asflags    extra flags to be passed to the assembler
   --with-native-debug-symbols
                           set the native debug symbol configuration (none,
                           internal, external, zipped) [varying]
@@ -4404,7 +4407,7 @@ VS_SDK_PLATFORM_NAME_2017=
 #CUSTOM_AUTOCONF_INCLUDE
 
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1565358475
+DATE_WHEN_GENERATED=1579517558
 
 ###############################################################################
 #
@@ -41586,6 +41589,12 @@ $as_echo "$as_me: WARNING: Ignoring LDFLAGS($LDFLAGS) found in environment. Use 
   fi
 
 
+  if test "x$ASFLAGS" != "x"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Ignoring ASFLAGS($ASFLAGS) found in environment. Use --with-extra-asflags" >&5
+$as_echo "$as_me: WARNING: Ignoring ASFLAGS($ASFLAGS) found in environment. Use --with-extra-asflags" >&2;}
+  fi
+
+
 # Check whether --with-extra-cflags was given.
 if test "${with_extra_cflags+set}" = set; then :
   withval=$with_extra_cflags;
@@ -41606,6 +41615,13 @@ if test "${with_extra_ldflags+set}" = set; then :
 fi
 
 
+
+# Check whether --with-extra-asflags was given.
+if test "${with_extra_asflags+set}" = set; then :
+  withval=$with_extra_asflags;
+fi
+
+
   CFLAGS_JDK="${CFLAGS_JDK} $with_extra_cflags"
   CXXFLAGS_JDK="${CXXFLAGS_JDK} $with_extra_cxxflags"
   LDFLAGS_JDK="${LDFLAGS_JDK} $with_extra_ldflags"
@@ -41614,6 +41630,8 @@ fi
   LEGACY_EXTRA_CFLAGS="$LEGACY_EXTRA_CFLAGS $with_extra_cflags"
   LEGACY_EXTRA_CXXFLAGS="$LEGACY_EXTRA_CXXFLAGS $with_extra_cxxflags"
   LEGACY_EXTRA_LDFLAGS="$LEGACY_EXTRA_LDFLAGS $with_extra_ldflags"
+  LEGACY_EXTRA_ASFLAGS="$with_extra_asflags"
+
 
 
 
@@ -51687,7 +51705,7 @@ fi
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for UCRT DLL dir" >&5
 $as_echo_n "checking for UCRT DLL dir... " >&6; }
     if test "x$with_ucrt_dll_dir" != x; then
-      if test -z "$(ls -d "$with_ucrt_dll_dir/*.dll" 2> /dev/null)"; then
+      if test -z "$(ls -d "$with_ucrt_dll_dir/"*.dll 2> /dev/null)"; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
         as_fn_error $? "Could not find any dlls in $with_ucrt_dll_dir" "$LINENO" 5
