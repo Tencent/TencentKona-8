@@ -62,10 +62,6 @@ CXX_FLAGS=$(CXX_FLAGS) /D "HOTSPOT_LIB_ARCH=\"$(HOTSPOT_LIB_ARCH)\""
 CXX_FLAGS=$(CXX_FLAGS) /D "HOTSPOT_BUILD_TARGET=\"$(BUILD_FLAVOR)\""
 CXX_FLAGS=$(CXX_FLAGS) /D "HOTSPOT_BUILD_USER=\"$(BuildUser)\""
 CXX_FLAGS=$(CXX_FLAGS) /D "HOTSPOT_VM_DISTRO=\"$(HOTSPOT_VM_DISTRO)\""
-CXX_FLAGS=$(CXX_FLAGS) /D "VENDOR=\"$(COMPANY_NAME)\""
-CXX_FLAGS=$(CXX_FLAGS) /D "VENDOR_URL=\"$(VENDOR_URL)\""
-CXX_FLAGS=$(CXX_FLAGS) /D "VENDOR_URL_BUG=\"$(VENDOR_URL_BUG)\""
-CXX_FLAGS=$(CXX_FLAGS) /D "VENDOR_URL_VM_BUG=\"$(VENDOR_URL_VM_BUG)\""
 
 CXX_FLAGS=$(CXX_FLAGS) $(CXX_INCLUDE_DIRS)
 
@@ -209,6 +205,13 @@ iphlp_interface.obj: $(WorkSpace)\src\os\windows\vm\iphlp_interface.cpp
 
 os_perf_windows.obj: $(WorkSpace)\src\os\windows\vm\os_perf_windows.cpp
         $(CXX) $(CXX_FLAGS) $(CXX_DONT_USE_PCH) /c $(WorkSpace)\src\os\windows\vm\os_perf_windows.cpp
+#files compiled with version flags
+
+vm_version.obj: $(WorkSpace)\src\share\vm\runtime\vm_version.cpp
+        $(CXX) $(CXX_FLAGS) $(VERSION_CFLAGS) $(CXX_USE_PCH) /c $(WorkSpace)\src\share\vm\runtime\vm_version.cpp
+
+arguments.obj: $(WorkSpace)\src\share\vm\runtime\arguments.cpp
+        $(CXX) $(CXX_FLAGS) $(VERSION_CFLAGS) $(CXX_USE_PCH) /c $(WorkSpace)\src\share\vm\runtime\arguments.cpp
 
 # Default rules for the Virtual Machine
 {$(COMMONSRC)\share\vm\c1}.cpp.obj::
