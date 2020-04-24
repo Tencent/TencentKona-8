@@ -8,3 +8,9 @@
 *.ntvs*
 *.njsproj
 *.sln
+
+# Ignore build related folders
+build/
+
+# Ignore MacOS X finder files
+.DS_Store

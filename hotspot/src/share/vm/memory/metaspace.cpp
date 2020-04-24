@@ -1482,7 +1482,7 @@ void MetaspaceGC::initialize() {
 
 void MetaspaceGC::post_initialize() {
   // Reset the high-water mark once the VM initialization is done.
-  _capacity_until_GC = MAX2(MetaspaceAux::committed_bytes(), MetaspaceSize);
+  _capacity_until_GC = MAX2(MetaspaceAux::committed_bytes(), (size_t) MetaspaceSize);
 }
 
 bool MetaspaceGC::can_expand(size_t word_size, bool is_class) {
@@ -1542,7 +1542,7 @@ void MetaspaceGC::compute_new_size() {
     (size_t)MIN2(min_tmp, double(MaxMetaspaceSize));
   // Don't shrink less than the initial generation size
   minimum_desired_capacity = MAX2(minimum_desired_capacity,
-                                  MetaspaceSize);
+                                  (size_t) MetaspaceSize);
 
   if (PrintGCDetails && Verbose) {
     gclog_or_tty->print_cr("\nMetaspaceGC::compute_new_size: ");
@@ -1600,7 +1600,7 @@ void MetaspaceGC::compute_new_size() {
     const double max_tmp = used_after_gc / minimum_used_percentage;
     size_t maximum_desired_capacity = (size_t)MIN2(max_tmp, double(MaxMetaspaceSize));
     maximum_desired_capacity = MAX2(maximum_desired_capacity,
-                                    MetaspaceSize);
+                                    (size_t) MetaspaceSize);
     if (PrintGCDetails && Verbose) {
       gclog_or_tty->print_cr("  "
                              "  maximum_free_percentage: %6.2f"
@@ -3065,10 +3065,49 @@ void Metaspace::allocate_metaspace_compressed_klass_ptrs(char* requested_addr, a
   // Don't use large pages for the class space.
   bool large_pages = false;
 
+#ifndef AARCH64
   ReservedSpace metaspace_rs = ReservedSpace(compressed_class_space_size(),
                                              _reserve_alignment,
                                              large_pages,
                                              requested_addr, 0);
+#else // AARCH64
+  ReservedSpace metaspace_rs;
+
+  // Our compressed klass pointers may fit nicely into the lower 32
+  // bits.
+  if ((uint64_t)requested_addr + compressed_class_space_size() < 4*G) {
+    metaspace_rs = ReservedSpace(compressed_class_space_size(),
+                                  _reserve_alignment,
+                                 large_pages,
+                                 requested_addr, 0);
+  }
+  if (!metaspace_rs.is_reserved()) {
+    // Try to align metaspace so that we can decode a compressed klass
+    // with a single MOVK instruction.  We can do this iff the
+    // compressed class base is a multiple of 4G.
+    for (char *a = (char*)align_ptr_up(requested_addr, 4*G);
+      a < (char*)(1024*G);
+      a += 4*G) {
+      if (UseSharedSpaces &&
+          !can_use_cds_with_metaspace_addr(a, cds_base)) {
+        // We failed to find an aligned base that will reach.  Fall
+        // back to using our requested addr.
+        metaspace_rs = ReservedSpace(compressed_class_space_size(),
+                                     _reserve_alignment,
+                                     large_pages,
+                                     requested_addr, 0);
+        break;
+      }
+      metaspace_rs = ReservedSpace(compressed_class_space_size(),
+                                   _reserve_alignment,
+                                   large_pages,
+                                   a, 0);
+      if (metaspace_rs.is_reserved())
+        break;
+    }
+  }
+#endif // AARCH64
+
   if (!metaspace_rs.is_reserved()) {
 #if INCLUDE_CDS
     if (UseSharedSpaces) {
@@ -3321,7 +3360,7 @@ void Metaspace::global_initialize() {
     // on the medium chunk list.   The next chunk will be small and progress
     // from there.  This size calculated by -version.
     _first_class_chunk_word_size = MIN2((size_t)MediumChunk*6,
-                                       (CompressedClassSpaceSize/BytesPerWord)*2);
+                                        (size_t) ((CompressedClassSpaceSize/BytesPerWord)*2));
     _first_class_chunk_word_size = align_word_size_up(_first_class_chunk_word_size);
     // Arbitrarily set the initial virtual space to a multiple
     // of the boot class loader size.
