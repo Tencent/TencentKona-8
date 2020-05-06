@@ -1,4 +1,4 @@
-# Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,9 @@ if [ "x$gcc_cmd" = "x" ]; then
     exit 0;
 fi
 
-CFLAGS="-m${VM_BITS}"
+if [ "$VM_CPU" != "aarch64" ]; then
+    CFLAGS="-m${VM_BITS}"
+fi
 
 LD_LIBRARY_PATH=.:${COMPILEJAVA}/jre/lib/${VM_CPU}/${VM_TYPE}:/usr/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH
