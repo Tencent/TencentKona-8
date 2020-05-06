@@ -49,7 +49,7 @@
   product(bool, UseSHM, false,                                          \
           "Use SYSV shared memory for large pages")                     \
                                                                         \
-  product(bool, UseContainerSupport, true,                              \
+  product(bool, UseContainerSupport, false,                             \
           "Enable detection and runtime container configuration support") \
                                                                         \
   product(bool, PreferContainerQuotaForCPUCount, true,                  \
