@@ -1530,8 +1530,10 @@ bool G1CollectedHeap::do_collection(bool explicit_gc,
     }
 
     if (FreeHeapPhysicalMemory) {
-        //should free heap memory
-        free_heap_physical_memory_after_fullgc();
+       MutexLockerEx x(FreeHeapMemory_lock);
+       FreeHeapPhsicalMemoryTask* task = new FreeHeapPhsicalMemoryTask(this);
+       free_heap_memory_task_queue()->push(task);
+       FreeHeapMemory_lock->notify();
     }
 
     if (G1Log::finer()) {
@@ -1803,6 +1805,7 @@ void G1CollectedHeap::free_heap_physical_memory_after_fullgc() {
   int diff = max_young_region_num - current_young_region_num;
   //how many regions will be used for old gen in the _free_list freed by FullGC
   int old_heap_region_num = num_free_regions - diff;
+  gclog_or_tty->print_cr("free_heap_physical_memory_after_fullgc---max_young_region_num == %d--num_free_regions == %d--current_young_region_num == %d", max_young_region_num, num_free_regions, current_young_region_num);
   if (old_heap_region_num <= 0) {
     return;
   }
@@ -1932,6 +1935,12 @@ G1CollectedHeap::G1CollectedHeap(G1CollectorPolicy* policy_) :
 
   int n_queues = MAX2((int)ParallelGCThreads, 1);
   _task_queues = new RefToScanQueueSet(n_queues);
+  if (FreeHeapPhysicalMemory) {
+    _free_heap_memory_task_queue = new FreeHeapMemoryTaskQueue();
+    if (0 != _free_heap_memory_task_queue) {
+      _free_heap_memory_task_queue->initialize();
+    }
+  }
 
   uint n_rem_sets = HeapRegionRemSet::num_par_rem_sets();
   assert(n_rem_sets > 0, "Invariant.");
@@ -7073,7 +7082,9 @@ void G1CollectedHeap::rebuild_strong_code_roots() {
 
 void G1CollectedHeap::print_heap_physical_memory_free_info() {
     if (PrintGCDetails) {
-        gclog_or_tty->print(", [free physical memory: " SIZE_FORMAT " KB, " SIZE_FORMAT " regions, %3.7f secs]",\
+        gclog_or_tty->print_cr("");
+        gclog_or_tty->gclog_stamp(GCId::peek());
+        gclog_or_tty->print_cr(" [free physical memory: " SIZE_FORMAT " KB, " SIZE_FORMAT " regions, %3.7f secs]",\
             _free_heap_physical_memory_total_byte_size / K,_reclaim_region_count,
                 _free_heap_physical_memory_time_sec);
     }
@@ -7089,4 +7100,9 @@ void G1CollectedHeap::add_heap_physical_memory_free_info(double free_heap_physic
     _free_heap_physical_memory_time_sec += free_heap_physical_memory_time_sec;
     _free_heap_physical_memory_total_byte_size += free_heap_physical_memory_total_byte_size;
     _reclaim_region_count += reclaim_region_count;
+}
+void FreeHeapPhsicalMemoryTask::doit() {
+  MutexLockerEx x(Heap_lock);
+  _gch->free_heap_physical_memory_after_fullgc();
+  _gch->print_heap_physical_memory_free_info();
 }
