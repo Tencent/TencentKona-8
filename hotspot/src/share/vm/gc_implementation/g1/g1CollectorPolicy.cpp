@@ -1248,9 +1248,6 @@ void G1CollectorPolicy::print_detailed_heap_transition(bool full) {
 
   if (full) {
     MetaspaceAux::print_metaspace_change(_metaspace_used_bytes_before_gc);
-    if (FreeHeapPhysicalMemory) {
-        G1CollectedHeap::heap()->print_heap_physical_memory_free_info();
-    }
   }
 
   gclog_or_tty->cr();

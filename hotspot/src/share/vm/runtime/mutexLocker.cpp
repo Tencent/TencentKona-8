@@ -68,6 +68,7 @@ Monitor* VMOperationRequest_lock      = NULL;
 Monitor* Safepoint_lock               = NULL;
 Monitor* SerializePage_lock           = NULL;
 Monitor* Threads_lock                 = NULL;
+Monitor* FreeHeapMemory_lock          = NULL;
 Monitor* CGC_lock                     = NULL;
 Monitor* STS_lock                     = NULL;
 Monitor* SLT_lock                     = NULL;
@@ -209,6 +210,7 @@ void mutex_init() {
     def(StringDedupQueue_lock      , Monitor, leaf,        true );
     def(StringDedupTable_lock      , Mutex  , leaf,        true );
   }
+  def(FreeHeapMemory_lock          , Monitor, nonleaf,     true );
   def(ParGCRareEvent_lock          , Mutex  , leaf     ,   true );
   def(DerivedPointerTableGC_lock   , Mutex,   leaf,        true );
   def(CodeCache_lock               , Mutex  , special,     true );

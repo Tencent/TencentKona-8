@@ -83,6 +83,7 @@
 #include "utilities/events.hpp"
 #include "utilities/preserveException.hpp"
 #include "utilities/macros.hpp"
+#include "services/freeHeapMemoryThread.hpp"
 #ifdef TARGET_OS_FAMILY_linux
 # include "os_linux.inline.hpp"
 #endif
@@ -3700,6 +3701,14 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
       //   take a while to process their first tick).
       if (PeriodicTask::num_tasks() > 0) {
           WatcherThread::start();
+      }
+  }
+
+  {
+      // if UseG1GC or other gc and periord gc enabled
+      //  we should start new thread
+      if (FreeHeapPhysicalMemory && (UseG1GC || PeriodicGCInterval != 0)) {
+         FreeHeapPhysicalMemoryThread::start(SharedHeap::heap());
       }
   }
 
