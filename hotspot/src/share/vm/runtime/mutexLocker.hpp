@@ -84,6 +84,7 @@ extern Monitor* SLT_lock;                        // used in CMS GC for acquiring
 extern Monitor* iCMS_lock;                       // CMS incremental mode start/stop notification
 extern Monitor* FullGCCount_lock;                // in support of "concurrent" full gc
 extern Monitor* CMark_lock;                      // used for concurrent mark thread coordination
+extern Monitor* FreeHeapMemory_lock;             // used fo free heap memory out of vmop
 extern Mutex*   CMRegionStack_lock;              // used for protecting accesses to the CM region stack
 extern Mutex*   SATB_Q_FL_lock;                  // Protects SATB Q
                                                  // buffer free list.

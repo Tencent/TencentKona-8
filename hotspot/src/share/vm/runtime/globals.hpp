@@ -3260,6 +3260,10 @@ class CommandLineFlags {
   product(bool, FreeHeapPhysicalMemory, false,                              \
              "Free physical memory after fullgc or shrink operation")       \
                                                                             \
+  product(uintx, PeriodicGCInterval, 0,                                     \
+          "Trigger periodic gc when this process is idle, disabled"         \
+          " by default")                                                    \
+                                                                            \
   product(intx, SoftRefLRUPolicyMSPerMB, 1000,                              \
           "Number of milliseconds per MB of free space in the heap")        \
                                                                             \
