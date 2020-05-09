@@ -1658,4 +1658,12 @@ protected:
   size_t _max_heap_capacity;
 };
 
+class FreeHeapPhsicalMemoryTask : public Task{
+  private:
+    G1CollectedHeap* _gch;
+  public:
+    FreeHeapPhsicalMemoryTask(G1CollectedHeap* gch) {_gch = gch;}
+    virtual void doit();
+};
+
 #endif // SHARE_VM_GC_IMPLEMENTATION_G1_G1COLLECTEDHEAP_HPP

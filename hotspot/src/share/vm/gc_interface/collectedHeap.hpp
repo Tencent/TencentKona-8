@@ -33,6 +33,7 @@
 #include "runtime/perfData.hpp"
 #include "runtime/safepoint.hpp"
 #include "utilities/events.hpp"
+#include "utilities/taskqueue.hpp"
 
 // A "CollectedHeap" is an implementation of a java heap for HotSpot.  This
 // is an abstract class: there may be many different kinds of heaps.  This
@@ -50,6 +51,8 @@ class Thread;
 class ThreadClosure;
 class VirtualSpaceSummary;
 class nmethod;
+class Task;
+typedef GenericTaskQueue<Task*, mtGC>            FreeHeapMemoryTaskQueue;
 
 class GCMessage : public FormatBuffer<1024> {
  public:
@@ -118,6 +121,8 @@ class CollectedHeap : public CHeapObj<mtInternal> {
 
   double _free_heap_physical_memory_time_sec;
   size_t _free_heap_physical_memory_total_byte_size;
+  // queue for free heap memory thread
+  FreeHeapMemoryTaskQueue* _free_heap_memory_task_queue;
 
   // Constructor
   CollectedHeap();
@@ -329,6 +334,9 @@ class CollectedHeap : public CHeapObj<mtInternal> {
  public:
   void free_heap_physical_memory_after_fullgc(void* start, void* end);
   virtual void print_heap_physical_memory_free_info();
+  FreeHeapMemoryTaskQueue* free_heap_memory_task_queue() {
+    return _free_heap_memory_task_queue;
+  }
 
   inline static void post_allocation_install_obj_klass(KlassHandle klass,
                                                        oop obj);
@@ -685,4 +693,11 @@ class GCCauseSetter : StackObj {
   }
 };
 
+/* any task that want to be executed by FreeHeapPhysicalMemoryThread 
+ * thread should inherite this class and explicitly implement doit method.
+ */
+class Task {
+  public:
+    virtual void doit() {};
+};
 #endif // SHARE_VM_GC_INTERFACE_COLLECTEDHEAP_HPP
