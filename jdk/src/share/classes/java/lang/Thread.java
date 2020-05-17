@@ -1969,7 +1969,7 @@ class Thread implements Runnable {
      * Dispatch an uncaught exception to the handler. This method is
      * intended to be called only by the JVM.
      */
-    private void dispatchUncaughtException(Throwable e) {
+    protected void dispatchUncaughtException(Throwable e) {
         getUncaughtExceptionHandler().uncaughtException(this, e);
     }
 
@@ -2061,4 +2061,54 @@ class Thread implements Runnable {
     private native void resume0();
     private native void interrupt0();
     private native void setNativeName(String name);
+
+    /* Continuation support */
+    /**
+     * Returns a reference to the currently executing thread object.
+     *
+     * @return  the currently executing thread.
+     */
+    public static native Thread currentThread0();
+    private Continuation cont;
+    private VirtualThread vthread;
+
+    VirtualThread getVirtualThread() {
+        // assert this == currentThread0();
+        return vthread;
+    }
+    void setVirtualThread(VirtualThread vthread) {
+        // assert this == currentThread0();
+        this.vthread = vthread;
+    }
+    public final boolean isVirtual() {
+        return (this instanceof VirtualThread);
+    }
+
+    /**
+     * Returns the current carrier thread.
+     */
+    static Thread currentCarrierThread() {
+        //return currentThread0();
+        return currentThread();
+    }
+    /**
+     * TBD
+     */
+    Continuation getContinuation() {
+        return cont;
+    }
+
+    /**
+     * TBD
+     */
+    void setContinuation(Continuation cont) {
+        this.cont = cont;
+    }
+
+    static void setScopedCache(Object[] cache) {
+    }
+
+    static Object[] scopedCache() {
+        return null;
+    }
 }
