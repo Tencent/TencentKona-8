@@ -75,6 +75,7 @@ security.provider.7=com.sun.security.sasl.Provider
 security.provider.8=org.jcp.xml.dsig.internal.dom.XMLDSigRI
 security.provider.9=sun.security.smartcardio.SunPCSC
 security.provider.10=apple.security.AppleProvider
+security.provider.11=com.tencent.crypto.provider.SMCSProvider
 
 #
 # Sun Provider SecureRandom seed source.

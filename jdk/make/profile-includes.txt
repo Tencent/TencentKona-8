@@ -175,6 +175,7 @@ PROFILE_1_JRE_LIB_FILES += \
     ext/sunec.jar \
     ext/sunjce_provider.jar \
     ext/sunpkcs11.jar \
+    ext/tencentsm_provider.jar \
     hijrah-config-umalqura.properties \
     jce.jar \
     jsse.jar \
@@ -215,6 +216,7 @@ PROFILE_1_JRE_JAR_FILES := \
     ext/localedata.jar \
     ext/sunec.jar \
     ext/sunjce_provider.jar \
+    ext/tencentsm_provider.jar \
     ext/sunpkcs11.jar \
     jce.jar \
     jsse.jar \

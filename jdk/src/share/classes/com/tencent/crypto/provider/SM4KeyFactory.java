@@ -1,0 +1,163 @@
+/*
+ * Copyright (c) 1997, 2015, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+package com.tencent.crypto.provider;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactorySpi;
+import java.security.InvalidKeyException;
+import java.security.spec.KeySpec;
+import java.security.spec.InvalidKeySpecException;
+import javax.crypto.spec.SecretKeySpec;
+
+/**
+ * This class implements the SM4 key factory of the SMCS provider.
+ *
+ */
+
+public final class SM4KeyFactory extends SecretKeyFactorySpi {
+
+    /**
+     * Empty constructor
+     */
+    public SM4KeyFactory() {
+    }
+
+    /**
+     * Generates a <code>SecretKey</code> object from the provided key
+     * specification (key material).
+     *
+     * @param keySpec the specification (key material) of the secret key
+     *
+     * @return the secret key
+     *
+     * @exception InvalidKeySpecException if the given key specification
+     * is inappropriate for this key factory to produce a public key.
+     */
+    protected SecretKey engineGenerateSecret(KeySpec keySpec)
+            throws InvalidKeySpecException {
+
+        try {
+            if (keySpec instanceof SM4KeySpec) {
+                SM4KeySpec spec = (SM4KeySpec) keySpec;
+                return new SM4Key(spec.getKey());
+            }
+
+            if (keySpec instanceof SecretKeySpec) {
+                return new SM4Key(((SecretKeySpec)keySpec).getEncoded());
+            }
+
+            throw new InvalidKeySpecException(
+                    "Inappropriate key specification");
+
+        } catch (InvalidKeyException e) {
+            throw new InvalidKeySpecException(e.getMessage());
+        }
+    }
+
+    /**
+     * Returns a specification (key material) of the given key
+     * in the requested format.
+     *
+     * @param key the key
+     *
+     * @param keySpec the requested format in which the key material shall be
+     * returned
+     *
+     * @return the underlying key specification (key material) in the
+     * requested format
+     *
+     * @exception InvalidKeySpecException if the requested key specification is
+     * inappropriate for the given key, or the given key cannot be processed
+     * (e.g., the given key has an unrecognized algorithm or format).
+     */
+    protected KeySpec engineGetKeySpec(SecretKey key, Class<?> keySpec)
+            throws InvalidKeySpecException {
+
+        try {
+
+            if ((key instanceof SecretKey)
+                    && (key.getAlgorithm().equalsIgnoreCase("SM4"))
+                    && (key.getFormat().equalsIgnoreCase("RAW"))) {
+
+                // Check if requested key spec is amongst the valid ones
+                if ((keySpec != null) &&
+                        SM4KeySpec.class.isAssignableFrom(keySpec)) {
+                    return new SM4KeySpec(key.getEncoded());
+
+                } else {
+                    throw new InvalidKeySpecException
+                            ("Inappropriate key specification");
+                }
+
+            } else {
+                throw new InvalidKeySpecException
+                        ("Inappropriate key format/algorithm");
+            }
+
+        } catch (InvalidKeyException e) {
+            throw new InvalidKeySpecException("Secret key has wrong size");
+        }
+    }
+
+    /**
+     * Translates a <code>SecretKey</code> object, whose provider may be
+     * unknown or potentially untrusted, into a corresponding
+     * <code>SecretKey</code> object of this key factory.
+     *
+     * @param key the key whose provider is unknown or untrusted
+     *
+     * @return the translated key
+     *
+     * @exception InvalidKeyException if the given key cannot be processed by
+     * this key factory.
+     */
+    protected SecretKey engineTranslateKey(SecretKey key)
+            throws InvalidKeyException {
+
+        try {
+
+            if ((key != null) &&
+                    (key.getAlgorithm().equalsIgnoreCase("SM4")) &&
+                    (key.getFormat().equalsIgnoreCase("RAW"))) {
+
+                // Check if key originates from this factory
+                if (key instanceof SM4Key) {
+                    return key;
+                }
+                // Convert key to spec
+                SM4KeySpec sm4KeySpec
+                        = (SM4KeySpec)engineGetKeySpec(key, SM4KeySpec.class);
+                // Create key from spec, and return it
+                return engineGenerateSecret(sm4KeySpec);
+
+            } else {
+                throw new InvalidKeyException
+                        ("Inappropriate key format/algorithm");
+            }
+
+        } catch (InvalidKeySpecException e) {
+            throw new InvalidKeyException("Cannot translate key");
+        }
+    }
+}

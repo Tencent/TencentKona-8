@@ -115,6 +115,7 @@ RT_JAR_EXCLUDES += \
     com/sun/xml/internal/dtdparser \
     com/sun/xml/internal/rngom \
     com/sun/xml/internal/xsom \
+    com/tencent/crypto/provider \
     javax/crypto \
     javax/swing/AbstractButtonBeanInfo.class \
     javax/swing/beaninfo \
