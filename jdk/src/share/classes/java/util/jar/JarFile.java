@@ -577,7 +577,7 @@ class JarFile extends ZipFile {
                 new GetPropertyAction("java.home"));
         }
         if (jarNames == null) {
-            String[] names = new String[11];
+            String[] names = new String[12];
             String fileSep = File.separator;
             int i = 0;
             names[i++] = fileSep + "rt.jar";
@@ -591,6 +591,7 @@ class JarFile extends ZipFile {
             names[i++] = fileSep + "sunjce_provider.jar";
             names[i++] = fileSep + "sunpkcs11.jar";
             names[i++] = fileSep + "sunec.jar";
+            names[i++] = fileSep + "tencentsm_provider.jar";
             jarNames = names;
         }
 

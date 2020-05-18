@@ -97,6 +97,7 @@ JAR_LIST := \
     sunpkcs11.jar \
     sunmscapi.jar \
     ucrypto.jar \
+    tencentsm_provider.jar \
     #
 
 UNSIGNED_JARS := $(wildcard $(addprefix $(JDK_OUTPUTDIR)/jce/unsigned/, $(JAR_LIST)))

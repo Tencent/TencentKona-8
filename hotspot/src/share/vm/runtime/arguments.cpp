@@ -3576,6 +3576,7 @@ static bool check_endorsed_and_ext_dirs() {
       "sunpkcs11.jar",
       "ucrypto.jar",
       "zipfs.jar",
+      "tencentsm_provider.jar",
       NULL
   };
 

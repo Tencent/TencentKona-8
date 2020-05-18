@@ -292,6 +292,7 @@ SECURITY_PKGS := \
     sun/security/internal \
     sun/security/mscapi \
     sun/security/pkcs11 \
+    com/tencent/crypto/provider \
     #
 
 AIX_SRC_DIRS :=
