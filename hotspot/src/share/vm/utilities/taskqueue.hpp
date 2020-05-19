@@ -573,7 +573,6 @@ GenericTaskQueueSet<T, F>::steal(uint queue_num, E& t) {
       return true;
     }
   }
-  TASKQUEUE_STATS_ONLY(queue(queue_num)->stats.record_steal(false));
   return false;
 }
 

@@ -4219,8 +4219,9 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
       if (cfs->source() != NULL) {
         if (PrintClassLoadingDetails) {
           tty->date_stamp(true);
+          oopDesc* classloader_ptr = class_loader();
           tty->print(" [Loaded %s from %s by classloader: %s (%p)]\n", this_klass->external_name(),
-                   cfs->source(), (class_loader.is_null() ? "bootstrap" : InstanceKlass::cast(class_loader->klass())->external_name()), class_loader());
+                   cfs->source(), (class_loader.is_null() ? "bootstrap" : InstanceKlass::cast(class_loader->klass())->external_name()), classloader_ptr);
         }else {
           tty->print("[Loaded %s from %s]\n", this_klass->external_name(),
                    cfs->source());
