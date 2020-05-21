@@ -25,21 +25,24 @@
 
 package java.lang;
 import sun.misc.Unsafe;
-import java.dyn.AsymCoroutine;
-import java.dyn.AsymRunnable;
+import java.dyn.*;
+
 /**
- * StackFul Continuation implementation
+ * Continuation implemenation use JKU coroutine runtime.
+ * Continuation main interface is run/yield/try force yield.
+ * Run method start/continue this continuation. Static method yield give up
+ * running current continuation. Try force yield will try to yield continuation
+ * at next safepoint.
  */
-public class Continuation {
+public class Continuation extends CoroutineBase {
     private static final Unsafe unsafe = Unsafe.getUnsafe();
 
     private static final boolean TRACE = sun.misc.VM.getSavedProperty("java.lang.Continuation.trace") != null;
     private static final boolean DEBUG = TRACE | sun.misc.VM.getSavedProperty("java.lang.Continuation.debug") != null;
-	private static final long mountedOffset;
+    private static final long mountedOffset;
 
     static {
         try {
-            //registerNatives();
             mountedOffset = unsafe.objectFieldOffset(Continuation.class.getDeclaredField("mounted"));
         } catch (Exception e) {
             throw new InternalError(e);
@@ -71,43 +74,36 @@ public class Continuation {
     /* While the native JVM code is aware that every continuation has a scope, it is, for the most part,
      * oblivious to the continuation hierarchy. The only time this hierarchy is traversed in native code
      * is when a hierarchy of continuations is mounted on the native stack.
+     *
+     * Continuation scope is used for faster yield to caller continuation.
+     * For example:
+     * Continuation parent(parent_scope), child(child_scope)
+     * When block operations happend, developer can choose yield child, if parent can continue.
+     * If parent cannot continue while child continuation is blocking, direclty yield both child and parent.
      */
     private final ContinuationScope scope;
-    private final long runtimeContinuation;
-
     private Continuation parent; // null for native stack
+    private Continuation child; // non-null when we're yielded in a child continuation
+    private CoroutineBase caller;  // could be thread coroutine or parent continuation
+
     private boolean done;
     private volatile int mounted = 0;  // 1 means true
 
     private short cs; // critical section semaphore
-    private Object[] scopedCache;
+    private Object[] scopedCache;   // similar continuation level thread local, but no weak reference, not used now
 
-    // temp asym
-    AsymCoroutine<Void, Void> coro;
-
+    protected final void runTarget() {
+        target.run();
+    }
     /**
      * Construct a Continuation
      * @param scope TBD
      * @param target TBD
      */
     public Continuation(ContinuationScope scope, Runnable target) {
-        this.scope = scope;
-        this.target = target;
-        runtimeContinuation = 0;
-        coro = new AsymCoroutine<Void, Void>("empty") { 
-            protected Void run(Void value) {
-                try {
-                  if (TRACE) System.out.println("Coro run start"); 
-                  target.run();
-                } finally {
-                  done = true;
-                  if (TRACE) System.out.println("Coro run finish");
-                }
-                return null;
-            }
-        };
+        this(scope, -1, target);
     }
-
+    
     /**
      * TBD
      * @param scope TBD
@@ -115,7 +111,10 @@ public class Continuation {
      * @param stackSize in bytes
      */
     public Continuation(ContinuationScope scope, int stackSize, Runnable target) {
-        this(scope, target);
+        super();
+        this.scope = scope;
+        this.target = target;
+        currentCarrierThread().getCoroutineSupport().addContinuation("cont" ,this, stackSize);
     }
 
     @Override
@@ -137,12 +136,11 @@ public class Continuation {
      * @return TBD
      */
     public static Continuation getCurrentContinuation(ContinuationScope scope) {
-        // not suppose to use in first step
-        return null;
-        /*Continuation cont = currentCarrierThread().getContinuation();
-        while (cont != null && cont.scope != scope)
+        Continuation cont = currentCarrierThread().getContinuation();
+        while (cont != null && cont.scope != scope) {
             cont = cont.parent;
-        return cont;*/
+        }
+        return cont;
     }
 
     public static Continuation getCurrentContinuation() {
@@ -160,7 +158,7 @@ public class Continuation {
     }
 
     private void mount() {
-        if (!compareAndSetMounted(0, 1))
+        if (!compareAndSetMounted(0, 1)) // why atomic? Avoid invoke run in two thread at same time?
             throw new IllegalStateException("Mounted!!!!");
         Thread.setScopedCache(scopedCache);
     }
@@ -173,7 +171,14 @@ public class Continuation {
     }
     
     /**
-     * TBD
+     * start/continue execute a continuation
+     * 1. no parent continuation, switch from thread coroutine to continuation
+     * 2. has parent and old parent is null, set parent and switch from parent to this
+     * 3. TODO: previously yield to parent, need siwtch to inner most child
+     *    Example: ContA invoke ContB invoke ContC
+     *             Yield ContC to ContA, ContB -> child->ContC
+     *             when invoke ContB.run, need switch to ContC
+     *             when invoke Contc.run, abort
      */
     public final void run() {
         while (true) {
@@ -183,7 +188,9 @@ public class Continuation {
 
             if (done)
                 throw new IllegalStateException("Continuation terminated");
-
+            
+            assert caller == null : "Caller coroutine is not null when run";
+            
             Thread t = currentCarrierThread();
             if (parent != null) {
                 if (parent != t.getContinuation())
@@ -191,22 +198,41 @@ public class Continuation {
             } else {
                 parent = t.getContinuation();
             }
+            CoroutineSupport support = currentCarrierThread().getCoroutineSupport();
+            caller = parent;
+            if (caller == null) {
+                caller = support.getCurrent();
+            }
+            assert caller != null : "Caller coroutine is null before run";
             t.setContinuation(this);
             try {
                 if (TRACE) System.out.println("Continuation run before call");
-                coro.call(); 
+                support.continuationSwtich(caller, this);
                 if (TRACE) System.out.println("Continuation run after call");
             } catch (Throwable e) {
-              done = true;
-              e.printStackTrace();
+                done = true;
+                e.printStackTrace();
             } finally {
                 fence();
                 assert t == currentCarrierThread() : "thread change";
-                currentCarrierThread().setContinuation(this.parent);
+                caller = null;
+                t.setContinuation(this.parent);
                 unmount();
                 return;
             }
         }
+    }
+    
+    // yield from current caller to target
+    // if target is null, yield to thread coroutine
+    private final boolean yield0(CoroutineBase target) {
+        CoroutineSupport support = currentCarrierThread().getCoroutineSupport();
+        assert target != null : "target is null in Continuation.yield0";
+        caller = null;
+        // System.out.println("before yield");
+        support.continuationSwtich(this, target);
+        // System.out.println("after yield");
+        return true;
     }
 
     /**
@@ -216,22 +242,38 @@ public class Continuation {
      * @return {@code true} for success; {@code false} for failure
      * @throws IllegalStateException if not currently in the given {@code scope},
      */
-    public static boolean yield(/*ContinuationScope scope*/) {
-        // if yield failed, call onPinned
-        // if yield success, call onContinue
+    public static boolean yield() {
         Thread t = currentCarrierThread();
         Continuation cont = t.getContinuation();
-        System.out.println("before yield");
-        cont.coro.ret();
-        System.out.println("resume yield");
-        return false;
+        return cont.yield0(cont.caller);
     }
 
+    /*
+     * hierachy yield support
+     * 1. find continuation match scope, if not found throw exception
+     * 2. setup parent child relationship used in resume
+     * 3. siwtch to target
+     */
     public static boolean yield(ContinuationScope scope) {
-        // if yield failed, call onPinned
-        // if yield success, call onContinue
-        return yield();
+        Continuation cont = currentCarrierThread().getContinuation();
+        Continuation c;
+        for (c = cont; c != null && c.scope != scope; c = c.parent)
+            ;
+        if (c == null)
+            throw new IllegalStateException("Not in scope " + scope);
+        
+        assert cont == c : "nested scope NYI";
+        /*
+        Continuation cur = cont;
+        while (cur != c) {
+            Continuation parent = cur.parent;
+            assert parent.child == null : "should not have child";
+            parent.child = cur;
+            cur = parent;
+        }*/
+        return cont.yield0(c.caller);
     }
+ 
     private void onPinned0(int reason) {
         if (TRACE) System.out.println("PINNED " + this + " reason: " + reason);
         onPinned(pinnedReason(reason));
@@ -306,33 +348,21 @@ public class Continuation {
 
     static private native int isPinned0(ContinuationScope scope);
 
-    private void clean() {
-        // if (!isStackEmpty())
-        //     clean0();
-    }
-
     private boolean fence() {
-        unsafe.storeFence(); // needed to prevent certain transformations by the compiler
+        unsafe.storeFence();
         return true;
     }
 
     private boolean compareAndSetMounted(int expectedValue, int newValue) {
        boolean res = unsafe.compareAndSwapInt(this, mountedOffset, expectedValue, newValue);
-    //    System.out.println("-- compareAndSetMounted:  ex: " + expectedValue + " -> " + newValue + " " + res + " " + id());
        return res;
      }
 
     private void setMounted(int newValue) {
-        // System.out.println("-- setMounted:  " + newValue + " " + id());
         mounted = newValue;
-        // MOUNTED.setVolatile(this, newValue);
     }
 
     private String id() {
         return Integer.toHexString(System.identityHashCode(this)) + " [" + currentCarrierThread().getId() + "]";
     }
-
-    // native methods
-    // private static native void registerNatives();
-    // private static native void swith(Continuation source, Continuation target);
 }

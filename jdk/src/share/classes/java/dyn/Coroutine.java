@@ -121,7 +121,7 @@ public class Coroutine extends CoroutineBase {
 		return (data != 0);
 	}
 
-	protected void run() {
+	protected void runTarget() {
 		assert Thread.currentThread() == threadSupport.getThread();
 		if (target != null) {
 			target.run();
