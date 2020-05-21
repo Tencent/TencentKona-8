@@ -177,7 +177,7 @@ public class AsymCoroutine<InT, OutT> extends CoroutineBase implements Iterable<
 		return new Iter<OutT>(this);
 	}
 
-	protected final void run() {
+	protected final void runTarget() {
 		output = run(input);
 	}
 }
