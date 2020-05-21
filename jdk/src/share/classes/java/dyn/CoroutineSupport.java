@@ -414,4 +414,27 @@ public class CoroutineSupport {
 	private static native boolean hasAlreadyRun(long coroutine);
 	
 	private static native void exitCoroutineHasNotRun(long coroutine);
+    
+    // continuation related
+    public void addContinuation(String name, CoroutineBase cont, long stacksize) {
+		cont.data = createCoroutine(name, cont, stacksize);
+		if (DEBUG) {
+			System.out.println("add Continuation " + cont + ", data" + cont.data);
+		}
+	}
+
+    public void continuationSwtich(CoroutineBase current, CoroutineBase target) {
+        if (current != currentCoroutine) {
+            throw new IllegalArgumentException("Switch from is not currentCoroutine");
+        }
+        if (target.data == 0) {
+			throw new IllegalArgumentException("Target coroutine has already finished");
+		}
+        currentCoroutine = target;
+		switchTo(current, target);
+    }
+
+    public CoroutineBase getThreadCoroutineObj() {
+		return threadCoroutine;
+    }
 }

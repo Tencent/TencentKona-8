@@ -49,6 +49,9 @@ public abstract class CoroutineBase {
 		this.threadSupport = thread.getCoroutineSupport();
 		name = coro_name;
 	}
+	
+	public CoroutineBase() {
+	}
 
 	// creates the initial coroutine for a new thread
 	CoroutineBase(CoroutineSupport threadSupport, long data) {
@@ -57,7 +60,7 @@ public abstract class CoroutineBase {
 		name = Thread.currentThread().getName()+"_thread_coroutine";
 	}
 
-	protected abstract void run();
+	protected abstract void runTarget();
 
 	@SuppressWarnings({ "unused" })
 	private final void startInternal() {
@@ -66,7 +69,7 @@ public abstract class CoroutineBase {
 			if (CoroutineSupport.DEBUG) {
 				System.out.println("starting coroutine " + this);
 			}
-			run();
+			runTarget();
 		} catch (Throwable t) {
 			CoroutineExitException exception = CoroutineExitException.searchException(t);
 			if (!(t instanceof CoroutineExitException)) {
