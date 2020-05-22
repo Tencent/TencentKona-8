@@ -82,7 +82,9 @@ public abstract class CoroutineBase {
 		} finally {
 			finished = true;
 			// use Thread.currentThread().getCoroutineSupport() because we might have been migrated to another thread!
-			if (this instanceof Coroutine) {
+            if (this instanceof Continuation) {
+                Thread.currentThread().getCoroutineSupport().terminateContinuation();
+            } else if (this instanceof Coroutine) {
 				Thread.currentThread().getCoroutineSupport().terminateCoroutine();
 			} else {
 				Thread.currentThread().getCoroutineSupport().terminateCallable();

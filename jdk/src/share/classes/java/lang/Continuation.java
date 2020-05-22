@@ -147,6 +147,10 @@ public class Continuation extends CoroutineBase {
         Continuation cont = currentCarrierThread().getContinuation();
         return cont;
     }
+    
+    public CoroutineBase getCaller() {
+        return caller;
+    }
 
     /**
      * TBD
