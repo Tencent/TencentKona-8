@@ -380,7 +380,7 @@ public class CoroutineSupport {
 	void terminateCallable() {
 		assert currentCoroutine != scheduledCoroutines;
 		assert currentCoroutine instanceof AsymCoroutine<?, ?>;
-
+        
 		if (DEBUG) {
 			System.out.println("to be terminated: " + currentCoroutine);
 		}
@@ -431,8 +431,23 @@ public class CoroutineSupport {
 			throw new IllegalArgumentException("Target coroutine has already finished");
 		}
         currentCoroutine = target;
+        if (DEBUG) {
+            System.out.println("continuation run current is " + current + " (" + current.data + ")");
+        }
 		switchTo(current, target);
     }
+    
+    void terminateContinuation() {
+		assert currentCoroutine instanceof Continuation;
+        Continuation cont = (Continuation)currentCoroutine;
+        CoroutineBase caller = cont.getCaller();
+
+		if (DEBUG) {
+			System.out.println("yieldReturn continuation " + caller + " (" + caller.data + ")");
+		}
+        currentCoroutine = caller;
+		switchToAndTerminate(cont, caller);
+	}
 
     public CoroutineBase getThreadCoroutineObj() {
 		return threadCoroutine;
