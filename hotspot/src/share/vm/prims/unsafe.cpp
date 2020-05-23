@@ -1439,18 +1439,26 @@ jlong CoroutineSupport_createCoroutine(JNIEnv* env, jclass klass, jstring name ,
     THROW_MSG_0(vmSymbols::java_lang_IllegalArgumentException(), "invalid stack size");
   }
   CoroutineStack* stack = NULL;
-  if (stack_size <= 0 && THREAD->coroutine_stack_cache_size() > 0) {
-    stack = THREAD->coroutine_stack_cache();
-    stack->remove_from_list(THREAD->coroutine_stack_cache());
-    THREAD->coroutine_stack_cache_size() --;
-	DEBUG_CORO_ONLY(tty->print("reused coroutine stack at %08x\n", stack->stack_base()));
-  } else {
+  {
+    MutexLockerEx ml(THREAD->coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
+    if (stack_size <= 0 && THREAD->coroutine_stack_cache_size() > 0) {
+      stack = THREAD->coroutine_stack_cache();
+      stack->remove_from_list(THREAD->coroutine_stack_cache());
+      THREAD->coroutine_stack_cache_size()--;
+      DEBUG_CORO_ONLY(tty->print("reused coroutine stack at %08x\n", stack->stack_base()));
+      guarantee(stack != NULL, "get NULL from cache");
+      stack->insert_into_list(THREAD->coroutine_stack_list());
+    }
+  }
+
+  if (stack == NULL) {
     stack = CoroutineStack::create_stack(THREAD, stack_size);
     if (stack == NULL) {
       THROW_0(vmSymbols::java_lang_OutOfMemoryError());
     }
+    MutexLockerEx ml(THREAD->coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
+    stack->insert_into_list(THREAD->coroutine_stack_list());
   }
-  stack->insert_into_list(THREAD->coroutine_stack_list());
 
   Coroutine* coro = Coroutine::create_coroutine(utfName,THREAD, stack, JNIHandles::resolve(coroutine));
   if (coro == NULL) {
@@ -1458,7 +1466,10 @@ jlong CoroutineSupport_createCoroutine(JNIEnv* env, jclass klass, jstring name ,
     HandleMark mark(THREAD);
     THROW_0(vmSymbols::java_lang_OutOfMemoryError());
   }
-  coro->insert_into_list(THREAD->coroutine_list());
+  {
+    MutexLockerEx ml(THREAD->coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
+    coro->insert_into_list(THREAD->coroutine_list());
+  }
   return (jlong)coro;
 }
 

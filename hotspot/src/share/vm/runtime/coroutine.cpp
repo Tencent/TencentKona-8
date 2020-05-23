@@ -34,6 +34,7 @@
 # include "vmreg_zero.inline.hpp"
 #endif
 
+JavaThread* Coroutine::_main_thread = NULL;
 
 #ifdef _WINDOWS
 
@@ -70,22 +71,31 @@ void coroutine_start(Coroutine* coroutine, jobject coroutineObj) {
   ShouldNotReachHere();
 }
 #endif
-void Coroutine::TerminateCoroutine(Coroutine* coro)
-{
+void Coroutine::TerminateCoroutine(Coroutine* coro) {
 	//cannot reclaim here,must recaim before swithto
   //Coroutine::ReclaimJavaCallStack(coro);
   JavaThread* thread = coro->thread();
-
-  CoroutineStack* stack = coro->stack();
-  stack->remove_from_list(thread->coroutine_stack_list());
-  if (thread->coroutine_stack_cache_size() < MaxFreeCoroutinesCacheSize) {
-    stack->insert_into_list(thread->coroutine_stack_cache());
-    thread->coroutine_stack_cache_size() ++;
-  } else {
-    CoroutineStack::free_stack(stack, thread);
+  if (TraceCoroutine) {
+    ResourceMark rm;
+    tty->print_cr("[Co]: TerminateCoroutine %s(%p) in thread %s(%p)", coro->name(), coro, coro->thread()->name(), coro->thread());
   }
-  Coroutine::free_coroutine(coro, thread);
+  guarantee(thread == JavaThread::current(), "thread not match");
+
+  {
+    MutexLockerEx ml(thread->coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
+    CoroutineStack* stack = coro->stack();
+    stack->remove_from_list(thread->coroutine_stack_list());
+    if (thread->coroutine_stack_cache_size() < MaxFreeCoroutinesCacheSize) {
+      stack->insert_into_list(thread->coroutine_stack_cache());
+      thread->coroutine_stack_cache_size() ++;
+    } else {
+      CoroutineStack::free_stack(stack, thread);
+    }
+    coro->remove_from_list(thread->coroutine_list());
+  }
+  delete coro;
 }
+
 void Coroutine::TerminateCoroutineObj(jobject coroutine)
 {
   
@@ -155,49 +165,111 @@ Coroutine::Coroutine()
   _monitor_chunks = NULL;
 }
 
-Coroutine::~Coroutine() 
-{ 
-	if(!is_thread_coroutine())
-	{
-		delete resource_area();
-		delete handle_area();
-		delete metadata_handles();
-		if (active_handles() != NULL) 
-		{
-			JNIHandleBlock* block = active_handles();
-			set_active_handles(NULL);
-			JNIHandleBlock::release_block(block);
-	  }
+Coroutine::~Coroutine() {
+  if(!is_thread_coroutine()) {
+    delete resource_area();
+    delete handle_area();
+    delete metadata_handles();
+    guarantee(active_handles() == NULL, "stop with none null active handles");
     assert(_monitor_chunks == NULL, "not empty _monitor_chunks");
-	}
+  }
 }
-void Coroutine::ReclaimJavaCallStack(Coroutine* coro)
-{
-	if(!coro->_is_thread_coroutine)
-	{
-		if(coro->_JavaCallWrapper != NULL)
-			coro->_JavaCallWrapper->ClearForCoro();//reclaim jnihandle
-		if(coro->_CallInfo!= NULL)
-		coro->_CallInfo->~CallInfo(); //reclaim metahandle
-		if(coro->_hm2!=NULL)
-		{
-			coro->_hm2->~HandleMark();
-		}
-		if(coro->_hm != NULL)
-		{
-			coro->_hm->~HandleMark();
-		}
-	}
+
+/*
+ * Norma exitflow is in startInternal, it invokes switchToAndTerminate(current, target)
+ * This method will switch from current to target and release all resources in current coroutine
+ * 1. In switchToAndTerminate, before switch context invoke Coroutine::ReclaimJavaCallStack
+ * 2. In switchToAndTerminate, after switch context, invoke CoroutineSupport_switchToAndTerminate
+ *    2.1 release stack
+ *    2.2 release coroutine
+ *
+ * This method is to release stack object allcoated in first Java call to CoroutineBase.startInternal
+ * Because JavaCallWrapper\CallInfo\HandleMark is allocated on coroutine's own stack, they will be
+ * released automatically in 2.1.
+ *
+ * HandleMark release is to maintain Coroutine::_handle_area, actually no need release.
+ */
+void Coroutine::ReclaimJavaCallStack(Coroutine* coro) {
+	if(!coro->_is_thread_coroutine && coro->_has_javacall) {
+    guarantee(coro->_JavaCallWrapper != NULL, "Recaim live stack without call wrapper");
+    guarantee(coro == JavaThread::current()->current_coroutine(), "Not expect coroutine");
+    coro->_JavaCallWrapper->ClearForCoro();//reclaim jnihandle
+
+    // remove method handle from _thread->metadata_handles()
+    // _thread->metadata_handles() will be released in Coroutine's destructor
+    guarantee(coro->_CallInfo != NULL, "Recaim live stack without call info");
+    coro->_CallInfo->~CallInfo(); //reclaim metahandle
+
+    // handle mark can be discarded without destructor
+    guarantee(coro->_hm2 != NULL, "Recaim live stack without hm2");
+    coro->_hm2->~HandleMark();
+    guarantee(coro->_hm != NULL, "Recaim live stack without hm");
+    coro->_hm->~HandleMark();
+  }
 }
-void Coroutine::SetJavaCallWrapper(Thread* thread,JavaCallWrapper* jcw)
-{
-	if(!thread->is_Java_thread()) return;
-	JavaThread* jt = (JavaThread*)thread;
-	if(jt->current_coroutine()->_JavaCallWrapper == NULL)
-	{
-		jt->current_coroutine()->_JavaCallWrapper = jcw;
-	}
+
+void Coroutine::SetJavaCallWrapper(JavaThread* thread, JavaCallWrapper* jcw) {
+  Coroutine* co = thread->current_coroutine();
+  if(co->_JavaCallWrapper == NULL)	{
+    guarantee(jcw != NULL, "NULL JavaCallWrapper");
+    co->_JavaCallWrapper = jcw;
+  }
 }
+
+static inline CoroutineStack* extract_from(Coroutine* coro, JavaThread* from) {
+  CoroutineStack* stack_ptr = coro->stack();
+  guarantee(stack_ptr != NULL, "stack is NULL");
+  MutexLockerEx ml(from->coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
+  stack_ptr->remove_from_list(from->coroutine_stack_list());
+  coro->remove_from_list(from->coroutine_list());
+  return stack_ptr;
+}
+
+static inline void insert_into(Coroutine* coro, JavaThread* to, CoroutineStack* stack) {
+  MutexLockerEx ml(to->coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
+  stack->insert_into_list(to->coroutine_stack_list());
+  coro->insert_into_list(to->coroutine_list());
+}
+
+/*
+ * switch from coroutine running _thread to target_thread
+ * extract coroutine/stack from _thread, insert into target thread
+ */
+void Coroutine::switchTo_current_thread(Coroutine* coro) {
+  guarantee(coro->is_continuation() == true, "Only Continuation allowed");
+  JavaThread* target_thread = JavaThread::current();
+  JavaThread* old_thread = coro->thread();
+  if (old_thread == target_thread) {
+    return;
+  }
+  CoroutineStack* stack_ptr = extract_from(coro, old_thread);
+  insert_into(coro, target_thread, stack_ptr);
+  coro->set_thread(target_thread);
+  if (TraceCoroutine) {
+    ResourceMark rm;
+    // can not get old thread name
+    tty->print_cr("[Co]: SwitchToCurrent Coroutine %s(%p) from (%p) to %s(%p)",
+      coro->name(), coro, old_thread, target_thread->name(), target_thread);
+  }
+}
+
+void Coroutine::switchFrom_current_thread(Coroutine* coro, JavaThread* to) {
+  JavaThread* from = JavaThread::current();
+  guarantee(from == coro->thread(), "not from current thread");
+  if (from == to) {
+    return;
+  }
+  CoroutineStack* stack_ptr = extract_from(coro, from);
+  insert_into(coro, to, stack_ptr);
+  coro->set_thread(to);
+  if (TraceCoroutine) {
+    ResourceMark rm;
+    // can not get to thread name
+    tty->print_cr("[Co]: SwitchFromCurrent Coroutine %s(%p) from %s(%p) to (%p)",
+      coro->name(), coro, from->name(), from, to);
+  }
+}
+
 const char* Coroutine::get_coroutine_name() const
 {
 	return name();
@@ -285,9 +357,13 @@ Coroutine* Coroutine::create_thread_coroutine(const char* name,JavaThread* threa
   Coroutine* coro = new Coroutine();
   if (coro == NULL)
     return NULL;
+  if (_main_thread == NULL) {
+    _main_thread = thread;
+  }
   coro->set_name(name);
   coro->_state = _current;
   coro->_is_thread_coroutine = true;
+  coro->_is_continuation = false;
   coro->_thread = thread;
   coro->_stack = stack;
   coro->set_resource_area(thread->resource_area());
@@ -309,6 +385,7 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, Coro
   if (coro == NULL) {
     return NULL;
   }
+  coro->_is_continuation = coroutineObj->klass() == SystemDictionary::continuation_klass();
   coro->set_name(name);
   intptr_t** d = (intptr_t**)stack->stack_base();
   //*(--d) = NULL;
@@ -329,7 +406,8 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, Coro
   coro->set_resource_area(new (mtThread) ResourceArea(32));
   coro->set_handle_area(new (mtThread) HandleArea(NULL, 32));
   coro->set_metadata_handles(new (ResourceObj::C_HEAP, mtClass) GrowableArray<Metadata*>(30, true));
-  coro->set_active_handles(JNIHandleBlock::allocate_block());
+  //coro->set_active_handles(JNIHandleBlock::allocate_block());
+  coro->set_active_handles(NULL);
 
 #ifdef ASSERT
   coro->_java_call_counter = 0;
@@ -337,6 +415,10 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, Coro
 #if defined(_WINDOWS)
   coro->_last_SEH = NULL;
 #endif
+  if (TraceCoroutine) {
+    ResourceMark rm;
+    tty->print_cr("[Co]: CreateCoroutine %s(%p) in thread %s(%p)", coro->name(), coro, coro->thread()->name(), coro->thread());
+  }
   return coro;
 }
 
