@@ -90,6 +90,7 @@ private:
   CoroutineState  _state;
 
   bool            _is_thread_coroutine;
+  bool            _is_continuation;
 
   JavaThread*     _thread;
   CoroutineStack* _stack;
@@ -126,11 +127,13 @@ private:
 
   char _name[64];
 
+  static JavaThread* _main_thread;
+
 public:
  //for javacall stack reclaim
   static void ReclaimJavaCallStack(Coroutine* coro);
   
-  static void SetJavaCallWrapper(Thread* thread,JavaCallWrapper* jcw);
+  static void SetJavaCallWrapper(JavaThread* thread, JavaCallWrapper* jcw);
   static void SetCallInfo(Thread* thread,CallInfo* ci);
 
   void set_name(const char* inname) 
@@ -146,6 +149,11 @@ public:
   {
 	  return _name;
   }
+  bool is_continuation() const { return _is_continuation; }
+  static void switchTo_current_thread(Coroutine* coro);
+  static void switchFrom_current_thread(Coroutine* coro, JavaThread* to);
+  static JavaThread* main_thread() { return _main_thread; }
+
   void print_on(outputStream* st) const;
   void print_stack_on(outputStream* st);
   const char* get_coroutine_name() const;
@@ -208,6 +216,7 @@ public:
   static ByteSize state_offset()              { return byte_offset_of(Coroutine, _state); }
   static ByteSize stack_offset()              { return byte_offset_of(Coroutine, _stack); }
 
+  static ByteSize thread_offset()             { return byte_offset_of(Coroutine, _thread); }
   static ByteSize resource_area_offset()      { return byte_offset_of(Coroutine, _resource_area); }
   static ByteSize handle_area_offset()        { return byte_offset_of(Coroutine, _handle_area); }
   static ByteSize last_handle_mark_offset()   { return byte_offset_of(Coroutine, _last_handle_mark); }
