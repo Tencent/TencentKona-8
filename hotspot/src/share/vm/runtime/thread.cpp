@@ -1494,6 +1494,7 @@ void JavaThread::initialize() {
   
   _coroutine_stack_list = NULL;
   _coroutine_list = NULL;
+  _coroutine_list_lock = new Mutex(Mutex::leaf, "Coroutine Lock", false);
 
   _thread_stat = NULL;
   _thread_stat = new ThreadStatistics();
@@ -1629,21 +1630,33 @@ JavaThread::JavaThread(ThreadFunction entry_point, size_t stack_sz) :
 }
 
 JavaThread::~JavaThread() {
-
+  guarantee(current_coroutine()->is_thread_coroutine(), "must thread coroutine");
   while (coroutine_stack_cache() != NULL) {
     CoroutineStack* stack = coroutine_stack_cache();
     stack->remove_from_list(coroutine_stack_cache());
     CoroutineStack::free_stack(stack, this);
   }
 
-  while(coroutine_list() != NULL)
-  {
-	  Coroutine* coro = coroutine_list();
+  while(coroutine_list() != NULL) {
+    Coroutine* coro = coroutine_list();
+    if (this != Coroutine::main_thread() && coro->is_continuation()) {
+      guarantee(!coro->is_thread_coroutine(), "not thread coroutine");
+      {
+        MutexLocker ml(Threads_lock);
+        // switch to main thread for now, later coroutine should be kept outside thread
+        // needs threads lock in case main thread is exiting
+        Coroutine::switchFrom_current_thread(coro, Coroutine::main_thread());
+      }
+      continue;
+    }
+    if (TraceCoroutine) {
+      ResourceMark rm;
+      tty->print_cr("[Co]: ClearCoroutine %s(%p) when exit thread %s(%p)", coro->name(), coro, name(), this);
+    }
 	  Coroutine::free_coroutine(coro,this);
   }
 
-  while (coroutine_stack_list() != NULL)
-  {
+  while (coroutine_stack_list() != NULL) {
       CoroutineStack* stack = coroutine_stack_list();
       stack->remove_from_list(coroutine_stack_list());
       CoroutineStack::free_stack(stack, this);
@@ -2674,11 +2687,14 @@ void JavaThread::frames_do(void f(frame*, const RegisterMap* map)) {
     f(fr, fst.register_map());
   }
   // traverse the coroutine stack frames
-  Coroutine* current = _coroutine_list;
-  do {
-    current->frames_do(f);
-    current = current->next();
-  } while (current != _coroutine_list);
+  {
+    MutexLockerEx ml(coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
+    Coroutine* current = _coroutine_list;
+    do {
+      current->frames_do(f);
+      current = current->next();
+    } while (current != _coroutine_list);
+  }
 }
 
 
@@ -2842,12 +2858,14 @@ void JavaThread::oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) 
     }
   }
   
-
-  Coroutine* current = _coroutine_list;
-  do {
-    current->oops_do(f, cld_f, cf);
-    current = current->next();
-  } while (current != _coroutine_list);
+  {
+    MutexLockerEx ml(coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
+    Coroutine* current = _coroutine_list;
+    do {
+      current->oops_do(f, cld_f, cf);
+      current = current->next();
+    } while (current != _coroutine_list);
+  }
 
   // callee_target is never live across a gc point so NULL it here should
   // it still contain a methdOop.
@@ -2889,11 +2907,14 @@ void JavaThread::nmethods_do(CodeBlobClosure* cf) {
     }
   }
 
-  Coroutine* current = _coroutine_list;
-  do {
-    current->nmethods_do(cf);
-    current = current->next();
-  } while (current != _coroutine_list);
+  {
+    MutexLockerEx ml(coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
+    Coroutine* current = _coroutine_list;
+    do {
+      current->nmethods_do(cf);
+      current = current->next();
+    } while (current != _coroutine_list);
+  }
 }
 
 void JavaThread::metadata_do(void f(Metadata*)) {
@@ -2911,12 +2932,14 @@ void JavaThread::metadata_do(void f(Metadata*)) {
     }
   }
 
-  Coroutine* current = _coroutine_list;
-  do {
-    current->metadata_do(f);
-    current = current->next();
-  } while (current != _coroutine_list);
-
+  {
+    MutexLockerEx ml(coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
+    Coroutine* current = _coroutine_list;
+    do {
+      current->metadata_do(f);
+      current = current->next();
+    } while (current != _coroutine_list);
+  }
 }
 
 // Printing
@@ -2945,8 +2968,9 @@ void JavaThread::print_thread_state() const {
   print_thread_state_on(tty);
 };
 #endif // PRODUCT
-void JavaThread::print_coroutine_on(outputStream* st, bool printstack) const
-{
+
+void JavaThread::print_coroutine_on(outputStream* st, bool printstack) const {
+  MutexLockerEx ml(coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
 	Coroutine* current = _coroutine_list;
 	do {
 		current->print_on(st);
@@ -4833,6 +4857,7 @@ void Threads::verify() {
 }
 
 void JavaThread::initialize_coroutine_support() {
+  // no lock in thread initialization
   CoroutineStack::create_thread_stack(this)->insert_into_list(_coroutine_stack_list);
   char buff[64];
 #ifdef TARGET_OS_FAMILY_windows
@@ -4841,8 +4866,10 @@ void JavaThread::initialize_coroutine_support() {
   snprintf(buff, sizeof(buff), INTPTR_FORMAT "_thread_coroutine", this);
 #endif
   buff[63] = '\0';
+  // no lock in thread initialization
   Coroutine::create_thread_coroutine(buff,this, _coroutine_stack_list)->insert_into_list(_coroutine_list);
   _current_coroutine = _coroutine_list;
+  OrderAccess::release();
 }
 
 

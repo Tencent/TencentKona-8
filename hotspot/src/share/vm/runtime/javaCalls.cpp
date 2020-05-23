@@ -82,7 +82,7 @@ JavaCallWrapper::JavaCallWrapper(methodHandle callee_method, Handle receiver, Ja
 #endif // CHECK_UNHANDLED_OOPS
 
   _thread       = (JavaThread *)thread;
-  _handles      = _thread->active_handles();    // save previous handle block & Java frame linkage
+  _handles      = _thread->active_handles();    // save previous handle block & Java frame linkage;
 
   // For the profiler, the last_Java_frame information in thread must always be in
   // legal state. We have no last Java frame if last_Java_sp == NULL so
@@ -116,21 +116,29 @@ void JavaCallWrapper::initialize(JavaThread* thread, JNIHandleBlock* handles, Me
   _anchor.clear();
 }
 
-
-void JavaCallWrapper::ClearForCoro()
-{
-  assert(_thread == JavaThread::current(), "must still be the same thread");
+/*
+ * clear coroutine JavaCallWrapper as it will not finish JavaCall and back into start coroutine
+ * It clears JNIHandleBlock and reset last java sp
+ */
+void JavaCallWrapper::ClearForCoro() {
+  // Continuation might invoked and stopped at different threads
+  JavaThread* cur_thread = JavaThread::current();
+  assert(_thread == JavaThread::current() ||
+    cur_thread->current_coroutine()->is_continuation(), "must still be the same thread");
 
   // restore previous handle block & Java frame linkage
-  JNIHandleBlock *_old_handles = _thread->active_handles();
-  _thread->set_active_handles(_handles);
+  JNIHandleBlock *_old_handles = cur_thread->active_handles();
+  guarantee(_handles == NULL, "first coroutine local JNI handle is not NULL");
+  guarantee(_old_handles != NULL, "_old_handles has not allocated");
+  cur_thread->set_active_handles(NULL);
 
-  _thread->frame_anchor()->zap();
+  cur_thread->frame_anchor()->zap();
 
-  debug_only(_thread->dec_java_call_counter());
+  //this stats can not be assummed correct when transist coroutine between threads
+  //debug_only(_thread->dec_java_call_counter());
 
   if (_anchor.last_Java_sp() == NULL) {
-    _thread->set_base_of_stack_pointer(NULL);
+    cur_thread->set_base_of_stack_pointer(NULL);
   }
 
   //[zcye] coroclear happend in native call cannot set thread state to _thread_in_vm
@@ -143,12 +151,15 @@ void JavaCallWrapper::ClearForCoro()
   // on sparc/ia64 which will catch violations of the reseting of last_Java_frame
   // invariants (i.e. _flags always cleared on return to Java)
 
-  _thread->frame_anchor()->copy(&_anchor);
+  cur_thread->frame_anchor()->copy(&_anchor);
 
   // Release handles after we are marked as being inside the VM again, since this
   // operation might block
-  JNIHandleBlock::release_block(_old_handles, _thread);
+  JNIHandleBlock::release_block(_old_handles, cur_thread);
 }
+
+// only coroutine first JavaCallWrapper can switch, other JavaCallWrapper means
+// invoke from native to java, can not yield, assert _thread == JavaThread::current() still keep
 JavaCallWrapper::~JavaCallWrapper() {
   assert(_thread == JavaThread::current(), "must still be the same thread");
 
@@ -465,7 +476,7 @@ void JavaCalls::call_helper(JavaValue* result, methodHandle* m, JavaCallArgument
 
   // do call
   { JavaCallWrapper link(method, receiver, result, CHECK);
-    Coroutine::SetJavaCallWrapper(thread,&link);
+    Coroutine::SetJavaCallWrapper(thread, &link);
     { HandleMark hm(thread);  // HandleMark used by HandleMarkCleaner
 
       StubRoutines::call_stub()(
@@ -486,7 +497,6 @@ void JavaCalls::call_helper(JavaValue* result, methodHandle* m, JavaCallArgument
         thread->set_vm_result((oop) result->get_jobject());
       }
     }
-	Coroutine::SetJavaCallWrapper(thread,NULL);
   } // Exit JavaCallWrapper (can block - potential return oop must be preserved)
 
   // Check if a thread stop or suspend should be executed

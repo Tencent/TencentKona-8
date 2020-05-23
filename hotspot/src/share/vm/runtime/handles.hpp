@@ -26,6 +26,7 @@
 #define SHARE_VM_RUNTIME_HANDLES_HPP
 
 #include "oops/klass.hpp"
+class Coroutine;
 
 //------------------------------------------------------------------------------------------------------------------------
 // In order to preserve oops during garbage collection, they should be
@@ -139,6 +140,7 @@ DEF_HANDLE(typeArray        , is_typeArray        )
   class name##Handle : public StackObj {         \
     type*     _value;                            \
     Thread*   _thread;                           \
+    Coroutine* _coroutine;                       \
    protected:                                    \
     type*        obj() const                     { return _value; } \
     type*        non_null_obj() const            { assert(_value != NULL, "resolving NULL _value"); return _value; } \
@@ -292,6 +294,7 @@ public:
 class HandleMark {
  private:
   Thread *_thread;              // thread that owns this mark
+  Coroutine *_coroutine;        // coroutine own this mark
   HandleArea *_area;            // saved handle area
   Chunk *_chunk;                // saved arena chunk
   char *_hwm, *_max;            // saved arena info

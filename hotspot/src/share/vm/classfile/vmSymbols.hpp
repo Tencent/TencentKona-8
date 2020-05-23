@@ -611,6 +611,7 @@
   /* coroutine support */                                                                                         \
   template(java_dyn_CoroutineSupport,                  "java/dyn/CoroutineSupport")                               \
   template(java_dyn_CoroutineBase,                     "java/dyn/CoroutineBase")                                  \
+  template(java_lang_Continuation,                     "java/lang/Continuation")                                  \
   template(java_dyn_CoroutineExitException,            "java/dyn/CoroutineExitException")                         \
   template(data_name,                                  "data")                                                    \
   template(stack_name,                                 "stack")                                                   \
