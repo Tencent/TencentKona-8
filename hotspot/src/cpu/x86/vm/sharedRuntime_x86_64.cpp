@@ -4425,6 +4425,25 @@ MacroAssembler* debug_line(MacroAssembler* masm, int l) {
     return masm;
 }
 
+/*
+ * switch from a coroutine to target coroutine in following method
+ * private static native void switchTo(CoroutineBase current, CoroutineBase target);
+ * private static native void switchToAndTerminate(CoroutineBase current, CoroutineBase target);
+ * private static native void switchToAndExit(CoroutineBase current, CoroutineBase target);
+ *
+ * target_coroutine in "rdx" and current coroutine in "rsi" in runtime ABI first two arguments.
+ * 1. monitor lock check, if lock is hold switch fail and pinned
+ * 2. if switching to target thread, perform stack/coroutine switch
+ *    TODO: if coroutine and stack is managed globally, no need perform switch
+ * 3. if terminate, ReclaimJavaCallStack
+ * 4. Save old coroutine context
+ * 5. Restore new coroutine context
+ * 6. If normal switch, return and execute in new coroutine
+ *    6.1 first switch, setup parameters
+ *    6.2 not first, no actions
+ * 7. If terminate, invoke terminate on current
+ * 8. If exit, current stack is target and throw exception in target coroutine
+ */
 void create_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* oop_maps, int &stack_slots, int total_in_args, 
                               BasicType *in_sig_bt, VMRegPair *in_regs, BasicType ret_type, bool terminate) {
   assert(total_in_args == 2, "wrong number of arguments");
@@ -4476,6 +4495,17 @@ void create_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* oop_ma
   DEBUG_ONLY(stop_if_null(masm, target_coroutine, "null new_coroutine"));
   __ movptr(target_coroutine, Address(target_coroutine, java_dyn_CoroutineBase::get_data_offset()));
   DEBUG_ONLY(stop_if_null(masm, target_coroutine, "new_coroutine without data"));
+
+  // check target_coroutine's thread is same with current thread
+  {
+    Label finish_switch_thread;
+    Register temp = r8;
+    __ movl(temp, Address(target_coroutine, in_bytes(Coroutine::thread_offset())));
+    __ cmpl(temp, thread);
+    __ jcc(Assembler::equal, finish_switch_thread);
+    __ SwitchJavaCallStack(target_coroutine);
+    __ bind(finish_switch_thread);
+  }
 
   /*
 #ifdef ASSERT

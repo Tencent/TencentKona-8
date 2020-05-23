@@ -27,6 +27,7 @@
 
 #include "runtime/handles.hpp"
 #include "runtime/thread.inline.hpp"
+#include "runtime/coroutine.hpp"
 
 // these inline functions are in a separate file to break an include cycle
 // between Thread and Handle
@@ -51,38 +52,51 @@ inline Handle::Handle(Thread* thread, oop obj) {
 }
 #endif // ASSERT
 
+static inline Coroutine* get_thread_coroutine(Thread* thread) {
+  if (thread->is_Java_thread()) {
+    Coroutine* coro = ((JavaThread*)thread)->current_coroutine();
+    if (!coro->is_thread_coroutine()) {
+      return coro;
+    }
+  }
+  return NULL;
+}
+
 // Constructors for metadata handles
 #define DEF_METADATA_HANDLE_FN(name, type) \
-inline name##Handle::name##Handle(type* obj) : _value(obj), _thread(NULL) {       \
+inline name##Handle::name##Handle(type* obj) : _value(obj), _thread(NULL), _coroutine(NULL) {       \
   if (obj != NULL) {                                                   \
     assert(((Metadata*)obj)->is_valid(), "obj is valid");              \
     _thread = Thread::current();                                       \
     assert (_thread->is_in_stack((address)this), "not on stack?");     \
     _thread->metadata_handles()->push((Metadata*)obj);                 \
+    _coroutine = get_thread_coroutine(_thread);                        \
   }                                                                    \
 }                                                                      \
-inline name##Handle::name##Handle(Thread* thread, type* obj) : _value(obj), _thread(thread) { \
+inline name##Handle::name##Handle(Thread* thread, type* obj) : _value(obj), _thread(thread), _coroutine(NULL) { \
   if (obj != NULL) {                                                   \
     assert(((Metadata*)obj)->is_valid(), "obj is valid");              \
     assert(_thread == Thread::current(), "thread must be current");    \
     assert (_thread->is_in_stack((address)this), "not on stack?");     \
     _thread->metadata_handles()->push((Metadata*)obj);                 \
+    _coroutine = get_thread_coroutine(_thread);                        \
   }                                                                    \
 }                                                                      \
 inline name##Handle::name##Handle(const name##Handle &h) {             \
   _value = h._value;                                                   \
   if (_value != NULL) {                                                \
     assert(_value->is_valid(), "obj is valid");                        \
-    if (h._thread != NULL) {                                           \
+    if (h._thread != NULL && h._coroutine == NULL) {                   \
       assert(h._thread == Thread::current(), "thread must be current");\
-      _thread = h._thread;                                             \
-    } else {                                                           \
-      _thread = Thread::current();                                     \
     }                                                                  \
+    _thread = Thread::current();                                       \
     assert (_thread->is_in_stack((address)this), "not on stack?");     \
     _thread->metadata_handles()->push((Metadata*)_value);              \
+    _coroutine = get_thread_coroutine(_thread);                        \
+    assert(_coroutine == h._coroutine, "must same coroutine");         \
   } else {                                                             \
     _thread = NULL;                                                    \
+    _coroutine = NULL;                                                 \
   }                                                                    \
 }                                                                      \
 inline name##Handle& name##Handle::operator=(const name##Handle &s) {  \
@@ -90,24 +104,32 @@ inline name##Handle& name##Handle::operator=(const name##Handle &s) {  \
   _value = s._value;                                                   \
   if (_value != NULL) {                                                \
     assert(_value->is_valid(), "obj is valid");                        \
-    if (s._thread != NULL) {                                           \
+    if (s._thread != NULL && s._coroutine == NULL) {                   \
       assert(s._thread == Thread::current(), "thread must be current");\
-      _thread = s._thread;                                             \
-    } else {                                                           \
-      _thread = Thread::current();                                     \
     }                                                                  \
+    _thread = Thread::current();                                       \
     assert (_thread->is_in_stack((address)this), "not on stack?");     \
     _thread->metadata_handles()->push((Metadata*)_value);              \
+    _coroutine = get_thread_coroutine(_thread);                        \
+    assert(_coroutine == s._coroutine, "must same coroutine");         \
   } else {                                                             \
     _thread = NULL;                                                    \
+    _coroutine = NULL;                                                 \
   }                                                                    \
   return *this;                                                        \
 }                                                                      \
 inline void name##Handle::remove() {                                   \
   if (_value != NULL) {                                                \
-    int i = _thread->metadata_handles()->find_from_end((Metadata*)_value); \
+    GrowableArray<Metadata*>* metadata_handles;                        \
+    if (_coroutine != NULL) {                                          \
+      assert(_coroutine ==  get_thread_coroutine(Thread::current()), "must same coroutine");  \
+      metadata_handles = _coroutine->metadata_handles();               \
+    } else {                                                           \
+      metadata_handles = _thread->metadata_handles();                  \
+    }                                                                  \
+    int i = metadata_handles->find_from_end((Metadata*)_value);        \
     assert(i!=-1, "not in metadata_handles list");                     \
-    _thread->metadata_handles()->remove_at(i);                         \
+    metadata_handles->remove_at(i);                                    \
   }                                                                    \
 }                                                                      \
 inline name##Handle::~name##Handle () { remove(); }                    \

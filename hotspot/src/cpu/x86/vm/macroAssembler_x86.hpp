@@ -607,6 +607,7 @@ class MacroAssembler: public Assembler {
   void zcyewarn(const char* msg,Register coro);
 
   void ReclaimJavaCallStack(Register old_coroutine);
+  void SwitchJavaCallStack(Register target_coroutine);
 
   void TerminateCoroutine(Register coroutine);
 
