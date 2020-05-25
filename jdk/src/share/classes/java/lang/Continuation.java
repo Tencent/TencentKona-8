@@ -93,7 +93,11 @@ public class Continuation extends CoroutineBase {
     private Object[] scopedCache;   // similar continuation level thread local, but no weak reference, not used now
 
     protected final void runTarget() {
-        target.run();
+        try {
+            target.run();
+        } finally {
+            done = true;
+        }
     }
     /**
      * Construct a Continuation
