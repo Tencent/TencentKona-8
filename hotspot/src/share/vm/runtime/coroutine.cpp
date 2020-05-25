@@ -170,7 +170,10 @@ Coroutine::~Coroutine() {
     delete resource_area();
     delete handle_area();
     delete metadata_handles();
-    guarantee(active_handles() == NULL, "stop with none null active handles");
+    JNIHandleBlock* JNIHandles = active_handles();
+    guarantee(JNIHandles != NULL, "stop with null active handles");
+    set_active_handles(NULL);
+    JNIHandleBlock::release_block(JNIHandles);
     assert(_monitor_chunks == NULL, "not empty _monitor_chunks");
   }
 }
@@ -406,8 +409,7 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, Coro
   coro->set_resource_area(new (mtThread) ResourceArea(32));
   coro->set_handle_area(new (mtThread) HandleArea(NULL, 32));
   coro->set_metadata_handles(new (ResourceObj::C_HEAP, mtClass) GrowableArray<Metadata*>(30, true));
-  //coro->set_active_handles(JNIHandleBlock::allocate_block());
-  coro->set_active_handles(NULL);
+  coro->set_active_handles(JNIHandleBlock::allocate_block());
 
 #ifdef ASSERT
   coro->_java_call_counter = 0;
