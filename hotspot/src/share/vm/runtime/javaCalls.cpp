@@ -128,9 +128,8 @@ void JavaCallWrapper::ClearForCoro() {
 
   // restore previous handle block & Java frame linkage
   JNIHandleBlock *_old_handles = cur_thread->active_handles();
-  guarantee(_handles == NULL, "first coroutine local JNI handle is not NULL");
   guarantee(_old_handles != NULL, "_old_handles has not allocated");
-  cur_thread->set_active_handles(NULL);
+  cur_thread->set_active_handles(_handles);
 
   cur_thread->frame_anchor()->zap();
 

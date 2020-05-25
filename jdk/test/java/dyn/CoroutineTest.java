@@ -52,7 +52,7 @@ public class CoroutineTest {
 	@Test
 	public void symSequence() {
 		Coroutine coro = new Coroutine("coro_symSequence") {
-			protected void run() {
+			protected void runTarget() {
 				seq.append("c");
 				for (int i = 0; i < 3; i++) {
 					yield();
@@ -79,7 +79,7 @@ public class CoroutineTest {
 	public void symMultiSequence() {
 		for (int i = 0; i < 10; i++)
 			new Coroutine("coro_symMultiSequence") {
-				protected void run() {
+				protected void runTarget() {
 					seq.append("c");
 					yield();
 					seq.append("e");
@@ -188,7 +188,7 @@ public class CoroutineTest {
 	@Test
 	public void gcTest1() {
 		new Coroutine("coro_gcTest1") {
-			protected void run() {
+			protected void runTarget() {
 				seq.append("c");
 				Integer v1 = 1;
 				Integer v2 = 14555668;
@@ -212,7 +212,7 @@ public class CoroutineTest {
 	@Test
 	public void exceptionTest1() {
 		Coroutine coro = new Coroutine("coro_exceptionTest1") {
-			protected void run() {
+			protected void runTarget() {
 				seq.append("c");
 				long temp = System.nanoTime();
 				if (temp != 0)
@@ -233,7 +233,7 @@ public class CoroutineTest {
 	@Test
 	public void largeStackframeTest() {
 		new Coroutine("coro_largeStackframeTest") {
-			protected void run() {
+			protected void runTarget() {
 				seq.append("c");
 				Integer v0 = 10000;
 				Integer v1 = 10001;
@@ -273,7 +273,7 @@ public class CoroutineTest {
 	@Test
 	public void shaTest() {
 		Coroutine coro = new Coroutine("coro_shaTest",65536) {
-			protected void run() {
+			protected void runTarget() {
 				try {
 					MessageDigest digest = MessageDigest.getInstance("SHA");
 					digest.update("TestMessage".getBytes());
@@ -299,7 +299,7 @@ public class CoroutineTest {
 			new Coroutine("coro_stackoverflowTest",65536) {
 				int i = 0;
 
-				protected void run() {
+				protected void runTarget() {
 					System.out.println("start");
 					try {
 						iter();
