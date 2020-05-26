@@ -388,7 +388,17 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, Coro
   if (coro == NULL) {
     return NULL;
   }
-  coro->_is_continuation = coroutineObj->klass() == SystemDictionary::continuation_klass();
+  Klass* klass = coroutineObj->klass();
+  Klass* continuation_klass = SystemDictionary::continuation_klass();
+  coro->_is_continuation = false;
+  while (klass != NULL) {
+    if (klass == continuation_klass) {
+      coro->_is_continuation = true;
+      break;
+    }
+    klass = klass->superklass();
+  }
+  // coro->_is_continuation = coroutineObj->klass() == SystemDictionary::continuation_klass();
   coro->set_name(name);
   intptr_t** d = (intptr_t**)stack->stack_base();
   //*(--d) = NULL;

@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.LockSupport;
+import java.util.concurrent.TimeUnit;
 import sun.nio.ch.Interruptible;
 import sun.reflect.CallerSensitive;
 import sun.reflect.Reflection;
@@ -272,6 +273,16 @@ class Thread implements Runnable {
      *
      * @return  the currently executing thread.
      */
+    /*public static Thread currentThread() {
+        Thread t = currentThread0();
+        VirtualThread vthread = t.vthread;
+        if (vthread != null) {
+            return vthread;
+        } else {
+            return t;
+        }
+    }
+    private static native Thread currentThread0();*/
     public static native Thread currentThread();
 
     /**
@@ -1014,7 +1025,15 @@ class Thread implements Runnable {
      * @return  <code>true</code> if this thread is alive;
      *          <code>false</code> otherwise.
      */
-    public final native boolean isAlive();
+    public final boolean isAlive() {
+        if (isVirtual()) {
+            State state = getState();
+            return (state != State.NEW && state != State.TERMINATED);
+        } else {
+            return isAlive0();
+        }
+    }
+    private final native boolean isAlive0();
 
     /**
      * Suspends this thread.
@@ -1252,27 +1271,35 @@ class Thread implements Runnable {
      *          <i>interrupted status</i> of the current thread is
      *          cleared when this exception is thrown.
      */
-    public final synchronized void join(long millis)
-    throws InterruptedException {
-        long base = System.currentTimeMillis();
-        long now = 0;
-
+    public final void join(long millis) throws InterruptedException {
         if (millis < 0) {
             throw new IllegalArgumentException("timeout value is negative");
         }
 
-        if (millis == 0) {
-            while (isAlive()) {
-                wait(0);
+        if (isVirtual()) {
+            if (isAlive()) {
+                long nanos = TimeUnit.MILLISECONDS.toNanos(millis);
+                ((VirtualThread) this).joinNanos(nanos);
             }
-        } else {
-            while (isAlive()) {
-                long delay = millis - now;
-                if (delay <= 0) {
-                    break;
+            return;
+        }
+
+        synchronized (this) {
+            long base = System.currentTimeMillis();
+            long now = 0;
+            if (millis == 0) {
+                while (isAlive()) {
+                    wait(0);
                 }
-                wait(delay);
-                now = System.currentTimeMillis() - base;
+            } else {
+                while (isAlive()) {
+                    long delay = millis - now;
+                    if (delay <= 0) {
+                        break;
+                    }
+                    wait(delay);
+                    now = System.currentTimeMillis() - base;
+                }
             }
         }
     }
@@ -2068,7 +2095,6 @@ class Thread implements Runnable {
      *
      * @return  the currently executing thread.
      */
-    public static native Thread currentThread0();
     private Continuation cont;
     private VirtualThread vthread;
 
@@ -2080,15 +2106,11 @@ class Thread implements Runnable {
         // assert this == currentThread0();
         this.vthread = vthread;
     }
-    public final boolean isVirtual() {
-        return (this instanceof VirtualThread);
-    }
 
     /**
      * Returns the current carrier thread.
      */
-    static Thread currentCarrierThread() {
-        //return currentThread0();
+    public static Thread currentCarrierThread() {
         return currentThread();
     }
     /**
@@ -2103,6 +2125,25 @@ class Thread implements Runnable {
      */
     void setContinuation(Continuation cont) {
         this.cont = cont;
+    }
+
+    /**
+     * Returns {@code true} if this thread scheduled by the Java virtual machine
+     * rather than the operating system.
+     *
+     * <p> Threads that are scheduled by the Java virtual machine do not support
+     * all features of Thread. In particular, the Thread is not an <i>active thread</i>
+     * in its thread group and so is not enumerated or acted on by thread group
+     * operations. In addition it does not support the stop, suspend or resume
+     * methods.
+     *
+     * @return {@code true} if this thread is scheduled by the Java virtual
+     *         machine rather than the operating system
+     *
+     * @since 99
+     */
+    public final boolean isVirtual() {
+        return (this instanceof VirtualThread);
     }
 
     static void setScopedCache(Object[] cache) {
