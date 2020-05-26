@@ -273,17 +273,15 @@ class Thread implements Runnable {
      *
      * @return  the currently executing thread.
      */
-    /*public static Thread currentThread() {
+    public static Thread currentThread() {
         Thread t = currentThread0();
-        VirtualThread vthread = t.vthread;
-        if (vthread != null) {
-            return vthread;
+        if (t != null && t.vthread != null) {
+            return t.vthread;
         } else {
             return t;
         }
     }
-    private static native Thread currentThread0();*/
-    public static native Thread currentThread();
+    public static native Thread currentThread0();
 
     /**
      * A hint to the scheduler that the current thread is willing to yield
@@ -2111,7 +2109,7 @@ class Thread implements Runnable {
      * Returns the current carrier thread.
      */
     public static Thread currentCarrierThread() {
-        return currentThread();
+        return currentThread0();
     }
     /**
      * TBD
