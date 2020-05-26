@@ -28,17 +28,17 @@
 class FreeHeapPhysicalMemoryThread: public ConcurrentGCThread {
 private:
   Monitor* _monitor;
-  SharedHeap* _sh;
+  CollectedHeap* _sh;
   static FreeHeapPhysicalMemoryThread* _thread;
 
   void stop_service();
 
   void sleep_before_next_cycle(uintx waitms);
-  FreeHeapPhysicalMemoryThread(SharedHeap* sh);
+  FreeHeapPhysicalMemoryThread();
 
 public:
   virtual void run();
-  static void start(SharedHeap* sh);
+  static void start();
   static FreeHeapPhysicalMemoryThread* thread() { return _thread;}
 };
 #endif // FREE_HEAP_PHYSICAL_MEMORY_HPP

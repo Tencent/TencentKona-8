@@ -164,6 +164,31 @@ CollectedHeap::CollectedHeap() : _n_par_threads(0)
   _gc_cause = _gc_lastcause = GCCause::_no_gc;
   NOT_PRODUCT(_promotion_failure_alot_count = 0;)
   NOT_PRODUCT(_promotion_failure_alot_gc_number = 0;)
+  if (FreeHeapPhysicalMemory) {
+    _free_heap_memory_task_queue = new FreeHeapMemoryTaskQueue();
+    if (NULL != _free_heap_memory_task_queue) {
+      _free_heap_memory_task_queue->initialize();
+    }
+    _last_minor_gc_time = 0;
+    // init histogram
+    if (PeriodicGCInterval > 0) {
+      _minor_gc_frequency_histogram = new Histogram();
+      if (NULL == _minor_gc_frequency_histogram) {
+        // will disable period gc
+        PeriodicGCInterval = 0;
+      }
+    } else {
+      _minor_gc_frequency_histogram = NULL;
+      PeriodicGCInterval = 0;
+    }
+    _minor_gc_frequency_below_thresold_count = 0;
+    _last_full_gc_time = 0;
+  } else {
+    _minor_gc_frequency_histogram = NULL;
+    PeriodicGCInterval = 0;
+  }
+  guarantee((PeriodicGCInterval > 0 && NULL != _minor_gc_frequency_histogram)
+            || (0 == PeriodicGCInterval && NULL == _minor_gc_frequency_histogram), "sanity check");
 
   if (UsePerfData) {
     EXCEPTION_MARK;
@@ -582,6 +607,71 @@ void CollectedHeap::post_full_gc_dump(GCTimer* timer) {
   }
 }
 
+void CollectedHeap::check_for_periodic_gc(int interval) {
+  if (should_start_periodic_gc(interval)) {
+    MutexLockerEx x(FreeHeapMemory_lock);
+    PeriodicGCTask* task = new PeriodicGCTask(this);
+    free_heap_memory_task_queue()->push(task);
+    FreeHeapMemory_lock->notify();
+  }
+}
+
+void CollectedHeap::update_minor_gc_frequency_histogram() {
+  if (_minor_gc_frequency_histogram) {
+    if (0 == _last_minor_gc_time) {
+       _last_minor_gc_time = os::javaTimeMillis();
+     }else {
+       size_t now = os::javaTimeMillis();
+       _minor_gc_frequency_histogram->add(now - _last_minor_gc_time);
+       _last_minor_gc_time = now;
+     }
+   }
+}
+
+bool CollectedHeap::should_start_periodic_gc(int interval) {
+  // disable free physical memory when the system is idle
+  if (0 == PeriodicGCInterval) {
+    return false;
+  }
+
+  double now = os::elapsedTime();
+  // should be static
+  static int last_check_minor_gc_count = _total_collections - _total_full_collections;
+  static double last_check_time = now;
+
+  // Check if this process load is below thresold.
+  int minor_gc_count = _total_collections - _total_full_collections;
+  double minor_gc_frequency = 0.0;
+  if (minor_gc_count > last_check_minor_gc_count) {
+    minor_gc_frequency = 
+      (now - last_check_time) / (minor_gc_count - last_check_minor_gc_count);
+    if (minor_gc_frequency > _minor_gc_frequency_histogram->percentile(99)) {
+      ++_minor_gc_frequency_below_thresold_count;
+    } else {
+      // reset it
+      _minor_gc_frequency_below_thresold_count = 0;
+    }
+    last_check_minor_gc_count = minor_gc_count;
+  } else if ((int)((now - _last_minor_gc_time) * 1000) > interval) {
+    ++_minor_gc_frequency_below_thresold_count;
+  } else {
+    // the interval is too short
+    _minor_gc_frequency_below_thresold_count = 0;
+  }
+
+  // update checktime
+  last_check_time = now;
+
+  // Check if enough time has passed since the last GC.
+  if ((long)(((now - _last_full_gc_time) * 1000) > PeriodicGCInterval)
+        && (_minor_gc_frequency_below_thresold_count >= PeriodicGCLoadThreshold)) {
+    _minor_gc_frequency_below_thresold_count = 0;
+    return true;
+  }
+
+  return false;
+}
+
 void  CollectedHeap::free_heap_physical_memory_after_fullgc(void* start, void* end) {
   double start_sec = os::elapsedTime();
   //UseLargePages
@@ -595,6 +685,7 @@ void  CollectedHeap::free_heap_physical_memory_after_fullgc(void* start, void* e
   os::free_heap_physical_memory(start_address, length);
   double end_sec = os::elapsedTime();
   _free_heap_physical_memory_time_sec = end_sec - start_sec;
+  _last_full_gc_time = end_sec;
 
   return;
 }
@@ -608,6 +699,10 @@ void CollectedHeap::print_heap_physical_memory_free_info() {
   //reset
   _free_heap_physical_memory_time_sec = 0;
   _free_heap_physical_memory_total_byte_size = 0;
+}
+
+void PeriodicGCTask::doit() {
+  Universe::heap()->collect(GCCause::_periodic_collection);
 }
 
 /////////////// Unit tests ///////////////
