@@ -71,6 +71,10 @@ public abstract class CoroutineBase {
 			}
 			runTarget();
 		} catch (Throwable t) {
+            if (CoroutineSupport.DEBUG) {
+                System.out.println("stop coroutine with exception" + this);
+                t.printStackTrace();
+            }
 			CoroutineExitException exception = CoroutineExitException.searchException(t);
 			if (!(t instanceof CoroutineExitException)) {
 				t.printStackTrace();
@@ -81,6 +85,9 @@ public abstract class CoroutineBase {
 			}
 		} finally {
 			finished = true;
+            if (CoroutineSupport.DEBUG) {
+                System.out.println("terminate in startInternal " + this);
+            }
 			// use Thread.currentThread().getCoroutineSupport() because we might have been migrated to another thread!
             if (this instanceof Continuation) {
                 Thread.currentThread().getCoroutineSupport().terminateContinuation();
