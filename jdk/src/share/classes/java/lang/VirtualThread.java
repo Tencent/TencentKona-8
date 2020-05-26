@@ -116,7 +116,6 @@ public class VirtualThread extends Thread {
         Runnable target = () -> {
             Throwable exc = null;
             try {
-                System.out.println("VirtualThread target run");
                 task.run();
             } catch (Throwable e) {
                 exc = e;
@@ -353,7 +352,7 @@ public class VirtualThread extends Thread {
      *
      * @throws IllegalCallerException if not called from a virtual thread
      */
-    static void park() {
+    public static void park() {
         VirtualThread vthread = Thread.currentCarrierThread().getVirtualThread();
         if (vthread == null)
             throw new Error("not a virtual thread");
@@ -375,7 +374,7 @@ public class VirtualThread extends Thread {
      *
      * @throws IllegalCallerException if not called from a virtual thread
      */
-    static void parkNanos(long nanos) {
+    public static void parkNanos(long nanos) {
         Thread thread = Thread.currentCarrierThread();
         VirtualThread vthread = thread.getVirtualThread();
         if (vthread == null)
@@ -445,7 +444,7 @@ public class VirtualThread extends Thread {
      * @throws RejectedExecutionException if the scheduler cannot accept a task
      * @return this virtual thread
      */
-    VirtualThread unpark() {
+    public VirtualThread unpark() {
         if (!parkPermitGetAndSet(PARK_PERMIT_TRUE) && Thread.currentThread() != this) {
             int s = waitIfParking();
             if (s == ST_PARKED && stateCompareAndSet(ST_PARKED, ST_RUNNABLE)) {
