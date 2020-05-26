@@ -96,7 +96,7 @@ public class Tracker {
                 throw new IllegalArgumentException("Negative method index");
             }
 
-            nativeCallSite(Thread.currentThread(), cnum, mnum);
+            nativeCallSite(Thread.currentThread0(), cnum, mnum);
         }
     }
 
@@ -117,7 +117,7 @@ public class Tracker {
                 throw new IllegalArgumentException("Negative method index");
             }
 
-            nativeReturnSite(Thread.currentThread(), cnum, mnum);
+            nativeReturnSite(Thread.currentThread0(), cnum, mnum);
         }
     }
 

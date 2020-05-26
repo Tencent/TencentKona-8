@@ -44,7 +44,8 @@ public abstract class CoroutineBase {
     }
 
 	CoroutineBase(String coro_name) {
-		Thread thread = Thread.currentThread();
+        Thread thread = Thread.currentCarrierThread();
+        assert Thread.currentCarrierThread() == Thread.currentThread() : "not create in carrier thread";
 		assert thread.getCoroutineSupport() != null;
 		this.threadSupport = thread.getCoroutineSupport();
 		name = coro_name;
@@ -57,14 +58,16 @@ public abstract class CoroutineBase {
 	CoroutineBase(CoroutineSupport threadSupport, long data) {
 		this.threadSupport = threadSupport;
 		this.data = data;
-		name = Thread.currentThread().getName()+"_thread_coroutine";
+        assert Thread.currentCarrierThread() == Thread.currentThread() : "must create in carrier thread";
+        name = Thread.currentCarrierThread().getName()+"_thread_coroutine";
 	}
 
 	protected abstract void runTarget();
 
 	@SuppressWarnings({ "unused" })
 	private final void startInternal() {
-		assert threadSupport.getThread() == Thread.currentThread();
+        assert Thread.currentCarrierThread() == Thread.currentThread() : "start in nested vritual thread NYI";
+        assert threadSupport.getThread() == Thread.currentCarrierThread();
 		try {
 			if (CoroutineSupport.DEBUG) {
 				System.out.println("starting coroutine " + this);
@@ -86,18 +89,19 @@ public abstract class CoroutineBase {
 		} finally {
 			finished = true;
             if (CoroutineSupport.DEBUG) {
-                System.out.println("terminate in startInternal " + this);
+                System.out.println("terminate in startInternal " + this + " in thread "
+                    + Thread.currentThread().getName() + " carrier " + Thread.currentCarrierThread().getName());
             }
 			// use Thread.currentThread().getCoroutineSupport() because we might have been migrated to another thread!
             if (this instanceof Continuation) {
-                Thread.currentThread().getCoroutineSupport().terminateContinuation();
+                Thread.currentCarrierThread().getCoroutineSupport().terminateContinuation();
             } else if (this instanceof Coroutine) {
-				Thread.currentThread().getCoroutineSupport().terminateCoroutine();
+				Thread.currentCarrierThread().getCoroutineSupport().terminateCoroutine();
 			} else {
-				Thread.currentThread().getCoroutineSupport().terminateCallable();
+				Thread.currentCarrierThread().getCoroutineSupport().terminateCallable();
 			}
 		}
-		assert threadSupport.getThread() == Thread.currentThread();
+		assert false : "should not reach here";
 	}
 
 	/**
@@ -117,6 +121,6 @@ public abstract class CoroutineBase {
 	}
 
 	public static CoroutineBase current() {
-		return Thread.currentThread().getCoroutineSupport().getCurrent();
+		return Thread.currentCarrierThread().getCoroutineSupport().getCurrent();
 	}
 }

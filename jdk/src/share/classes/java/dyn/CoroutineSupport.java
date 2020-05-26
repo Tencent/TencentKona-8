@@ -90,7 +90,8 @@ public class CoroutineSupport {
 	}
 
 	public void drain() {
-		if (Thread.currentThread() != thread) {
+        assert Thread.currentCarrierThread() == Thread.currentThread() : "drain in virtual thread";
+        if (Thread.currentCarrierThread() != thread) {
 			throw new IllegalArgumentException("Cannot drain another threads CoroutineThreadSupport");
 		}
 		// scheduledCoroutines == currentCoroutine == threadCoroutine because thread will exit when the threadCoroutine run to end
