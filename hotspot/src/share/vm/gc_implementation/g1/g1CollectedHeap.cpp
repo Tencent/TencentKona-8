@@ -1935,12 +1935,6 @@ G1CollectedHeap::G1CollectedHeap(G1CollectorPolicy* policy_) :
 
   int n_queues = MAX2((int)ParallelGCThreads, 1);
   _task_queues = new RefToScanQueueSet(n_queues);
-  if (FreeHeapPhysicalMemory) {
-    _free_heap_memory_task_queue = new FreeHeapMemoryTaskQueue();
-    if (0 != _free_heap_memory_task_queue) {
-      _free_heap_memory_task_queue->initialize();
-    }
-  }
 
   uint n_rem_sets = HeapRegionRemSet::num_par_rem_sets();
   assert(n_rem_sets > 0, "Invariant.");
@@ -4288,6 +4282,11 @@ G1CollectedHeap::do_collection_pause_at_safepoint(double target_pause_time_ms) {
           // The "used" of the the collection set have already been subtracted
           // when they were freed.  Add in the bytes evacuated.
           _allocator->increase_used(g1_policy()->bytes_copied_during_gc());
+          
+          if (PeriodicGCInterval > 0) {
+            //if no evacuation failure occured, update young gc frequency directly
+            update_minor_gc_frequency_histogram();
+          }
         }
 
         if (g1_policy()->during_initial_mark_pause()) {
@@ -7082,7 +7081,6 @@ void G1CollectedHeap::rebuild_strong_code_roots() {
 
 void G1CollectedHeap::print_heap_physical_memory_free_info() {
     if (PrintGCDetails) {
-        gclog_or_tty->print_cr("");
         gclog_or_tty->gclog_stamp(GCId::peek());
         gclog_or_tty->print_cr(" [free physical memory: " SIZE_FORMAT " KB, " SIZE_FORMAT " regions, %3.7f secs]",\
             _free_heap_physical_memory_total_byte_size / K,_reclaim_region_count,

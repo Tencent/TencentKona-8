@@ -34,6 +34,7 @@
 #include "runtime/safepoint.hpp"
 #include "utilities/events.hpp"
 #include "utilities/taskqueue.hpp"
+#include "services/histogram.hpp"
 
 // A "CollectedHeap" is an implementation of a java heap for HotSpot.  This
 // is an abstract class: there may be many different kinds of heaps.  This
@@ -123,6 +124,17 @@ class CollectedHeap : public CHeapObj<mtInternal> {
   size_t _free_heap_physical_memory_total_byte_size;
   // queue for free heap memory thread
   FreeHeapMemoryTaskQueue* _free_heap_memory_task_queue;
+  //unit is ms
+  //_last_minor_gc_time will be changed frequently and need to be visible to 2 threads
+  volatile size_t _last_minor_gc_time;
+  //histogram for young gc
+  Histogram* _minor_gc_frequency_histogram;
+  //last full gc time
+  //_last_full_gc_time will be changed frequently and need to be visible to 2 threads
+  volatile double _last_full_gc_time;
+
+  //the number of times the young gc frequency is below given threshold
+  int _minor_gc_frequency_below_thresold_count;
 
   // Constructor
   CollectedHeap();
@@ -322,10 +334,22 @@ class CollectedHeap : public CHeapObj<mtInternal> {
   uint n_par_threads() { return _n_par_threads; }
 
   void free_heap_physical_memory_after_fullgc(void* start, void* end);
+
   virtual void print_heap_physical_memory_free_info();
+
   FreeHeapMemoryTaskQueue* free_heap_memory_task_queue() {
     return _free_heap_memory_task_queue;
   }
+
+  Histogram* minor_gc_frequency_histogram() {
+    return  _minor_gc_frequency_histogram;
+  }
+
+  bool should_start_periodic_gc(int);
+
+  void check_for_periodic_gc(int);
+
+  void update_minor_gc_frequency_histogram();
 
   // May be overridden to set additional parallelism.
   virtual void set_par_threads(uint t) { _n_par_threads = t; };
@@ -696,5 +720,14 @@ class GCCauseSetter : StackObj {
 class Task {
   public:
     virtual void doit() {};
+};
+
+//task that will do periodic gc when process load is below thresold
+class PeriodicGCTask : public Task {
+  private:
+    CollectedHeap* _ch;
+  public:
+    PeriodicGCTask(CollectedHeap* ch) {_ch = ch;}
+    virtual void doit();
 };
 #endif // SHARE_VM_GC_INTERFACE_COLLECTEDHEAP_HPP
