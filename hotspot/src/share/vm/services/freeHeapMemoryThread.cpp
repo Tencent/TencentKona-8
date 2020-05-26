@@ -24,16 +24,16 @@
 #include "freeHeapMemoryThread.hpp"
 #include "runtime/mutexLocker.hpp"
 FreeHeapPhysicalMemoryThread* FreeHeapPhysicalMemoryThread::_thread = 0;
-FreeHeapPhysicalMemoryThread::FreeHeapPhysicalMemoryThread(SharedHeap* sh) :
+FreeHeapPhysicalMemoryThread::FreeHeapPhysicalMemoryThread() :
     ConcurrentGCThread() {
   _monitor = FreeHeapMemory_lock;
-  _sh = sh;
+  _sh = Universe::heap();
   set_name("Free Heap Physical Memory Thread");
   create_and_start();
 }
 
-void FreeHeapPhysicalMemoryThread::start(SharedHeap* sh) {
-  _thread = new FreeHeapPhysicalMemoryThread(sh);
+void FreeHeapPhysicalMemoryThread::start() {
+  _thread = new FreeHeapPhysicalMemoryThread();
   if (NULL == _thread) {
     if (UseG1GC) {
       //disable free heap physical memory feature
@@ -50,11 +50,11 @@ void FreeHeapPhysicalMemoryThread::sleep_before_next_cycle(uintx waitms) {
 }
 
 void FreeHeapPhysicalMemoryThread::run() {
-  int i = 0;
   Task* task = 0;
-  uintx waitms = 1800000; // 1800s
+  const uintx waitms = 300000; // 5min
   while (!_should_terminate) {
     sleep_before_next_cycle(waitms);
+
     while (!_sh->free_heap_memory_task_queue()->is_empty()) {
       if (_sh->free_heap_memory_task_queue()->pop_local(task)) {
         task->doit();
@@ -63,10 +63,9 @@ void FreeHeapPhysicalMemoryThread::run() {
         task = 0;
       }
     }
-    //The fullgc is triggered for the first time after the process starts for 1800s, and then for 3600s
-    if (waitms == 1800000) {
-      waitms = 3600000;
-    }
+
+   //check if should do periodic gc
+   _sh->check_for_periodic_gc(waitms);
   }
 }
 

@@ -547,6 +547,12 @@ void GenCollectedHeap::do_collection(bool  full,
     if (complete) { // We did a "major" collection
       // FIXME: See comment at pre_full_gc_dump call
       post_full_gc_dump(NULL);   // do any post full gc dumps
+    }else {
+      //update young gc info
+      //should call this here for ParNew/defNew and tenuredGeneration
+      if (PeriodicGCInterval > 0) {
+        update_minor_gc_frequency_histogram();
+      }
     }
 
     if (PrintGCDetails) {

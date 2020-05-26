@@ -30,6 +30,9 @@ const char* GCCause::to_string(GCCause::Cause cause) {
     case _java_lang_system_gc:
       return "System.gc()";
 
+    case _periodic_collection:
+      return "PeriodicGC";
+
     case _full_gc_alot:
       return "FullGCAlot";
 
