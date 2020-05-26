@@ -3283,9 +3283,17 @@ class CommandLineFlags {
                                                                             \
   product(bool, FreeHeapPhysicalMemory, false,                              \
              "Free physical memory after fullgc or shrink operation")       \
+                                                                            \
+  product(intx, PeriodicGCLoadThreshold, 3,                                 \
+             "when PeriodicGCInterval > 0,jvm will check minor gc frequency"\
+             "each 5 minutes, and if the frequency in this 5 minutes is"    \
+             "lower than the p99 value for PeriodicGCLoadThreshold"         \
+             "consecutive times, will trigger periodical gc.")              \
+                                                                            \
   product(uintx, PeriodicGCInterval, 0,                                     \
-             "Trigger periodic gc when this process is idle, disabled by "  \
-             "default")                                                     \
+          "Number of milliseconds after previous GC to wait before "        \
+          "triggering a periodic gc. A value of zero disables periodically "\
+          "enforced gc cycles.")                                            \
                                                                             \
   product(intx, SoftRefLRUPolicyMSPerMB, 1000,                              \
           "Number of milliseconds per MB of free space in the heap")        \

@@ -628,6 +628,11 @@ bool PSScavenge::invoke_no_policy() {
       heap->gc_policy_counters()->update_counters();
 
       heap->resize_all_tlabs();
+      
+      if (PeriodicGCInterval > 0) {
+        //update young gc frequency info
+        heap->update_minor_gc_frequency_histogram();
+      }
 
       assert(young_gen->to_space()->is_empty(), "to space should be empty now");
     }
