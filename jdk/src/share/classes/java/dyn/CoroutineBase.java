@@ -27,6 +27,7 @@ package java.dyn;
 
 public abstract class CoroutineBase {
 	transient long data;
+    int switch_result = 0;
 
 	transient CoroutineLocal.CoroutineLocalMap coroutineLocals = null;
 
@@ -123,4 +124,14 @@ public abstract class CoroutineBase {
 	public static CoroutineBase current() {
 		return Thread.currentCarrierThread().getCoroutineSupport().getCurrent();
 	}
+
+    public long getData() {
+        return data;
+    }
+
+    public int getAndClearSwitchResult() {
+        int res = switch_result;
+        switch_result = 0;
+        return res;
+    }
 }
