@@ -424,7 +424,7 @@ public class CoroutineSupport {
 		}
 	}
 
-    public void continuationSwtich(CoroutineBase current, CoroutineBase target) {
+    public int continuationSwtich(CoroutineBase current, CoroutineBase target) {
         if (current != currentCoroutine) {
             throw new IllegalArgumentException("Switch from is not currentCoroutine");
         }
@@ -435,7 +435,13 @@ public class CoroutineSupport {
         if (DEBUG) {
             System.out.println("continuation run current is " + current + " (" + current.data + ")");
         }
-		switchTo(current, target);
+        switchTo(current, target);
+        int res = current.getAndClearSwitchResult();
+        if (res != 0) {
+            assert currentCoroutine == target : "replaced by other";
+            currentCoroutine = current;
+        }
+        return res;
     }
     
     void terminateContinuation() {

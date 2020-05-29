@@ -86,22 +86,22 @@ public:
   };
 
 private:
-  
   CoroutineState  _state;
-
   bool            _is_thread_coroutine;
   bool            _is_continuation;
 
-  JavaThread*     _thread;
   CoroutineStack* _stack;
-
   ResourceArea*   _resource_area;
   HandleArea*     _handle_area;
   GrowableArray<Metadata*>* _metadata_handles;//the first javacall stack handles cannot be deallocate so devide them to coros, discard them when destruct coro
   HandleMark*     _last_handle_mark;
   // Active_handles points to a block of handles
   JNIHandleBlock* _active_handles;
+
+  // mutable
   MonitorChunk*   _monitor_chunks;  // if deoptimizing happens in corutine it should record own monitor chunks
+  int             _jni_frames;      // jni frame count in current coroutine stack, pinned
+  JavaThread*     _thread;
 
 #ifdef ASSERT
   int             _java_call_counter;
@@ -173,6 +173,10 @@ public:
   static Coroutine* create_coroutine(const char* name,JavaThread* thread, CoroutineStack* stack, oop coroutineObj);
   static void free_coroutine(Coroutine* coroutine, JavaThread* thread);
 
+  int jni_frames() const { return _jni_frames; }
+  void inc_jni_frames()  { _jni_frames++; }
+  void dec_jni_frames()  { _jni_frames--; }
+
   CoroutineState state() const      { return _state; }
   void set_state(CoroutineState x)  { _state = x; }
 
@@ -217,6 +221,7 @@ public:
   static ByteSize stack_offset()              { return byte_offset_of(Coroutine, _stack); }
 
   static ByteSize thread_offset()             { return byte_offset_of(Coroutine, _thread); }
+  static ByteSize jni_frame_offset()          { return byte_offset_of(Coroutine, _jni_frames); }
   static ByteSize resource_area_offset()      { return byte_offset_of(Coroutine, _resource_area); }
   static ByteSize handle_area_offset()        { return byte_offset_of(Coroutine, _handle_area); }
   static ByteSize last_handle_mark_offset()   { return byte_offset_of(Coroutine, _last_handle_mark); }

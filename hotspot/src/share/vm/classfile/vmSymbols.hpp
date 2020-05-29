@@ -614,6 +614,7 @@
   template(java_lang_Continuation,                     "java/lang/Continuation")                                  \
   template(java_dyn_CoroutineExitException,            "java/dyn/CoroutineExitException")                         \
   template(data_name,                                  "data")                                                    \
+  template(switch_result_name,                         "switch_result")                                           \
   template(stack_name,                                 "stack")                                                   \
   template(current_name,                               "current")                                                 \
   template(java_dyn_CoroutineBase_signature,           "Ljava/dyn/CoroutineBase;")                                \

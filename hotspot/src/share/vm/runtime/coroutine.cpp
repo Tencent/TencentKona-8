@@ -163,6 +163,7 @@ Coroutine::Coroutine()
 	_has_javacall = false;
 	_active_handles = NULL;
   _monitor_chunks = NULL;
+  _jni_frames = 0;
 }
 
 Coroutine::~Coroutine() {
@@ -691,3 +692,32 @@ frame CoroutineStack::last_frame(Coroutine* coro, RegisterMap& map) const {
 
   return frame(sp, fp, pc);
 }
+
+JVM_ENTRY(jint, CONT_isPinned0(JNIEnv* env, jclass klass, long data)) {
+  JavaThread* thread = JavaThread::thread_from_jni_environment(env);
+  if (thread->locksAcquired != 0) {
+    return 3;
+  }
+  Coroutine* coro = (Coroutine*)data;
+  if (coro->jni_frames() != 0) {
+    return 2; // JNI
+  }
+  return 0;
+}
+JVM_END
+
+#define CC (char*)  /*cast a literal from (const char*)*/
+#define FN_PTR(f) CAST_FROM_FN_PTR(void*, &f)
+
+static JNINativeMethod CONT_methods[] = {
+    {CC"isPinned0",        CC"(J)I", FN_PTR(CONT_isPinned0)},
+};
+
+JVM_ENTRY(void, JVM_RegisterContinuationNativeMethods(JNIEnv *env, jclass cls)) {
+    Thread* thread = Thread::current();
+    assert(thread->is_Java_thread(), "");
+    ThreadToNativeFromVM trans((JavaThread*)thread);
+    int status = env->RegisterNatives(cls, CONT_methods, sizeof(CONT_methods)/sizeof(JNINativeMethod));
+    guarantee(status == JNI_OK && !env->ExceptionOccurred(), "register java.lang.Continuation natives");
+}
+JVM_END

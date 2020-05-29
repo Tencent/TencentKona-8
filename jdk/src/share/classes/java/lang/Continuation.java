@@ -43,6 +43,7 @@ public class Continuation extends CoroutineBase {
 
     static {
         try {
+            registerNatives();
             mountedOffset = unsafe.objectFieldOffset(Continuation.class.getDeclaredField("mounted"));
         } catch (Exception e) {
             throw new InternalError(e);
@@ -215,7 +216,11 @@ public class Continuation extends CoroutineBase {
             t.setContinuation(this);
             try {
                 if (TRACE) System.out.println("Continuation run before call");
-                support.continuationSwtich(caller, this);
+                int result = support.continuationSwtich(caller, this);
+                if (result != 0) {
+                    caller= null;
+                    onPinned0(result);
+                }
                 if (TRACE) System.out.println("Continuation run after call");
             } catch (Throwable e) {
                 done = true;
@@ -236,9 +241,19 @@ public class Continuation extends CoroutineBase {
     private final boolean yield0(CoroutineBase target) {
         CoroutineSupport support = currentCarrierThread().getCoroutineSupport();
         assert target != null : "target is null in Continuation.yield0";
+        if (cs > 0) {
+            onPinned(Pinned.CRITICAL_SECTION);
+            return false;
+        }
+        assert caller == target : "unexpected";
         caller = null;
         // System.out.println("before yield");
-        support.continuationSwtich(this, target);
+        int result = support.continuationSwtich(this, target);
+        if (result != 0) {
+            caller = target;
+            onPinned0(result);
+            return false;
+        }
         // System.out.println("after yield");
         return true;
     }
@@ -343,18 +358,60 @@ public class Continuation extends CoroutineBase {
     }
 
     /**
-     * Tests whether the given scope is pinned. 
+     * Tests whether the given scope is pinned in scope. This method can only apply to current running continuation.
      * This method is slow.
+     *
+     * 1. Check if continuation exist, find all parent continuation in scope. If current continuaation
+     *    Not in this scope, throw exception
+     * 2. Check if pinned
+     * 3. Check if has monitor: invoke to runtime code
+     * 4. check if has JNI: invoke to runtime code
+     *
+     * check from current continuation to its parent continuation
      * 
      * @param scope the continuation scope
      * @return {@code} true if we're in the give scope and are pinned; {@code false otherwise}
      */
     public static boolean isPinned(ContinuationScope scope) {
-        int res = isPinned0(scope);
-        return res != 0;
+        Continuation cont = currentCarrierThread().getContinuation();
+        Continuation c;
+        for (c = cont; c != null && c.scope != scope; c = c.parent)
+            ;
+        if (c == null)
+            throw new IllegalStateException("Not in scope " + scope);
+        assert cont == c : "nested scope NYI";
+        /*
+        Continuation cur = cont;
+        while (cur != c) {
+            Continuation parent = cur.parent;
+            if (cur.isPinnedInternal()) {
+            return true;
+            }
+            cur = parent;
+        }*/
+        return false;
     }
 
-    static private native int isPinned0(ContinuationScope scope);
+    public static boolean isPinned() {
+        Continuation cont = currentCarrierThread().getContinuation();
+        if (cont == null) {
+            return false;
+        }
+        return cont.isPinnedInternal();
+    }
+
+    private boolean isPinnedInternal() {
+        if (cs > 0) {
+            return true;
+        }
+        assert getData() != 0 : "uninitialized";
+        return isPinned0(getData()) != 0;
+    }
+
+    // return int indicate pin reason
+    // check runtime structure if it has monitor/jni frame
+    private static native int isPinned0(long data);
+    private static native void registerNatives();
 
     private boolean fence() {
         unsafe.storeFence();
