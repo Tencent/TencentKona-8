@@ -4456,7 +4456,27 @@ void create_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* oop_ma
   }
 
   Register thread = r15;
-  Register target_coroutine = rdx; 
+  Register target_coroutine = rdx;
+  Register old_coroutine_obj = rsi;
+
+  // check if continuation is pinned, return pinned result
+  {
+    Register temp = r8;
+    Label lockOK, check_JNI_frame;
+    __ movl(temp, Address(thread, in_bytes(Thread::locksAcquired_offset())));
+    __ testl(temp, temp);
+    __ jcc(Assembler::zero, check_JNI_frame);
+    __ movl(Address(old_coroutine_obj, java_dyn_CoroutineBase::get_switch_result_offset()), 3);
+    __ ret(0);
+    __ bind(check_JNI_frame);
+    __ movptr(temp, Address(old_coroutine_obj, java_dyn_CoroutineBase::get_data_offset()));
+    __ movl(temp, Address(temp, Coroutine::jni_frame_offset()));
+    __ testl(temp, temp);
+    __ jcc(Assembler::zero, lockOK);
+    __ movl(Address(old_coroutine_obj, java_dyn_CoroutineBase::get_switch_result_offset()), 2);
+    __ ret(0);
+    __ bind(lockOK);
+  }
 
   if (CouroutineCheckMonitrAtYield > 0) {
     // check if thread.locksAcquire is zero when switch
@@ -4519,7 +4539,7 @@ void create_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* oop_ma
     //
     // valid registers: rsi = old Coroutine, rdx = target Coroutine
 
-    Register old_coroutine_obj = rsi;
+    //Register old_coroutine_obj = rsi;
     Register old_coroutine = r9;
     Register old_stack = r10;
     Register temp = r8;

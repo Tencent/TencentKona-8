@@ -3315,11 +3315,13 @@ void java_nio_Buffer::compute_offsets() {
 /* stack manipulation */
 
 int java_dyn_CoroutineBase::data_offset = 0;
+int java_dyn_CoroutineBase::switch_result_offset = 0;
 
 void java_dyn_CoroutineBase::compute_offsets() {
   Klass* k = SystemDictionary::coroutine_base_klass();
   if (k != NULL) {
-    compute_offset(data_offset,    k, vmSymbols::data_name(),    vmSymbols::long_signature());
+    compute_offset(data_offset,          k, vmSymbols::data_name(),    vmSymbols::long_signature());
+    compute_offset(switch_result_offset, k, vmSymbols::switch_result_name(),    vmSymbols::int_signature());
   }
 }
 
