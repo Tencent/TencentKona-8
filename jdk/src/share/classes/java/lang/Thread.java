@@ -318,7 +318,16 @@ class Thread implements Runnable {
      *          <i>interrupted status</i> of the current thread is
      *          cleared when this exception is thrown.
      */
-    public static native void sleep(long millis) throws InterruptedException;
+    public static void sleep(long millis) throws InterruptedException {
+        Thread t = currentCarrierThread();
+        VirtualThread vthread;
+        if (t != null && ((vthread = t.getVirtualThread())!= null)) {
+            vthread.sleepNanos(TimeUnit.MILLISECONDS.toNanos(millis));
+        } else {
+            sleep0(millis);
+        }
+    }
+    public static native void sleep0(long millis) throws InterruptedException;
 
     /**
      * Causes the currently executing thread to sleep (temporarily cease
