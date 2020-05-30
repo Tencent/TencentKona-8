@@ -423,7 +423,6 @@ public class VirtualThread extends Thread {
             signalParking();
             return;
         }
-
         Continuation.yield(VTHREAD_SCOPE);
 
         // continued
@@ -790,7 +789,7 @@ public class VirtualThread extends Thread {
     }
 
     private boolean parkPermitGetAndSet(int newValue) {
-        return unsafe.getAndAddInt(this, PARK_PERMIT_OFFSET, newValue) == PARK_PERMIT_TRUE;
+        return unsafe.getAndSetInt(this, PARK_PERMIT_OFFSET, newValue) == PARK_PERMIT_TRUE;
     }
 
     // -- JVM TI support --
