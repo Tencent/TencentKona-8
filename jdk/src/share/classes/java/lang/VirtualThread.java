@@ -99,6 +99,7 @@ public class VirtualThread extends Thread {
     private Condition parking;            // created lazily
     private Condition termination;        // created lazily
     private volatile int parkPermit;      // 0 for false and 1 for true
+    private volatile boolean interrupted;
 
     /**
      * Creates a new {@code VirtualThread} to run the given task with the given scheduler.
@@ -218,10 +219,9 @@ public class VirtualThread extends Thread {
 
         // sets the carrier thread and forward interrupt status if needed
         carrierThread = thread;
-        /*
         if (interrupted) {
             thread.setInterrupt();
-        }*/
+        }
 
         // set thread field so Thread.currentThread() returns the VirtualThread object
         assert thread.getVirtualThread() == null;
@@ -246,9 +246,9 @@ public class VirtualThread extends Thread {
 
         // drop connection between this virtual thread and the carrier thread
         thread.setVirtualThread(null);
-        /*synchronized (interruptLock) {   // synchronize with interrupt
+        synchronized (getBlockerLock()) {   // synchronize with interrupt
             carrierThread = null;
-        }*/
+        }
         carrierThread = null;
     }
 
@@ -415,7 +415,7 @@ public class VirtualThread extends Thread {
             throw new InternalError();
 
         // consume permit if available, and continue rather than park
-        if (parkPermitGetAndSet(PARK_PERMIT_FALSE) /*|| interrupted*/) {
+        if (parkPermitGetAndSet(PARK_PERMIT_FALSE) || interrupted) {
             if (!stateCompareAndSet(ST_PARKING, ST_RUNNING))
                 throw new InternalError();
 
@@ -558,16 +558,17 @@ public class VirtualThread extends Thread {
 
     @Override
     public void interrupt() {
-        /*if (Thread.currentThread() != this) {
+        if (Thread.currentThread() != this) {
             checkAccess();
-            synchronized (interruptLock) {
+            synchronized (getBlockerLock()) {
                 interrupted = true;
-                Interruptible b = nioBlocker;
+                Interruptible b = getBlocker();
                 if (b != null) {
                     b.interrupt(this);
                 }
 
-                // interrupt carrier thread
+                // interrupt carrier thread if not null
+                // this means this virtual thread is attached on its carrier thread now.
                 Thread t = carrierThread;
                 if (t != null) t.setInterrupt();
             }
@@ -575,28 +576,24 @@ public class VirtualThread extends Thread {
             interrupted = true;
             carrierThread.setInterrupt();
         }
-        unpark();*/
-        assert false : "not supported yet";
+        unpark();
     }
 
-    //@Override
+    @Override
     public boolean isInterrupted() {
-        // return interrupted;
-        return false;
+        return interrupted;
     }
 
-    //@Override
     boolean getAndClearInterrupt() {
         assert Thread.currentCarrierThread().getVirtualThread() == this;
-        /*synchronized (interruptLock) {
+        synchronized (getBlockerLock()) {
             boolean oldValue = interrupted;
             if (oldValue)
                 interrupted = false;
             Thread t = carrierThread;
-            if (t != null) t.clearInterrupt();
+            //if (t != null) t.clearInterrupt(); only for win32 in loom
             return oldValue;
-        }*/
-        return false;
+        }
     }
 
     /**
