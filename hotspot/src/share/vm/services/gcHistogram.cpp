@@ -19,14 +19,14 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#include "histogram.hpp"
+#include "gcHistogram.hpp"
 #include <float.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
 
-int Histogram::binary_search(long key) {
+int GCHistogram::binary_search(long key) {
    int low = 0, high = ALL_LEVEL, mid = 0;
 
    while (low < high) {
@@ -41,7 +41,7 @@ int Histogram::binary_search(long key) {
    return ((_bucket_limits[mid] <= key) ? low : (ALL_LEVEL - 2));
 }
 
-int Histogram::binary_search(long *array, int size, long key) {
+int GCHistogram::binary_search(long *array, int size, long key) {
     int first = 0, count = size, step;
     int it = 0;
 
@@ -60,7 +60,7 @@ int Histogram::binary_search(long *array, int size, long key) {
     return (0 == first ? first : first -1);
 }
 
-int Histogram::search(long key) {
+int GCHistogram::search(long key) {
   //fast path
   int result = (int)(key / 100);
   if (result < LEVEL1) {
@@ -71,9 +71,9 @@ int Histogram::search(long key) {
   return binary_search(_bucket_limits, ALL_LEVEL, key);
 }
 
-Histogram::Histogram() : _bucket_limits(init_default_buckets()) { clear(); }
+GCHistogram::GCHistogram() : _bucket_limits(init_default_buckets()) { clear(); }
 
-long* Histogram::init_default_buckets_inner() {
+long* GCHistogram::init_default_buckets_inner() {
   long* result = new long[ALL_LEVEL];
   for (int i = 0; i < ALL_LEVEL; i++) {
     if (i < LEVEL1) {//100,200,300......19000
@@ -90,19 +90,19 @@ long* Histogram::init_default_buckets_inner() {
   return result;
 }
 
-long* Histogram::init_default_buckets() {
+long* GCHistogram::init_default_buckets() {
   long* default_bucket_limits = init_default_buckets_inner();
   return default_bucket_limits;
 }
 
 // Create a histogram with a custom set of bucket limits,
-Histogram::Histogram(long* custom_bucket_limits)
+GCHistogram::GCHistogram(long* custom_bucket_limits)
     : _custom_bucket_limits(custom_bucket_limits),
       _bucket_limits(_custom_bucket_limits) {
   clear();
 }
 
-void Histogram::clear() {
+void GCHistogram::clear() {
   _min = _bucket_limits[ALL_LEVEL - 1];
   _max = 0;
   _num = 0;
@@ -114,7 +114,7 @@ void Histogram::clear() {
   }
 }
 
-void Histogram::add(long value) {
+void GCHistogram::add(long value) {
  int b = search(value);
   _buckets[b] += 1;
   if (_min > value) _min = value;
@@ -124,15 +124,15 @@ void Histogram::add(long value) {
   _sum_squares += (value * value);
 }
 
-long Histogram::median() const { return percentile(50); }
+long GCHistogram::median() const { return percentile(50); }
 
-long Histogram::remap(double x, long x0, long x1, long y0,
+long GCHistogram::remap(double x, long x0, long x1, long y0,
                         long y1) const {
   //assert((x0 != x1 && y0 != y1), "sanity check");
   return (long)(y0 + (x - x0) / (x1 - x0) * (y1 - y0));
 }
 
-long Histogram::percentile(double p) const {
+long GCHistogram::percentile(double p) const {
   if (0 == _num) return 0;
 
   double threshold = (_num * (p / 100.0));
@@ -163,20 +163,20 @@ long Histogram::percentile(double p) const {
   return _max;
 }
 
-double Histogram::average() const {
+double GCHistogram::average() const {
   if (0 == _num) return 0.0;
   return (_sum * 1.0) / _num;
 }
 
-long Histogram::max() const {
+long GCHistogram::max() const {
   return _max;
 }
 
-long Histogram::min() const {
+long GCHistogram::min() const {
   return _min;
 }
 
-double Histogram::standard_deviation() const {
+double GCHistogram::standard_deviation() const {
   if (0 == _num) return 0.0;
   double variance = (_sum_squares * _num * 1.0 - _sum * _sum) / (_num * _num);
   return sqrt(variance);

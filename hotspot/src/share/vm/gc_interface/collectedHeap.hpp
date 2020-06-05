@@ -34,7 +34,7 @@
 #include "runtime/safepoint.hpp"
 #include "utilities/events.hpp"
 #include "utilities/taskqueue.hpp"
-#include "services/histogram.hpp"
+#include "services/gcHistogram.hpp"
 
 // A "CollectedHeap" is an implementation of a java heap for HotSpot.  This
 // is an abstract class: there may be many different kinds of heaps.  This
@@ -128,7 +128,7 @@ class CollectedHeap : public CHeapObj<mtInternal> {
   //_last_minor_gc_time will be changed frequently and need to be visible to 2 threads
   volatile size_t _last_minor_gc_time;
   //histogram for young gc
-  Histogram* _minor_gc_frequency_histogram;
+  GCHistogram* _minor_gc_frequency_histogram;
   //last full gc time
   //_last_full_gc_time will be changed frequently and need to be visible to 2 threads
   volatile double _last_full_gc_time;
@@ -352,7 +352,7 @@ class CollectedHeap : public CHeapObj<mtInternal> {
     return _free_heap_memory_task_queue;
   }
 
-  Histogram* minor_gc_frequency_histogram() {
+  GCHistogram* minor_gc_frequency_histogram() {
     return  _minor_gc_frequency_histogram;
   }
 
