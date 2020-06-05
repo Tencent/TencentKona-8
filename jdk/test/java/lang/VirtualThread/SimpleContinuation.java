@@ -25,22 +25,30 @@
  * @test
  * @summary Basic test for continuation, test create/run/yield/resume/stop
  */
+
+import org.testng.annotations.Test;
+import static org.testng.Assert.*;
+
 public class SimpleContinuation {
     static long count = 0;
     static ContinuationScope scope = new ContinuationScope("test");
     public static void main(String args[]) throws Exception {
         foo();
         System.out.println("finish first");
+        assertEquals(count, 2);
         foo();
         System.out.println("finish second");
+        assertEquals(count, 4);
     }
 
     static void foo() {
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("before yield");
+                count++;
                 Continuation.yield(scope);
                 System.out.println("resume yield");
+                count++;
             }
         };
         Continuation cont = new Continuation(scope, target);

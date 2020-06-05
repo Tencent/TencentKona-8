@@ -23,82 +23,106 @@
 
 /*
  * @test
- * @summary Basic test for continuation, test create/run/yield/resume/stop
+ * @summary Basic test for virtual thread, test create/run/yield/resume/stop
  */
 import java.util.concurrent.*;
+import org.testng.annotations.Test;
+import static org.testng.Assert.*;
 
 public class SimpleVT {
-    static long count = 0;
+    static long finished_vt_count = 0;
     public static void main(String args[]) throws Exception {
         foo();
         System.out.println("finish foo 1");
         FixedThreadPoolSimple();
         System.out.println("finish FixedThreadPoolSimple 1");
-		singleThreadParkTest();
-		System.out.println("finish singleThreadParkTest 1");
+        singleThreadParkTest();
+        System.out.println("finish singleThreadParkTest 1");
         multipleThreadParkTest();
         System.out.println("finish multipleThreadParkTest 1");
-		multipleThreadPoolParkTest();
-		System.out.println("finish multipleThreadPoolParkTest 1");
+        multipleThreadPoolParkTest();
+        System.out.println("finish multipleThreadPoolParkTest 1");
     }
 
     static void foo() throws Exception {
-		ExecutorService executor = Executors.newSingleThreadExecutor();
+        ExecutorService executor = Executors.newSingleThreadExecutor();
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("before yield");
                 Continuation.yield();
                 System.out.println("resume yield");
+                finished_vt_count++;
             }
         };
-		VirtualThread vt = new VirtualThread(executor, "foo_thread", 0, target);
-		vt.start();
-		vt.join();
-		//Thread.sleep(1000);
-		executor.shutdown();
+        VirtualThread vt = new VirtualThread(executor, "foo_thread", 0, target);
+        vt.start();
+        vt.join();
+        //Thread.sleep(1000);
+        executor.shutdown();
+        assertEquals(finished_vt_count, 1);
     }
 
     static void FixedThreadPoolSimple() throws Exception {
+        finished_vt_count = 0;
         ExecutorService executor = Executors.newFixedThreadPool(4);
         Runnable target = new Runnable() {
             public void run() {
-                System.out.println("before yield");
+                System.out.println("before yield " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
                 Continuation.yield();
-                System.out.println("resume yield");
+                System.out.println("resume yield " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
+                finished_vt_count++;
             }
         };
-		VirtualThread[] vts = new VirtualThread[40];
-		for (int i = 0; i < 40; i++) {
-			vts[i] = new VirtualThread(executor, "FixedThreadPoolSimple_" + i, 0, target);
-		}
-		for (int i = 0; i < 40; i++) {
-			vts[i].start();
-		}
-          
-		for (int i = 0; i < 40; i++) {
-			vts[i].join();
-		}
+
+        VirtualThread[] vts = new VirtualThread[40];
+        for (int i = 0; i < 40; i++) {
+            vts[i] = new VirtualThread(executor, "FixedThreadPoolSimple_" + i, 0, target);
+        }
+        for (int i = 0; i < 40; i++) {
+            vts[i].start();
+        }
+
+        for (int i = 0; i < 40; i++) {
+            vts[i].join();
+        }
         executor.shutdown();
+        assertEquals(finished_vt_count, 40);
     }
 
-	static void singleThreadParkTest() throws Exception {
+    static void singleThreadParkTest() throws Exception {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("before park " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
+                assertEquals(Thread.currentThread().getName(), "park_thread");
+                assertNotEquals(Thread.currentCarrierThread().getName(), "main");
                 VirtualThread.park();
                 System.out.println("after park " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
+                assertEquals(Thread.currentThread().getName(), "park_thread");
+                assertNotEquals(Thread.currentCarrierThread().getName(), "main");
             }
         };
         VirtualThread vt = new VirtualThread(executor, "park_thread", 0, target);
         vt.start();
-		System.out.println("after start " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
-		Thread.sleep(500);
-		System.out.println("before unpark " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
-		vt.unpark();
-		System.out.println("after unpark " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
+
+        System.out.println("after start " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
+        assertEquals(Thread.currentThread().getName(), "main");
+        assertEquals(Thread.currentCarrierThread().getName(), "main");
+
+        Thread.sleep(500);
+
+        System.out.println("before unpark " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
+        assertEquals(Thread.currentThread().getName(), "main");
+        assertEquals(Thread.currentCarrierThread().getName(), "main");
+
+        vt.unpark();
+
+        System.out.println("after unpark " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
+        assertEquals(Thread.currentThread().getName(), "main");
+        assertEquals(Thread.currentCarrierThread().getName(), "main");
+
         vt.join();
-		 System.out.println("after join");
+        System.out.println("after join");
         //Thread.sleep(1000);
         executor.shutdown();
     }
@@ -106,35 +130,38 @@ public class SimpleVT {
     /*
      * Park and unpark in multiple virtual threads
      */
-	static void multipleThreadParkTest() throws Exception {
+    static void multipleThreadParkTest() throws Exception {
         ExecutorService executor = Executors.newSingleThreadExecutor();
-		VirtualThread[] vts = new VirtualThread[10];
+        VirtualThread[] vts = new VirtualThread[10];
         Runnable target = new Runnable() {
             public void run() {
-				System.out.println(Thread.currentThread().getName() + " before park");
-				int myIndex = -1;
-				for (int i = 0; i < 10; i++) {
-					if (vts[i] == Thread.currentThread()) {
-						myIndex = i;
-						break;
-					}
-				}
-				// myIndex from 0 to 9
-				if (myIndex > 0) {
-					vts[myIndex - 1].unpark();
-				}
+                System.out.println(Thread.currentThread().getName() + " before park");
+                int myIndex = -1;
+                for (int i = 0; i < 10; i++) {
+                    if (vts[i] == Thread.currentThread()) {
+                        myIndex = i;
+                        break;
+                    }
+                }
+
+                assertEquals(Thread.currentThread().getName(), "vt" + myIndex);
+                // myIndex from 0 to 9
+                if (myIndex > 0) {
+                    vts[myIndex - 1].unpark();
+                }
                 VirtualThread.park();
-				System.out.println(Thread.currentThread().getName() + " after park");
+                System.out.println(Thread.currentThread().getName() + " after park");
+                assertEquals(Thread.currentThread().getName(), "vt" + myIndex);
             }
         };
-		for (int i = 0; i < 10; i++) {
-			vts[i] = new VirtualThread(executor, "vt" + i, 0, target);
-		}
-		for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
+            vts[i] = new VirtualThread(executor, "vt" + i, 0, target);
+        }
+        for (int i = 0; i < 10; i++) {
             vts[i].start();
         }
         vts[9].unpark();
-		for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
             vts[i].join();
         }
         executor.shutdown();
@@ -153,14 +180,17 @@ public class SimpleVT {
                         break;
                     }
                 }
-                // myIndex from 0 to 9
+
+                assertEquals(Thread.currentThread().getName(), "vt" + myIndex);
+                // myIndex from 0 to 99
                 if (myIndex > 0) {
                     vts[myIndex - 1].unpark();
                 } else {
-					vts[99].unpark();
-				}
+                    vts[99].unpark();
+                }
                 VirtualThread.park();
                 System.out.println(Thread.currentThread().getName() + " after park");
+                assertEquals(Thread.currentThread().getName(), "vt" + myIndex);
             }
         };
         for (int i = 0; i < 100; i++) {

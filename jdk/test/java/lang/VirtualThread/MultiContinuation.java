@@ -27,6 +27,9 @@
  */
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.*;
+import org.testng.annotations.Test;
+import static org.testng.Assert.*;
+
 public class MultiContinuation {
     static long count = 0;
     static ContinuationScope scope = new ContinuationScope("test");
@@ -47,30 +50,10 @@ public class MultiContinuation {
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("Continuation first run in " + Thread.currentThread().getName());
+                assertEquals(Thread.currentThread().getName(), "main");
                 Continuation.yield(scope);
                 System.out.println("Continuation second run in " + Thread.currentThread().getName());
-            }
-        };
-        Continuation[] conts = new Continuation[10];
-        for (int i = 0; i < 10; i++) {
-			conts[i] = new Continuation(scope, target);;
-        }
-		for (int i = 0; i < 10; i++) {
-			conts[i].run();
-		}
-        for (int i = 0; i < 10; i++) {
-            conts[i].run();
-        }
-    }
-
-    static void bar() throws Exception {
-        Runnable target = new Runnable() {
-            public void run() {
-                System.out.println("Continuation first run in " + Thread.currentThread().getName());
-                Continuation.yield(scope);
-                System.out.println("Continuation second run in " + Thread.currentThread().getName());
-				Continuation.yield(scope);
-                System.out.println("Continuation third run in " + Thread.currentThread().getName());
+                assertEquals(Thread.currentThread().getName(), "main");
             }
         };
         Continuation[] conts = new Continuation[10];
@@ -80,11 +63,36 @@ public class MultiContinuation {
         for (int i = 0; i < 10; i++) {
             conts[i].run();
         }
-        Thread thread = new Thread(){
+        for (int i = 0; i < 10; i++) {
+            conts[i].run();
+        }
+    }
+
+    static void bar() throws Exception {
+        Runnable target = new Runnable() {
             public void run() {
-		        for (int i = 0; i < 10; i++) {
-        	    	conts[i].run();
-        		}
+                System.out.println("Continuation first run in " + Thread.currentThread().getName());
+                assertEquals(Thread.currentThread().getName(), "main");
+                Continuation.yield(scope);
+                System.out.println("Continuation second run in " + Thread.currentThread().getName());
+                assertEquals(Thread.currentThread().getName(), "bar-thread-0");
+                Continuation.yield(scope);
+                System.out.println("Continuation third run in " + Thread.currentThread().getName());
+                assertEquals(Thread.currentThread().getName(), "main");
+            }
+        };
+        Continuation[] conts = new Continuation[10];
+        for (int i = 0; i < 10; i++) {
+            conts[i] = new Continuation(scope, target);;
+        }
+        for (int i = 0; i < 10; i++) {
+            conts[i].run();
+        }
+        Thread thread = new Thread("bar-thread-0"){
+            public void run() {
+                for (int i = 0; i < 10; i++) {
+                    conts[i].run();
+                }
             }
         };
         thread.start();
@@ -99,57 +107,63 @@ public class MultiContinuation {
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("Continuation first run in " + Thread.currentThread().getName());
+                assertEquals(Thread.currentThread().getName(), "qux-thread-0");
                 Continuation.yield(scope);
                 System.out.println("Continuation second run in " + Thread.currentThread().getName());
+                assertEquals(Thread.currentThread().getName(), "main");
                 Continuation.yield(scope);
                 System.out.println("Continuation third run in " + Thread.currentThread().getName());
+                assertEquals(Thread.currentThread().getName(), "qux-thread-0");
             }
         };
         Continuation[] conts = new Continuation[10];
         for (int i = 0; i < 10; i++) {
             conts[i] = new Continuation(scope, target);;
         }
-        Thread thread = new Thread(){
+        Thread thread = new Thread("qux-thread-0"){
             public void run() {
                 for (int i = 0; i < 10; i++) {
                     conts[i].run();
                 }
-				try {
-					Thread.sleep(2000);
-				} catch (Exception e) {
-				}
+                try {
+                    Thread.sleep(2000);
+                } catch (Exception e) {
+                }
                 for (int i = 0; i < 10; i++) {
                     conts[i].run();
                 }
-
             }
         };
         thread.start();
-		Thread.sleep(1000);
+        Thread.sleep(1000);
         for (int i = 0; i < 10; i++) {
             conts[i].run();
         }
-		thread.join();
+        thread.join();
     }
 
     // racing processing multiple continuations in threads
     static void baz() throws Exception {
-	    Runnable target = new Runnable() {
+        Runnable target = new Runnable() {
             public void run() {
                 System.out.println("Continuation first run in " + Thread.currentThread().getName());
+                assertEquals(Thread.currentThread().getName(), "baz-thread-0");
                 Continuation.yield(scope);
                 System.out.println("Continuation second run in " + Thread.currentThread().getName());
+                assertEquals(Thread.currentThread().getName(), "baz-thread-0");
                 Continuation.yield(scope);
                 System.out.println("Continuation third run in " + Thread.currentThread().getName());
+                assertEquals(Thread.currentThread().getName(), "baz-thread-0");
             }
         };
-		LinkedBlockingDeque<Continuation> queue = new LinkedBlockingDeque();
-	    for (int i = 0; i < 10; i++) {
-			queue.offer(new Continuation(scope, target));
-		}
-		AtomicInteger ai = new AtomicInteger(0);
 
-		Runnable r = new Runnable() {
+        LinkedBlockingDeque<Continuation> queue = new LinkedBlockingDeque();
+        for (int i = 0; i < 10; i++) {
+            queue.offer(new Continuation(scope, target));
+        }
+        AtomicInteger ai = new AtomicInteger(0);
+
+        Runnable r = new Runnable() {
             public void run() {
                 try {
                     while (true) {
@@ -158,21 +172,21 @@ public class MultiContinuation {
                         if (c.isDone() == false) {
                             queue.offer(c);
                         } else {
-							System.out.println("done");
-							int res = ai.incrementAndGet();
-							if(res == 10) {
-								return;
-							}
-						}
+                            System.out.println("done");
+                            int res = ai.incrementAndGet();
+                            if(res == 10) {
+                                return;
+                            }
+                        }
                     }
                 } catch(InterruptedException e) {
                 }
             }
-		}; 
+        }; 
 
-        Thread thread = new Thread(r);
+        Thread thread = new Thread(r, "baz-thread-0");
         thread.start();
-		thread.join();
+        thread.join();
     }
 
 
@@ -180,10 +194,13 @@ public class MultiContinuation {
         Runnable target = new Runnable() {
             public void run() {
                 //System.out.println("Continuation first run in " + Thread.currentThread().getName());
+                assertNotEquals(Thread.currentThread().getName(), "main");
                 Continuation.yield(scope);
                 //System.out.println("Continuation second run in " + Thread.currentThread().getName());
+                assertNotEquals(Thread.currentThread().getName(), "main");
                 Continuation.yield(scope);
                 //System.out.println("Continuation third run in " + Thread.currentThread().getName());
+                assertNotEquals(Thread.currentThread().getName(), "main");
             }
         };
         LinkedBlockingDeque<Continuation> queue = new LinkedBlockingDeque();
@@ -204,15 +221,16 @@ public class MultiContinuation {
                         } else {
                             //System.out.println("done");
                             int res = ai.incrementAndGet();
-                            if(res == 1000) {
-								for (int i = 0; i < 10; i++) {
-									if (threads[i] == Thread.currentThread()) {
-										continue;
-									}
-									threads[i].interrupt();
-								}
-                                return;
+                            if (res < 1000)
+                                continue;
+
+                            for (int i = 0; i < 10; i++) {
+                                if (threads[i] == Thread.currentThread()) {
+                                    continue;
+                                }
+                                threads[i].interrupt();
                             }
+                            return;
                         }
                     }
                 } catch(InterruptedException e) {
@@ -225,13 +243,15 @@ public class MultiContinuation {
             threads[i] = new Thread(r);
         }
 
-		for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
             threads[i].start();
         }
 
         for (int i = 0; i < 10; i++) {
             threads[i].join(); 
         }
+
+        assertEquals(ai.get(), 1000);
     }
 
 }
