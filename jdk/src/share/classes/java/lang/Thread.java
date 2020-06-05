@@ -976,7 +976,11 @@ class Thread implements Runnable {
      * @revised 6.0
      */
     public static boolean interrupted() {
-        return currentThread().isInterrupted(true);
+        Thread t = currentThread();
+        if (t.isVirtual()) {
+            return ((VirtualThread)t).getAndClearInterrupt();
+        }
+        return t.isInterrupted(true);
     }
 
     /**
@@ -2114,6 +2118,10 @@ class Thread implements Runnable {
         this.vthread = vthread;
     }
 
+    void setInterrupt() {
+        interrupt0();
+    }
+
     /**
      * Returns the current carrier thread.
      */
@@ -2159,4 +2167,7 @@ class Thread implements Runnable {
     static Object[] scopedCache() {
         return null;
     }
+
+    protected Interruptible getBlocker() { return blocker; }
+    protected Object getBlockerLock() { return blockerLock; }
 }
