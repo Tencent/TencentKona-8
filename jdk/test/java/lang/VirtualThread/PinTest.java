@@ -26,6 +26,8 @@
  * @summary Basic test for continuation, test create/run/yield/resume/stop
  */
 import java.util.concurrent.*;
+import org.testng.annotations.Test;
+import static org.testng.Assert.*;
 
 public class PinTest {
     static long count = 0;
@@ -34,76 +36,81 @@ public class PinTest {
         System.out.println("finish critical_section_test_continuation 1");
         monitor_test_continuation();
         System.out.println("finish monitor_test_continuation 1");
-		monitor_custom_test_continuation();
-		System.out.println("finish monitor_custom_test_continuation 1");
+        monitor_custom_test_continuation();
+        System.out.println("finish monitor_custom_test_continuation 1");
     }
 
     // continuation set in critical section and yield
     static void critical_section_test_continuation() throws Exception {
-    	ContinuationScope scope = new ContinuationScope("scope");
+        ContinuationScope scope = new ContinuationScope("scope");
         Continuation cont = new Continuation(scope, () -> {
-			System.out.println("critical_section_test_continuation start");
-			Continuation.pin();
+            System.out.println("critical_section_test_continuation start");
+            Continuation.pin();
             try {
-				Continuation.yield();
+                Continuation.yield();
             } catch (IllegalStateException e) {
-				System.out.println("critical_section_test_continuation is pinned expect true: " + Continuation.isPinned());
-				System.out.println(e.toString());
-			} 
-			Continuation.unpin();
-			System.out.println("critical_section_test_continuation is pinned expect false: " + Continuation.isPinned());
-			boolean result = Continuation.yield();
+                System.out.println("critical_section_test_continuation is pinned expect true: " + Continuation.isPinned());
+                assertEquals(Continuation.isPinned(), true);
+                System.out.println(e.toString());
+            } 
+
+            Continuation.unpin();
+            System.out.println("critical_section_test_continuation is pinned expect false: " + Continuation.isPinned());
+            assertEquals(Continuation.isPinned(), false);
+            boolean result = Continuation.yield();
             System.out.println(result);
         });
         cont.run();
-	    cont.run();	
-		// test need assert get catched and kept
-	}
+        cont.run();
+    }
 
     static void monitor_test_continuation() throws Exception {
-		Object o = new Object();
+        Object o = new Object();
         ContinuationScope scope = new ContinuationScope("scope");
         Continuation cont = new Continuation(scope, () -> {
             System.out.println("monitor_test_continuation start");
-			synchronized(o) {
-				try {
-					 System.out.println("critical_section_test_continuation is pinned expect true: " + Continuation.isPinned());
-            		Continuation.yield();
-				} catch (IllegalStateException e) {
-                	System.out.println(e.toString());
-            	}
-			}
-			System.out.println("critical_section_test_continuation is pinned expect false: " + Continuation.isPinned());
+            synchronized(o) {
+                try {
+                    System.out.println("critical_section_test_continuation is pinned expect true: " + Continuation.isPinned());
+                    assertEquals(Continuation.isPinned(), true);
+                    Continuation.yield();
+                } catch (IllegalStateException e) {
+                    System.out.println(e.toString());
+                }
+            }
+
+            System.out.println("critical_section_test_continuation is pinned expect false: " + Continuation.isPinned());
+            assertEquals(Continuation.isPinned(), false);
             boolean result = Continuation.yield();
             System.out.println(result);
-		});
+        });
         cont.run();
         cont.run();
-		// test need assert get catched and kept
     }
 
-	static void monitor_custom_test_continuation() throws Exception {
-		Object o = new Object();
+    static void monitor_custom_test_continuation() throws Exception {
+        Object o = new Object();
         ContinuationScope scope = new ContinuationScope("scope");
         Continuation cont = new Continuation(scope, () -> {
             System.out.println("monitor_custom_test_continuation start");
-			synchronized(o) {
-             	boolean result = Continuation.yield();
-				System.out.println(result);
+            synchronized(o) {
+                boolean result = Continuation.yield();
+                System.out.println("yield result : " + result);
             }
             boolean result = Continuation.yield();
-            System.out.println(result);
+            System.out.println("yield result : " + result);
         }) {
-			 protected void onPinned(Pinned reason) {
-                System.out.println("Pinned and block here");
-				System.out.println("critical_section_test_continuation is pinned expect true: " + Continuation.isPinned());
-            }
-		};
-		System.out.println("critical_section_test_continuation is pinned expect false: " + Continuation.isPinned());
-		while (!cont.isDone()) {
-			 cont.run();
-		}
-		// test need assert override method is invoked
+               protected void onPinned(Pinned reason) {
+                   System.out.println("Pinned and block here");
+                   System.out.println("critical_section_test_continuation is pinned expect true: " + Continuation.isPinned());
+                   assertEquals(Continuation.isPinned(), true);
+               }
+        };
+        System.out.println("critical_section_test_continuation is pinned expect false: " + Continuation.isPinned());
+        assertEquals(Continuation.isPinned(), false);
+        while (!cont.isDone()) {
+            cont.run();
+        }
     }
 
     // jni frame test
