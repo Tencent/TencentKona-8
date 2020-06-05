@@ -23,11 +23,11 @@
 
 /*
  * @test
+ * @run testng MultiContinuation
  * @summary Basic test for continuation, test create/run/yield/resume/stop
  */
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.*;
-import org.testng.annotations.Test;
 import static org.testng.Assert.*;
 
 public class MultiContinuation {
