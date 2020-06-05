@@ -689,6 +689,7 @@ MACOSX_VERSION_MIN
 FDLIBM_CFLAGS
 NO_LIFETIME_DSE_CFLAG
 NO_DELETE_NULL_POINTER_CHECKS_CFLAG
+LEGACY_EXTRA_ASFLAGS
 LEGACY_EXTRA_LDFLAGS
 LEGACY_EXTRA_CXXFLAGS
 LEGACY_EXTRA_CFLAGS
@@ -1090,6 +1091,7 @@ with_jtreg
 with_extra_cflags
 with_extra_cxxflags
 with_extra_ldflags
+with_extra_asflags
 enable_debug_symbols
 enable_zip_debug_info
 with_native_debug_symbols
@@ -1966,6 +1968,7 @@ Optional Packages:
   --with-extra-cflags     extra flags to be used when compiling jdk c-files
   --with-extra-cxxflags   extra flags to be used when compiling jdk c++-files
   --with-extra-ldflags    extra flags to be used when linking jdk
+  --with-extra-asflags    extra flags to be passed to the assembler
   --with-native-debug-symbols
                           set the native debug symbol configuration (none,
                           internal, external, zipped) [varying]
@@ -4404,7 +4407,7 @@ VS_SDK_PLATFORM_NAME_2017=
 #CUSTOM_AUTOCONF_INCLUDE
 
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1565695932
+DATE_WHEN_GENERATED=1579517558
 
 ###############################################################################
 #
@@ -41519,16 +41522,8 @@ $as_echo "$ac_cv_c_bigendian" >&6; }
     CFLAGS_JDK="${CFLAGS_JDK} -qchars=signed -q64 -qfullpath -qsaveopt"
     CXXFLAGS_JDK="${CXXFLAGS_JDK} -qchars=signed -q64 -qfullpath -qsaveopt"
   elif test "x$TOOLCHAIN_TYPE" = xgcc; then
-    case $OPENJDK_TARGET_CPU_ARCH in
-    x86 )
-      LEGACY_EXTRA_CFLAGS="$LEGACY_EXTRA_CFLAGS -fstack-protector"
-      LEGACY_EXTRA_CXXFLAGS="$LEGACY_EXTRA_CXXFLAGS -fstack-protector"
-      ;;
-    x86_64 )
-      LEGACY_EXTRA_CFLAGS="$LEGACY_EXTRA_CFLAGS -fstack-protector"
-      LEGACY_EXTRA_CXXFLAGS="$LEGACY_EXTRA_CXXFLAGS -fstack-protector"
-      ;;
-    esac
+    LEGACY_EXTRA_CFLAGS="$LEGACY_EXTRA_CFLAGS -fstack-protector"
+    LEGACY_EXTRA_CXXFLAGS="$LEGACY_EXTRA_CXXFLAGS -fstack-protector"
     if test "x$OPENJDK_TARGET_OS" != xmacosx; then
       LDFLAGS_JDK="$LDFLAGS_JDK -Wl,-z,relro"
       LEGACY_EXTRA_LDFLAGS="$LEGACY_EXTRA_LDFLAGS -Wl,-z,relro"
@@ -41594,6 +41589,12 @@ $as_echo "$as_me: WARNING: Ignoring LDFLAGS($LDFLAGS) found in environment. Use 
   fi
 
 
+  if test "x$ASFLAGS" != "x"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Ignoring ASFLAGS($ASFLAGS) found in environment. Use --with-extra-asflags" >&5
+$as_echo "$as_me: WARNING: Ignoring ASFLAGS($ASFLAGS) found in environment. Use --with-extra-asflags" >&2;}
+  fi
+
+
 # Check whether --with-extra-cflags was given.
 if test "${with_extra_cflags+set}" = set; then :
   withval=$with_extra_cflags;
@@ -41614,6 +41615,13 @@ if test "${with_extra_ldflags+set}" = set; then :
 fi
 
 
+
+# Check whether --with-extra-asflags was given.
+if test "${with_extra_asflags+set}" = set; then :
+  withval=$with_extra_asflags;
+fi
+
+
   CFLAGS_JDK="${CFLAGS_JDK} $with_extra_cflags"
   CXXFLAGS_JDK="${CXXFLAGS_JDK} $with_extra_cxxflags"
   LDFLAGS_JDK="${LDFLAGS_JDK} $with_extra_ldflags"
@@ -41622,6 +41630,8 @@ fi
   LEGACY_EXTRA_CFLAGS="$LEGACY_EXTRA_CFLAGS $with_extra_cflags"
   LEGACY_EXTRA_CXXFLAGS="$LEGACY_EXTRA_CXXFLAGS $with_extra_cxxflags"
   LEGACY_EXTRA_LDFLAGS="$LEGACY_EXTRA_LDFLAGS $with_extra_ldflags"
+  LEGACY_EXTRA_ASFLAGS="$with_extra_asflags"
+
 
 
 
@@ -41639,7 +41649,7 @@ fi
   if test "x$TOOLCHAIN_TYPE" = xgcc; then
     # these options are used for both C and C++ compiles
     CCXXFLAGS_JDK="$CCXXFLAGS $CCXXFLAGS_JDK -Wall -Wno-parentheses -Wextra -Wno-unused -Wno-unused-parameter -Wformat=2 \
-        -pipe -D_GNU_SOURCE -D_REENTRANT -D_LARGEFILE64_SOURCE"
+        -pipe -fstack-protector -D_GNU_SOURCE -D_REENTRANT -D_LARGEFILE64_SOURCE"
     case $OPENJDK_TARGET_CPU_ARCH in
       arm )
         # on arm we don't prevent gcc to omit frame pointer but do prevent strict aliasing
@@ -41647,10 +41657,6 @@ fi
         ;;
       ppc )
         # on ppc we don't prevent gcc to omit frame pointer nor strict-aliasing
-        ;;
-      x86 )
-        CCXXFLAGS_JDK="$CCXXFLAGS_JDK -fno-omit-frame-pointer -fstack-protector"
-        CFLAGS_JDK="${CFLAGS_JDK} -fno-strict-aliasing -fstack-protector"
         ;;
       * )
         CCXXFLAGS_JDK="$CCXXFLAGS_JDK -fno-omit-frame-pointer"
@@ -51699,7 +51705,7 @@ fi
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for UCRT DLL dir" >&5
 $as_echo_n "checking for UCRT DLL dir... " >&6; }
     if test "x$with_ucrt_dll_dir" != x; then
-      if test -z "$(ls -d "$with_ucrt_dll_dir/*.dll" 2> /dev/null)"; then
+      if test -z "$(ls -d "$with_ucrt_dll_dir/"*.dll 2> /dev/null)"; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
         as_fn_error $? "Could not find any dlls in $with_ucrt_dll_dir" "$LINENO" 5

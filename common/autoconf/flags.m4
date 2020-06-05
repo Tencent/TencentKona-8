@@ -388,16 +388,8 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK],
     CFLAGS_JDK="${CFLAGS_JDK} -qchars=signed -q64 -qfullpath -qsaveopt"
     CXXFLAGS_JDK="${CXXFLAGS_JDK} -qchars=signed -q64 -qfullpath -qsaveopt"
   elif test "x$TOOLCHAIN_TYPE" = xgcc; then
-    case $OPENJDK_TARGET_CPU_ARCH in
-    x86 )
-      LEGACY_EXTRA_CFLAGS="$LEGACY_EXTRA_CFLAGS -fstack-protector"
-      LEGACY_EXTRA_CXXFLAGS="$LEGACY_EXTRA_CXXFLAGS -fstack-protector"
-      ;;
-    x86_64 )
-      LEGACY_EXTRA_CFLAGS="$LEGACY_EXTRA_CFLAGS -fstack-protector"
-      LEGACY_EXTRA_CXXFLAGS="$LEGACY_EXTRA_CXXFLAGS -fstack-protector"
-      ;;
-    esac
+    LEGACY_EXTRA_CFLAGS="$LEGACY_EXTRA_CFLAGS -fstack-protector"
+    LEGACY_EXTRA_CXXFLAGS="$LEGACY_EXTRA_CXXFLAGS -fstack-protector"
     if test "x$OPENJDK_TARGET_OS" != xmacosx; then
       LDFLAGS_JDK="$LDFLAGS_JDK -Wl,-z,relro"
       LEGACY_EXTRA_LDFLAGS="$LEGACY_EXTRA_LDFLAGS -Wl,-z,relro"
@@ -422,6 +414,11 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK],
     AC_MSG_WARN([Ignoring LDFLAGS($LDFLAGS) found in environment. Use --with-extra-ldflags])
   fi
 
+
+  if test "x$ASFLAGS" != "x"; then
+    AC_MSG_WARN([Ignoring ASFLAGS($ASFLAGS) found in environment. Use --with-extra-asflags])
+  fi
+
   AC_ARG_WITH(extra-cflags, [AS_HELP_STRING([--with-extra-cflags],
       [extra flags to be used when compiling jdk c-files])])
 
@@ -431,6 +428,9 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK],
   AC_ARG_WITH(extra-ldflags, [AS_HELP_STRING([--with-extra-ldflags],
       [extra flags to be used when linking jdk])])
 
+  AC_ARG_WITH(extra-asflags, [AS_HELP_STRING([--with-extra-asflags],
+      [extra flags to be passed to the assembler])])
+
   CFLAGS_JDK="${CFLAGS_JDK} $with_extra_cflags"
   CXXFLAGS_JDK="${CXXFLAGS_JDK} $with_extra_cxxflags"
   LDFLAGS_JDK="${LDFLAGS_JDK} $with_extra_ldflags"
@@ -439,10 +439,12 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK],
   LEGACY_EXTRA_CFLAGS="$LEGACY_EXTRA_CFLAGS $with_extra_cflags"
   LEGACY_EXTRA_CXXFLAGS="$LEGACY_EXTRA_CXXFLAGS $with_extra_cxxflags"
   LEGACY_EXTRA_LDFLAGS="$LEGACY_EXTRA_LDFLAGS $with_extra_ldflags"
+  LEGACY_EXTRA_ASFLAGS="$with_extra_asflags"
 
   AC_SUBST(LEGACY_EXTRA_CFLAGS)
   AC_SUBST(LEGACY_EXTRA_CXXFLAGS)
   AC_SUBST(LEGACY_EXTRA_LDFLAGS)
+  AC_SUBST(LEGACY_EXTRA_ASFLAGS)
 
   ###############################################################################
   #
@@ -456,7 +458,7 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK],
   if test "x$TOOLCHAIN_TYPE" = xgcc; then
     # these options are used for both C and C++ compiles
     CCXXFLAGS_JDK="$CCXXFLAGS $CCXXFLAGS_JDK -Wall -Wno-parentheses -Wextra -Wno-unused -Wno-unused-parameter -Wformat=2 \
-        -pipe -D_GNU_SOURCE -D_REENTRANT -D_LARGEFILE64_SOURCE"
+        -pipe -fstack-protector -D_GNU_SOURCE -D_REENTRANT -D_LARGEFILE64_SOURCE"
     case $OPENJDK_TARGET_CPU_ARCH in
       arm )
         # on arm we don't prevent gcc to omit frame pointer but do prevent strict aliasing
@@ -464,10 +466,6 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK],
         ;;
       ppc )
         # on ppc we don't prevent gcc to omit frame pointer nor strict-aliasing
-        ;;
-      x86 )
-        CCXXFLAGS_JDK="$CCXXFLAGS_JDK -fno-omit-frame-pointer -fstack-protector"
-        CFLAGS_JDK="${CFLAGS_JDK} -fno-strict-aliasing -fstack-protector"
         ;;
       * )
         CCXXFLAGS_JDK="$CCXXFLAGS_JDK -fno-omit-frame-pointer"
