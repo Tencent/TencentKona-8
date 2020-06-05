@@ -23,10 +23,10 @@
 
 /*
  * @test
+ * @run testng PinTest
  * @summary Basic test for continuation, test create/run/yield/resume/stop
  */
 import java.util.concurrent.*;
-import org.testng.annotations.Test;
 import static org.testng.Assert.*;
 
 public class PinTest {
