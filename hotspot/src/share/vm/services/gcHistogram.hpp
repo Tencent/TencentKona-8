@@ -24,7 +24,7 @@
 #define SHARE_VM_SERVICES_HISTOGRAM_HPP
 
 //This class provides a framework for collecting percentile statistics.
-class Histogram {
+class GCHistogram {
  public:
   enum BucketLevel {
     LEVEL1 = 200,
@@ -34,12 +34,12 @@ class Histogram {
   };
 
   // Create a histogram with a default set of bucket boundaries.
-  Histogram();
+  GCHistogram();
 
   // Create a histogram with a custom set of bucket boundaries,
-  explicit Histogram(long* custom_bucket_limits);
+  explicit GCHistogram(long* custom_bucket_limits);
 
-  ~Histogram() {}
+  ~GCHistogram() {}
 
   void clear();
   void add(long value);

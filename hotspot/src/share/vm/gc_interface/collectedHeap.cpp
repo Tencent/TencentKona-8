@@ -172,7 +172,7 @@ CollectedHeap::CollectedHeap() : _n_par_threads(0)
     _last_minor_gc_time = 0;
     // init histogram
     if (PeriodicGCInterval > 0) {
-      _minor_gc_frequency_histogram = new Histogram();
+      _minor_gc_frequency_histogram = new GCHistogram();
       if (NULL == _minor_gc_frequency_histogram) {
         // will disable period gc
         PeriodicGCInterval = 0;
