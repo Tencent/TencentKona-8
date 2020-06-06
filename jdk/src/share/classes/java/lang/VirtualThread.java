@@ -249,7 +249,6 @@ public class VirtualThread extends Thread {
         synchronized (getBlockerLock()) {   // synchronize with interrupt
             carrierThread = null;
         }
-        carrierThread = null;
     }
 
     /**
@@ -446,16 +445,28 @@ public class VirtualThread extends Thread {
     public VirtualThread unpark() {
         if (!parkPermitGetAndSet(PARK_PERMIT_TRUE) && Thread.currentThread() != this) {
             int s = waitIfParking();
-            if (s == ST_PARKED && stateCompareAndSet(ST_PARKED, ST_RUNNABLE)) {
-                boolean scheduled = false;
-                try {
-                    scheduler.execute(runContinuation);
-                    scheduled = true;
-                } finally {
-                    if (!scheduled) {
-                        stateCompareAndSet(ST_RUNNABLE, ST_PARKED);
+            // avoid scheduler.execute park current virtual thread, this might cause deadlock
+            // park virtual thread on scheduler blockedLinkedQueue's lock
+            // carrier thread might all block this lock and if unpark is first happens on
+            // this virtual thread, its cause dead lock
+            // clear virtual thread make this block in carrier thread only
+            Thread thread = Thread.currentCarrierThread();
+            VirtualThread vthread = thread.getVirtualThread();
+            if (vthread != null) thread.setVirtualThread(null);
+            try {
+                if (s == ST_PARKED && stateCompareAndSet(ST_PARKED, ST_RUNNABLE)) {
+                    boolean scheduled = false;
+                    try {
+                        scheduler.execute(runContinuation);
+                        scheduled = true;
+                    } finally {
+                        if (!scheduled) {
+                            stateCompareAndSet(ST_RUNNABLE, ST_PARKED);
+                        }
                     }
                 }
+            } finally {
+                if (vthread != null) thread.setVirtualThread(vthread);
             }
         }
         return this;
@@ -632,12 +643,12 @@ public class VirtualThread extends Thread {
                 return Thread.State.RUNNABLE;
             case ST_RUNNING:
                 // if mounted then return state of carrier thread
-                //synchronized (interruptLock) {
+                synchronized (getBlockerLock()) {
                     Thread carrierThread = this.carrierThread;
                     if (carrierThread != null) {
                         return carrierThread.getState();
                     }
-                //}
+                }
                 // runnable, mounted
                 return Thread.State.RUNNABLE;
             case ST_PARKING:
