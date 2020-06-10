@@ -27,6 +27,7 @@
  * @summary Basic test for virtual thread, test create/run/yield/resume/stop
  */
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 import static org.testng.Assert.*;
 
 public class SimpleVT {
@@ -63,14 +64,15 @@ public class SimpleVT {
     }
 
     static void FixedThreadPoolSimple() throws Exception {
-        finished_vt_count = 0;
         ExecutorService executor = Executors.newFixedThreadPool(4);
+        AtomicInteger ai = new AtomicInteger(0);
+
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("before yield " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
                 Continuation.yield();
                 System.out.println("resume yield " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
-                finished_vt_count++;
+                ai.incrementAndGet();
             }
         };
 
@@ -86,7 +88,7 @@ public class SimpleVT {
             vts[i].join();
         }
         executor.shutdown();
-        assertEquals(finished_vt_count, 40);
+        assertEquals(ai.get(), 40);
     }
 
     static void singleThreadParkTest() throws Exception {
