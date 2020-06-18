@@ -43,6 +43,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import sun.misc.Unsafe;
 import sun.nio.ch.Interruptible;
@@ -58,6 +59,7 @@ public class VirtualThread extends Thread {
     private static final Unsafe unsafe = Unsafe.getUnsafe();
     private static final ContinuationScope VTHREAD_SCOPE = new ContinuationScope("VirtualThreads");
     private static final Executor DEFAULT_SCHEDULER = defaultScheduler();
+    private static final ThreadFactory DEFAULT_FACTORY = defaultFactory();
     private static final ScheduledExecutorService UNPARKER = delayedTaskScheduler();
     private static final int TRACE_PINNING_MODE = tracePinningMode();
 
@@ -101,6 +103,13 @@ public class VirtualThread extends Thread {
     private volatile int parkPermit;      // 0 for false and 1 for true
     private volatile boolean interrupted;
 
+    public static ThreadFactory DefaultThreadFactory() {
+        return DEFAULT_FACTORY;
+    }
+
+    public static VirtualThread create(String name, Runnable task) {
+        return new VirtualThread(null, name, 0, task);
+    }
     /**
      * Creates a new {@code VirtualThread} to run the given task with the given scheduler.
      *
@@ -835,6 +844,20 @@ public class VirtualThread extends Thread {
             return new ForkJoinPool(parallelism, factory, ueh, asyncMode);
         };
         return AccessController.doPrivileged(pa);
+    }
+
+    private static final AtomicInteger vtNumber = new AtomicInteger(1);
+    private static ThreadFactory defaultFactory() {
+        return new ThreadFactory() {
+            public Thread newThread(Runnable r) {
+                Thread t = new VirtualThread(null, "defaultVT" + vtNumber.getAndIncrement(), 0, r);
+                if (t.isDaemon())
+                    t.setDaemon(false);
+                if (t.getPriority() != Thread.NORM_PRIORITY)
+                    t.setPriority(Thread.NORM_PRIORITY);
+                return t;
+            }
+        };
     }
 
     /**
