@@ -705,7 +705,7 @@ public abstract class CountedCompleter<T> extends ForkJoinTask<T> {
     public final void helpComplete(int maxTasks) {
         Thread t; ForkJoinWorkerThread wt;
         if (maxTasks > 0 && status >= 0) {
-            if ((t = Thread.currentThread()) instanceof ForkJoinWorkerThread)
+            if ((t = Thread.currentCarrierThread()) instanceof ForkJoinWorkerThread)
                 (wt = (ForkJoinWorkerThread)t).pool.
                     helpComplete(wt.workQueue, this, maxTasks);
             else

@@ -2190,7 +2190,7 @@ public class ForkJoinPool extends AbstractExecutorService {
      */
     static int getSurplusQueuedTaskCount() {
         Thread t; ForkJoinWorkerThread wt; ForkJoinPool pool; WorkQueue q;
-        if (((t = Thread.currentThread()) instanceof ForkJoinWorkerThread)) {
+        if (((t = Thread.currentCarrierThread()) instanceof ForkJoinWorkerThread)) {
             int p = (pool = (wt = (ForkJoinWorkerThread)t).pool).
                 config & SMASK;
             int n = (q = wt.workQueue).top - q.base;
@@ -3158,7 +3158,7 @@ public class ForkJoinPool extends AbstractExecutorService {
     public boolean awaitQuiescence(long timeout, TimeUnit unit) {
         long nanos = unit.toNanos(timeout);
         ForkJoinWorkerThread wt;
-        Thread thread = Thread.currentThread();
+        Thread thread = Thread.currentCarrierThread();
         if ((thread instanceof ForkJoinWorkerThread) &&
             (wt = (ForkJoinWorkerThread)thread).pool == this) {
             helpQuiescePool(wt.workQueue);
@@ -3302,7 +3302,7 @@ public class ForkJoinPool extends AbstractExecutorService {
         throws InterruptedException {
         ForkJoinPool p;
         ForkJoinWorkerThread wt;
-        Thread t = Thread.currentThread();
+        Thread t = Thread.currentCarrierThread();
         if ((t instanceof ForkJoinWorkerThread) &&
             (p = (wt = (ForkJoinWorkerThread)t).pool) != null) {
             WorkQueue w = wt.workQueue;
