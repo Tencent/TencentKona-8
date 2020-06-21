@@ -23,29 +23,41 @@
 
 /*
  * @test
- * @run main/othervm VTExecutorTest 10 100 100
- * @run main/othervm VTExecutorTest 100 1000 1000
- * @run main/othervm VTExecutorTest 1000 10000 5000
+ * @run main/othervm VTExecutorTest 10 100 100 false
+ * @run main/othervm VTExecutorTest 100 1000 1000 false
+ * @run main/othervm VTExecutorTest 1000 10000 5000 false
+ * @run main/othervm VTExecutorTest 10 100 100 true
+ * @run main/othervm VTExecutorTest 100 1000 1000 true
+ * @run main/othervm VTExecutorTest 1000 10000 5000 true
  * @summary stress scheduling test
  */
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
 public class VTExecutorTest {
-    private static final ExecutorService carrier_executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+    private static ExecutorService carrier_executor;
     private static int realThreadCount;
     private static int requestCount;
     private static int interval;
+	private static boolean useDefaultScheduler = false;
  
     public static void main(String[] args) throws Exception {
         realThreadCount = Integer.parseInt(args[0]);
         requestCount = Integer.parseInt(args[1]);
         interval = Integer.parseInt(args[2]);
+        useDefaultScheduler = Boolean.parseBoolean(args[3]);
+		if (useDefaultScheduler == true) {
+			carrier_executor = null;
+		} else {
+			carrier_executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+		}
         for (int i = 1; i < 100; i+=10) {
             System.out.println("sleep " + i + "ms");
             testSchedule(i);
         }
-        carrier_executor.shutdown();
+		if (carrier_executor != null) {
+            carrier_executor.shutdown();
+        }
     }
 
     private static void testSchedule(int sleepMilli) throws Exception {

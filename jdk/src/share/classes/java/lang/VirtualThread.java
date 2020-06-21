@@ -44,6 +44,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ForkJoinTask;
 
 import sun.misc.Unsafe;
 import sun.nio.ch.Interruptible;
@@ -466,7 +467,9 @@ public class VirtualThread extends Thread {
                 if (s == ST_PARKED && stateCompareAndSet(ST_PARKED, ST_RUNNABLE)) {
                     boolean scheduled = false;
                     try {
-                        scheduler.execute(runContinuation);
+                        //if (tryForkLocal() == false) {
+                            scheduler.execute(runContinuation);
+                        //}
                         scheduled = true;
                     } finally {
                         if (!scheduled) {
@@ -927,5 +930,40 @@ public class VirtualThread extends Thread {
                 return 2;
         }
         return 0;
+    }
+
+    /* There could be fastpath to add task in same thread's work queue
+     * If current thread is ForkJoinWorkerThread and shcueler is same with
+     * ForkJoinWorkerThread's scheudler, append runnable task directory in
+     * current ForkJoinWorkerThread's local work queue
+     * This can be used in unpark for fast processing
+     */
+    private boolean tryForkLocal() {
+        Thread t;
+        if ((t = Thread.currentCarrierThread()) instanceof ForkJoinWorkerThread) {
+            ForkJoinWorkerThread ft = (ForkJoinWorkerThread)t;
+            if (ft.getPool() == scheduler) {
+                DefaultTask task = new DefaultTask(runContinuation);
+                task.fork();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static final class DefaultTask extends ForkJoinTask<Void> {
+        final Runnable runnable;
+        DefaultTask(Runnable runnable) {
+            if (runnable == null) {
+                throw new NullPointerException();
+            }
+            this.runnable = runnable;
+        }
+        public final Void getRawResult() { return null; }
+        public final void setRawResult(Void v) { }
+        public final boolean exec() {
+            runnable.run();
+            return true;
+        }
     }
 }
