@@ -1272,6 +1272,24 @@ public final class System {
             public void invokeFinalize(Object o) throws Throwable {
                 o.finalize();
             }
+            public Thread currentCarrierThread() {
+                return Thread.currentCarrierThread();
+            }
+            public void parkVirtualThread() {
+                VirtualThread.park();
+            }
+
+            public void parkVirtualThread(long nanos) {
+                VirtualThread.parkNanos(nanos);
+            }
+
+            public void unparkVirtualThread(Thread thread) {
+                ((VirtualThread) thread).unpark();
+            }
+
+            public boolean isVirtualThreadParking(Thread thread) {
+                return ((VirtualThread) thread).isParking();
+            }
         });
     }
 }
