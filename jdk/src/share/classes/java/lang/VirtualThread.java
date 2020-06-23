@@ -361,7 +361,7 @@ public class VirtualThread extends Thread {
      *
      * @throws IllegalCallerException if not called from a virtual thread
      */
-    public static void park() {
+    static void park() {
         VirtualThread vthread = Thread.currentCarrierThread().getVirtualThread();
         if (vthread == null)
             throw new Error("not a virtual thread");
@@ -383,7 +383,7 @@ public class VirtualThread extends Thread {
      *
      * @throws IllegalCallerException if not called from a virtual thread
      */
-    public static void parkNanos(long nanos) {
+    static void parkNanos(long nanos) {
         Thread thread = Thread.currentCarrierThread();
         VirtualThread vthread = thread.getVirtualThread();
         if (vthread == null)
@@ -452,7 +452,7 @@ public class VirtualThread extends Thread {
      * @throws RejectedExecutionException if the scheduler cannot accept a task
      * @return this virtual thread
      */
-    public VirtualThread unpark() {
+    VirtualThread unpark() {
         if (!parkPermitGetAndSet(PARK_PERMIT_TRUE) && Thread.currentThread() != this) {
             int s = waitIfParking();
             // avoid scheduler.execute park current virtual thread, this might cause deadlock
