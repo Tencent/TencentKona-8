@@ -132,4 +132,30 @@ public interface JavaLangAccess {
      * Invokes the finalize method of the given object.
      */
     void invokeFinalize(Object o) throws Throwable;
+
+    /**
+     * Returns a reference to the Thread object for the currently executing
+     * carrier thread.
+     */
+    Thread currentCarrierThread();
+
+    /**
+     * Parks the current virtual thread.
+     */
+    void parkVirtualThread();
+
+    /**
+     * Parks the current virtual thread.for up to the given waiting time.
+     */
+    void parkVirtualThread(long nanos);
+
+    /**
+     * Unparks the given virtual thread.
+     */
+    void unparkVirtualThread(Thread thread);
+
+    /**
+     * Returns true if the given virtual thread is parking.
+     */
+    boolean isVirtualThreadParking(Thread thread);
 }
