@@ -51,7 +51,7 @@ public class VTExecutorTest {
 		} else {
 			carrier_executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 		}
-        for (int i = 1; i < 100; i+=10) {
+        for (int i = 1; i < 100; i+=20) {
             System.out.println("sleep " + i + "ms");
             testSchedule(i);
         }

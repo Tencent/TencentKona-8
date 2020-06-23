@@ -35,6 +35,7 @@
 
 package java.util.concurrent.locks;
 import sun.misc.Unsafe;
+import sun.misc.VirtualThreads;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -140,7 +141,7 @@ public class LockSupport {
     public static void unpark(Thread thread) {
         if (thread != null) {
             if (thread.isVirtual()) {
-                ((VirtualThread)thread).unpark(); // can throw RejectedExecutionException
+                VirtualThreads.unpark(thread);
             } else {
                 UNSAFE.unpark(thread);
             }
@@ -179,7 +180,7 @@ public class LockSupport {
         Thread t = Thread.currentThread();
         setBlocker(t, blocker);
         if (t.isVirtual()) {
-            VirtualThread.park();
+            VirtualThreads.park();
         } else {
             UNSAFE.park(false, 0L);
         }
@@ -223,7 +224,7 @@ public class LockSupport {
             Thread t = Thread.currentThread();
             setBlocker(t, blocker);
             if (t.isVirtual()) {
-                VirtualThread.parkNanos(nanos);
+                VirtualThreads.park(nanos);
             } else {
                 UNSAFE.park(false, nanos);
             }
@@ -270,7 +271,7 @@ public class LockSupport {
         if (t.isVirtual()) {
             long millis = deadline - System.currentTimeMillis();
             long nanos = TimeUnit.NANOSECONDS.convert(millis, TimeUnit.MILLISECONDS);
-            VirtualThread.parkNanos(nanos);
+            VirtualThreads.park(nanos);
         } else {
             UNSAFE.park(true, deadline);
         }

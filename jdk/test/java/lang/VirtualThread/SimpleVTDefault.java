@@ -28,6 +28,7 @@
  */
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
+import sun.misc.VirtualThreads;
 import static org.testng.Assert.*;
 
 public class SimpleVTDefault {
@@ -93,7 +94,7 @@ public class SimpleVTDefault {
                 System.out.println("before park " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
                 assertEquals(Thread.currentThread().getName(), "park_thread");
                 assertNotEquals(Thread.currentCarrierThread().getName(), "main");
-                VirtualThread.park();
+                VirtualThreads.park();
                 System.out.println("after park " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
                 assertEquals(Thread.currentThread().getName(), "park_thread");
                 assertNotEquals(Thread.currentCarrierThread().getName(), "main");
@@ -112,7 +113,7 @@ public class SimpleVTDefault {
         assertEquals(Thread.currentThread().getName(), "main");
         assertEquals(Thread.currentCarrierThread().getName(), "main");
 
-        vt.unpark();
+        VirtualThreads.unpark(vt);
 
         System.out.println("after unpark " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
         assertEquals(Thread.currentThread().getName(), "main");
@@ -141,9 +142,9 @@ public class SimpleVTDefault {
                 assertEquals(Thread.currentThread().getName(), "vt" + myIndex);
                 // myIndex from 0 to 9
                 if (myIndex > 0) {
-                    vts[myIndex - 1].unpark();
+                    VirtualThreads.unpark(vts[myIndex - 1]);
                 }
-                VirtualThread.park();
+                VirtualThreads.park();
                 System.out.println(Thread.currentThread().getName() + " after park");
                 assertEquals(Thread.currentThread().getName(), "vt" + myIndex);
             }
@@ -154,7 +155,7 @@ public class SimpleVTDefault {
         for (int i = 0; i < 10; i++) {
             vts[i].start();
         }
-        vts[9].unpark();
+        VirtualThreads.unpark(vts[9]);
         for (int i = 0; i < 10; i++) {
             vts[i].join();
         }
@@ -176,11 +177,11 @@ public class SimpleVTDefault {
                 assertEquals(Thread.currentThread().getName(), "vt" + myIndex);
                 // myIndex from 0 to 99
                 if (myIndex > 0) {
-                    vts[myIndex - 1].unpark();
+                    VirtualThreads.unpark(vts[myIndex - 1]);
                 } else {
-                    vts[99].unpark();
+                    VirtualThreads.unpark(vts[99]);
                 }
-                VirtualThread.park();
+                VirtualThreads.park();
                 System.out.println(Thread.currentThread().getName() + " after park");
                 assertEquals(Thread.currentThread().getName(), "vt" + myIndex);
             }
