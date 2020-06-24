@@ -83,15 +83,15 @@ public class Continuation extends CoroutineBase {
      * If parent cannot continue while child continuation is blocking, direclty yield both child and parent.
      */
     private final ContinuationScope scope;
-    private Continuation parent; // null for native stack
-    private Continuation child; // non-null when we're yielded in a child continuation
-    private CoroutineBase caller;  // could be thread coroutine or parent continuation
+    private Continuation parent;   // null for native stack -- Kona NYI
+    private Continuation child;    // non-null when we're yielded in a child continuation -- Kona NYI
+    private CoroutineBase caller;  // could be thread coroutine or parent continuation -- Kona must be thread coroutine now
 
     private boolean done;
     private volatile int mounted = 0;  // 1 means true
 
     private short cs; // critical section semaphore
-    private Object[] scopedCache;   // similar continuation level thread local, but no weak reference, not used now
+    private Object[] scopedCache;   // similar continuation level thread local, but no weak reference -- Kona NYI
 
     protected final void runTarget() {
         try {
@@ -141,16 +141,12 @@ public class Continuation extends CoroutineBase {
      * @return TBD
      */
     public static Continuation getCurrentContinuation(ContinuationScope scope) {
-        Continuation cont = currentCarrierThread().getContinuation();
+        throw new Error("getCurrentContinuation(ContinuationScope scope) NYI");
+        /*Continuation cont = currentCarrierThread().getContinuation();
         while (cont != null && cont.scope != scope) {
             cont = cont.parent;
         }
-        return cont;
-    }
-
-    public static Continuation getCurrentContinuation() {
-        Continuation cont = currentCarrierThread().getContinuation();
-        return cont;
+        return cont;*/
     }
     
     public CoroutineBase getCaller() {
@@ -169,13 +165,13 @@ public class Continuation extends CoroutineBase {
     private void mount() {
         if (!compareAndSetMounted(0, 1)) // why atomic? Avoid invoke run in two thread at same time?
             throw new IllegalStateException("Mounted!!!!");
-        Thread.setScopedCache(scopedCache);
+        // Thread.setScopedCache(scopedCache);
     }
 
     private void unmount() {
         assert mounted == 1: "not mounted yet";
-        scopedCache = Thread.scopedCache();
-        Thread.setScopedCache(null);
+        // scopedCache = Thread.scopedCache();
+        // Thread.setScopedCache(null);
         setMounted(0);
     }
     
@@ -264,28 +260,20 @@ public class Continuation extends CoroutineBase {
      * @param scope The {@link ContinuationScope} to yield
      * @return {@code true} for success; {@code false} for failure
      * @throws IllegalStateException if not currently in the given {@code scope},
-     */
-    public static boolean yield() {
-        Thread t = currentCarrierThread();
-        Continuation cont = t.getContinuation();
-        return cont.yield0(cont.caller);
-    }
-
-    /*
+     *
      * hierachy yield support
      * 1. find continuation match scope, if not found throw exception
-     * 2. setup parent child relationship used in resume
+     * 2. setup parent child relationship used for resume
      * 3. siwtch to target
      */
     public static boolean yield(ContinuationScope scope) {
         Continuation cont = currentCarrierThread().getContinuation();
+        /*
         Continuation c;
         for (c = cont; c != null && c.scope != scope; c = c.parent)
-            ;
-        if (c == null)
+            ;*/
+        if (cont == null || cont.scope != scope)
             throw new IllegalStateException("Not in scope " + scope);
-        
-        assert cont == c : "nested scope NYI";
         /*
         Continuation cur = cont;
         while (cur != c) {
@@ -294,7 +282,7 @@ public class Continuation extends CoroutineBase {
             parent.child = cur;
             cur = parent;
         }*/
-        return cont.yield0(c.caller);
+        return cont.yield0(cont.caller);
     }
  
     private void onPinned0(int reason) {
@@ -368,18 +356,18 @@ public class Continuation extends CoroutineBase {
      * 4. check if has JNI: invoke to runtime code
      *
      * check from current continuation to its parent continuation
+     * Nested scoped NYI
      * 
      * @param scope the continuation scope
      * @return {@code} true if we're in the give scope and are pinned; {@code false otherwise}
      */
     public static boolean isPinned(ContinuationScope scope) {
         Continuation cont = currentCarrierThread().getContinuation();
-        Continuation c;
+        /*Continuation c;
         for (c = cont; c != null && c.scope != scope; c = c.parent)
-            ;
-        if (c == null)
+            ;*/
+        if (cont == null || cont.scope != scope)
             throw new IllegalStateException("Not in scope " + scope);
-        assert cont == c : "nested scope NYI";
         /*
         Continuation cur = cont;
         while (cur != c) {
@@ -389,14 +377,6 @@ public class Continuation extends CoroutineBase {
             }
             cur = parent;
         }*/
-        return false;
-    }
-
-    public static boolean isPinned() {
-        Continuation cont = currentCarrierThread().getContinuation();
-        if (cont == null) {
-            return false;
-        }
         return cont.isPinnedInternal();
     }
 
