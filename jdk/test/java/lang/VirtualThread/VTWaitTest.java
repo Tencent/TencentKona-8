@@ -140,7 +140,7 @@ public class VTWaitTest {
             public void run() {
                 lock.lock();
                 System.out.println("before yield " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
-                Continuation.yield();
+                Thread.yield();
                 System.out.println("resume yield " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
                 val++;
                 lock.unlock();
@@ -173,7 +173,7 @@ public class VTWaitTest {
             public void run() {
                 lock.lock();
                 System.out.println("before yield " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
-                Continuation.yield();
+                Thread.yield();
                 System.out.println("resume yield " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
                 val++;
                 lock.unlock();

@@ -51,7 +51,7 @@ public class SimpleVT {
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("before yield");
-                Continuation.yield();
+                Thread.yield();
                 System.out.println("resume yield");
                 finished_vt_count++;
             }
@@ -71,7 +71,7 @@ public class SimpleVT {
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("before yield " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
-                Continuation.yield();
+                Thread.yield();
                 System.out.println("resume yield " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
                 ai.incrementAndGet();
             }
