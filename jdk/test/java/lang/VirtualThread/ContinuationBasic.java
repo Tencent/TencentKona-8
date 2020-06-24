@@ -55,7 +55,7 @@ public class ContinuationBasic {
         Continuation cont = new Continuation(scope, () -> {
            System.out.println("enter cont");
            foo();
-           Continuation.yield();
+           Continuation.yield(scope);
            foo();
            System.out.println("exit cont");
         });

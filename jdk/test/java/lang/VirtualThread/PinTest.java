@@ -47,17 +47,17 @@ public class PinTest {
             System.out.println("critical_section_test_continuation start");
             Continuation.pin();
             try {
-                Continuation.yield();
+                Continuation.yield(scope);
             } catch (IllegalStateException e) {
-                System.out.println("critical_section_test_continuation is pinned expect true: " + Continuation.isPinned());
-                assertEquals(Continuation.isPinned(), true);
+                System.out.println("critical_section_test_continuation is pinned expect true: " + Continuation.isPinned(scope));
+                assertEquals(Continuation.isPinned(scope), true);
                 System.out.println(e.toString());
             } 
 
             Continuation.unpin();
-            System.out.println("critical_section_test_continuation is pinned expect false: " + Continuation.isPinned());
-            assertEquals(Continuation.isPinned(), false);
-            boolean result = Continuation.yield();
+            System.out.println("critical_section_test_continuation is pinned expect false: " + Continuation.isPinned(scope));
+            assertEquals(Continuation.isPinned(scope), false);
+            boolean result = Continuation.yield(scope);
             System.out.println(result);
         });
         cont.run();
@@ -71,17 +71,17 @@ public class PinTest {
             System.out.println("monitor_test_continuation start");
             synchronized(o) {
                 try {
-                    System.out.println("critical_section_test_continuation is pinned expect true: " + Continuation.isPinned());
-                    assertEquals(Continuation.isPinned(), true);
-                    Continuation.yield();
+                    System.out.println("critical_section_test_continuation is pinned expect true: " + Continuation.isPinned(scope));
+                    assertEquals(Continuation.isPinned(scope), true);
+                    Continuation.yield(scope);
                 } catch (IllegalStateException e) {
                     System.out.println(e.toString());
                 }
             }
 
-            System.out.println("critical_section_test_continuation is pinned expect false: " + Continuation.isPinned());
-            assertEquals(Continuation.isPinned(), false);
-            boolean result = Continuation.yield();
+            System.out.println("critical_section_test_continuation is pinned expect false: " + Continuation.isPinned(scope));
+            assertEquals(Continuation.isPinned(scope), false);
+            boolean result = Continuation.yield(scope);
             System.out.println(result);
         });
         cont.run();
@@ -94,20 +94,20 @@ public class PinTest {
         Continuation cont = new Continuation(scope, () -> {
             System.out.println("monitor_custom_test_continuation start");
             synchronized(o) {
-                boolean result = Continuation.yield();
+                boolean result = Continuation.yield(scope);
                 System.out.println("yield result : " + result);
             }
-            boolean result = Continuation.yield();
+            boolean result = Continuation.yield(scope);
             System.out.println("yield result : " + result);
         }) {
                protected void onPinned(Pinned reason) {
                    System.out.println("Pinned and block here");
-                   System.out.println("critical_section_test_continuation is pinned expect true: " + Continuation.isPinned());
-                   assertEquals(Continuation.isPinned(), true);
+                   System.out.println("critical_section_test_continuation is pinned expect true: " + Continuation.isPinned(scope));
+                   assertEquals(Continuation.isPinned(scope), true);
                }
         };
-        System.out.println("critical_section_test_continuation is pinned expect false: " + Continuation.isPinned());
-        assertEquals(Continuation.isPinned(), false);
+        System.out.println("critical_section_test_continuation is pinned expect false: " + Continuation.isPinned(scope));
+        assertEquals(Continuation.isPinned(scope), false);
         while (!cont.isDone()) {
             cont.run();
         }
