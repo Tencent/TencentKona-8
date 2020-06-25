@@ -55,7 +55,7 @@ public class SimpleVTDefault {
                 finished_vt_count++;
             }
         };
-        VirtualThread vt = new VirtualThread(null, "foo_thread", 0, target);
+        Thread vt = Thread.newThread("foo_thread", Thread.VIRTUAL, target); 
         vt.start();
         vt.join();
         //Thread.sleep(1000);
@@ -74,9 +74,10 @@ public class SimpleVTDefault {
             }
         };
 
-        VirtualThread[] vts = new VirtualThread[40];
+        Thread[] vts = new Thread[40];
+        ThreadFactory f = Thread.builder().virtual().name("FixedThreadPoolSimple_", 0).factory();
         for (int i = 0; i < 40; i++) {
-            vts[i] = new VirtualThread(null, "FixedThreadPoolSimple_" + i, 0, target);
+            vts[i] = f.newThread(target);
         }
         for (int i = 0; i < 40; i++) {
             vts[i].start();
@@ -100,7 +101,7 @@ public class SimpleVTDefault {
                 assertNotEquals(Thread.currentCarrierThread().getName(), "main");
             }
         };
-        VirtualThread vt = new VirtualThread(null, "park_thread", 0, target);
+        Thread vt = Thread.newThread("park_thread", Thread.VIRTUAL, target); 
         vt.start();
 
         System.out.println("after start " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
@@ -127,7 +128,7 @@ public class SimpleVTDefault {
      * Park and unpark in multiple virtual threads
      */
     static void multipleThreadParkTest() throws Exception {
-        VirtualThread[] vts = new VirtualThread[10];
+        Thread[] vts = new Thread[10];
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println(Thread.currentThread().getName() + " before park");
@@ -149,8 +150,9 @@ public class SimpleVTDefault {
                 assertEquals(Thread.currentThread().getName(), "vt" + myIndex);
             }
         };
+        ThreadFactory f = Thread.builder().virtual().name("vt", 0).factory();
         for (int i = 0; i < 10; i++) {
-            vts[i] = new VirtualThread(null, "vt" + i, 0, target);
+            vts[i] = f.newThread(target);
         }
         for (int i = 0; i < 10; i++) {
             vts[i].start();
@@ -162,7 +164,7 @@ public class SimpleVTDefault {
     }
 
     static void multipleThreadPoolParkTest() throws Exception {
-        VirtualThread[] vts = new VirtualThread[100];
+        Thread[] vts = new Thread[100];
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println(Thread.currentThread().getName() + " before park");
@@ -186,8 +188,9 @@ public class SimpleVTDefault {
                 assertEquals(Thread.currentThread().getName(), "vt" + myIndex);
             }
         };
+        ThreadFactory f = Thread.builder().virtual().name("vt", 0).factory();
         for (int i = 0; i < 100; i++) {
-            vts[i] = new VirtualThread(null, "vt" + i, 0, target);
+            vts[i] = f.newThread(target);
         }
         for (int i = 0; i < 100; i++) {
             vts[i].start();
