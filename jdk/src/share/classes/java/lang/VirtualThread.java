@@ -108,9 +108,6 @@ public class VirtualThread extends Thread {
         return DEFAULT_FACTORY;
     }
 
-    public static VirtualThread create(String name, Runnable task) {
-        return new VirtualThread(null, name, 0, task);
-    }
     /**
      * Creates a new {@code VirtualThread} to run the given task with the given scheduler.
      *
@@ -120,7 +117,7 @@ public class VirtualThread extends Thread {
      * @param task the task to execute
      */
     public VirtualThread(Executor scheduler, String name, int characteristics, Runnable task) {
-        super(name);
+        super(name == null ? "<unnamed>" : name);
 
         Objects.requireNonNull(task);
 
