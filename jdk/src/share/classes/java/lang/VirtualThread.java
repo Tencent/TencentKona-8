@@ -56,11 +56,10 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * system.
  */
 
-public class VirtualThread extends Thread {
+class VirtualThread extends Thread {
     private static final Unsafe unsafe = Unsafe.getUnsafe();
     private static final ContinuationScope VTHREAD_SCOPE = new ContinuationScope("VirtualThreads");
     private static final Executor DEFAULT_SCHEDULER = defaultScheduler();
-    private static final ThreadFactory DEFAULT_FACTORY = defaultFactory();
     private static final ScheduledExecutorService UNPARKER = delayedTaskScheduler();
     private static final int TRACE_PINNING_MODE = tracePinningMode();
 
@@ -104,10 +103,6 @@ public class VirtualThread extends Thread {
     private volatile int parkPermit;      // 0 for false and 1 for true
     private volatile boolean interrupted;
 
-    public static ThreadFactory DefaultThreadFactory() {
-        return DEFAULT_FACTORY;
-    }
-
     /**
      * Creates a new {@code VirtualThread} to run the given task with the given scheduler.
      *
@@ -116,7 +111,7 @@ public class VirtualThread extends Thread {
      * @param characteristics characteristics
      * @param task the task to execute
      */
-    public VirtualThread(Executor scheduler, String name, int characteristics, Runnable task) {
+    VirtualThread(Executor scheduler, String name, int characteristics, Runnable task) {
         super(name == null ? "<unnamed>" : name);
 
         Objects.requireNonNull(task);
@@ -844,20 +839,6 @@ public class VirtualThread extends Thread {
             return new ForkJoinPool(parallelism, factory, ueh, asyncMode);
         };
         return AccessController.doPrivileged(pa);
-    }
-
-    private static final AtomicInteger vtNumber = new AtomicInteger(1);
-    private static ThreadFactory defaultFactory() {
-        return new ThreadFactory() {
-            public Thread newThread(Runnable r) {
-                Thread t = new VirtualThread(null, "defaultVT" + vtNumber.getAndIncrement(), 0, r);
-                if (t.isDaemon())
-                    t.setDaemon(false);
-                if (t.getPriority() != Thread.NORM_PRIORITY)
-                    t.setPriority(Thread.NORM_PRIORITY);
-                return t;
-            }
-        };
     }
 
     /**

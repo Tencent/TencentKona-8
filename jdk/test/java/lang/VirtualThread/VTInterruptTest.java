@@ -51,13 +51,13 @@ public class VTInterruptTest {
         val = 0;
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        VirtualThread vt = new VirtualThread(executor, "vt", 0, () -> {
+        Thread vt = Thread.builder().virtual(executor).name("vt").task(() -> {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
                 val++;
             }
-        });
+        }).build();
 
         vt.start();
         Thread.sleep(100);
@@ -85,9 +85,10 @@ public class VTInterruptTest {
             }
         };
 
-        VirtualThread[] vts = new VirtualThread[40];
+        Thread[] vts = new Thread[40];
+        ThreadFactory f = Thread.builder().virtual(executor).name("multipleSleepInterrupt_", 0).factory();
         for (int i = 0; i < 40; i++) {
-            vts[i] = new VirtualThread(executor, "multipleSleepInterrupt_" + i, 0, target);
+            vts[i] = f.newThread(target);
         }
         for (int i = 0; i < 40; i++) {
             vts[i].start();
@@ -125,8 +126,7 @@ public class VTInterruptTest {
             }
         };
 
-        VirtualThread vt = new VirtualThread(executor, "vt-0", 0, target);
-
+        Thread vt = Thread.builder().virtual(executor).name("vt-0").task(target).build();
         lock.lock();
         vt.start();
         Thread.sleep(100);
@@ -159,7 +159,7 @@ public class VTInterruptTest {
             }
         };
 
-        VirtualThread vt = new VirtualThread(executor, "vt-0", 0, target);
+        Thread vt = Thread.builder().virtual(executor).name("vt-0").task(target).build();
 
         lock.lock();
         vt.start();
@@ -195,7 +195,7 @@ public class VTInterruptTest {
             }
         };
 
-        VirtualThread vt = new VirtualThread(executor, "vt-0", 0, target);
+        Thread vt = Thread.builder().virtual(executor).name("vt-0").task(target).build(); 
 
         vt.start();
         Thread.sleep(100);

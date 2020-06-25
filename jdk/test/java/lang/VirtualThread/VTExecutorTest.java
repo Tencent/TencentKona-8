@@ -62,7 +62,7 @@ public class VTExecutorTest {
 
     private static void testSchedule(int sleepMilli) throws Exception {
         AtomicInteger count = new AtomicInteger();
-        ThreadFactory f = new FiberThreadFactory();
+        ThreadFactory f = Thread.builder().virtual().factory();
         ExecutorService e = Executors.newFixedThreadPool(realThreadCount, f);
         CountDownLatch startSignal = new CountDownLatch(1);
         CountDownLatch doneSignal = new CountDownLatch(requestCount);
@@ -99,7 +99,7 @@ public class VTExecutorTest {
         System.out.println("finish shutdown " + (System.currentTimeMillis() - now));
     }
 
-    static class FiberThreadFactory implements ThreadFactory {
+    /*static class FiberThreadFactory implements ThreadFactory {
         private final AtomicInteger threadNumber = new AtomicInteger(1);
         private final String namePrefix = "vt-";
         FiberThreadFactory() {
@@ -114,5 +114,5 @@ public class VTExecutorTest {
                 t.setPriority(Thread.NORM_PRIORITY);
             return t;
         }
-    }
+    }*/
 }
