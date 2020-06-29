@@ -19,7 +19,6 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-package com.tencent.crypto.provider.Cipher.SM3;
 /**
  * @test
  * @summary Verify that our digests work correctly irrespective of input alignment

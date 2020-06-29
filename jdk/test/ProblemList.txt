@@ -368,3 +368,17 @@ sun/tools/jps/TestJpsJarRelative.java				generic-all
 
 # 8141370
 com/sun/jndi/ldap/DeadSSLLdapTimeoutTest.java			linux-i586,macosx-all
+
+
+############################################################################
+# currently SM cipher only support linux-x86_64 and macosx-x86_64 
+
+com/tencent/crypto/provider/Cipher/SM2/TestSM2.java             linux-i586,macosx-i586,windows-all,solaris-all,aix-all
+com/tencent/crypto/provider/Cipher/SM3/DigestKAT.java           linux-i586,macosx-i586,windows-all,solaris-all,aix-all
+com/tencent/crypto/provider/Cipher/SM3/Offsets.java             linux-i586,macosx-i586,windows-all,solaris-all,aix-all
+com/tencent/crypto/provider/Cipher/SM4/FlushBug.java            linux-i586,macosx-i586,windows-all,solaris-all,aix-all
+com/tencent/crypto/provider/Cipher/SM4/KeyWrapping.java         linux-i586,macosx-i586,windows-all,solaris-all,aix-all
+com/tencent/crypto/provider/Cipher/SM4/PaddingTest.java         linux-i586,macosx-i586,windows-all,solaris-all,aix-all
+com/tencent/crypto/provider/Cipher/SM4/Sealtest.java            linux-i586,macosx-i586,windows-all,solaris-all,aix-all
+com/tencent/crypto/provider/Cipher/SM4/SM4APITest.java          linux-i586,macosx-i586,windows-all,solaris-all,aix-all
+com/tencent/crypto/provider/Cipher/SM4/TestCipherSM4.java       linux-i586,macosx-i586,windows-all,solaris-all,aix-all

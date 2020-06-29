@@ -185,8 +185,7 @@ jdk_security1 = \
 jdk_security2 = \
     javax/crypto \
     javax/xml/crypto \
-    com/sun/crypto \
-    com/tencent/crypto
+    com/sun/crypto
 
 jdk_security3 = \
     javax/security  \
@@ -214,6 +213,9 @@ jdk_security = \
 
 jdk_security_infra = \
     security/infra/java/security/cert/CertPathValidator/certification
+
+jdk_sm_security = \
+    com/tencent/crypto
 
 jdk_text = \
     java/text \

@@ -90,7 +90,7 @@ public final class SMCSProvider extends Provider {
                      * Cipher engines
                      */
                     put("Cipher.SM2", "com.tencent.crypto.provider.SM2Cipher");
-                    put("Cipher.SM2 SupportedModes", "");
+                    put("Cipher.SM2 SupportedModes", SM2_MODES);
                     put("Cipher.SM2 SupportedPaddings", "NOPADDING");
                     put("Cipher.SM2 SupportedKeyClass", "SM2PrivateKey|SM2PublicKey");
 
@@ -137,7 +137,7 @@ public final class SMCSProvider extends Provider {
             });
 
         if (instance == null) {
-            instance = getInstance();
+            instance = this;
         }
     }
 

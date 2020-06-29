@@ -19,7 +19,6 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-package com.tencent.crypto.provider.Cipher.SM4;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKeyFactory;

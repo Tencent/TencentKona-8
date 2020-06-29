@@ -19,7 +19,6 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-package com.tencent.crypto.provider.Cipher.SM3;
 
 /**
  * @test
@@ -149,7 +148,7 @@ public class DigestKAT {
             this.data = data;
             this.digest = digest;
             String str = deParse(digest);
-            System.out.println("deParse：" + str);
+            System.out.println("deParse:" + str);
         }
         void run(Provider p) throws Exception {
             MessageDigest md;
