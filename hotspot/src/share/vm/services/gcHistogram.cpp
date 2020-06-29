@@ -168,14 +168,6 @@ double GCHistogram::average() const {
   return (_sum * 1.0) / _num;
 }
 
-long GCHistogram::max() const {
-  return _max;
-}
-
-long GCHistogram::min() const {
-  return _min;
-}
-
 double GCHistogram::standard_deviation() const {
   if (0 == _num) return 0.0;
   double variance = (_sum_squares * _num * 1.0 - _sum * _sum) / (_num * _num);
