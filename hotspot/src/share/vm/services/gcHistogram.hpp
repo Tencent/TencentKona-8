@@ -51,8 +51,6 @@ class GCHistogram {
   // distribution
   long percentile(double p) const;
 
-  long min() const;
-  long max() const;
   int search(long);
   int binary_search(long);
   int binary_search(long *array, int size, long key);
