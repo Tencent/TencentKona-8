@@ -53,7 +53,9 @@ public class SM3MessageDigest extends MessageDigest {
 
     @Override
     protected byte[] engineDigest() {
-        return SMUtils.getInstance().SM3Final(handler);
+        byte[] digest = SMUtils.getInstance().SM3Final(handler);
+        engineReset();
+        return digest;
     }
 
     @Override

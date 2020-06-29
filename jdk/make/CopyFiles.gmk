@@ -613,7 +613,7 @@ endif
 ifeq ($(OPENJDK_TARGET_OS), macosx)
 ifeq ($(OPENJDK_TARGET_CPU), x86_64)
   LIB_TENCENTSM_SRC := $(JDK_TOPDIR)/src/share/lib/security/macosx/libTencentSM.dylib
-  LIB_TENCENTSM_DST := $(JDK_OUTPUTDIR)/lib/security/libTencentSM.dylib
+  LIB_TENCENTSM_DST := $(JDK_OUTPUTDIR)/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libTencentSM.dylib
 
   $(LIB_TENCENTSM_DST): $(LIB_TENCENTSM_SRC)
 	$(call install-file)
@@ -628,7 +628,7 @@ endif
 ifeq ($(OPENJDK_TARGET_OS), linux)
 ifeq ($(OPENJDK_TARGET_CPU), x86_64)
   LIB_TENCENTSM_SRC := $(JDK_TOPDIR)/src/share/lib/security/linux/libTencentSM.so
-  LIB_TENCENTSM_DST := $(JDK_OUTPUTDIR)/lib/security/libTencentSM.so
+  LIB_TENCENTSM_DST := $(JDK_OUTPUTDIR)/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libTencentSM.so
 
   $(LIB_TENCENTSM_DST): $(LIB_TENCENTSM_SRC)
 	$(call install-file)

@@ -19,7 +19,6 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-package com.tencent.crypto.provider.Cipher.SM4;
 /*
  * @test
  * @summary PaddingTest
@@ -70,11 +69,8 @@ public class PaddingTest {
     static String[] modes =  {"ECB", "CBC", "CTR", "GCM"};
     static String[] paddings =  {"PKCS7Padding", "NoPadding"};
     static int numFiles = 11;
-    static final String currFile = PaddingTest.class.getResource("PaddingTest.class").getPath();
-    static final int lastIdx = currFile.lastIndexOf("PaddingTest.class");
-    static final String currDir = currFile.substring(0,lastIdx);
+    static final String currDir = System.getProperty("test.src", ".");
     static String dataDir = currDir + "/inputData/";
-
     private String padding = null;
 
     public static void main(String argv[]) throws Exception {

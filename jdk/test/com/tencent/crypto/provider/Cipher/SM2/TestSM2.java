@@ -20,7 +20,6 @@
  *
  */
 
-package com.tencent.crypto.provider.Cipher.SM2;
 /**
  * @test
  * @summary Test SM2 Cipher implementation
