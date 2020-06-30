@@ -105,6 +105,21 @@ public class ForkJoinWorkerThread extends Thread {
     }
 
     /**
+     * Creates a ForkJoinWorkerThread operating in the given pool.
+     *
+     * @param group thread group, can be null
+     * @param pool the pool this thread works in
+     * @throws NullPointerException if pool is null
+     * @since 99
+     */
+    protected ForkJoinWorkerThread(ThreadGroup group, ForkJoinPool pool) {
+        // Use a placeholder until a useful name can be set in registerWorker
+        super(group, "aForkJoinWorkerThread");
+        this.pool = pool;
+        this.workQueue = pool.registerWorker(this);
+    }
+
+    /**
      * Version for InnocuousForkJoinWorkerThread
      */
     ForkJoinWorkerThread(ForkJoinPool pool, ThreadGroup threadGroup,
