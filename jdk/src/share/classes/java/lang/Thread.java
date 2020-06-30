@@ -2139,6 +2139,14 @@ class Thread implements Runnable {
         interrupt0();
     }
 
+    boolean getAndClearInterrupt() {
+        return isInterrupted(true);
+    }
+
+    void clearInterrupt() {
+        isInterrupted(true);
+    }
+
     /**
      * Returns the current carrier thread.
      */
