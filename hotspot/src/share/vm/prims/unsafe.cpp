@@ -1517,6 +1517,21 @@ jobject CoroutineSupport_cleanupCoroutine(JNIEnv* env, jclass klass) {
   return NULL;
 }
 
+
+JVM_ENTRY(jobjectArray, CoroutineSupport_dumpVirtualThreads(JNIEnv *env, jclass klass, jobject coroBase))
+
+  oop coroOop = JNIHandles::resolve(coroBase);
+  Coroutine* coro = (Coroutine*)java_dyn_CoroutineBase::data(coroOop);
+  assert(coro != NULL, "target coroutine is NULL in CoroutineSupport_dumpVirtualThreads");
+
+  VirtualThreadStackTrace* res = new VirtualThreadStackTrace(coro);
+  res->dump_stack();
+
+  Handle stacktraces = res->allocate_fill_stack_trace_element_array(THREAD);
+  return (jobjectArray)JNIHandles::make_local(env, stacktraces());
+
+JVM_END
+
 /// JVM_RegisterUnsafeMethods
 
 #define ADR "J"
@@ -1857,6 +1872,7 @@ JNINativeMethod fence_methods[] = {
 
 #define COBA "Ljava/dyn/CoroutineBase;"
 #define STRPARA LANG "String;"
+#define STE "Ljava/lang/StackTraceElement;"
 
 JNINativeMethod coroutine_support_methods[] = {
     {CC"getThreadCoroutine",      CC"()J",            FN_PTR(CoroutineSupport_getThreadCoroutine)},
@@ -1866,8 +1882,9 @@ JNINativeMethod coroutine_support_methods[] = {
     {CC"switchToAndTerminate",    CC"("COBA COBA")V", FN_PTR(CoroutineSupport_switchToAndTerminate)},
     {CC"switchToAndExit",         CC"("COBA COBA")V", FN_PTR(CoroutineSupport_switchToAndExit)},
     {CC"cleanupCoroutine",        CC"()"COBA,         FN_PTR(CoroutineSupport_cleanupCoroutine)},
-	{CC"hasAlreadyRun",            CC"(J)Z",          FN_PTR(CoroutineSupport_hasAlreadyRun)},
-	{CC"exitCoroutineHasNotRun",   CC"(J)V",     FN_PTR(CoroutineSupport_exitCoroutineHasNotRun)},
+    {CC"hasAlreadyRun",           CC"(J)Z",           FN_PTR(CoroutineSupport_hasAlreadyRun)},
+    {CC"exitCoroutineHasNotRun",  CC"(J)V",           FN_PTR(CoroutineSupport_exitCoroutineHasNotRun)},
+    {CC"dumpVirtualThreads",      CC"("COBA")[" STE,  FN_PTR(CoroutineSupport_dumpVirtualThreads)},
 };
 
 #define COMPILE_CORO_METHODS_FROM (3)
