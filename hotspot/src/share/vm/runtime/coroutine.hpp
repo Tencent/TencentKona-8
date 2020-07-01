@@ -156,6 +156,7 @@ public:
 
   void print_on(outputStream* st) const;
   void print_stack_on(outputStream* st);
+  void print_stack_on(void* frames, int* depth);
   const char* get_coroutine_name() const;
   static const char* get_coroutine_state_name(CoroutineState state);
   bool is_lock_owned(address adr) const;
@@ -263,6 +264,9 @@ private:
   CoroutineStack(intptr_t size) : _reserved_space(size) { }
   virtual ~CoroutineStack() { }
 
+  void add_stack_frame(void* frames, int* depth, javaVFrame* jvf);
+  void print_stack_on(outputStream* st, void* frames, int* depth);
+
 public:
   static CoroutineStack* create_thread_stack(JavaThread* thread);
   static CoroutineStack* create_stack(JavaThread* thread, intptr_t size = -1);
@@ -288,6 +292,7 @@ public:
 
   frame last_frame(Coroutine* coro, RegisterMap& map) const;
   void print_stack_on(outputStream* st);
+  void print_stack_on(void* frames, int* depth);
   // GC support
   void frames_do(FrameClosure* fc, bool isThreadCoroutine);
 

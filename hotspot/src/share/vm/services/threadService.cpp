@@ -62,6 +62,14 @@ ThreadDumpResult* ThreadService::_threaddump_list = NULL;
 
 static const int INITIAL_ARRAY_SIZE = 10;
 
+VirtualThreadStackTrace::VirtualThreadStackTrace(Coroutine* coro) : ThreadStackTrace(NULL, false) {
+  _coro = coro;
+}
+
+void VirtualThreadStackTrace::dump_stack() {
+  _coro->print_stack_on(_frames, &_depth);
+}
+
 void ThreadService::init() {
   EXCEPTION_MARK;
 

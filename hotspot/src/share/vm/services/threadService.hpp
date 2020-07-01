@@ -247,7 +247,7 @@ public:
 };
 
 class ThreadStackTrace : public CHeapObj<mtInternal> {
- private:
+ protected:
   JavaThread*                     _thread;
   int                             _depth;  // number of stack frames added
   bool                            _with_locked_monitors;
@@ -273,6 +273,15 @@ class ThreadStackTrace : public CHeapObj<mtInternal> {
 
   bool            is_owned_monitor_on_stack(oop object);
   void            add_jni_locked_monitor(oop object) { _jni_locked_monitors->append(object); }
+};
+
+class VirtualThreadStackTrace : public ThreadStackTrace {
+  private:
+    Coroutine* _coro;
+
+  public:
+    VirtualThreadStackTrace(Coroutine* coro);
+    void dump_stack();
 };
 
 // StackFrameInfo for keeping Method* and bci during

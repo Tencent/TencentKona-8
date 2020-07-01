@@ -45,6 +45,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 import sun.misc.InnocuousThread;
+import java.dyn.CoroutineSupport;
+
 import sun.misc.Unsafe;
 import sun.nio.ch.Interruptible;
 import sun.security.action.GetPropertyAction;
@@ -302,7 +304,7 @@ class VirtualThread extends Thread {
         // drop connection between this virtual thread and the carrier thread
         carrier.setVirtualThread(null);
         synchronized (getBlockerLock()) {   // synchronize with interrupt
-            UNSAFE.putObjectVolatile(this, CARRIER_THREAD, carrier);
+            UNSAFE.putObjectVolatile(this, CARRIER_THREAD, null);
         }
 
         // clear carrier thread interrupt status before exit
@@ -743,10 +745,8 @@ class VirtualThread extends Thread {
 
     @Override
     public StackTraceElement[] getStackTrace() {
-        /*if (Thread.currentThread() == this) {
-            return STACK_WALKER
-                    .walk(s -> s.map(StackFrame::toStackTraceElement)
-                    .toArray(StackTraceElement[]::new));
+        if (Thread.currentThread() == this) {
+            return virtualThreadStackTrace((new Exception()).getStackTrace());
         } else {
             SecurityManager security = System.getSecurityManager();
             if (security != null) {
@@ -769,8 +769,7 @@ class VirtualThread extends Thread {
                 }
             } while (stackTrace == null);
             return stackTrace;
-        }*/
-        return null;
+        }
     }
 
     /**
@@ -779,28 +778,27 @@ class VirtualThread extends Thread {
      * null is returned.
      */
     private StackTraceElement[] tryGetStackTrace(Thread carrier) {
-        /*assert carrier != Thread.currentCarrierThread();
+        assert carrier != Thread.currentCarrierThread();
 
         StackTraceElement[] stackTrace = null;
-        carrier.suspendThread();
+        carrier.suspend();
         try {
             // get stack trace if virtual thread is still mounted on the suspended
             // carrier thread. Skip if the virtual thread is parking as the
             // continuation frames may or may not be on the thread stack.
             // FIXME: Thread.yield may also need special handling.
             if (carrierThread == carrier && state() != PARKING) {
-                stackTrace = carrier.getFullStackTrace();
+                stackTrace = carrier.getStackTrace();
             }
         } finally {
-            carrier.resumeThread();
+            carrier.resume();
         }
 
         if (stackTrace != null) {
             return virtualThreadStackTrace(stackTrace);
         } else {
             return null;
-        }*/
-        return null;
+        }
     }
 
     /**
@@ -808,31 +806,28 @@ class VirtualThread extends Thread {
      * parked, or terminated. Returns null if the thread is in other states.
      */
     private StackTraceElement[] tryGetStackTrace() {
-        /*if (compareAndSetState(PARKED, PARKED_SUSPENDED)) {
+        if (compareAndSetState(PARKED, PARKED_SUSPENDED)) {
             try {
-                return cont.stackWalker()
-                        .walk(s -> s.map(StackFrame::toStackTraceElement)
-                                    .toArray(StackTraceElement[]::new));
+                return virtualThreadStackTrace(CoroutineSupport.dumpVirtualThreads(cont));
             } finally {
                 assert state == PARKED_SUSPENDED;
                 setState(PARKED);
 
                 // may have been unparked while suspended
-                if (parkPermit && compareAndSetState(PARKED, RUNNABLE)) {
+                if (parkPermit == PARK_PERMIT_TRUE && compareAndSetState(PARKED, RUNNABLE)) {
                     try {
                         scheduler.execute(runContinuation);
                     } catch (RejectedExecutionException ignore) { }
                 }
             }
         } else {
-            short state = state();
+            int state = state();
             if (state == NEW || state == TERMINATED) {
                 return EMPTY_STACK;
             } else {
                 return null;
             }
-        }*/
-        return null;
+        }
     }
 
     /**
@@ -841,9 +836,9 @@ class VirtualThread extends Thread {
      */
     static StackTraceElement[] virtualThreadStackTrace(StackTraceElement[] stackTrace) {
         int runMethod = findRunContinuation(stackTrace);
-        if (runMethod >= 2) {
+        if (runMethod >= 0) {
             // skip Continuation.run and Continuation.enterSpecial frames
-            return Arrays.copyOf(stackTrace, runMethod - 2);
+            return Arrays.copyOf(stackTrace, runMethod);
         } else {
             return EMPTY_STACK;
         }
@@ -866,17 +861,16 @@ class VirtualThread extends Thread {
      * Returns index of the VirtualThread.runContinuation frame or -1 if not found.
      */
     private static int findRunContinuation(StackTraceElement[] stackTrace) {
-        /*int index = 0;
+        int index = 0;
         while (index < stackTrace.length) {
             StackTraceElement e = stackTrace[index];
-            if ("java.base".equals(e.getModuleName())
-                    && "java.lang.VirtualThread".equals(e.getClassName())
-                    && "runContinuation".equals(e.getMethodName())) {
+            if ("java.lang.VirtualThread".equals(e.getClassName())
+                    && "lambda$new$0".equals(e.getMethodName())) {
                 return index;
             } else {
                 index++;
             }
-        }*/
+        }
         return -1;
     }
 
