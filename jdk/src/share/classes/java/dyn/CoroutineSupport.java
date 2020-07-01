@@ -415,7 +415,9 @@ public class CoroutineSupport {
 	private static native boolean hasAlreadyRun(long coroutine);
 	
 	private static native void exitCoroutineHasNotRun(long coroutine);
-    
+
+	public static native StackTraceElement[] dumpVirtualThreads(CoroutineBase target);
+ 
     // continuation related
     public void addContinuation(String name, CoroutineBase cont, long stacksize) {
 		cont.data = createCoroutine(name, cont, stacksize);
