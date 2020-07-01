@@ -34,7 +34,15 @@
 # include "vmreg_zero.inline.hpp"
 #endif
 
+#include "services/threadService.hpp"
+
 JavaThread* Coroutine::_main_thread = NULL;
+
+void CoroutineStack::add_stack_frame(void* frames, int* depth, javaVFrame* jvf) {
+  StackFrameInfo* frame = new StackFrameInfo(jvf, false);
+  ((GrowableArray<StackFrameInfo*>*)frames)->append(frame);
+  (*depth)++;
+}
 
 #ifdef _WINDOWS
 
@@ -310,6 +318,12 @@ void Coroutine::print_on(outputStream* st) const
 	// print guess for valid stack memory region (assume 4K pages); helps lock debugging
 	st->print_cr("[" INTPTR_FORMAT "]", (intptr_t)stack()->last_sp() & ~right_n_bits(12));
 	st->print_cr("   java.lang.Thread.State: %s", get_coroutine_state_name(this->state()));
+}
+
+void Coroutine::print_stack_on(void* frames, int* depth)
+{
+  if (!has_javacall() || state() != Coroutine::_onstack) return;
+  stack()->print_stack_on(frames, depth);
 }
 
 void Coroutine::print_stack_on(outputStream* st)
@@ -618,6 +632,16 @@ void CoroutineStack::free_stack(CoroutineStack* stack, JavaThread* thread) {
 
 void CoroutineStack::print_stack_on(outputStream* st)
 {
+  return print_stack_on(st, NULL, NULL);
+}
+
+void CoroutineStack::print_stack_on(void* frames, int* depth)
+{
+  return print_stack_on(NULL, frames, depth);
+}
+
+void CoroutineStack::print_stack_on(outputStream* st, void* frames, int* depth)
+{
 	if (_last_sp == NULL) return;
     address pc = ((address*)_last_sp)[1];
     if (pc != (address)coroutine_start) {
@@ -640,11 +664,15 @@ void CoroutineStack::print_stack_on(outputStream* st)
 		for (vframe* f = start_vf; f; f = f->sender()) {
 			if (f->is_java_frame()) {
 				javaVFrame* jvf = javaVFrame::cast(f);
-				java_lang_Throwable::print_stack_element(st, jvf->method(), jvf->bci());
+				if (st != NULL) {
+					java_lang_Throwable::print_stack_element(st, jvf->method(), jvf->bci());
 
-				// Print out lock information
-				if (JavaMonitorsInStackTrace) {
-					jvf->print_lock_info_on(st, count);
+					// Print out lock information
+					if (JavaMonitorsInStackTrace) {
+						jvf->print_lock_info_on(st, count);
+					}
+				} else {
+					add_stack_frame(frames, depth, jvf);
 				}
 			}
 			else {
