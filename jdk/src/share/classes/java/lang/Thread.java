@@ -1143,7 +1143,7 @@ class Thread implements Runnable {
         if (newPriority > MAX_PRIORITY || newPriority < MIN_PRIORITY) {
             throw new IllegalArgumentException();
         }
-        if((g = getThreadGroup()) != null) {
+        if(!isVirtual() && (g = getThreadGroup()) != null) {
             if (newPriority > g.getMaxPriority()) {
                 newPriority = g.getMaxPriority();
             }
@@ -1158,7 +1158,11 @@ class Thread implements Runnable {
      * @see     #setPriority
      */
     public final int getPriority() {
-        return priority;
+        if (isVirtual()) {
+            return Thread.NORM_PRIORITY;
+        } else {
+            return priority;
+        }
     }
 
     /**
@@ -1182,7 +1186,7 @@ class Thread implements Runnable {
         }
 
         this.name = name;
-        if (threadStatus != 0) {
+        if (!isVirtual() && threadStatus != 0) {
             setNativeName(name);
         }
     }
