@@ -32,6 +32,7 @@ import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.AccessControlContext;
 import java.security.PrivilegedAction;
+import java.security.ProtectionDomain;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -429,6 +430,11 @@ class Thread implements Runnable {
             }
         }
 
+        /* can't create a kernel thread in the virtual thread group */
+        if (sun.misc.VM.isBooted() && (g == VirtualThreads.THREAD_GROUP)) {
+            g = VirtualThreads.THREAD_SUBGROUP;
+        }
+
         /* checkAccess regardless of whether or not threadgroup is
            explicitly passed in. */
         g.checkAccess();
@@ -451,8 +457,14 @@ class Thread implements Runnable {
             this.contextClassLoader = parent.getContextClassLoader();
         else
             this.contextClassLoader = parent.contextClassLoader;
-        this.inheritedAccessControlContext =
-                acc != null ? acc : AccessController.getContext();
+
+        if (!isVirtual()) {
+            this.inheritedAccessControlContext =
+                    acc != null ? acc : AccessController.getContext();
+        } else {
+            this.inheritedAccessControlContext = VirtualThreads.ACCESS_CONTROL_CONTEXT;
+        }
+
         this.target = target;
         setPriority(priority);
         if (inheritThreadLocals && parent.inheritableThreadLocals != null)
@@ -784,8 +796,10 @@ class Thread implements Runnable {
      */
     @Override
     public void run() {
-        if (target != null) {
-            target.run();
+        if (!isVirtual()) {
+            if (target != null) {
+                target.run();
+            }
         }
     }
 
@@ -1209,7 +1223,7 @@ class Thread implements Runnable {
      * @return  this thread's thread group.
      */
     public final ThreadGroup getThreadGroup() {
-        return group;
+        return isVirtual() ? VirtualThreads.THREAD_GROUP : group;
     }
 
     /**
@@ -2094,6 +2108,53 @@ class Thread implements Runnable {
         }
     }
 
+    private static class VirtualThreads {
+        // Thread group for virtual threads.
+        static final ThreadGroup THREAD_GROUP;
+
+        // Thread group for kernel threads created by virtual threads
+        static final ThreadGroup THREAD_SUBGROUP;
+
+        // AccessControlContext that doesn't support any permissions.
+        static final AccessControlContext ACCESS_CONTROL_CONTEXT;
+
+        static {
+            PrivilegedAction<ThreadGroup> pa = new PrivilegedAction<ThreadGroup>() {
+                @Override
+                public ThreadGroup run() {
+                    ThreadGroup parent = Thread.currentCarrierThread().getThreadGroup();
+                    for (ThreadGroup p; (p = parent.getParent()) != null; )
+                        parent = p;
+                    return parent;
+                }
+            };
+            ThreadGroup root = AccessController.doPrivileged(pa);
+
+            ThreadGroup vgroup = new ThreadGroup(root, "VirtualThreads") {
+                @Override
+                @SuppressWarnings({"deprecation", "removal"})
+                public boolean allowThreadSuspension(boolean b) {
+                    return false;
+                }
+            };
+            vgroup.setDaemon(true);
+            vgroup.setMaxPriority(NORM_PRIORITY);
+            THREAD_GROUP = vgroup;
+
+            ThreadGroup subgroup = new ThreadGroup(vgroup, "other");
+            subgroup.setDaemon(true);
+            if (System.getSecurityManager() == null) {
+                subgroup.setMaxPriority(NORM_PRIORITY);
+            } else {
+                subgroup.setMaxPriority(MIN_PRIORITY);
+            }
+            THREAD_SUBGROUP = subgroup;
+
+            ACCESS_CONTROL_CONTEXT = new AccessControlContext(new ProtectionDomain[] {
+                new ProtectionDomain(null, null)
+            });
+        }
+    }
 
     // The following three initially uninitialized fields are exclusively
     // managed by class java.util.concurrent.ThreadLocalRandom. These
