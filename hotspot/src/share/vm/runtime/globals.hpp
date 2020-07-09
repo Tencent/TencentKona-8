@@ -3271,6 +3271,11 @@ class CommandLineFlags {
           "triggering a periodic gc. A value of zero disables periodically "\
           "enforced gc cycles.")                                            \
                                                                             \
+  product(uintx, ForcePeriodicGCInterval, 0,                                \
+          "Number of milliseconds between enforced periodic gc, "           \
+          "regardless of threshold setting. "                               \
+          "A value of zero disables enforced periodic gc.")                 \
+                                                                            \
   product(intx, SoftRefLRUPolicyMSPerMB, 1000,                              \
           "Number of milliseconds per MB of free space in the heap")        \
                                                                             \

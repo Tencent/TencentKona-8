@@ -629,8 +629,8 @@ void CollectedHeap::update_minor_gc_frequency_histogram() {
 }
 
 bool CollectedHeap::should_start_periodic_gc(int interval) {
-  // disable free physical memory when the system is idle
-  if (0 == PeriodicGCInterval) {
+  // disable free physical memory when the system is idle and force periodic gc is closed
+  if (0 == PeriodicGCInterval && 0 == ForcePeriodicGCInterval) {
     return false;
   }
 
@@ -639,10 +639,13 @@ bool CollectedHeap::should_start_periodic_gc(int interval) {
   static int last_check_minor_gc_count = _total_collections - _total_full_collections;
   static double last_check_time = now;
 
-  // Check if this process load is below thresold.
+  // Check if this process load is below thresold when PeriodicGCInterval is set.
   int minor_gc_count = _total_collections - _total_full_collections;
   double minor_gc_frequency = 0.0;
-  if (minor_gc_count > last_check_minor_gc_count) {
+  if (0 == PeriodicGCInterval) {
+    // no need to handle threshold
+    _minor_gc_frequency_below_thresold_count = 0;
+  } else if (minor_gc_count > last_check_minor_gc_count) {
     minor_gc_frequency = 
       (now - last_check_time) / (minor_gc_count - last_check_minor_gc_count);
     if (minor_gc_frequency > _minor_gc_frequency_histogram->percentile(99)) {
@@ -663,8 +666,12 @@ bool CollectedHeap::should_start_periodic_gc(int interval) {
   last_check_time = now;
 
   // Check if enough time has passed since the last GC.
-  if ((long)(((now - _last_full_gc_time) * 1000) > PeriodicGCInterval)
-        && (_minor_gc_frequency_below_thresold_count >= PeriodicGCLoadThreshold)) {
+  bool should_start_threshold_gc = (PeriodicGCInterval != 0)
+          && (long)(((now - _last_full_gc_time) * 1000) > PeriodicGCInterval)
+          && (_minor_gc_frequency_below_thresold_count >= PeriodicGCLoadThreshold);
+  bool should_start_enforced_gc = ForcePeriodicGCInterval != 0
+          && (long)(((now - _last_full_gc_time) * 1000) > ForcePeriodicGCInterval);
+  if (should_start_threshold_gc || should_start_enforced_gc) {
     _minor_gc_frequency_below_thresold_count = 0;
     return true;
   }
