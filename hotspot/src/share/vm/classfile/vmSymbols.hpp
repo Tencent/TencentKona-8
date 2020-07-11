@@ -612,9 +612,11 @@
   template(java_dyn_CoroutineSupport,                  "java/dyn/CoroutineSupport")                               \
   template(java_dyn_CoroutineBase,                     "java/dyn/CoroutineBase")                                  \
   template(java_lang_Continuation,                     "java/lang/Continuation")                                  \
+  template(cont_start_method_name,                     "start")                                                   \
   template(java_dyn_CoroutineExitException,            "java/dyn/CoroutineExitException")                         \
   template(data_name,                                  "data")                                                    \
   template(switch_result_name,                         "switch_result")                                           \
+  template(cont_switch_result_name,                    "switchResult")                                            \
   template(stack_name,                                 "stack")                                                   \
   template(current_name,                               "current")                                                 \
   template(java_dyn_CoroutineBase_signature,           "Ljava/dyn/CoroutineBase;")                                \
@@ -1106,6 +1108,10 @@
    do_name(     switchToAndTerminate_name,                        "switchToAndTerminate")                               \
   do_intrinsic(_switchToAndExit,          java_dyn_CoroutineSupport, switchToAndExit_name, switchTo_signature, F_SN)    \
    do_name(     switchToAndExit_name,                             "switchToAndExit")                                    \
+  /* continuation */                                                                                                    \
+  do_intrinsic(_contSwitchTo,             java_lang_Continuation, switchTo_name, contSwitchTo_signature, F_SN)          \
+   do_signature(contSwitchTo_signature,                           "(Ljava/lang/Continuation;Ljava/lang/Continuation;)V")\
+  do_intrinsic(_contSwitchToAndTerminate, java_lang_Continuation, switchToAndTerminate_name, contSwitchTo_signature, F_SN)  \
                                                                                                                         \
   do_intrinsic(_fillInStackTrace,         java_lang_Throwable, fillInStackTrace_name, void_throwable_signature,  F_RNY) \
                                                                                                                           \

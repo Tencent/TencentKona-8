@@ -808,7 +808,7 @@ class VirtualThread extends Thread {
     private StackTraceElement[] tryGetStackTrace() {
         if (compareAndSetState(PARKED, PARKED_SUSPENDED)) {
             try {
-                return virtualThreadStackTrace(CoroutineSupport.dumpVirtualThreads(cont));
+                return virtualThreadStackTrace(cont.getStackTrace());
             } finally {
                 assert state == PARKED_SUSPENDED;
                 setState(PARKED);

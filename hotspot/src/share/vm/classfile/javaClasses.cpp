@@ -3322,6 +3322,7 @@ void java_dyn_CoroutineBase::compute_offsets() {
   if (k != NULL) {
     compute_offset(data_offset,          k, vmSymbols::data_name(),    vmSymbols::long_signature());
     compute_offset(switch_result_offset, k, vmSymbols::switch_result_name(),    vmSymbols::int_signature());
+    // tty->print_cr("java_dyn_CoroutineBase %d %d", data_offset, switch_result_offset);
   }
 }
 
@@ -3330,6 +3331,25 @@ jlong java_dyn_CoroutineBase::data(oop obj) {
 }
 
 void java_dyn_CoroutineBase::set_data(oop obj, jlong value) {
+  obj->long_field_put(data_offset, value);
+}
+
+int java_lang_Continuation::data_offset = 0;
+int java_lang_Continuation::switch_result_offset = 0;
+void java_lang_Continuation::compute_offsets() {
+  Klass* k = SystemDictionary::continuation_klass();
+  if (k != NULL) {
+    compute_offset(data_offset,          k, vmSymbols::data_name(),    vmSymbols::long_signature());
+    compute_offset(switch_result_offset, k, vmSymbols::cont_switch_result_name(), vmSymbols::int_signature());
+    // tty->print_cr("java_lang_Continuation %d %d", data_offset, switch_result_offset);
+  }
+}
+
+jlong java_lang_Continuation::data(oop obj) {
+  return obj->long_field(data_offset);
+}
+
+void java_lang_Continuation::set_data(oop obj, jlong value) {
   obj->long_field_put(data_offset, value);
 }
 
@@ -3444,6 +3464,7 @@ void JavaClasses::compute_offsets() {
   AbstractAssembler::update_delayed_values();
 
   java_dyn_CoroutineBase::compute_offsets();
+  java_lang_Continuation::compute_offsets();
 }
 
 #ifndef PRODUCT
