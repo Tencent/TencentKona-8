@@ -3084,7 +3084,7 @@ static void thread_entry(JavaThread* thread, TRAPS) {
   Handle obj(THREAD, thread->threadObj());
   JavaValue result(T_VOID);
 
-  if (SystemDictionary::coroutine_support_klass() != NULL) {
+  /*if (SystemDictionary::coroutine_support_klass() != NULL) {
     InstanceKlass::cast(SystemDictionary::Class_klass())->initialize(CHECK);
     InstanceKlass::cast(SystemDictionary::coroutine_support_klass())->initialize(CHECK);
     JavaCalls::call_virtual(&result,
@@ -3098,7 +3098,7 @@ static void thread_entry(JavaThread* thread, TRAPS) {
       THREAD->clear_pending_exception();
       vm_abort(false);
     }
-  }
+  }*/
   JavaCalls::call_virtual(&result,
                           obj,
                           KlassHandle(THREAD, SystemDictionary::Thread_klass()),

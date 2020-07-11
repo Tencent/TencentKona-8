@@ -473,6 +473,8 @@ class Thread implements Runnable {
         /* Stash the specified stack size in case the VM cares */
         this.stackSize = stackSize;
 
+        // initThreadContinuation();
+
         /* Set thread ID */
         tid = nextThreadID();
     }
@@ -2189,6 +2191,7 @@ class Thread implements Runnable {
      * @return  the currently executing thread.
      */
     private Continuation cont;
+    private Continuation threadCont;
     private VirtualThread vthread;
 
     VirtualThread getVirtualThread() {
@@ -2223,6 +2226,15 @@ class Thread implements Runnable {
      */
     Continuation getContinuation() {
         return cont;
+    }
+
+    // only invoked when inovke continuation on current thread
+    // no race
+    Continuation getThreadContinuation() {
+        if (threadCont == null) {
+            threadCont = new Continuation();
+        }
+        return threadCont;
     }
 
     /**

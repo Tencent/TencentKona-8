@@ -1630,36 +1630,38 @@ JavaThread::JavaThread(ThreadFunction entry_point, size_t stack_sz) :
 }
 
 JavaThread::~JavaThread() {
-  guarantee(current_coroutine()->is_thread_coroutine(), "must thread coroutine");
-  while (coroutine_stack_cache() != NULL) {
-    CoroutineStack* stack = coroutine_stack_cache();
-    stack->remove_from_list(coroutine_stack_cache());
-    CoroutineStack::free_stack(stack, this);
-  }
-
-  while(coroutine_list() != NULL) {
-    Coroutine* coro = coroutine_list();
-    if (this != Coroutine::main_thread() && coro->is_continuation()) {
-      guarantee(!coro->is_thread_coroutine(), "not thread coroutine");
-      {
-        MutexLocker ml(Threads_lock);
-        // switch to main thread for now, later coroutine should be kept outside thread
-        // needs threads lock in case main thread is exiting
-        Coroutine::switchFrom_current_thread(coro, Coroutine::main_thread());
-      }
-      continue;
-    }
-    if (TraceCoroutine) {
-      ResourceMark rm;
-      tty->print_cr("[Co]: ClearCoroutine %s(%p) when exit thread %s(%p)", coro->name(), coro, name(), this);
-    }
-	  Coroutine::free_coroutine(coro,this);
-  }
-
-  while (coroutine_stack_list() != NULL) {
-      CoroutineStack* stack = coroutine_stack_list();
-      stack->remove_from_list(coroutine_stack_list());
+  // it could racing issue here that coroutine is switching to other thread
+  // Need fix
+  if (current_coroutine() != NULL) {
+    guarantee(current_coroutine()->is_thread_coroutine(), "must thread coroutine");
+    while (coroutine_stack_cache() != NULL) {
+      CoroutineStack* stack = coroutine_stack_cache();
+      stack->remove_from_list(coroutine_stack_cache());
       CoroutineStack::free_stack(stack, this);
+    }
+    while(coroutine_list() != NULL) {
+      Coroutine* coro = coroutine_list();
+      if (this != Coroutine::main_thread() && coro->is_continuation()) {
+        guarantee(!coro->is_thread_coroutine(), "not thread coroutine");
+        {
+          MutexLocker ml(Threads_lock);
+          // switch to main thread for now, later coroutine should be kept outside thread
+          // needs threads lock in case main thread is exiting
+          Coroutine::switchFrom_current_thread(coro, Coroutine::main_thread());
+        }
+        continue;
+      }
+      if (TraceCoroutine) {
+        ResourceMark rm;
+        tty->print_cr("[Co]: ClearCoroutine %s(%p) when exit thread %s(%p)", coro->name(), coro, name(), this);
+      }
+      Coroutine::free_coroutine(coro,this);
+    }
+    while (coroutine_stack_list() != NULL) {
+        CoroutineStack* stack = coroutine_stack_list();
+        stack->remove_from_list(coroutine_stack_list());
+        CoroutineStack::free_stack(stack, this);
+    }
   }
 
   if (TraceThreadEvents) {
@@ -1711,7 +1713,7 @@ void JavaThread::run() {
   // Record real stack base and size.
   this->record_stack_base_and_size();
 
-  this->initialize_coroutine_support();
+  //this->initialize_coroutine_support();
 
   // Initialize thread local storage; set before calling MutexLocker
   this->initialize_thread_local_storage();
@@ -2073,13 +2075,15 @@ JavaThread* JavaThread::active() {
 }
 
 bool JavaThread::is_lock_owned(address adr) const {
-  if (_current_coroutine->is_thread_coroutine()) {
+  if (_current_coroutine == NULL || _current_coroutine->is_thread_coroutine()) {
     bool res = Thread::is_lock_owned(adr);
-    assert(res == _current_coroutine->is_lock_owned(adr), "thread coroutine has different with thread");
+    assert(_current_coroutine == NULL || res == _current_coroutine->is_lock_owned(adr),
+      "thread coroutine has different with thread");
     if (res) {
       return true;
     }
-    assert(_current_coroutine->monitor_chunks() == NULL, "thread coroutine should not have monitor block");
+    assert(_current_coroutine == NULL || _current_coroutine->monitor_chunks() == NULL,
+      "thread coroutine should not have monitor block");
     for (MonitorChunk* chunk = monitor_chunks(); chunk != NULL; chunk = chunk->next()) {
       if (chunk->contains(adr)) return true;
     }
@@ -2091,7 +2095,7 @@ bool JavaThread::is_lock_owned(address adr) const {
 
 
 void JavaThread::add_monitor_chunk(MonitorChunk* chunk) {
-  if (!_current_coroutine->is_thread_coroutine()) {
+  if (_current_coroutine != NULL && !_current_coroutine->is_thread_coroutine()) {
     _current_coroutine->add_monitor_chunk(chunk);
     return;
   }
@@ -2100,7 +2104,7 @@ void JavaThread::add_monitor_chunk(MonitorChunk* chunk) {
 }
 
 void JavaThread::remove_monitor_chunk(MonitorChunk* chunk) {
-  if (!_current_coroutine->is_thread_coroutine()) {
+  if (_current_coroutine != NULL  && !_current_coroutine->is_thread_coroutine()) {
     _current_coroutine->remove_monitor_chunk(chunk);
     return;
   }
@@ -2689,11 +2693,13 @@ void JavaThread::frames_do(void f(frame*, const RegisterMap* map)) {
   // traverse the coroutine stack frames
   {
     MutexLockerEx ml(coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
-    Coroutine* current = _coroutine_list;
-    do {
-      current->frames_do(f);
-      current = current->next();
-    } while (current != _coroutine_list);
+    if (_coroutine_list != NULL) {
+      Coroutine* current = _coroutine_list;
+      do {
+        current->frames_do(f);
+        current = current->next();
+      } while (current != _coroutine_list);
+    }
   }
 }
 
@@ -2860,11 +2866,13 @@ void JavaThread::oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) 
   
   {
     MutexLockerEx ml(coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
-    Coroutine* current = _coroutine_list;
-    do {
-      current->oops_do(f, cld_f, cf);
-      current = current->next();
-    } while (current != _coroutine_list);
+    if (_coroutine_list != NULL) {
+      Coroutine* current = _coroutine_list;
+      do {
+        current->oops_do(f, cld_f, cf);
+        current = current->next();
+      } while (current != _coroutine_list);
+    }
   }
 
   // callee_target is never live across a gc point so NULL it here should
@@ -2909,11 +2917,13 @@ void JavaThread::nmethods_do(CodeBlobClosure* cf) {
 
   {
     MutexLockerEx ml(coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
-    Coroutine* current = _coroutine_list;
-    do {
-      current->nmethods_do(cf);
-      current = current->next();
-    } while (current != _coroutine_list);
+    if (_coroutine_list != NULL) {
+      Coroutine* current = _coroutine_list;
+      do {
+        current->nmethods_do(cf);
+        current = current->next();
+      } while (current != _coroutine_list);
+    }
   }
 }
 
@@ -2934,11 +2944,13 @@ void JavaThread::metadata_do(void f(Metadata*)) {
 
   {
     MutexLockerEx ml(coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
-    Coroutine* current = _coroutine_list;
-    do {
-      current->metadata_do(f);
-      current = current->next();
-    } while (current != _coroutine_list);
+    if (_coroutine_list != NULL) {
+      Coroutine* current = _coroutine_list;
+      do {
+        current->metadata_do(f);
+        current = current->next();
+      } while (current != _coroutine_list);
+    }
   }
 }
 
@@ -2971,13 +2983,15 @@ void JavaThread::print_thread_state() const {
 
 void JavaThread::print_coroutine_on(outputStream* st, bool printstack) const {
   MutexLockerEx ml(coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
-	Coroutine* current = _coroutine_list;
-	do {
-		current->print_on(st);
-		if(printstack)
-			current->print_stack_on(st);
-		current = current->next();
-	} while (current != _coroutine_list);
+  Coroutine* current = _coroutine_list;
+  if (current) {
+    do {
+      current->print_on(st);
+      if(printstack)
+        current->print_stack_on(st);
+      current = current->next();
+    } while (current != _coroutine_list);
+  }
 }
 
 // Called by Threads::print() for VM_PrintThreads operation
@@ -3552,7 +3566,7 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   // stacksize. This adjusted size is what is used to figure the placement
   // of the guard pages.
   main_thread->record_stack_base_and_size();
-  main_thread->initialize_coroutine_support();
+  //main_thread->initialize_coroutine_support();
   main_thread->initialize_thread_local_storage();
 
   main_thread->set_active_handles(JNIHandleBlock::allocate_block());
@@ -4858,7 +4872,8 @@ void Threads::verify() {
 
 void JavaThread::initialize_coroutine_support() {
   // no lock in thread initialization
-  CoroutineStack::create_thread_stack(this)->insert_into_list(_coroutine_stack_list);
+  CoroutineStack* stack = CoroutineStack::create_thread_stack(this);
+  stack->insert_into_list(_coroutine_stack_list);
   char buff[64];
 #ifdef TARGET_OS_FAMILY_windows
   _snprintf(buff, sizeof(buff), INTPTR_FORMAT "_thread_coroutine", this);
@@ -4867,8 +4882,9 @@ void JavaThread::initialize_coroutine_support() {
 #endif
   buff[63] = '\0';
   // no lock in thread initialization
-  Coroutine::create_thread_coroutine(buff,this, _coroutine_stack_list)->insert_into_list(_coroutine_list);
-  _current_coroutine = _coroutine_list;
+  Coroutine* coro = Coroutine::create_thread_coroutine(buff,this, stack);
+  coro->insert_into_list(_coroutine_list);
+  _current_coroutine = coro;
   OrderAccess::release();
 }
 

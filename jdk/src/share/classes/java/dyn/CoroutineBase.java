@@ -94,9 +94,9 @@ public abstract class CoroutineBase {
                     + Thread.currentThread().getName() + " carrier " + Thread.currentCarrierThread().getName());
             }
 			// use Thread.currentThread().getCoroutineSupport() because we might have been migrated to another thread!
-            if (this instanceof Continuation) {
+            /*if (this instanceof Continuation) {
                 Thread.currentCarrierThread().getCoroutineSupport().terminateContinuation();
-            } else if (this instanceof Coroutine) {
+            } else */if (this instanceof Coroutine) {
 				Thread.currentCarrierThread().getCoroutineSupport().terminateCoroutine();
 			} else {
 				Thread.currentCarrierThread().getCoroutineSupport().terminateCallable();
