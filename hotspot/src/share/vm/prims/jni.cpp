@@ -5269,7 +5269,7 @@ _JNI_IMPORT_OR_EXPORT_ jint JNICALL JNI_CreateJavaVM(JavaVM **vm, void **penv, v
     CALL_TEST_FUNC_WITH_WRAPPER_IF_NEEDED(execute_internal_vm_tests);
 #endif
 
-    JavaThread* __the_thread__ = thread;
+    /*JavaThread* __the_thread__ = thread;
     HandleMark hm(THREAD);
     Handle obj(THREAD, thread->threadObj());
     JavaValue result(T_VOID);
@@ -5288,7 +5288,7 @@ _JNI_IMPORT_OR_EXPORT_ jint JNICALL JNI_CreateJavaVM(JavaVM **vm, void **penv, v
         THREAD->clear_pending_exception();
         vm_abort(false);
       }
-    }
+    }*/
 
     // Since this is not a JVM_ENTRY we have to set the thread state manually before leaving.
     ThreadStateTransition::transition_and_fence(thread, _thread_in_vm, _thread_in_native);
@@ -5418,7 +5418,7 @@ static jint attach_current_thread(JavaVM *vm, void **penv, void *_args, bool dae
   thread->set_thread_state(_thread_in_vm);
   // Must do this before initialize_thread_local_storage
   thread->record_stack_base_and_size();
-  thread->initialize_coroutine_support();
+  //thread->initialize_coroutine_support();
   thread->initialize_thread_local_storage();
 
   if (!os::create_attached_thread(thread)) {

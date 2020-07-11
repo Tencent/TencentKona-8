@@ -49,23 +49,9 @@ void CoroutineStack::add_stack_frame(void* frames, int* depth, javaVFrame* jvf) 
 LONG WINAPI topLevelExceptionFilter(struct _EXCEPTION_POINTERS* exceptionInfo);
 
 
-void coroutine_start(Coroutine* coroutine, jobject coroutineObj) {
+void coroutine_start(Coroutine* coroutine, jobject contObj) {
   coroutine->thread()->set_thread_state(_thread_in_vm);
-
-  if (false/*UseVectoredExceptions*/) { //all definition for this macro is false and its only defind on linux but use on windows..so..
-    // If we are using vectored exception we don't need to set a SEH
-    coroutine->run(coroutineObj);
-  }
-  else {
-    // Install a win32 structured exception handler around every thread created
-    // by VM, so VM can genrate error dump when an exception occurred in non-
-    // Java thread (e.g. VM thread).
-    __try {
-       coroutine->run(coroutineObj);
-    } __except(topLevelExceptionFilter((_EXCEPTION_POINTERS*)_exception_info())) {
-    }
-  }
-
+  coroutine->run(contObj);
   ShouldNotReachHere();
 }
 #endif
@@ -108,9 +94,9 @@ void Coroutine::TerminateCoroutineObj(jobject coroutine)
 {
   
   oop old_oop = JNIHandles::resolve(coroutine);
-  Coroutine* coro = (Coroutine*)java_dyn_CoroutineBase::data(old_oop);
+  Coroutine* coro = (Coroutine*)java_lang_Continuation::data(old_oop);
   assert(coro != NULL, "NULL old coroutine in switchToAndTerminate");
-  java_dyn_CoroutineBase::set_data(old_oop, 0);
+  java_lang_Continuation::set_data(old_oop, 0);
   TerminateCoroutine(coro);
 }
 
@@ -153,8 +139,8 @@ void Coroutine::run(jobject coroutine) {
 	set_has_javacall(true);
     JavaCalls::call_virtual(&result,
                             obj,
-                            KlassHandle(_thread, SystemDictionary::coroutine_base_klass()),
-                            vmSymbols::startInternal_method_name(),
+                            KlassHandle(_thread, SystemDictionary::continuation_klass()),
+                            vmSymbols::cont_start_method_name(),
                             vmSymbols::void_method_signature(),
                             _thread);
   }
@@ -222,7 +208,7 @@ void Coroutine::ReclaimJavaCallStack(Coroutine* coro) {
 
 void Coroutine::SetJavaCallWrapper(JavaThread* thread, JavaCallWrapper* jcw) {
   Coroutine* co = thread->current_coroutine();
-  if(co->_JavaCallWrapper == NULL)	{
+  if(co && co->_JavaCallWrapper == NULL)	{
     guarantee(jcw != NULL, "NULL JavaCallWrapper");
     co->_JavaCallWrapper = jcw;
   }
@@ -349,9 +335,9 @@ void Coroutine::SetCallInfo(Thread* thread,CallInfo* ci)
 {
 	if(!thread->is_Java_thread()) return;
 	JavaThread* jt = (JavaThread*)thread;
-	if(jt->current_coroutine()->_CallInfo == NULL)
-	{
-		jt->current_coroutine()->_CallInfo = ci;
+  Coroutine* cur = jt->current_coroutine();
+	if(cur != NULL && cur->_CallInfo == NULL)	{
+		cur->_CallInfo = ci;
 	}
 }
 
@@ -734,18 +720,125 @@ JVM_ENTRY(jint, CONT_isPinned0(JNIEnv* env, jclass klass, long data)) {
 }
 JVM_END
 
+JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jstring name, jobject cont, long stackSize)) {
+  DEBUG_CORO_PRINT("CONT_createContinuation\n");
+  assert(cont != NULL, "cannot create coroutine with NULL Coroutine object");
+
+  if (stackSize < 0) {
+    guarantee(thread->current_coroutine() == NULL, "current thread already has default continuation");
+    thread->initialize_coroutine_support();
+    if (TraceCoroutine) {
+      tty->print_cr("CONT_createContinuation: create thread continuation %p", thread->current_coroutine());
+    }
+    return (jlong)thread->current_coroutine();
+  }
+
+  // illegal arguments is checked in library side
+  // 0 means default stack size
+  // -1 means no stack, this is continuation for kernel thread
+  // Stack is cached in thread local now, later will be cached in bucket sized list
+  // now cache is not cosiderering different size, for example:
+  // 1. DefaultCoroutineStackSize is 256K
+  // 2. if user allocate stack as 8k and freed, 8K stack will be in cache too and reused as default size
+  // This will be solved later with global coroutine cache
+  CoroutineStack* stack = NULL;
+  if (stackSize == 0) {
+    {
+      MutexLockerEx ml(thread->coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
+      if (thread->coroutine_stack_cache_size() > 0) {
+        stack = thread->coroutine_stack_cache();
+        stack->remove_from_list(thread->coroutine_stack_cache());
+        thread->coroutine_stack_cache_size()--;
+        DEBUG_CORO_ONLY(tty->print("reused coroutine stack at %08x\n", stack->stack_base()));
+        guarantee(stack != NULL, "get NULL from cache");
+        stack->insert_into_list(thread->coroutine_stack_list());
+      }
+    }
+  }
+  if (stack == NULL) {
+    stack = CoroutineStack::create_stack(thread, stackSize);
+    if (stack == NULL) {
+      THROW_0(vmSymbols::java_lang_OutOfMemoryError());
+    }
+    MutexLockerEx ml(thread->coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
+    stack->insert_into_list(thread->coroutine_stack_list());
+  }
+
+  Coroutine* coro = Coroutine::create_coroutine(NULL, thread, stack, JNIHandles::resolve(cont));
+  if (coro == NULL) {
+    ThreadInVMfromNative tivm(thread);
+    HandleMark mark(thread);
+    THROW_0(vmSymbols::java_lang_OutOfMemoryError());
+  }
+  {
+    MutexLockerEx ml(thread->coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
+    coro->insert_into_list(thread->coroutine_list());
+  }
+  if (TraceCoroutine) {
+    tty->print_cr("CONT_createContinuation: create continuation %p", coro);
+  }
+  return (jlong)coro;
+}
+JVM_END
+
+JVM_ENTRY(void, CONT_switchTo(JNIEnv* env, jclass klass, jobject from, jobject to)) {
+  ShouldNotReachHere();
+}
+JVM_END
+
+JVM_ENTRY(void, CONT_switchToAndTerminate(JNIEnv* env, jclass klass, jobject from, jobject to)) {
+  Coroutine::TerminateCoroutineObj(from);
+}
+JVM_END
+
+JVM_ENTRY(jobjectArray, CONT_dumpStackTrace(JNIEnv *env, jclass klass, jobject cont))
+  oop contOop = JNIHandles::resolve(cont);
+  Coroutine* coro = (Coroutine*)java_lang_Continuation::data(contOop);
+  assert(coro != NULL, "target coroutine is NULL in CoroutineSupport_dumpVirtualThreads");
+
+  VirtualThreadStackTrace* res = new VirtualThreadStackTrace(coro);
+  res->dump_stack();
+
+  Handle stacktraces = res->allocate_fill_stack_trace_element_array(thread);
+  return (jobjectArray)JNIHandles::make_local(env, stacktraces());
+JVM_END
+
 #define CC (char*)  /*cast a literal from (const char*)*/
 #define FN_PTR(f) CAST_FROM_FN_PTR(void*, &f)
+#define JLSTR  "Ljava/lang/String;"
+#define JLSTE  "Ljava/lang/StackTraceElement;"
+#define JLCONT "Ljava/lang/Continuation;"
 
 static JNINativeMethod CONT_methods[] = {
-    {CC"isPinned0",        CC"(J)I", FN_PTR(CONT_isPinned0)},
+  {CC"isPinned0",                 CC"(J)I", FN_PTR(CONT_isPinned0)},
+  {CC"createContinuation",        CC"("JLSTR JLCONT "J)J", FN_PTR(CONT_createContinuation)},
+  {CC"switchTo",                  CC"("JLCONT JLCONT")V", FN_PTR(CONT_switchTo)},
+  {CC"switchToAndTerminate",      CC"("JLCONT JLCONT")V", FN_PTR(CONT_switchToAndTerminate)},
+  {CC"dumpStackTrace",            CC"("JLCONT ")[" JLSTE, FN_PTR(CONT_dumpStackTrace)},
 };
 
+static const int switchToIndex = 2;
+static const int switchToAndTerminateIndex = 3;
+
+static void initializeForceWrapper(JNIEnv *env, jclass cls, JavaThread* thread, int index) {
+  jmethodID id = env->GetStaticMethodID(cls, CONT_methods[index].name, CONT_methods[index].signature);
+  {
+    ThreadInVMfromNative tivfn(thread);
+    methodHandle method(Method::resolve_jmethod_id(id));
+    AdapterHandlerLibrary::create_native_wrapper(method);
+    // switch method doesn't have real implemenation, when JVMTI is on and JavaThread::interp_only_mode is true
+    // it crashes when execute registered native method, as empty or incorrect.
+    // set i2i as point to i2c entry, force it execute native wrapper
+    method->set_interpreter_entry(method->from_interpreted_entry());
+  }
+}
+
 JVM_ENTRY(void, JVM_RegisterContinuationNativeMethods(JNIEnv *env, jclass cls)) {
-    Thread* thread = Thread::current();
     assert(thread->is_Java_thread(), "");
     ThreadToNativeFromVM trans((JavaThread*)thread);
     int status = env->RegisterNatives(cls, CONT_methods, sizeof(CONT_methods)/sizeof(JNINativeMethod));
     guarantee(status == JNI_OK && !env->ExceptionOccurred(), "register java.lang.Continuation natives");
+    initializeForceWrapper(env, cls, thread, switchToIndex);
+    initializeForceWrapper(env, cls, thread, switchToAndTerminateIndex);
 }
 JVM_END

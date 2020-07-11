@@ -25,7 +25,6 @@
 
 package java.lang;
 import sun.misc.Unsafe;
-import java.dyn.*;
 
 /**
  * Continuation implemenation use JKU coroutine runtime.
@@ -34,12 +33,13 @@ import java.dyn.*;
  * running current continuation. Try force yield will try to yield continuation
  * at next safepoint.
  */
-public class Continuation extends CoroutineBase {
+public class Continuation {
     private static final Unsafe unsafe = Unsafe.getUnsafe();
 
     private static final boolean TRACE = sun.misc.VM.getSavedProperty("java.lang.Continuation.trace") != null;
     private static final boolean DEBUG = TRACE | sun.misc.VM.getSavedProperty("java.lang.Continuation.debug") != null;
     private static final long mountedOffset;
+    private static final ContinuationScope kernelScope = new ContinuationScope("Kernel");
 
     static {
         try {
@@ -70,8 +70,6 @@ public class Continuation extends CoroutineBase {
         return Thread.currentCarrierThread();
     }
 
-    private Runnable target;
-
     /* While the native JVM code is aware that every continuation has a scope, it is, for the most part,
      * oblivious to the continuation hierarchy. The only time this hierarchy is traversed in native code
      * is when a hierarchy of continuations is mounted on the native stack.
@@ -83,22 +81,27 @@ public class Continuation extends CoroutineBase {
      * If parent cannot continue while child continuation is blocking, direclty yield both child and parent.
      */
     private final ContinuationScope scope;
+    private final Runnable target;
+    private long data;
     private Continuation parent;   // null for native stack -- Kona NYI
     private Continuation child;    // non-null when we're yielded in a child continuation -- Kona NYI
-    private CoroutineBase caller;  // could be thread coroutine or parent continuation -- Kona must be thread coroutine now
-
-    private boolean done;
     private volatile int mounted = 0;  // 1 means true
-
+    private boolean done;
     private short cs; // critical section semaphore
-    private Object[] scopedCache;   // similar continuation level thread local, but no weak reference -- Kona NYI
+    private int switchResult;
 
-    protected final void runTarget() {
+    private final void start() {
+        assert Thread.currentCarrierThread() == Thread.currentThread() : "start in nested vritual thread";
         try {
             target.run();
+        } catch (Throwable t) {
+            System.out.println("stop coroutine with exception" + this);
+            t.printStackTrace();
         } finally {
             done = true;
+            switchToAndTerminate(this, parent);
         }
+        assert false : "should not reach here";
     }
     /**
      * Construct a Continuation
@@ -106,7 +109,7 @@ public class Continuation extends CoroutineBase {
      * @param target TBD
      */
     public Continuation(ContinuationScope scope, Runnable target) {
-        this(scope, -1, target);
+        this(scope, 0, target);
     }
     
     /**
@@ -116,10 +119,16 @@ public class Continuation extends CoroutineBase {
      * @param stackSize in bytes
      */
     public Continuation(ContinuationScope scope, int stackSize, Runnable target) {
-        super();
         this.scope = scope;
         this.target = target;
-        currentCarrierThread().getCoroutineSupport().addContinuation("cont" ,this, stackSize);
+        data = createContinuation(null, this, stackSize);
+    }
+
+    // default continuation for current kernel thread thread
+    Continuation() {
+        this.scope = kernelScope;
+        this.target = null;
+        data = createContinuation("kernel", this, -1);
     }
 
     @Override
@@ -149,17 +158,13 @@ public class Continuation extends CoroutineBase {
         return cont;*/
     }
     
-    public CoroutineBase getCaller() {
-        return caller;
-    }
-
     /**
      * TBD
      * @return TBD
      * @throws IllegalStateException if the continuation is mounted
      */
     public StackTraceElement[] getStackTrace() {
-        return null;
+        return Continuation.dumpStackTrace(this);
     }
 
     private void mount() {
@@ -186,68 +191,47 @@ public class Continuation extends CoroutineBase {
      *             when invoke Contc.run, abort
      */
     public final void run() {
-        while (true) {
-            if (TRACE) System.out.println("\n++++++++++++++++++++++++++++++");
-
-            mount();
-
-            if (done)
-                throw new IllegalStateException("Continuation terminated");
+        if (TRACE) System.out.println("\n++++++++++++++++++++++++++++++");
+        mount();
+        if (done)
+            throw new IllegalStateException("Continuation terminated");
+        if (parent != null)
+            throw new IllegalStateException("parent continuation set");
             
-            assert caller == null : "Caller coroutine is not null when run";
-            
-            Thread t = currentCarrierThread();
-            if (parent != null) {
-                if (parent != t.getContinuation())
-                    throw new IllegalStateException();
-            } else {
-                parent = t.getContinuation();
+        Thread t = currentCarrierThread();
+        parent = t.getThreadContinuation();
+        t.setContinuation(this);
+        try {
+            if (TRACE) System.out.println("Continuation run before call");
+            switchTo(parent, this);
+            if (switchResult != 0) {
+                parent = null;
+                onPinned0(switchResult);
+                if (TRACE) System.out.println("Continuation run after pin");
             }
-            CoroutineSupport support = currentCarrierThread().getCoroutineSupport();
-            caller = parent;
-            if (caller == null) {
-                caller = support.getCurrent();
-            }
-            assert caller != null : "Caller coroutine is null before run";
-            t.setContinuation(this);
-            try {
-                if (TRACE) System.out.println("Continuation run before call");
-                int result = support.continuationSwtich(caller, this);
-                if (result != 0) {
-                    caller= null;
-                    onPinned0(result);
-                }
-                if (TRACE) System.out.println("Continuation run after call");
-            } catch (Throwable e) {
-                done = true;
-                e.printStackTrace();
-            } finally {
-                fence();
-                assert t == currentCarrierThread() : "thread change";
-                caller = null;
-                t.setContinuation(this.parent);
-                unmount();
-                return;
-            }
+        } catch (Throwable e) {
+            done = true;
+            e.printStackTrace();
+        } finally {
+            fence();
+            assert t == currentCarrierThread() : "thread change";
+            parent = null;
+            t.setContinuation(null);
+            unmount();
+            return;
         }
     }
     
     // yield from current caller to target
     // if target is null, yield to thread coroutine
-    private final boolean yield0(CoroutineBase target) {
-        CoroutineSupport support = currentCarrierThread().getCoroutineSupport();
-        assert target != null : "target is null in Continuation.yield0";
+    private final boolean yield0() {
         if (cs > 0) {
             onPinned(Pinned.CRITICAL_SECTION);
             return false;
         }
-        assert caller == target : "unexpected";
-        caller = null;
-        // System.out.println("before yield");
-        int result = support.continuationSwtich(this, target);
-        if (result != 0) {
-            caller = target;
-            onPinned0(result);
+        switchTo(this, parent);
+        if (switchResult != 0) {
+            onPinned0(switchResult);
             return false;
         }
         // System.out.println("after yield");
@@ -282,7 +266,7 @@ public class Continuation extends CoroutineBase {
             parent.child = cur;
             cur = parent;
         }*/
-        return cont.yield0(cont.caller);
+        return cont.yield0();
     }
  
     private void onPinned0(int reason) {
@@ -384,14 +368,20 @@ public class Continuation extends CoroutineBase {
         if (cs > 0) {
             return true;
         }
-        assert getData() != 0 : "uninitialized";
-        return isPinned0(getData()) != 0;
+        if (data == 0) {
+            return false;
+        }
+        return isPinned0(data) != 0;
     }
 
     // return int indicate pin reason
     // check runtime structure if it has monitor/jni frame
-    private static native int isPinned0(long data);
     private static native void registerNatives();
+    private static native int isPinned0(long data);
+    private static native long createContinuation(String name, Continuation cont, long stackSize);
+    private static native void switchTo(Continuation from, Continuation to);
+    private static native void switchToAndTerminate(Continuation from, Continuation to);
+    private static native StackTraceElement[] dumpStackTrace(Continuation cont);
 
     private boolean fence() {
         unsafe.storeFence();
