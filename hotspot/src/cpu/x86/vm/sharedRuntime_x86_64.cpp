@@ -1726,7 +1726,7 @@ static void gen_special_dispatch(MacroAssembler* masm,
 }
 
 void create_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* oop_maps, int &stack_slots, int total_in_args, BasicType *in_sig_bt, VMRegPair *in_regs, BasicType ret_type, bool terminate);
-
+void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* oop_maps, int &stack_slots, int total_in_args, BasicType *in_sig_bt, VMRegPair *in_regs, BasicType ret_type, bool terminate);
 
 // ---------------------------------------------------------------------------
 // Generate a native wrapper for a given method.  The method takes arguments
@@ -2022,6 +2022,10 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     create_switchTo_contents(masm, start, oop_maps, stack_slots, total_in_args, in_sig_bt, in_regs, ret_type, true);
   } else if (method->intrinsic_id() == vmIntrinsics::_switchToAndExit) {
     create_switchTo_contents(masm, start, oop_maps, stack_slots, total_in_args, in_sig_bt, in_regs, ret_type, true);
+  } else if (method->intrinsic_id() == vmIntrinsics::_contSwitchTo) {
+    continuation_switchTo_contents(masm, start, oop_maps, stack_slots, total_in_args, in_sig_bt, in_regs, ret_type, false);
+  } else if (method->intrinsic_id() == vmIntrinsics::_contSwitchToAndTerminate) {
+    continuation_switchTo_contents(masm, start, oop_maps, stack_slots, total_in_args, in_sig_bt, in_regs, ret_type, true);
   }
 
   // Generate a new frame for the wrapper.
@@ -2547,7 +2551,8 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
 
   // Return
   if (method->intrinsic_id() == vmIntrinsics::_switchToAndTerminate ||
-      method->intrinsic_id() == vmIntrinsics::_switchToAndExit) {
+      method->intrinsic_id() == vmIntrinsics::_switchToAndExit ||
+      method->intrinsic_id() == vmIntrinsics::_contSwitchToAndTerminate) {
 
     Label normal;
     __ lea(rcx, RuntimeAddress((unsigned char*)coroutine_start));
@@ -4424,6 +4429,178 @@ MacroAssembler* debug_line(MacroAssembler* masm, int l) {
 */    masm->movl(r13, l);
     return masm;
 }
+
+/*
+ * switch from current continuation to target continuation in following method
+ * private static native void switchTo(Continuation current, Continuation target);
+ * private static native void switchToAndTerminate(Continuation current, Continuation target);
+ *
+ * target_coroutine in "rdx" and current coroutine in "rsi" in runtime ABI first two arguments.
+ * 1. monitor lock/JNI check, if lock is hold, JNI frame present on stack, no switch and pinned
+ * 2. if switch target continuation on other thread, perform stack/coroutine switch
+ *    TODO: if coroutine and stack is managed globally, no need perform switch
+ * 3. if terminate, ReclaimJavaCallStack
+ * 4. Save old coroutine context
+ * 5. Restore new coroutine context
+ * 6. If normal switch, return and execute in new coroutine
+ *    6.1 first switch, setup parameters
+ *    6.2 not first, no actions
+ * 7. If terminate, invoke terminate on current thread
+ */
+static const int cont_pin_monitor = 3;
+static const int cont_pin_jni = 2;
+void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* oop_maps, int &stack_slots, int total_in_args,
+                                    BasicType *in_sig_bt, VMRegPair *in_regs, BasicType ret_type, bool terminate) {
+  assert(total_in_args == 2, "wrong number of arguments");
+
+  if (j_rarg0 != rsi) {
+    __ movptr(rsi, j_rarg0);
+  }
+  if (j_rarg1 != rdx) {
+    __ movptr(rdx, j_rarg1);
+  }
+
+  Register thread = r15;
+  Register target_coroutine = rdx;
+  Register old_coroutine_obj = rsi;
+  Register temp = r8;
+
+  // check if continuation is pinned, return pinned result
+  // terminate must happen in Continuation.start method no JNI and lock
+  if (terminate == false) {
+    Label lockOK, check_JNI_frame;
+    __ movl(temp, Address(thread, in_bytes(Thread::locksAcquired_offset())));
+    __ testl(temp, temp);
+    __ jcc(Assembler::zero, check_JNI_frame);
+    __ movl(Address(old_coroutine_obj, java_lang_Continuation::get_switch_result_offset()), 3);
+    __ ret(0);
+    __ bind(check_JNI_frame);
+    __ movptr(temp, Address(old_coroutine_obj, java_lang_Continuation::get_data_offset()));
+    __ movl(temp, Address(temp, Coroutine::jni_frame_offset()));
+    __ testl(temp, temp);
+    __ jcc(Assembler::zero, lockOK);
+    __ movl(Address(old_coroutine_obj, java_lang_Continuation::get_switch_result_offset()), 2);
+    __ ret(0);
+    __ bind(lockOK);
+  }
+  // push the current IP and frame pointer onto the stack
+  __ push(rbp);
+
+  // check that we're dealing with sane objects...
+  __ movptr(target_coroutine, Address(target_coroutine, java_lang_Continuation::get_data_offset()));
+  // check target_coroutine's thread is same with current thread
+  {
+    Label finish_switch_thread;
+    __ movptr(temp, Address(target_coroutine, in_bytes(Coroutine::thread_offset())));
+    __ cmpptr(temp, thread);
+    __ jcc(Assembler::equal, finish_switch_thread);
+    __ SwitchJavaCallStack(target_coroutine);
+    __ bind(finish_switch_thread);
+  }
+
+  // save old continuation
+  // 1. if terminate invoke Coroutine::ReclaimJavaCallStack
+  // 2. save last handle mark
+  // 3. save active handles offset
+  // 4. save rsp
+  {
+    //////////////////////////////////////////////////////////////////////////
+    // store information into the old coroutine's object
+    //
+    // valid registers: rsi = old Coroutine, rdx = target Coroutine
+    Register old_coroutine = r9;
+    Register old_stack = r10;
+
+    // check that we're dealing with sane objects...
+    DEBUG_ONLY(stop_if_null(masm, old_coroutine_obj, "null old_coroutine"));
+    __ movptr(old_coroutine, Address(old_coroutine_obj, java_lang_Continuation::get_data_offset()));
+    DEBUG_ONLY(stop_if_null(masm, old_coroutine, "old_coroutine without data"));
+	  if(terminate)	{
+      //if terminate reclaim old coroutine's javacall stack must reclain before switch
+      __ ReclaimJavaCallStack(old_coroutine);
+    }
+    __ movptr(old_stack, Address(old_coroutine, Coroutine::stack_offset()));
+    __ movl(Address(old_coroutine, Coroutine::state_offset()) , Coroutine::_onstack);
+    __ movptr(temp, Address(thread, Thread::last_handle_mark_offset()));
+    __ movptr(Address(old_coroutine, Coroutine::last_handle_mark_offset()), temp);
+    __ movptr(temp, Address(thread, Thread::active_handles_offset()));
+    __ movptr(Address(old_coroutine, Coroutine::active_handles_offset()), temp);
+#ifdef ASSERT
+    __ movl(temp, Address(thread, JavaThread::java_call_counter_offset()));
+    __ movl(Address(old_coroutine, Coroutine::java_call_counter_offset()), temp);
+#endif
+    __ movptr(Address(old_stack, CoroutineStack::last_sp_offset()), rsp);
+  }
+  Register target_stack = r12;
+  __ movptr(target_stack, Address(target_coroutine, Coroutine::stack_offset()));
+
+  {
+    //////////////////////////////////////////////////////////////////////////
+    // perform the switch to the new stack
+    //
+    // valid registers: rdx = target Coroutine
+
+    __ movl(Address(target_coroutine, Coroutine::state_offset()), Coroutine::_current);
+	  __ movptr(Address(thread,JavaThread::current_coro_offset()),target_coroutine);
+    {
+      Register temp2 = r9;
+      // set new handle and resource areas
+      __ movptr(temp, Address(target_coroutine, Coroutine::handle_area_offset()));
+      __ movptr(Address(thread, Thread::handle_area_offset()), temp);
+      __ movptr(temp, Address(target_coroutine, Coroutine::resource_area_offset()));
+      __ movptr(Address(thread, Thread::resource_area_offset()), temp);
+      __ movptr(temp, Address(target_coroutine, Coroutine::last_handle_mark_offset()));
+      __ movptr(Address(thread, Thread::last_handle_mark_offset()), temp);
+      __ movptr(temp, Address(target_coroutine, Coroutine::metadata_handles_offset()));
+      __ movptr(Address(thread,Thread::metadata_handles_offset()) , temp);
+      __ movptr(temp, Address(target_coroutine, Coroutine::active_handles_offset()));
+      __ movptr(Address(thread, Thread::active_handles_offset()), temp);
+#ifdef ASSERT
+      __ movl(temp, Address(target_coroutine, Coroutine::java_call_counter_offset()));
+      __ movl(Address(thread, JavaThread::java_call_counter_offset()), temp);
+      __ movl(Address(target_coroutine, Coroutine::java_call_counter_offset()), 0);
+#endif
+
+      // update the thread's stack base and size
+      __ movptr(temp, Address(target_stack, CoroutineStack::stack_base_offset()));
+      __ movptr(Address(thread, JavaThread::stack_base_offset()), temp);
+      __ movl(temp2, Address(target_stack, CoroutineStack::stack_size_offset()));
+      __ movl(Address(thread, JavaThread::stack_size_offset()), temp2);
+    }
+    // restore the stack pointer
+    __ movptr(temp, Address(target_stack, CoroutineStack::last_sp_offset()));
+    __ movptr(rsp, temp);
+    __ pop(rbp);
+
+    if (!terminate) {
+      //////////////////////////////////////////////////////////////////////////
+      // normal case (resume immediately)
+      // this will reset r12
+      __ reinit_heapbase();
+
+      Label normal;
+      __ lea(rcx, RuntimeAddress((unsigned char*)coroutine_start));
+      __ cmpq(Address(rsp, 0), rcx);
+      __ jcc(Assembler::notEqual, normal);
+      // copy on stack parameters as coroutine_start register parameters
+      __ movq(c_rarg0, Address(rsp, HeapWordSize * 2));
+      __ movq(c_rarg1, Address(rsp, HeapWordSize * 3));
+      __ bind(normal);
+      __ ret(0);        // <-- this will jump to the stored IP of the target coroutine
+    } else {
+      //////////////////////////////////////////////////////////////////////////
+      // slow case (terminate old coroutine)
+
+      // this will reset r12
+      __ reinit_heapbase();
+      if (j_rarg0 != rsi) {
+        __ movptr(j_rarg0, rsi);
+      }
+      __ movptr(j_rarg1, 0);
+    }
+  }
+}
+
 
 /*
  * switch from a coroutine to target coroutine in following method

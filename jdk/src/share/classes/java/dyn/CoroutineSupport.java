@@ -420,10 +420,10 @@ public class CoroutineSupport {
  
     // continuation related
     public void addContinuation(String name, CoroutineBase cont, long stacksize) {
-		cont.data = createCoroutine(name, cont, stacksize);
+		/*cont.data = createCoroutine(name, cont, stacksize);
 		if (DEBUG) {
 			System.out.println("add Continuation " + cont + ", data" + cont.data);
-		}
+		}*/
 	}
 
     public int continuationSwtich(CoroutineBase current, CoroutineBase target) {
@@ -447,7 +447,7 @@ public class CoroutineSupport {
     }
     
     void terminateContinuation() {
-		assert currentCoroutine instanceof Continuation;
+	/*	assert currentCoroutine instanceof Continuation;
         Continuation cont = (Continuation)currentCoroutine;
         CoroutineBase caller = cont.getCaller();
 
@@ -455,7 +455,7 @@ public class CoroutineSupport {
 			System.out.println("yieldReturn continuation " + caller + " (" + caller.data + ")");
 		}
         currentCoroutine = caller;
-		switchToAndTerminate(cont, caller);
+		switchToAndTerminate(cont, caller);*/
 	}
 
     public CoroutineBase getThreadCoroutineObj() {

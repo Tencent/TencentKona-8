@@ -1459,6 +1459,26 @@ public:
   friend class JavaClasses;
 };
 
+class java_lang_Continuation: AllStatic {
+private:
+  // Note that to reduce dependencies on the JDK we compute these offsets at run-time.
+  static int data_offset;
+  static int switch_result_offset;
+
+  static void compute_offsets();
+
+public:
+  // Accessors
+  static jlong data(oop obj);
+  static void set_data(oop obj, jlong value);
+
+  static int get_data_offset()    { return data_offset; }
+  static int get_switch_result_offset()    { return switch_result_offset; }
+
+  // Debugging
+  friend class JavaClasses;
+};
+
 // Interface to hard-coded offset checking
 
 class JavaClasses : AllStatic {

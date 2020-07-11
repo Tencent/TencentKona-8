@@ -55,7 +55,7 @@ inline Handle::Handle(Thread* thread, oop obj) {
 static inline Coroutine* get_thread_coroutine(Thread* thread) {
   if (thread->is_Java_thread()) {
     Coroutine* coro = ((JavaThread*)thread)->current_coroutine();
-    if (!coro->is_thread_coroutine()) {
+    if (coro != NULL && !coro->is_thread_coroutine()) {
       return coro;
     }
   }
