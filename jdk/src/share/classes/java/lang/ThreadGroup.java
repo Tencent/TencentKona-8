@@ -57,6 +57,8 @@ public
 class ThreadGroup implements Thread.UncaughtExceptionHandler {
     private final ThreadGroup parent;
     String name;
+    private final boolean destroyable;
+
     int maxPriority;
     boolean destroyed;
     boolean daemon;
@@ -77,6 +79,7 @@ class ThreadGroup implements Thread.UncaughtExceptionHandler {
         this.name = "system";
         this.maxPriority = Thread.MAX_PRIORITY;
         this.parent = null;
+        this.destroyable = true;
     }
 
     /**
@@ -114,15 +117,20 @@ class ThreadGroup implements Thread.UncaughtExceptionHandler {
      * @since   JDK1.0
      */
     public ThreadGroup(ThreadGroup parent, String name) {
-        this(checkParentAccess(parent), parent, name);
+        this(checkParentAccess(parent), parent, name, true);
     }
 
-    private ThreadGroup(Void unused, ThreadGroup parent, String name) {
+    ThreadGroup(ThreadGroup parent, String name, boolean destroyable) {
+        this(null, parent, name, destroyable);
+    }
+
+    private ThreadGroup(Void unused, ThreadGroup parent, String name, boolean destroyable) {
         this.name = name;
         this.maxPriority = parent.maxPriority;
         this.daemon = parent.daemon;
         this.vmAllowSuspension = parent.vmAllowSuspension;
         this.parent = parent;
+        this.destroyable = destroyable;
         parent.add(this);
     }
 
@@ -770,6 +778,9 @@ class ThreadGroup implements Thread.UncaughtExceptionHandler {
      * @since      JDK1.0
      */
     public final void destroy() {
+        if (!destroyable)
+            throw new UnsupportedOperationException();
+
         int ngroupsSnapshot;
         ThreadGroup[] groupsSnapshot;
         synchronized (this) {
@@ -944,7 +955,7 @@ class ThreadGroup implements Thread.UncaughtExceptionHandler {
             if (nthreads == 0) {
                 notifyAll();
             }
-            if (daemon && (nthreads == 0) &&
+            if (destroyable && daemon && (nthreads == 0) &&
                 (nUnstartedThreads == 0) && (ngroups == 0))
             {
                 destroy();
