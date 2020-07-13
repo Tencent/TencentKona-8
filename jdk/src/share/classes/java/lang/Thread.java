@@ -2132,7 +2132,7 @@ class Thread implements Runnable {
             };
             ThreadGroup root = AccessController.doPrivileged(pa);
 
-            ThreadGroup vgroup = new ThreadGroup(root, "VirtualThreads") {
+            ThreadGroup vgroup = new ThreadGroup(root, "VirtualThreads", false) {
                 @Override
                 @SuppressWarnings({"deprecation", "removal"})
                 public boolean allowThreadSuspension(boolean b) {
@@ -2143,7 +2143,7 @@ class Thread implements Runnable {
             vgroup.setMaxPriority(NORM_PRIORITY);
             THREAD_GROUP = vgroup;
 
-            ThreadGroup subgroup = new ThreadGroup(vgroup, "other");
+            ThreadGroup subgroup = new ThreadGroup(vgroup, "other", false);
             subgroup.setDaemon(true);
             if (System.getSecurityManager() == null) {
                 subgroup.setMaxPriority(NORM_PRIORITY);
