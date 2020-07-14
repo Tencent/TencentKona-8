@@ -123,8 +123,8 @@ void JavaCallWrapper::initialize(JavaThread* thread, JNIHandleBlock* handles, Me
 void JavaCallWrapper::ClearForCoro() {
   // Continuation might invoked and stopped at different threads
   JavaThread* cur_thread = JavaThread::current();
-  assert(_thread == JavaThread::current() ||
-    cur_thread->current_coroutine()->is_continuation(), "must still be the same thread");
+  // TODO: need check caller thread is different or dead's impact
+  // assert(_thread == JavaThread::current(), "must still be the same thread");
 
   // restore previous handle block & Java frame linkage
   JNIHandleBlock *_old_handles = cur_thread->active_handles();

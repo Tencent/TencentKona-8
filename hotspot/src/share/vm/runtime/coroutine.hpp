@@ -88,7 +88,6 @@ public:
 private:
   CoroutineState  _state;
   bool            _is_thread_coroutine;
-  bool            _is_continuation;
 
   CoroutineStack* _stack;
   ResourceArea*   _resource_area;
@@ -149,7 +148,6 @@ public:
   {
 	  return _name;
   }
-  bool is_continuation() const { return _is_continuation; }
   static void switchTo_current_thread(Coroutine* coro);
   static void switchFrom_current_thread(Coroutine* coro, JavaThread* to);
   static JavaThread* main_thread() { return _main_thread; }
