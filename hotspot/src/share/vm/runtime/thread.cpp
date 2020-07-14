@@ -1641,8 +1641,7 @@ JavaThread::~JavaThread() {
     }
     while(coroutine_list() != NULL) {
       Coroutine* coro = coroutine_list();
-      if (this != Coroutine::main_thread() && coro->is_continuation()) {
-        guarantee(!coro->is_thread_coroutine(), "not thread coroutine");
+      if (!coro->is_thread_coroutine() && this != Coroutine::main_thread()) {
         {
           MutexLocker ml(Threads_lock);
           // switch to main thread for now, later coroutine should be kept outside thread
