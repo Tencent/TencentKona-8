@@ -608,28 +608,13 @@
   template(classRedefinedCount_name,                   "classRedefinedCount")                                     \
   template(classLoader_name,                           "classLoader")                                             \
                                                                                                                   \
-  /* coroutine support */                                                                                         \
-  template(java_dyn_CoroutineSupport,                  "java/dyn/CoroutineSupport")                               \
-  template(java_dyn_CoroutineBase,                     "java/dyn/CoroutineBase")                                  \
+  /* continuation support */                                                                                      \
   template(java_lang_Continuation,                     "java/lang/Continuation")                                  \
   template(cont_start_method_name,                     "start")                                                   \
-  template(java_dyn_CoroutineExitException,            "java/dyn/CoroutineExitException")                         \
   template(data_name,                                  "data")                                                    \
-  template(switch_result_name,                         "switch_result")                                           \
   template(cont_switch_result_name,                    "switchResult")                                            \
-  template(stack_name,                                 "stack")                                                   \
-  template(current_name,                               "current")                                                 \
-  template(java_dyn_CoroutineBase_signature,           "Ljava/dyn/CoroutineBase;")                                \
   template(reflect_method_signature,                   "Ljava/lang/reflect/Method;")                              \
-  template(startInternal_method_name,                  "startInternal")                                           \
-  template(initializeCoroutineSupport_method_name,     "initializeCoroutineSupport")                              \
-  template(method_name,                                "method")                                                  \
-  template(bci_name,                                   "bci")                                                     \
-  template(localCount_name,                            "localCount")                                              \
-  template(expressionCount_name,                       "expressionCount")                                         \
-  template(scalarValues_name,                          "scalarValues")                                            \
-  template(objectValues_name,                          "objectValues")                                            \
-  template(long_array_signature,                       "[J")                                                      \
+                                                                                                                  \
   /* jfr signatures */                                                                                            \
   JFR_TEMPLATES(template)                                                                                         \
                                                                                                                   \
@@ -1100,18 +1085,12 @@
     /*== LAST_COMPILER_INLINE*/                                                                                         \
     /*the compiler does have special inlining code for these; bytecode inline is just fine */                           \
                                                                                                                         \
-  /* coroutine intrinsics */                                                                                            \
-  do_intrinsic(_switchTo,                 java_dyn_CoroutineSupport, switchTo_name, switchTo_signature, F_SN)           \
-   do_name(     switchTo_name,                                    "switchTo")                                           \
-   do_signature(switchTo_signature,                               "(Ljava/dyn/CoroutineBase;Ljava/dyn/CoroutineBase;)V") \
-  do_intrinsic(_switchToAndTerminate,     java_dyn_CoroutineSupport, switchToAndTerminate_name, switchTo_signature, F_SN) \
-   do_name(     switchToAndTerminate_name,                        "switchToAndTerminate")                               \
-  do_intrinsic(_switchToAndExit,          java_dyn_CoroutineSupport, switchToAndExit_name, switchTo_signature, F_SN)    \
-   do_name(     switchToAndExit_name,                             "switchToAndExit")                                    \
   /* continuation */                                                                                                    \
   do_intrinsic(_contSwitchTo,             java_lang_Continuation, switchTo_name, contSwitchTo_signature, F_SN)          \
+   do_name(     switchTo_name,                                    "switchTo")                                           \
    do_signature(contSwitchTo_signature,                           "(Ljava/lang/Continuation;Ljava/lang/Continuation;)V")\
   do_intrinsic(_contSwitchToAndTerminate, java_lang_Continuation, switchToAndTerminate_name, contSwitchTo_signature, F_SN)  \
+   do_name(     switchToAndTerminate_name,                        "switchToAndTerminate")                               \
                                                                                                                         \
   do_intrinsic(_fillInStackTrace,         java_lang_Throwable, fillInStackTrace_name, void_throwable_signature,  F_RNY) \
                                                                                                                           \
