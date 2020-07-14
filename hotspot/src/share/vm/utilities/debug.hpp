@@ -226,8 +226,6 @@ void report_insufficient_metaspace(size_t required_size);
 
 void warning(const char* format, ...) ATTRIBUTE_PRINTF(1, 2);
 
-void warning_fixed_args(const char* message);
-
 #ifdef ASSERT
 // Compile-time asserts.
 template <bool> struct StaticAssert;
