@@ -45,8 +45,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 import sun.misc.InnocuousThread;
-import java.dyn.CoroutineSupport;
-
 import sun.misc.Unsafe;
 import sun.nio.ch.Interruptible;
 import sun.security.action.GetPropertyAction;

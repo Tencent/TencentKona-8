@@ -745,20 +745,15 @@ void CodeCache::mark_all_nmethods_for_deoptimization() {
   MutexLockerEx mu(CodeCache_lock, Mutex::_no_safepoint_check_flag);
   FOR_ALL_ALIVE_NMETHODS(nm) {
     if (!nm->method()->is_method_handle_intrinsic()) {
-		if (nm->method()->intrinsic_id() != vmIntrinsics::_switchTo &&
-			nm->method()->intrinsic_id() != vmIntrinsics::_switchToAndExit &&
-			nm->method()->intrinsic_id() != vmIntrinsics::_switchToAndTerminate)
-		{
-			nm->mark_for_deoptimization();
-		}
-		else
-		{
-			tty->print_cr("[zcye] protected method %s mark_all_nmethods_for_deoptimization", nm->method()->name()->as_C_string());
-		}
+      if (nm->method()->intrinsic_id() != vmIntrinsics::_contSwitchTo &&
+          nm->method()->intrinsic_id() != vmIntrinsics::_contSwitchToAndTerminate) {
+        nm->mark_for_deoptimization();
+      } else {
+        tty->print_cr("protected method %s mark_all_nmethods_for_deoptimization", nm->method()->name()->as_C_string());
+      }
     }
   }
 }
-
 
 int CodeCache::mark_for_deoptimization(Method* dependee) {
   MutexLockerEx mu(CodeCache_lock, Mutex::_no_safepoint_check_flag);

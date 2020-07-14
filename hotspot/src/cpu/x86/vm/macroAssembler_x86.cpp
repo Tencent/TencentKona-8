@@ -821,10 +821,6 @@ void MacroAssembler::stop(const char* msg) {
   hlt();
 }
 
-void MacroAssembler::testwarn(const char* msg, char* coro)
-{
-	tty->print_cr("%s %p",msg,coro);
-}
 #include "runtime/coroutine.hpp"
 
 void MacroAssembler::ReclaimJavaCallStack(Register old_coroutine)
@@ -855,35 +851,6 @@ void MacroAssembler::SwitchJavaCallStack(Register target_coroutine) {
   pop(rbp);
 }
 
-void MacroAssembler::TerminateCoroutine(Register coroutine)
-{
-  address rip = pc();
-  push(rbp);
-  movq(rbp, rsp);
-  andq(rsp, -16);     // align stack as required by push_CPU_state and call
-  push_CPU_state();   // keeps alignment at 16 bytes
-  movq(c_rarg0,coroutine);
-  call_VM_leaf(CAST_FROM_FN_PTR(address, Coroutine::TerminateCoroutine),c_rarg0);
-  pop_CPU_state();
-  mov(rsp, rbp);
-  pop(rbp);
-}
-
-void MacroAssembler::zcyewarn(const char* msg,Register coro )
-{
-  address rip = pc();
-  //pusha();            // get regs on stack
-  push(rbp);
-  movq(rbp, rsp);
-  andq(rsp, -16);     // align stack as required by push_CPU_state and call
-  push_CPU_state();   // keeps alignment at 16 bytes
-  lea(c_rarg0, ExternalAddress((address) msg));
-  movq(c_rarg1, coro);
-  call_VM_leaf(CAST_FROM_FN_PTR(address, MacroAssembler::testwarn),c_rarg0,c_rarg1);
-  pop_CPU_state();
-  mov(rsp, rbp);
-  pop(rbp);
-}
 void MacroAssembler::warn(const char* msg) {
   push(rbp);
   movq(rbp, rsp);
