@@ -147,7 +147,7 @@ HandleMark::HandleMark(Thread* thread, HandleArea* area, HandleMark* last_handle
 HandleMark::~HandleMark() {
   HandleArea* area = _area;   // help compilers with poor alias analysis
   assert(area == _thread->handle_area() || 
-    (_coroutine != NULL && _coroutine->is_continuation() && area == _coroutine->handle_area()), "sanity check");
+    (_coroutine != NULL && area == _coroutine->handle_area()), "sanity check");
   assert(area->_handle_mark_nesting > 0, "must stack allocate HandleMarks" );
   debug_only(area->_handle_mark_nesting--);
 

@@ -44,18 +44,6 @@ void CoroutineStack::add_stack_frame(void* frames, int* depth, javaVFrame* jvf) 
   (*depth)++;
 }
 
-#ifdef _WINDOWS
-
-LONG WINAPI topLevelExceptionFilter(struct _EXCEPTION_POINTERS* exceptionInfo);
-
-
-void coroutine_start(Coroutine* coroutine, jobject contObj) {
-  coroutine->thread()->set_thread_state(_thread_in_vm);
-  coroutine->run(contObj);
-  ShouldNotReachHere();
-}
-#endif
-
 #if defined(LINUX) || defined(_ALLBSD_SOURCE)
 
 void coroutine_start(Coroutine* coroutine, jobject coroutineObj) {
@@ -234,7 +222,6 @@ static inline void insert_into(Coroutine* coro, JavaThread* to, CoroutineStack* 
  * extract coroutine/stack from _thread, insert into target thread
  */
 void Coroutine::switchTo_current_thread(Coroutine* coro) {
-  guarantee(coro->is_continuation() == true, "Only Continuation allowed");
   JavaThread* target_thread = JavaThread::current();
   JavaThread* old_thread = coro->thread();
   if (old_thread == target_thread) {
@@ -367,7 +354,6 @@ Coroutine* Coroutine::create_thread_coroutine(const char* name,JavaThread* threa
   coro->set_name(name);
   coro->_state = _current;
   coro->_is_thread_coroutine = true;
-  coro->_is_continuation = false;
   coro->_thread = thread;
   coro->_stack = stack;
   coro->set_resource_area(thread->resource_area());
@@ -391,15 +377,6 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, Coro
   }
   Klass* klass = coroutineObj->klass();
   Klass* continuation_klass = SystemDictionary::continuation_klass();
-  coro->_is_continuation = false;
-  while (klass != NULL) {
-    if (klass == continuation_klass) {
-      coro->_is_continuation = true;
-      break;
-    }
-    klass = klass->superklass();
-  }
-  // coro->_is_continuation = coroutineObj->klass() == SystemDictionary::continuation_klass();
   coro->set_name(name);
   intptr_t** d = (intptr_t**)stack->stack_base();
   //*(--d) = NULL;
