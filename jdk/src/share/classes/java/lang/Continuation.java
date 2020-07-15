@@ -89,6 +89,7 @@ public class Continuation {
     private boolean done;
     private short cs; // critical section semaphore
     private int switchResult;
+    private final int stackSize;
 
     private final void start() {
         assert Thread.currentCarrierThread() == Thread.currentThread() : "start in nested vritual thread";
@@ -121,13 +122,14 @@ public class Continuation {
     public Continuation(ContinuationScope scope, int stackSize, Runnable target) {
         this.scope = scope;
         this.target = target;
-        data = createContinuation(null, this, stackSize);
+        this.stackSize = stackSize;
     }
 
     // default continuation for current kernel thread thread
     Continuation() {
         this.scope = kernelScope;
         this.target = null;
+        this.stackSize = 0;
         data = createContinuation("kernel", this, -1);
     }
 
@@ -203,6 +205,9 @@ public class Continuation {
         t.setContinuation(this);
         try {
             if (TRACE) System.out.println("Continuation run before call");
+            if (data == 0) {
+                data = createContinuation(null, this, stackSize);
+            }
             switchTo(parent, this);
             if (switchResult != 0) {
                 parent = null;
