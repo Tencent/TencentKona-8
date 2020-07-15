@@ -379,7 +379,19 @@ public class Object {
      * @see        java.lang.Object#notify()
      * @see        java.lang.Object#notifyAll()
      */
-    public final native void wait(long timeout) throws InterruptedException;
+    public final void wait(long timeoutMillis) throws InterruptedException {
+        try {
+            wait0(timeoutMillis);
+        } catch (InterruptedException e) {
+            Thread thread = Thread.currentThread();
+            if (thread.isVirtual()) {
+                thread.getAndClearInterrupt();
+            }
+            throw e;
+        }
+    }
+
+    private final native void wait0(long timeout) throws InterruptedException;
 
     /**
      * Causes the current thread to wait until another thread invokes the
