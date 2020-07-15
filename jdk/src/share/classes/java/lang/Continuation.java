@@ -211,7 +211,10 @@ public class Continuation {
             switchTo(parent, this);
             if (switchResult != 0) {
                 parent = null;
-                onPinned0(switchResult);
+
+                int pinnedReason = switchResult;
+                switchResult = 0;
+                onPinned0(pinnedReason);
                 if (TRACE) System.out.println("Continuation run after pin");
             }
         } catch (Throwable e) {
@@ -236,7 +239,9 @@ public class Continuation {
         }
         switchTo(this, parent);
         if (switchResult != 0) {
-            onPinned0(switchResult);
+            int pinnedReason = switchResult;
+            switchResult = 0;
+            onPinned0(pinnedReason);
             return false;
         }
         // System.out.println("after yield");

@@ -320,6 +320,10 @@ class Thread implements Runnable {
      *          cleared when this exception is thrown.
      */
     public static void sleep(long millis) throws InterruptedException {
+        if (millis < 0) {
+            throw new IllegalArgumentException("timeout value is negative");
+        }
+
         Thread t = currentCarrierThread();
         VirtualThread vthread;
         if (t != null && ((vthread = t.getVirtualThread())!= null)) {
@@ -888,6 +892,10 @@ class Thread implements Runnable {
                 security.checkPermission(SecurityConstants.STOP_THREAD_PERMISSION);
             }
         }
+
+        if (isVirtual())
+            throw new UnsupportedOperationException();
+
         // A zero status value corresponds to "NEW", it can't change to
         // not-NEW because we hold the lock.
         if (threadStatus != 0) {
@@ -1086,6 +1094,8 @@ class Thread implements Runnable {
     @Deprecated
     public final void suspend() {
         checkAccess();
+        if (isVirtual())
+            throw new UnsupportedOperationException();
         suspend0();
     }
 
@@ -1112,6 +1122,8 @@ class Thread implements Runnable {
     @Deprecated
     public final void resume() {
         checkAccess();
+        if (isVirtual())
+            throw new UnsupportedOperationException();
         resume0();
     }
 
@@ -1211,7 +1223,11 @@ class Thread implements Runnable {
      * @return  this thread's thread group.
      */
     public final ThreadGroup getThreadGroup() {
-        return isVirtual() ? VirtualThreads.THREAD_GROUP : group;
+        if (getState() == State.TERMINATED) {
+            return null;
+        } else {
+            return isVirtual() ? VirtualThreads.THREAD_GROUP : group;
+        }
     }
 
     /**

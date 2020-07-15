@@ -175,7 +175,7 @@ class VirtualThread extends Thread {
     @Override
     public void start() {
         if (!compareAndSetState(NEW, STARTED)) {
-            throw new InternalError("Already started");
+            throw new IllegalThreadStateException("Already started");
         }
         try {
             scheduler.execute(runContinuation);
