@@ -129,6 +129,7 @@ private:
   static JavaThread* _main_thread;
 
 public:
+  static void UpdateJniFrame(Thread* t, bool enter);
  //for javacall stack reclaim
   static void ReclaimJavaCallStack(Coroutine* coro);
   
