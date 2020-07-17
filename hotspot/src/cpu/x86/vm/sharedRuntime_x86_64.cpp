@@ -2542,22 +2542,6 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     __ jcc(Assembler::notEqual, exception_pending);
   }
 
-  // Return
-  if (method->intrinsic_id() == vmIntrinsics::_contSwitchToAndTerminate) {
-
-    Label normal;
-    __ lea(rcx, RuntimeAddress((unsigned char*)coroutine_start));
-    __ cmpq(Address(rsp, 0), rcx);
-    __ jcc(Assembler::notEqual, normal);
-
-    __ movq(c_rarg0, Address(rsp, HeapWordSize * 2));
-    __ movq(c_rarg1, Address(rsp, HeapWordSize * 3));
-
-    __ bind(normal);
-
-    __ ret(0);        // <-- this will jump to the stored IP of the target coroutine
-  }
-
   __ ret(0);
 
   // Unexpected paths are out of line and go here

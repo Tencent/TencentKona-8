@@ -202,6 +202,21 @@ void Coroutine::SetJavaCallWrapper(JavaThread* thread, JavaCallWrapper* jcw) {
   }
 }
 
+void Coroutine::UpdateJniFrame(Thread* t, bool enter) {
+  if (t->is_Java_thread()) {
+    JavaThread* thread  = (JavaThread*)t;
+    Coroutine* co = thread->current_coroutine();
+    if (co != NULL && !co->is_thread_coroutine()) {
+      if (enter) {
+        co->_jni_frames++;
+      } else {
+        co->_jni_frames--;
+        guarantee(co->_jni_frames >= 0, "invalid frames");
+      }
+    }
+  }
+}
+
 static inline CoroutineStack* extract_from(Coroutine* coro, JavaThread* from) {
   CoroutineStack* stack_ptr = coro->stack();
   guarantee(stack_ptr != NULL, "stack is NULL");
@@ -349,6 +364,8 @@ Coroutine* Coroutine::create_thread_coroutine(const char* name,JavaThread* threa
   if (coro == NULL)
     return NULL;
   if (_main_thread == NULL) {
+    // this is not correct now, as this records first thread with continuation
+    // this can be removed later with global stack/coroutine structure
     _main_thread = thread;
   }
   coro->set_name(name);
@@ -375,8 +392,6 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, Coro
   if (coro == NULL) {
     return NULL;
   }
-  Klass* klass = coroutineObj->klass();
-  Klass* continuation_klass = SystemDictionary::continuation_klass();
   coro->set_name(name);
   intptr_t** d = (intptr_t**)stack->stack_base();
   //*(--d) = NULL;

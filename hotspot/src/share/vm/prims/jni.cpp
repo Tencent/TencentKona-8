@@ -1316,6 +1316,7 @@ static void jni_invoke_static(JNIEnv *env, JavaValue* result, jobject receiver, 
   // Create object to hold arguments for the JavaCall, and associate it with
   // the jni parser
   ResourceMark rm(THREAD);
+  Coroutine::UpdateJniFrame(THREAD, true);
   int number_of_parameters = method->size_of_parameters();
   JavaCallArguments java_args(number_of_parameters);
   args->set_java_argument_object(&java_args);
@@ -1334,6 +1335,7 @@ static void jni_invoke_static(JNIEnv *env, JavaValue* result, jobject receiver, 
   if (result->get_type() == T_OBJECT || result->get_type() == T_ARRAY) {
     result->set_jobject(JNIHandles::make_local(env, (oop) result->get_jobject()));
   }
+  Coroutine::UpdateJniFrame(THREAD, false);
 }
 
 
@@ -1384,6 +1386,7 @@ static void jni_invoke_nonstatic(JNIEnv *env, JavaValue* result, jobject receive
   // Create object to hold arguments for the JavaCall, and associate it with
   // the jni parser
   ResourceMark rm(THREAD);
+  Coroutine::UpdateJniFrame(THREAD, true);
   JavaCallArguments java_args(number_of_parameters);
   args->set_java_argument_object(&java_args);
 
@@ -1403,6 +1406,7 @@ static void jni_invoke_nonstatic(JNIEnv *env, JavaValue* result, jobject receive
   if (result->get_type() == T_OBJECT || result->get_type() == T_ARRAY) {
     result->set_jobject(JNIHandles::make_local(env, (oop) result->get_jobject()));
   }
+  Coroutine::UpdateJniFrame(THREAD, false);
 }
 
 
