@@ -46,7 +46,7 @@
 
 #include "runtime/coroutine.hpp"
 
-void coroutine_start(Coroutine* coroutine, jobject coroutineObj);
+void coroutine_start(Coroutine* coroutine, oop coroutineObj);
 
 
 #define __ masm->
@@ -4435,10 +4435,16 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
     __ movptr(rdx, j_rarg1);
   }
 
-  Register thread = r15;
-  Register target_coroutine = rdx;
-  Register old_coroutine_obj = rsi;
-  Register temp = r8;
+  // resgister should not overlap
+  Register thread                = r15;  // [1-7]
+  Register target_coroutine_obj  = rdx;  // [1-6] to coroutine java object
+  Register target_coroutine      = r10;  // [2,5,6] to coroutine runtime
+  Register old_coroutine_obj     = rsi;  // [1-7] old coroutine java object
+  Register temp                  = r8;   // [1-5]
+  Register temp2                 = r9;   // [5-5]
+  Register old_coroutine         = r9;   // [4-4]
+  Register old_stack             = r10;  // [4-4]
+  Register target_stack          = r12;  // [5-5]
 
   // check if continuation is pinned, return pinned result
   // terminate must happen in Continuation.start method no JNI and lock
@@ -4462,7 +4468,7 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
   __ push(rbp);
 
   // check that we're dealing with sane objects...
-  __ movptr(target_coroutine, Address(target_coroutine, java_lang_Continuation::get_data_offset()));
+  __ movptr(target_coroutine, Address(target_coroutine_obj, java_lang_Continuation::get_data_offset()));
   // check target_coroutine's thread is same with current thread
   {
     Label finish_switch_thread;
@@ -4483,9 +4489,6 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
     // store information into the old coroutine's object
     //
     // valid registers: rsi = old Coroutine, rdx = target Coroutine
-    Register old_coroutine = r9;
-    Register old_stack = r10;
-
     // check that we're dealing with sane objects...
     DEBUG_ONLY(stop_if_null(masm, old_coroutine_obj, "null old_coroutine"));
     __ movptr(old_coroutine, Address(old_coroutine_obj, java_lang_Continuation::get_data_offset()));
@@ -4506,7 +4509,8 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
 #endif
     __ movptr(Address(old_stack, CoroutineStack::last_sp_offset()), rsp);
   }
-  Register target_stack = r12;
+  // load again as r10 overlap with old_stack
+  __ movptr(target_coroutine, Address(target_coroutine_obj, java_lang_Continuation::get_data_offset()));
   __ movptr(target_stack, Address(target_coroutine, Coroutine::stack_offset()));
 
   {
@@ -4518,7 +4522,6 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
     __ movl(Address(target_coroutine, Coroutine::state_offset()), Coroutine::_current);
 	  __ movptr(Address(thread,JavaThread::current_coro_offset()),target_coroutine);
     {
-      Register temp2 = r9;
       // set new handle and resource areas
       __ movptr(temp, Address(target_coroutine, Coroutine::handle_area_offset()));
       __ movptr(Address(thread, Thread::handle_area_offset()), temp);
@@ -4558,8 +4561,8 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
       __ cmpq(Address(rsp, 0), rcx);
       __ jcc(Assembler::notEqual, normal);
       // copy on stack parameters as coroutine_start register parameters
-      __ movq(c_rarg0, Address(rsp, HeapWordSize * 2));
-      __ movq(c_rarg1, Address(rsp, HeapWordSize * 3));
+      __ movq(c_rarg0, target_coroutine);
+      __ movq(c_rarg1, target_coroutine_obj);
       __ bind(normal);
       __ ret(0);        // <-- this will jump to the stored IP of the target coroutine
     } else {
