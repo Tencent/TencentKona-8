@@ -30,17 +30,17 @@
 #include "oops/oop.pcgc.inline.hpp"
 #include "runtime/prefetch.inline.hpp"
 
-G1ParScanThreadState::G1ParScanThreadState(G1CollectedHeap* g1h, uint queue_num, ReferenceProcessor* rp)
+G1ParScanThreadState::G1ParScanThreadState(G1CollectedHeap* g1h, uint queue_num)
   : _g1h(g1h),
     _refs(g1h->task_queue(queue_num)),
     _dcq(&g1h->dirty_card_queue_set()),
     _ct_bs(g1h->g1_barrier_set()),
     _g1_rem(g1h->g1_rem_set()),
     _queue_num(queue_num),
-    _term_attempts(0),
     _tenuring_threshold(g1h->g1_policy()->tenuring_threshold()),
-    _age_table(false), _scanner(g1h, rp),
-    _strong_roots_time(0), _term_time(0) {
+    _age_table(false),
+    _scanner(g1h)
+{
   _scanner.set_par_scan_thread_state(this);
   // we allocate G1YoungSurvRateNumRegions plus one entries, since
   // we "sacrifice" entry 0 to keep track of surviving bytes for
@@ -66,7 +66,6 @@ G1ParScanThreadState::G1ParScanThreadState(G1CollectedHeap* g1h, uint queue_num,
   _dest[InCSetState::Young]        = InCSetState::Old;
   _dest[InCSetState::Old]          = InCSetState::Old;
 
-  _start = os::elapsedTime();
 }
 
 G1ParScanThreadState::~G1ParScanThreadState() {
@@ -75,35 +74,9 @@ G1ParScanThreadState::~G1ParScanThreadState() {
   FREE_C_HEAP_ARRAY(size_t, _surviving_young_words_base, mtGC);
 }
 
-void
-G1ParScanThreadState::print_termination_stats_hdr(outputStream* const st)
-{
-  st->print_raw_cr("GC Termination Stats");
-  st->print_raw_cr("     elapsed  --strong roots-- -------termination-------"
-                   " ------waste (KiB)------");
-  st->print_raw_cr("thr     ms        ms      %        ms      %    attempts"
-                   "  total   alloc    undo");
-  st->print_raw_cr("--- --------- --------- ------ --------- ------ --------"
-                   " ------- ------- -------");
-}
-
-void
-G1ParScanThreadState::print_termination_stats(int i,
-                                              outputStream* const st) const
-{
-  const double elapsed_ms = elapsed_time() * 1000.0;
-  const double s_roots_ms = strong_roots_time() * 1000.0;
-  const double term_ms    = term_time() * 1000.0;
-  const size_t alloc_buffer_waste = _g1_par_allocator->alloc_buffer_waste();
-  const size_t undo_waste         = _g1_par_allocator->undo_waste();
-  st->print_cr("%3d %9.2f %9.2f %6.2f "
-               "%9.2f %6.2f " SIZE_FORMAT_W(8) " "
-               SIZE_FORMAT_W(7) " " SIZE_FORMAT_W(7) " " SIZE_FORMAT_W(7),
-               i, elapsed_ms, s_roots_ms, s_roots_ms * 100 / elapsed_ms,
-               term_ms, term_ms * 100 / elapsed_ms, term_attempts(),
-               (alloc_buffer_waste + undo_waste) * HeapWordSize / K,
-               alloc_buffer_waste * HeapWordSize / K,
-               undo_waste * HeapWordSize / K);
+void G1ParScanThreadState::waste(size_t& wasted, size_t& undo_wasted) {
+  wasted = _g1_par_allocator->alloc_buffer_waste();
+  undo_wasted = _g1_par_allocator->undo_waste();
 }
 
 #ifdef ASSERT
@@ -295,8 +268,7 @@ oop G1ParScanThreadState::copy_to_survivor_space(InCSetState const state,
                                              obj);
     }
 
-    size_t* const surv_young_words = surviving_young_words();
-    surv_young_words[young_index] += word_sz;
+    _surviving_young_words[young_index] += word_sz;
 
     if (obj->is_objArray() && arrayOop(obj)->length() >= ParGCArrayScanChunk) {
       // We keep track of the next start index in the length field of
