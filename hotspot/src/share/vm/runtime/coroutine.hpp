@@ -167,7 +167,7 @@ public:
   bool has_javacall() const { return _has_javacall; }
   void set_has_javacall(bool hjc) { _has_javacall = hjc; }
 
-  void run(jobject coroutine);
+  void run(oop coroutine);
 
   static Coroutine* create_thread_coroutine(const char* name,JavaThread* thread, CoroutineStack* stack);
   static Coroutine* create_coroutine(const char* name,JavaThread* thread, CoroutineStack* stack, oop coroutineObj);

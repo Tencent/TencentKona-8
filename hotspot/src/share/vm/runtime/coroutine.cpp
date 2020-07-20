@@ -46,7 +46,7 @@ void CoroutineStack::add_stack_frame(void* frames, int* depth, javaVFrame* jvf) 
 
 #if defined(LINUX) || defined(_ALLBSD_SOURCE)
 
-void coroutine_start(Coroutine* coroutine, jobject coroutineObj) {
+void coroutine_start(Coroutine* coroutine, oop coroutineObj) {
   coroutine->thread()->set_thread_state(_thread_in_vm);
 
   coroutine->run(coroutineObj);
@@ -88,50 +88,22 @@ void Coroutine::TerminateCoroutineObj(jobject coroutine)
   TerminateCoroutine(coro);
 }
 
-void Coroutine::run(jobject coroutine) {
-
-  // do not call JavaThread::current() here!
-
-  //_thread->set_resource_area(new (mtThread) ResourceArea(32));
-  //_thread->set_handle_area(new (mtThread) HandleArea(NULL, 32));
-  //_thread->set_metadata_handles(new (ResourceObj::C_HEAP, mtClass) GrowableArray<Metadata*>(30, true));
-  // used to test validitity of stack trace backs
-//  this->record_base_of_stack_pointer();
-
-  // Record real stack base and size.
-//  this->record_stack_base_and_size();
-
-  // Initialize thread local storage; set before calling MutexLocker
-//  this->initialize_thread_local_storage();
-
-//  this->create_stack_guard_pages();
-
-  // Thread is now sufficient initialized to be handled by the safepoint code as being
-  // in the VM. Change thread state from _thread_new to _thread_in_vm
-//  ThreadStateTransition::transition_and_fence(this, _thread_new, _thread_in_vm);
-
-  // This operation might block. We call that after all safepoint checks for a new thread has
-  // been completed.
-//  this->set_active_handles(JNIHandleBlock::allocate_block());
-
-  // We call another function to do the rest so we are sure that the stack addresses used
-  // from there will be lower than the stack base just computed
-  {
-    HandleMark hm(_thread);
-    HandleMark hm2(_thread);
-	_hm = &hm;
-	_hm2 = &hm2;
-    Handle obj(_thread, JNIHandles::resolve(coroutine));
-    JNIHandles::destroy_global(coroutine);
-    JavaValue result(T_VOID);
-	set_has_javacall(true);
-    JavaCalls::call_virtual(&result,
-                            obj,
-                            KlassHandle(_thread, SystemDictionary::continuation_klass()),
-                            vmSymbols::cont_start_method_name(),
-                            vmSymbols::void_method_signature(),
-                            _thread);
-  }
+// there is no safepoint from coroutine_start invoke to add handle mark here
+// so safe to use raw oop
+void Coroutine::run(oop coroutine) {
+  HandleMark hm(_thread);
+  HandleMark hm2(_thread);
+  _hm = &hm;
+  _hm2 = &hm2;
+  Handle obj(_thread, coroutine);
+  JavaValue result(T_VOID);
+  set_has_javacall(true);
+  JavaCalls::call_virtual(&result,
+                          obj,
+                          KlassHandle(_thread, SystemDictionary::continuation_klass()),
+                          vmSymbols::cont_start_method_name(),
+                          vmSymbols::void_method_signature(),
+                          _thread);
 }
 
 Coroutine::Coroutine() 
@@ -394,11 +366,6 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, Coro
   }
   coro->set_name(name);
   intptr_t** d = (intptr_t**)stack->stack_base();
-  //*(--d) = NULL;
-  *(--d) = NULL;
-  jobject obj = JNIHandles::make_global(coroutineObj);
-  *(--d) = (intptr_t*)obj;
-  *(--d) = (intptr_t*)coro;
   *(--d) = NULL;
   *(--d) = (intptr_t*)coroutine_start;
   *(--d) = NULL;
