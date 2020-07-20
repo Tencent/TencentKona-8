@@ -56,6 +56,7 @@ class HeapRegion;
 class HRRSCleanupTask;
 class GenerationSpec;
 class OopsInHeapRegionClosure;
+class G1ParScanThreadState;
 class G1KlassScanClosure;
 class G1ScanHeapEvacClosure;
 class ObjectClosure;
@@ -591,6 +592,9 @@ protected:
   void retire_gc_alloc_region(HeapRegion* alloc_region,
                               size_t allocated_bytes, InCSetState dest);
 
+  // Allocates a new per thread par scan state for the given thread id.
+  G1ParScanThreadState* new_par_scan_state(uint worker_id);
+
   // - if explicit_gc is true, the GC is for a System.gc() or a heap
   //   inspection request and should collect the entire heap
   // - if clear_all_soft_refs is true, all soft references should be
@@ -627,11 +631,11 @@ protected:
 
   // Process any reference objects discovered during
   // an incremental evacuation pause.
-  void process_discovered_references(uint no_of_gc_workers);
+  void process_discovered_references(uint no_of_gc_workers, G1ParScanThreadState** per_thread_states);
 
   // Enqueue any remaining discovered references
   // after processing.
-  void enqueue_discovered_references(uint no_of_gc_workers);
+  void enqueue_discovered_references(uint no_of_gc_workers, G1ParScanThreadState** per_thread_states);
 
 public:
 
@@ -790,6 +794,18 @@ protected:
 
   // Actually do the work of evacuating the collection set.
   void evacuate_collection_set(EvacuationInfo& evacuation_info);
+
+  // Print the header for the per-thread termination statistics.
+  static void print_termination_stats_hdr(outputStream* const st);
+  // Print actual per-thread termination statistics.
+  void print_termination_stats(outputStream* const st,
+                               uint worker_id,
+                               double elapsed_ms,
+                               double strong_roots_ms,
+                               double term_ms,
+                               size_t term_attempts,
+                               size_t alloc_buffer_waste,
+                               size_t undo_waste) const;
 
   // The g1 remembered set of the heap.
   G1RemSet* _g1_rem_set;

@@ -24,10 +24,15 @@
 
 #include "precompiled.hpp"
 #include "gc_implementation/g1/g1CollectedHeap.hpp"
+#include "gc_implementation/g1/g1ParScanThreadState.hpp"
 
 bool G1CollectedHeap::copy_allocation_context_stats(const jint* contexts,
                                                     jlong* totals,
                                                     jbyte* accuracy,
                                                     jint len) {
   return false;
+}
+
+G1ParScanThreadState* G1CollectedHeap::new_par_scan_state(uint worker_id) {
+  return new G1ParScanThreadState(this, worker_id);
 }
