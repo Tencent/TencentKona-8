@@ -46,9 +46,16 @@ void CoroutineStack::add_stack_frame(void* frames, int* depth, javaVFrame* jvf) 
 
 #if defined(LINUX) || defined(_ALLBSD_SOURCE)
 
-void coroutine_start(Coroutine* coroutine, oop coroutineObj) {
+void coroutine_start(Coroutine* coroutine, const void* coroutineObjAddr) {
   coroutine->thread()->set_thread_state(_thread_in_vm);
-
+  // passing raw object address form stub to C method
+  // normally oop is OopDesc*, can use raw object directly
+  // in fastdebug mode, oop is "class oop", raw object addrss is stored in class oop structure
+#ifdef CHECK_UNHANDLED_OOPS
+  oop coroutineObj = oop(coroutineObj);
+#else
+  oop coroutineObj = (oop)coroutineObjAddr;
+#endif
   coroutine->run(coroutineObj);
   ShouldNotReachHere();
 }

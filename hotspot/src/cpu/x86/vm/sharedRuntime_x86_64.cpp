@@ -46,7 +46,7 @@
 
 #include "runtime/coroutine.hpp"
 
-void coroutine_start(Coroutine* coroutine, oop coroutineObj);
+void coroutine_start(Coroutine* coroutine, const void* coroutineObj);
 
 
 #define __ masm->
