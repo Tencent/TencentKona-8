@@ -32,7 +32,6 @@
 
 enum G1Barrier {
   G1BarrierNone,
-  G1BarrierEvac,
   G1BarrierKlass
 };
 

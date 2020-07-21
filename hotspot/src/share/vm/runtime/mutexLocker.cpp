@@ -83,7 +83,6 @@ Mutex*   DirtyCardQ_FL_lock           = NULL;
 Monitor* DirtyCardQ_CBL_mon           = NULL;
 Mutex*   Shared_DirtyCardQ_lock       = NULL;
 Mutex*   ParGCRareEvent_lock          = NULL;
-Mutex*   EvacFailureStack_lock        = NULL;
 Mutex*   DerivedPointerTableGC_lock   = NULL;
 Mutex*   Compile_lock                 = NULL;
 Monitor* MethodCompileQueue_lock      = NULL;
@@ -205,7 +204,6 @@ void mutex_init() {
     def(OldSets_lock               , Mutex  , leaf     ,   true );
     def(RootRegionScan_lock        , Monitor, leaf     ,   true );
     def(MMUTracker_lock            , Mutex  , leaf     ,   true );
-    def(EvacFailureStack_lock      , Mutex  , nonleaf  ,   true );
 
     def(StringDedupQueue_lock      , Monitor, leaf,        true );
     def(StringDedupTable_lock      , Mutex  , leaf,        true );
