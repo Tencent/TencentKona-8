@@ -57,8 +57,6 @@ class G1ParScanThreadState : public StackObj {
   size_t            _alloc_buffer_waste;
   size_t            _undo_waste;
 
-  OopsInHeapRegionClosure*      _evac_failure_cl;
-
   uint _queue_num;
 
   size_t _term_attempts;
@@ -121,12 +119,6 @@ class G1ParScanThreadState : public StackObj {
       }
    }
   }
-
-  void set_evac_failure_closure(OopsInHeapRegionClosure* evac_failure_cl) {
-    _evac_failure_cl = evac_failure_cl;
-  }
-
-  OopsInHeapRegionClosure* evac_failure_closure() { return _evac_failure_cl; }
 
   uint queue_num() { return _queue_num; }
 
@@ -222,6 +214,9 @@ class G1ParScanThreadState : public StackObj {
   void trim_queue();
 
   inline void steal_and_trim_queue(RefToScanQueueSet *task_queues);
+
+  // An attempt to evacuate "obj" has failed; take necessary steps.
+  oop handle_evacuation_failure_par(oop obj, markOop m);
 };
 
 #endif // SHARE_VM_GC_IMPLEMENTATION_G1_G1PARSCANTHREADSTATE_HPP
