@@ -52,7 +52,7 @@ void coroutine_start(Coroutine* coroutine, const void* coroutineObjAddr) {
   // normally oop is OopDesc*, can use raw object directly
   // in fastdebug mode, oop is "class oop", raw object addrss is stored in class oop structure
 #ifdef CHECK_UNHANDLED_OOPS
-  oop coroutineObj = oop(coroutineObj);
+  oop coroutineObj = oop(coroutineObjAddr);
 #else
   oop coroutineObj = (oop)coroutineObjAddr;
 #endif
