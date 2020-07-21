@@ -136,8 +136,6 @@ typedef G1ParCopyClosure<G1BarrierNone,  G1MarkPromotedFromRoot> G1ParScanAndMar
 // We use a separate closure to handle references during evacuation
 // failure processing.
 
-typedef G1ParCopyClosure<G1BarrierEvac, G1MarkNone> G1ParScanHeapEvacFailureClosure;
-
 class FilterIntoCSClosure: public ExtendedOopClosure {
   G1CollectedHeap* _g1;
   OopClosure* _oc;
