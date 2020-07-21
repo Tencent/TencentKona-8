@@ -1069,4 +1069,11 @@ class VirtualThread extends Thread {
         }
         return 0;
     }
+
+    /**
+     * Only used in package
+     */
+    Continuation Cont() {
+        return cont;
+    }
 }

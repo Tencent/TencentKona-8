@@ -92,7 +92,9 @@ public class Continuation {
     private final int stackSize;
 
     private final void start() {
-        assert Thread.currentCarrierThread() == Thread.currentThread() : "start in nested vritual thread";
+        assert (Thread.currentCarrierThread() == Thread.currentThread()) ||
+           (((VirtualThread)Thread.currentThread()).Cont() == this)
+           : "start not in kernel thread or owner virtual thread";
         try {
             target.run();
         } catch (Throwable t) {
