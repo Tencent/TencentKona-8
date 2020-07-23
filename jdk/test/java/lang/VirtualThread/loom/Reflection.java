@@ -88,6 +88,10 @@ public class Reflection {
                 assertTrue(false);
             } catch (ExceptionInInitializerError e) {
                 assertTrue(e.getCause() instanceof ArithmeticException);
+            } catch (Exception e) {
+                assertTrue(e.getCause().getCause() instanceof ArithmeticException);
+            } catch (Throwable t) {
+                assertTrue(false);
             }
         });
     }
@@ -103,7 +107,17 @@ public class Reflection {
     public void testInvokeStatic5() throws Exception {
         TestHelper.runInVirtualThread(() -> {
             Method foo = BadClass2.class.getDeclaredMethod("foo");
-            assertThrows(AbstractMethodError.class, () -> foo.invoke(null));
+            try {
+                foo.invoke(null);
+                assertTrue(false);
+            } catch (Exception e) {
+                assertTrue(e.getCause() instanceof AbstractMethodError);
+            } catch (AbstractMethodError e) {
+            } catch (Throwable t) {
+                assertTrue(false);
+            }
+
+            //assertThrows(AbstractMethodError.class, () -> foo.invoke(null));
         });
     }
 

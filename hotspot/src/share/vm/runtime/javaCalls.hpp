@@ -265,6 +265,9 @@ class JavaCalls: AllStatic {
 
   // Low-level interface
   static void call(JavaValue* result, methodHandle method, JavaCallArguments* args, TRAPS);
+
+  // Continuation Entry call
+  static void call_continuation_start(JavaCallArguments* args, TRAPS);
 };
 
 #endif // SHARE_VM_RUNTIME_JAVACALLS_HPP
