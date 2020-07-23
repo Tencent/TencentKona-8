@@ -251,10 +251,8 @@ void JavaCalls::call_virtual(JavaValue* result, KlassHandle spec_klass, Symbol* 
   methodHandle method = callinfo.selected_method();
   assert(method.not_null(), "should have thrown exception");
 
-  Coroutine::SetCallInfo(THREAD,&callinfo);
   // Invoke the method
   JavaCalls::call(result, method, args, CHECK);
-  Coroutine::SetCallInfo(THREAD,NULL);
 }
 
 
@@ -475,7 +473,6 @@ void JavaCalls::call_helper(JavaValue* result, methodHandle* m, JavaCallArgument
 
   // do call
   { JavaCallWrapper link(method, receiver, result, CHECK);
-    Coroutine::SetJavaCallWrapper(thread, &link);
     { HandleMark hm(thread);  // HandleMark used by HandleMarkCleaner
 
       StubRoutines::call_stub()(
@@ -506,6 +503,96 @@ void JavaCalls::call_helper(JavaValue* result, methodHandle* m, JavaCallArgument
   if (oop_result_flag) {
     result->set_jobject((jobject)thread->vm_result());
     thread->set_vm_result(NULL);
+  }
+}
+
+
+/*
+ * call continuation start, construct special entry that not return
+ * Similar with Call_helper, but can be simplied
+ * 1. Handles/MetaDataHandles are relcaimed before invoke StubRoutines::call_stub
+ * 2. No result is needed and stub will not callback here
+ *
+ * Steps todo:
+ * 1. Simplify JNI, reuse kernel thread JNI handle block, when run coroutine entry
+ *    1.1 JNI handle block is not siwtched during continuation switch
+ *    1.2 Continuation use kernel thread's JNI block
+ *    1.3 In continuation switch, save JNI active handle for later verfication
+ *    1.4 In first entry, JavaCallWrapper not create new JNI block and later ClearForCoro
+ *        will skip clean JNI block
+ *    1.5 when yield success, check if JNI handle block should be same when enter
+ * 2. Reuse kernel thread resource area(ResourceMark)
+ *    2.1 not switch _resource_area when enter continuation, save current chunk and water mark
+ *        for verfication
+ *    2.2 check _resource_area's current chunk and water mark is same when yield
+ * 3. Reuse Handle area
+ *    3.1 not switch handle area when call continuation.run, reuse kenrel theread handl area
+ *        save last handle mark snapshot for verification
+ *    3.2 in first entry, saved handle area snapshot, before call stub restore to snapshot
+ *    3.3 when yield success, check if current handle area is same with snapshot
+ * 4. Resuse kernel metadata handle area
+ *    4.1 in JavaCallWrapper._callee_method how to use? save raw Method because continuation start
+ *        is awlays live and not relocatable
+ *    same verification
+ *
+ * When continuation yield back to thread, check HandleMark/ResourceMark/JNI/MetadataHandle
+ * is same with before call continuation
+ */
+void JavaCalls::call_continuation_start(JavaCallArguments* args, TRAPS) {
+  // During dumping, Java execution environment is not fully initialized. Also, Java execution
+  // may cause undesirable side-effects in the class metadata.
+  assert(!DumpSharedSpaces, "must not execute Java bytecodes when dumping");
+
+  JavaThread* thread = (JavaThread*)THREAD;
+  methodHandle method = methodHandle(Coroutine::cont_start_method());
+  assert(thread->is_Java_thread(), "must be called by a java thread");
+  assert(thread->current_coroutine() != NULL && !thread->current_coroutine()->is_thread_coroutine(),
+    "must be in coroutine");
+  assert(method.not_null(), "must have a method to call");
+  assert(!SafepointSynchronize::is_at_safepoint(), "call to Java code during VM operation");
+  assert(!thread->handle_area()->no_handle_mark_active(), "cannot call out to Java here");
+
+  CHECK_UNHANDLED_OOPS_ONLY(thread->clear_unhandled_oops();)
+
+  assert(!thread->is_Compiler_thread(), "cannot compile from the compiler");
+  if (CompilationPolicy::must_be_compiled(method)) {
+    CompileBroker::compile_method(method, InvocationEntryBci,
+                                  CompilationPolicy::policy()->initial_compile_level(),
+                                  methodHandle(), 0, "must_be_compiled", CHECK);
+  }
+
+  // Since the call stub sets up like the interpreter we call the from_interpreted_entry
+  // so we can go compiled via a i2c. Otherwise initial entry method will always
+  // run interpreted.
+  address entry_point = method->from_interpreted_entry();
+  if (JvmtiExport::can_post_interpreter_events() && thread->is_interp_only_mode()) {
+    entry_point = method->interpreter_entry();
+  }
+
+  // Find receiver
+  Handle receiver = args->receiver();
+  // call from Java in VM, no stack zone is change
+  // no stack overflow check is needed
+
+  // do call
+  {
+    JavaCallWrapper link(method, receiver, NULL, CHECK);
+    Coroutine::SetJavaCallWrapper(thread, &link);
+    {
+      HandleMark hm(thread);  // HandleMark used by HandleMarkCleaner
+      StubRoutines::call_stub()(
+        (address)&link,
+        // (intptr_t*)&(result->_value), // see NOTE above (compiler problem)
+        NULL,          // result_val_address
+        T_VOID,
+        method(),
+        entry_point,
+        args->parameters(),
+        args->size_of_parameters(),
+        CHECK
+      );
+      ShouldNotReachHere();
+    }
   }
 }
 

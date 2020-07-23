@@ -37,6 +37,7 @@
 #include "services/threadService.hpp"
 
 JavaThread* Coroutine::_main_thread = NULL;
+Method* Coroutine::_continuation_start = NULL;
 
 void CoroutineStack::add_stack_frame(void* frames, int* depth, javaVFrame* jvf) {
   StackFrameInfo* frame = new StackFrameInfo(jvf, false);
@@ -95,6 +96,23 @@ void Coroutine::TerminateCoroutineObj(jobject coroutine)
   TerminateCoroutine(coro);
 }
 
+void Coroutine::Initialize() {
+  guarantee(_continuation_start == NULL, "continuation start already initialized");
+  KlassHandle klass = KlassHandle(SystemDictionary::continuation_klass());
+  Symbol* method_name = vmSymbols::cont_start_method_name();
+  Symbol* signature = vmSymbols::void_method_signature();
+  methodHandle method = LinkResolver::linktime_resolve_virtual_method_or_null(
+    klass, method_name, signature, klass, true);
+  _continuation_start = method();
+  guarantee(_continuation_start != NULL, "continuation start not resolveds");
+}
+
+void Coroutine::cont_metadata_do(void f(Metadata*)) {
+  if (_continuation_start != NULL) {
+    f(_continuation_start);
+  }
+}
+
 // there is no safepoint from coroutine_start invoke to add handle mark here
 // so safe to use raw oop
 void Coroutine::run(oop coroutine) {
@@ -103,14 +121,17 @@ void Coroutine::run(oop coroutine) {
   _hm = &hm;
   _hm2 = &hm2;
   Handle obj(_thread, coroutine);
-  JavaValue result(T_VOID);
+  //JavaValue result(T_VOID);
   set_has_javacall(true);
-  JavaCalls::call_virtual(&result,
-                          obj,
-                          KlassHandle(_thread, SystemDictionary::continuation_klass()),
-                          vmSymbols::cont_start_method_name(),
-                          vmSymbols::void_method_signature(),
-                          _thread);
+
+  {
+    JavaCallArguments args(obj); // One oop argument
+    assert(_thread->is_Java_thread(), "only JavaThreads can make JavaCalls");
+    //methodHandle method = methodHandle(_continuation_start);
+    //JavaCalls::call_helper(&result, &method, &args, _thread);
+    JavaCalls::call_continuation_start(&args, _thread);
+    ShouldNotReachHere();
+  }
 }
 
 Coroutine::Coroutine() 
@@ -119,7 +140,6 @@ Coroutine::Coroutine()
 	_handle_area = NULL;
 	_metadata_handles = NULL;
 	_JavaCallWrapper = NULL;
-	_CallInfo = NULL;
 	_last_handle_mark = NULL;
 	_has_javacall = false;
 	_active_handles = NULL;
@@ -162,8 +182,6 @@ void Coroutine::ReclaimJavaCallStack(Coroutine* coro) {
 
     // remove method handle from _thread->metadata_handles()
     // _thread->metadata_handles() will be released in Coroutine's destructor
-    guarantee(coro->_CallInfo != NULL, "Recaim live stack without call info");
-    coro->_CallInfo->~CallInfo(); //reclaim metahandle
 
     // handle mark can be discarded without destructor
     guarantee(coro->_hm2 != NULL, "Recaim live stack without hm2");
@@ -312,16 +330,6 @@ bool Coroutine::is_lock_owned(address adr) const {
   return false;
 }
 
-void Coroutine::SetCallInfo(Thread* thread,CallInfo* ci)
-{
-	if(!thread->is_Java_thread()) return;
-	JavaThread* jt = (JavaThread*)thread;
-  Coroutine* cur = jt->current_coroutine();
-	if(cur != NULL && cur->_CallInfo == NULL)	{
-		cur->_CallInfo = ci;
-	}
-}
-
 void Coroutine::add_monitor_chunk(MonitorChunk* chunk) {
   chunk->set_next(monitor_chunks());
   set_monitor_chunks(chunk);
@@ -347,6 +355,7 @@ Coroutine* Coroutine::create_thread_coroutine(const char* name,JavaThread* threa
     // this can be removed later with global stack/coroutine structure
     _main_thread = thread;
   }
+
   coro->set_name(name);
   coro->_state = _current;
   coro->_is_thread_coroutine = true;
@@ -373,6 +382,7 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, Coro
   }
   coro->set_name(name);
   intptr_t** d = (intptr_t**)stack->stack_base();
+  *(--d) = NULL;
   *(--d) = NULL;
   *(--d) = (intptr_t*)coroutine_start;
   *(--d) = NULL;
@@ -806,5 +816,6 @@ JVM_ENTRY(void, JVM_RegisterContinuationNativeMethods(JNIEnv *env, jclass cls)) 
     guarantee(status == JNI_OK && !env->ExceptionOccurred(), "register java.lang.Continuation natives");
     initializeForceWrapper(env, cls, thread, switchToIndex);
     initializeForceWrapper(env, cls, thread, switchToAndTerminateIndex);
+    Coroutine::Initialize();
 }
 JVM_END
