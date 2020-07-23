@@ -4388,6 +4388,7 @@ void Threads::nmethods_do(CodeBlobClosure* cf) {
 }
 
 void Threads::metadata_do(void f(Metadata*)) {
+  Coroutine::cont_metadata_do(f);
   ALL_JAVA_THREADS(p) {
     p->metadata_do(f);
   }

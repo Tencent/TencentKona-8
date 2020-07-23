@@ -119,7 +119,6 @@ private:
 
   //for javacall stack reclaim
   JavaCallWrapper* _JavaCallWrapper;
-  CallInfo*        _CallInfo;
   HandleMark*      _hm;
   HandleMark*      _hm2;
   bool             _has_javacall;
@@ -127,14 +126,15 @@ private:
   char _name[64];
 
   static JavaThread* _main_thread;
+  static Method* _continuation_start;
 
 public:
   static void UpdateJniFrame(Thread* t, bool enter);
  //for javacall stack reclaim
   static void ReclaimJavaCallStack(Coroutine* coro);
+  static void Initialize();
   
   static void SetJavaCallWrapper(JavaThread* thread, JavaCallWrapper* jcw);
-  static void SetCallInfo(Thread* thread,CallInfo* ci);
 
   void set_name(const char* inname) 
   {
@@ -152,6 +152,7 @@ public:
   static void switchTo_current_thread(Coroutine* coro);
   static void switchFrom_current_thread(Coroutine* coro, JavaThread* to);
   static JavaThread* main_thread() { return _main_thread; }
+  static Method* cont_start_method() { return _continuation_start; }
 
   void print_on(outputStream* st) const;
   void print_stack_on(outputStream* st);
@@ -215,6 +216,7 @@ public:
   void nmethods_do(CodeBlobClosure* cf);
   void metadata_do(void f(Metadata*));
   void frames_do(void f(frame*, const RegisterMap* map));
+  static void cont_metadata_do(void f(Metadata*));
   static void TerminateCoroutineObj(jobject coro);
   static void TerminateCoroutine(Coroutine* coro);
   static ByteSize state_offset()              { return byte_offset_of(Coroutine, _state); }
