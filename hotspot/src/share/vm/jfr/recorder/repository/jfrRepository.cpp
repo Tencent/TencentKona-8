@@ -239,14 +239,16 @@ RepositoryIterator::RepositoryIterator(const char* repository, size_t repository
       if (true) tty->print_cr("Unable to open repository %s", _repo);
       return;
     }
+    char *dbuf = NEW_C_HEAP_ARRAY(char, os::readdir_buf_size(NULL), mtInternal);
     struct dirent* dentry;
-    while ((dentry = os::readdir(dirp)) != NULL) {
+    while ((dentry = os::readdir(dirp, (dirent *)dbuf)) != NULL) {
       const char* const entry_path = filter(dentry->d_name);
       if (NULL != entry_path) {
         _files->append(entry_path);
       }
     }
     os::closedir(dirp);
+    FREE_C_HEAP_ARRAY(char, dbuf, mtInternal);
     if (_files->length() > 1) {
       _files->sort(file_sort);
     }
