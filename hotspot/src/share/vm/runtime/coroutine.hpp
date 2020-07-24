@@ -94,8 +94,10 @@ private:
   HandleArea*     _handle_area;
   GrowableArray<Metadata*>* _metadata_handles;//the first javacall stack handles cannot be deallocate so devide them to coros, discard them when destruct coro
   HandleMark*     _last_handle_mark;
-  // Active_handles points to a block of handles
-  JNIHandleBlock* _active_handles;
+
+  // for verify check
+  JNIHandleBlock* saved_active_handles;
+  size_t saved_active_handle_count;
 
   // mutable
   MonitorChunk*   _monitor_chunks;  // if deoptimizing happens in corutine it should record own monitor chunks
@@ -130,8 +132,6 @@ private:
 
 public:
   static void UpdateJniFrame(Thread* t, bool enter);
- //for javacall stack reclaim
-  static void ReclaimJavaCallStack(Coroutine* coro);
   static void Initialize();
   
   static void SetJavaCallWrapper(JavaThread* thread, JavaCallWrapper* jcw);
@@ -151,6 +151,7 @@ public:
   }
   static void switchTo_current_thread(Coroutine* coro);
   static void switchFrom_current_thread(Coroutine* coro, JavaThread* to);
+  static void yield_verify(Coroutine* from, Coroutine* to, bool terminate);
   static JavaThread* main_thread() { return _main_thread; }
   static Method* cont_start_method() { return _continuation_start; }
 
@@ -160,10 +161,6 @@ public:
   const char* get_coroutine_name() const;
   static const char* get_coroutine_state_name(CoroutineState state);
   bool is_lock_owned(address adr) const;
-	
-    // JNI handle support
-  JNIHandleBlock* active_handles() const         { return _active_handles; }
-  void set_active_handles(JNIHandleBlock* block) { _active_handles = block; }
 
   bool has_javacall() const { return _has_javacall; }
   void set_has_javacall(bool hjc) { _has_javacall = hjc; }
@@ -229,7 +226,6 @@ public:
   static ByteSize last_handle_mark_offset()   { return byte_offset_of(Coroutine, _last_handle_mark); }
   static ByteSize metadata_handles_offset()   { return byte_offset_of(Coroutine, _metadata_handles); }
   static ByteSize has_javacall_offset()   { return byte_offset_of(Coroutine, _has_javacall); }
-  static ByteSize active_handles_offset()        { return byte_offset_of(Coroutine, _active_handles   ); }
 
 #ifdef ASSERT
   static ByteSize java_call_counter_offset()  { return byte_offset_of(Coroutine, _java_call_counter); }

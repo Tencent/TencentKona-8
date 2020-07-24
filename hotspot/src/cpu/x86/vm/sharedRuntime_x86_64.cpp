@@ -4414,7 +4414,7 @@ MacroAssembler* debug_line(MacroAssembler* masm, int l) {
  * 1. monitor lock/JNI check, if lock is hold, JNI frame present on stack, no switch and pinned
  * 2. if switch target continuation on other thread, perform stack/coroutine switch
  *    TODO: if coroutine and stack is managed globally, no need perform switch
- * 3. if terminate, ReclaimJavaCallStack
+ * 3. if terminate, ReclaimJavaCallStack, deleted
  * 4. Save old coroutine context
  * 5. Restore new coroutine context
  * 6. If normal switch, return and execute in new coroutine
@@ -4479,8 +4479,14 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
     __ bind(finish_switch_thread);
   }
 
+  // invoke coroutine verify with old and target coroutine
+  if (VerifyCoroutineStateOnYield) {
+    __ movptr(old_coroutine, Address(old_coroutine_obj, java_lang_Continuation::get_data_offset()));
+    __ VerifyCoroutineState(old_coroutine, target_coroutine, terminate);
+  }
+
   // save old continuation
-  // 1. if terminate invoke Coroutine::ReclaimJavaCallStack
+  // 1. if terminate is false, save java call counter
   // 2. save last handle mark
   // 3. save active handles offset
   // 4. save rsp
@@ -4493,20 +4499,19 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
     DEBUG_ONLY(stop_if_null(masm, old_coroutine_obj, "null old_coroutine"));
     __ movptr(old_coroutine, Address(old_coroutine_obj, java_lang_Continuation::get_data_offset()));
     DEBUG_ONLY(stop_if_null(masm, old_coroutine, "old_coroutine without data"));
-	  if(terminate)	{
-      //if terminate reclaim old coroutine's javacall stack must reclain before switch
-      __ ReclaimJavaCallStack(old_coroutine);
+    if(terminate == false)	{
+      // java_call_counter must be 1 before terminate, check in VerifyCoroutineStateOnYield
+#ifdef ASSERT
+      __ movl(temp, Address(thread, JavaThread::java_call_counter_offset()));
+      __ movl(Address(old_coroutine, Coroutine::java_call_counter_offset()), temp);
+#endif
     }
     __ movptr(old_stack, Address(old_coroutine, Coroutine::stack_offset()));
     __ movl(Address(old_coroutine, Coroutine::state_offset()) , Coroutine::_onstack);
     __ movptr(temp, Address(thread, Thread::last_handle_mark_offset()));
     __ movptr(Address(old_coroutine, Coroutine::last_handle_mark_offset()), temp);
-    __ movptr(temp, Address(thread, Thread::active_handles_offset()));
-    __ movptr(Address(old_coroutine, Coroutine::active_handles_offset()), temp);
-#ifdef ASSERT
-    __ movl(temp, Address(thread, JavaThread::java_call_counter_offset()));
-    __ movl(Address(old_coroutine, Coroutine::java_call_counter_offset()), temp);
-#endif
+    //__ movptr(temp, Address(thread, Thread::active_handles_offset()));
+    //__ movptr(Address(old_coroutine, Coroutine::active_handles_offset()), temp);
     __ movptr(Address(old_stack, CoroutineStack::last_sp_offset()), rsp);
   }
   // load again as r10 overlap with old_stack
@@ -4531,11 +4536,12 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
       __ movptr(Address(thread, Thread::last_handle_mark_offset()), temp);
       __ movptr(temp, Address(target_coroutine, Coroutine::metadata_handles_offset()));
       __ movptr(Address(thread,Thread::metadata_handles_offset()) , temp);
-      __ movptr(temp, Address(target_coroutine, Coroutine::active_handles_offset()));
-      __ movptr(Address(thread, Thread::active_handles_offset()), temp);
+      //__ movptr(temp, Address(thread, Thread::active_handles_offset()));
+      //__ movptr(Address(old_coroutine, Coroutine::active_handles_offset()), temp);
 #ifdef ASSERT
       __ movl(temp, Address(target_coroutine, Coroutine::java_call_counter_offset()));
       __ movl(Address(thread, JavaThread::java_call_counter_offset()), temp);
+      // can delete?
       __ movl(Address(target_coroutine, Coroutine::java_call_counter_offset()), 0);
 #endif
 

@@ -116,47 +116,6 @@ void JavaCallWrapper::initialize(JavaThread* thread, JNIHandleBlock* handles, Me
   _anchor.clear();
 }
 
-/*
- * clear coroutine JavaCallWrapper as it will not finish JavaCall and back into start coroutine
- * It clears JNIHandleBlock and reset last java sp
- */
-void JavaCallWrapper::ClearForCoro() {
-  // Continuation might invoked and stopped at different threads
-  JavaThread* cur_thread = JavaThread::current();
-  // TODO: need check caller thread is different or dead's impact
-  // assert(_thread == JavaThread::current(), "must still be the same thread");
-
-  // restore previous handle block & Java frame linkage
-  JNIHandleBlock *_old_handles = cur_thread->active_handles();
-  guarantee(_old_handles != NULL, "_old_handles has not allocated");
-  cur_thread->set_active_handles(_handles);
-
-  cur_thread->frame_anchor()->zap();
-
-  //this stats can not be assummed correct when transist coroutine between threads
-  //debug_only(_thread->dec_java_call_counter());
-
-  if (_anchor.last_Java_sp() == NULL) {
-    cur_thread->set_base_of_stack_pointer(NULL);
-  }
-
-  //[zcye] coroclear happend in native call cannot set thread state to _thread_in_vm
-  // Old thread-local info. has been restored. We are not back in the VM.
-  //ThreadStateTransition::transition_from_java(_thread, _thread_in_vm);
-
-  // State has been restored now make the anchor frame visible for the profiler.
-  // Do this after the transition because this allows us to put an assert
-  // the Java->vm transition which checks to see that stack is not walkable
-  // on sparc/ia64 which will catch violations of the reseting of last_Java_frame
-  // invariants (i.e. _flags always cleared on return to Java)
-
-  cur_thread->frame_anchor()->copy(&_anchor);
-
-  // Release handles after we are marked as being inside the VM again, since this
-  // operation might block
-  JNIHandleBlock::release_block(_old_handles, cur_thread);
-}
-
 // only coroutine first JavaCallWrapper can switch, other JavaCallWrapper means
 // invoke from native to java, can not yield, assert _thread == JavaThread::current() still keep
 JavaCallWrapper::~JavaCallWrapper() {
@@ -194,7 +153,9 @@ JavaCallWrapper::~JavaCallWrapper() {
 
 void JavaCallWrapper::oops_do(OopClosure* f) {
   f->do_oop((oop*)&_receiver);
-  handles()->oops_do(f);
+  if (handles() != NULL) {
+    handles()->oops_do(f);
+  }
 }
 
 
@@ -476,6 +437,33 @@ void JavaCalls::call_helper(JavaValue* result, methodHandle* m, JavaCallArgument
   }
 }
 
+/*
+ * Different with normal JavaCallWrapper from vm to java
+ * Continuation actually is invoked from kernel thread's Java space to Contination.start Java code
+ * maintain this JavaCallWrapper is for stack walking entry frame(stub frame)
+ * So
+ * 1. no need save/clear last java farame, it must be empty
+ * 2. suspend/has_special_runtime_exit_condition on kernel thread should not affect newly created continuation
+ * 3. no pending exception to clear as call from java to java
+ */
+JavaCallWrapper::JavaCallWrapper(Method* method, Handle receiver, TRAPS) {
+  JavaThread* thread = (JavaThread *)THREAD;
+  assert(!thread->owns_locks(), "must release all locks when leaving VM");
+  if (VerifyCoroutineStateOnYield) {
+    // continuation.run must call from java code, its frame_anchor must be cleared
+    guarantee(thread->last_Java_sp() == NULL &&
+              thread->last_Java_pc() == 0 &&
+              thread->last_Java_fp() == NULL, "should not has last java frame");
+  }
+  ThreadStateTransition::transition(thread, _thread_in_vm, _thread_in_Java);
+  _thread = thread;
+  _handles = NULL;
+  _callee_method = method;
+  _receiver = receiver();
+  _anchor.clear();
+  _result = NULL;
+  debug_only(_thread->inc_java_call_counter());
+}
 
 /*
  * call continuation start, construct special entry that not return
@@ -546,7 +534,7 @@ void JavaCalls::call_continuation_start(JavaCallArguments* args, TRAPS) {
 
   // do call
   {
-    JavaCallWrapper link(method, receiver, NULL, CHECK);
+    JavaCallWrapper link(method(), receiver, CHECK);
     Coroutine::SetJavaCallWrapper(thread, &link);
     {
       HandleMark hm(thread);  // HandleMark used by HandleMarkCleaner

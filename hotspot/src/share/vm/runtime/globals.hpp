@@ -4024,6 +4024,9 @@ class CommandLineFlags {
   diagnostic(bool, TraceCoroutine, false,                                   \
           "Trace Coroutine create/switch/terminate")                        \
                                                                             \
+  diagnostic(bool, VerifyCoroutineStateOnYield, false,                      \
+          "Verify coroutine state after yield success")                     \
+                                                                            \
   diagnostic(bool, WhiteBoxAPI, false,                                      \
           "Enable internal testing APIs")                                   \
                                                                             \
