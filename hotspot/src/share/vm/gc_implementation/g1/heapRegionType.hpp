@@ -26,7 +26,6 @@
 #define SHARE_VM_GC_IMPLEMENTATION_G1_HEAPREGIONTYPE_HPP
 
 #include "memory/allocation.hpp"
-#include "gc_implementation/g1/g1HeapRegionTraceType.hpp"
 
 #define hrt_assert_is_valid(tag) \
   assert(is_valid((tag)), err_msg("invalid HR type: %u", (uint) (tag)))
@@ -128,7 +127,6 @@ public:
 
   const char* get_str() const;
   const char* get_short_str() const;
-  G1HeapRegionTraceType::Type get_trace_type();
 
   HeapRegionType() : _tag(FreeTag) { hrt_assert_is_valid(_tag); }
 };

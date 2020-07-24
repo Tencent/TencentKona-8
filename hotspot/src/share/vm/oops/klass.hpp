@@ -32,6 +32,7 @@
 #include "oops/klassPS.hpp"
 #include "oops/metadata.hpp"
 #include "oops/oop.hpp"
+#include "trace/traceMacros.hpp"
 #include "utilities/accessFlags.hpp"
 #include "utilities/macros.hpp"
 #if INCLUDE_ALL_GCS
@@ -39,9 +40,6 @@
 #include "gc_implementation/g1/g1OopClosures.hpp"
 #include "gc_implementation/parNew/parOopClosures.hpp"
 #endif // INCLUDE_ALL_GCS
-#if INCLUDE_JFR
-#include "jfr/support/jfrTraceIdExtension.hpp"
-#endif
 
 //
 // A Klass provides:
@@ -172,7 +170,7 @@ class Klass : public Metadata {
   markOop  _prototype_header;   // Used when biased locking is both enabled and disabled for this type
   jint     _biased_lock_revocation_count;
 
-  JFR_ONLY(DEFINE_TRACE_ID_FIELD;)
+  TRACE_DEFINE_KLASS_TRACE_ID;
 
   // Remembered sets support for the oops in the klasses.
   jbyte _modified_oops;             // Card Table Equivalent (YC/CMS support)
@@ -615,7 +613,7 @@ protected:
   jlong last_biased_lock_bulk_revocation_time() { return _last_biased_lock_bulk_revocation_time; }
   void  set_last_biased_lock_bulk_revocation_time(jlong cur_time) { _last_biased_lock_bulk_revocation_time = cur_time; }
 
-  JFR_ONLY(DEFINE_TRACE_ID_METHODS;)
+  TRACE_DEFINE_KLASS_METHODS;
 
   // garbage collection support
   virtual void oops_do(OopClosure* cl);

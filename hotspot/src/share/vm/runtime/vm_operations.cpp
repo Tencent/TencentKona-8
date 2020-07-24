@@ -37,6 +37,7 @@
 #include "runtime/thread.inline.hpp"
 #include "runtime/vm_operations.hpp"
 #include "services/threadService.hpp"
+#include "trace/tracing.hpp"
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 

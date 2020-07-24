@@ -42,6 +42,8 @@
 #include "runtime/threadLocalStorage.hpp"
 #include "runtime/thread_ext.hpp"
 #include "runtime/unhandledOops.hpp"
+#include "trace/traceBackend.hpp"
+#include "trace/traceMacros.hpp"
 #include "utilities/exceptions.hpp"
 #include "utilities/macros.hpp"
 #include "utilities/top.hpp"
@@ -51,9 +53,6 @@
 #endif // INCLUDE_ALL_GCS
 #ifdef TARGET_ARCH_zero
 # include "stack_zero.hpp"
-#endif
-#if INCLUDE_JFR
-#include "jfr/support/jfrThreadExtension.hpp"
 #endif
 
 class ThreadSafepointState;
@@ -196,9 +195,7 @@ class Thread: public ThreadShadow {
     _deopt_suspend          = 0x10000000U, // thread needs to self suspend for deopt
 
     _has_async_exception    = 0x00000001U, // there is a pending async exception
-    _critical_native_unlock = 0x00000002U, // Must call back to unlock JNI critical lock
-
-    JFR_ONLY(_trace_flag    = 0x00000004U)  // call jfr tracing
+    _critical_native_unlock = 0x00000002U  // Must call back to unlock JNI critical lock
   };
 
   // various suspension related flags - atomically updated
@@ -263,7 +260,7 @@ class Thread: public ThreadShadow {
   // Thread-local buffer used by MetadataOnStackMark.
   MetadataOnStackBuffer* _metadata_on_stack_buffer;
 
-  JFR_ONLY(DEFINE_THREAD_LOCAL_FIELD_JFR;)      // Thread-local data for jfr
+  TRACE_DATA _trace_data;                       // Thread-local data for tracing
 
   ThreadExt _ext;
 
@@ -444,8 +441,7 @@ class Thread: public ThreadShadow {
   void incr_allocated_bytes(jlong size) { _allocated_bytes += size; }
   inline jlong cooked_allocated_bytes();
 
-  JFR_ONLY(DEFINE_THREAD_LOCAL_ACCESSOR_JFR;)
-  JFR_ONLY(DEFINE_TRACE_SUSPEND_FLAG_METHODS)
+  TRACE_DATA* trace_data()              { return &_trace_data; }
 
   const ThreadExt& ext() const          { return _ext; }
   ThreadExt& ext()                      { return _ext; }
@@ -629,8 +625,6 @@ protected:
 #undef TLAB_FIELD_OFFSET
 
   static ByteSize allocated_bytes_offset()       { return byte_offset_of(Thread, _allocated_bytes ); }
-
-  JFR_ONLY(DEFINE_THREAD_LOCAL_OFFSET_JFR;)
 
  public:
   volatile intptr_t _Stalled ;

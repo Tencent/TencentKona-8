@@ -38,7 +38,6 @@
 #include "compiler/compileBroker.hpp"
 #include "interpreter/bytecodeStream.hpp"
 #include "interpreter/interpreter.hpp"
-#include "jfr/jfrEvents.hpp"
 #include "memory/filemap.hpp"
 #include "memory/gcLocker.hpp"
 #include "memory/oopFactory.hpp"
@@ -65,6 +64,9 @@
 #include "services/threadService.hpp"
 #include "utilities/macros.hpp"
 #include "utilities/ticks.hpp"
+#if INCLUDE_TRACE
+#include "trace/tracing.hpp"
+#endif
 
 Dictionary*            SystemDictionary::_dictionary          = NULL;
 PlaceholderTable*      SystemDictionary::_placeholders        = NULL;
@@ -138,9 +140,6 @@ bool SystemDictionary::is_internal_format(Symbol* class_name) {
   }
 }
 
-#endif
-#if INCLUDE_JFR
-#include "jfr/jfr.hpp"
 #endif
 
 // ----------------------------------------------------------------------------
@@ -599,22 +598,6 @@ instanceKlassHandle SystemDictionary::handle_parallel_super_load(
   return (nh);
 }
 
-// utility function for class load event
-static void post_class_load_event(EventClassLoad &event,
-                                  instanceKlassHandle k,
-                                  Handle initiating_loader) {
-#if INCLUDE_JFR
-  if (event.should_commit()) {
-    event.set_loadedClass(k());
-    event.set_definingClassLoader(k->class_loader_data());
-    oop class_loader = initiating_loader.is_null() ? (oop)NULL : initiating_loader();
-    event.set_initiatingClassLoader(class_loader != NULL ?
-                                    ClassLoaderData::class_loader_data_or_null(class_loader) :
-                                    (ClassLoaderData*)NULL);
-    event.commit();
-  }
-#endif // INCLUDE_JFR
-}
 
 Klass* SystemDictionary::resolve_instance_class_or_null(Symbol* name,
                                                         Handle class_loader,
@@ -623,7 +606,7 @@ Klass* SystemDictionary::resolve_instance_class_or_null(Symbol* name,
   assert(name != NULL && !FieldType::is_array(name) &&
          !FieldType::is_obj(name), "invalid class name");
 
-  EventClassLoad class_load_start_event;
+  Ticks class_load_start_time = Ticks::now();
 
   // UseNewReflection
   // Fix for 4474172; see evaluation for more details
@@ -874,7 +857,7 @@ Klass* SystemDictionary::resolve_instance_class_or_null(Symbol* name,
     return NULL;
   }
 
-  post_class_load_event(class_load_start_event, k, class_loader);
+  post_class_load_event(class_load_start_time, k, class_loader);
 
 #ifdef ASSERT
   {
@@ -999,7 +982,7 @@ Klass* SystemDictionary::parse_stream(Symbol* class_name,
                                       TRAPS) {
   TempNewSymbol parsed_name = NULL;
 
-  EventClassLoad class_load_start_event;
+  Ticks class_load_start_time = Ticks::now();
 
   ClassLoaderData* loader_data;
   if (host_klass.not_null()) {
@@ -1060,7 +1043,7 @@ Klass* SystemDictionary::parse_stream(Symbol* class_name,
         JvmtiExport::post_class_load((JavaThread *) THREAD, k());
     }
 
-    post_class_load_event(class_load_start_event, k, class_loader);
+    post_class_load_event(class_load_start_time, k, class_loader);
   }
   assert(host_klass.not_null() || cp_patches == NULL,
          "cp_patches only found with host_klass");
@@ -1102,13 +1085,12 @@ Klass* SystemDictionary::resolve_from_stream(Symbol* class_name,
   //
   // Note: "name" is updated.
 
-  ClassFileParser parser(st);
-  instanceKlassHandle k = parser.parseClassFile(class_name,
-                                                loader_data,
-                                                protection_domain,
-                                                parsed_name,
-                                                verify,
-                                                THREAD);
+  instanceKlassHandle k = ClassFileParser(st).parseClassFile(class_name,
+                                                             loader_data,
+                                                             protection_domain,
+                                                             parsed_name,
+                                                             verify,
+                                                             THREAD);
 
   const char* pkg = "java/";
   size_t pkglen = strlen(pkg);
@@ -1142,14 +1124,6 @@ Klass* SystemDictionary::resolve_from_stream(Symbol* class_name,
     // asserts that that's the case.
     assert(is_internal_format(parsed_name),
            "external class name format used internally");
-
-#if INCLUDE_JFR
-    {
-      InstanceKlass* ik = k();
-      ON_KLASS_CREATION(ik, parser, THREAD);
-      k = instanceKlassHandle(ik);
-    }
-#endif
 
     // Add class just loaded
     // If a class loader supports parallel classloading handle parallel define requests
@@ -1411,15 +1385,6 @@ instanceKlassHandle SystemDictionary::load_instance_class(Symbol* class_name, Ha
   }
 }
 
-static void post_class_define_event(InstanceKlass* k, const ClassLoaderData* def_cld) {
-  EventClassDefine event;
-  if (event.should_commit()) {
-    event.set_definedClass(k);
-    event.set_definingClassLoader(def_cld);
-    event.commit();
-  }
-}
-
 void SystemDictionary::define_instance_class(instanceKlassHandle k, TRAPS) {
 
   ClassLoaderData* loader_data = k->class_loader_data();
@@ -1490,7 +1455,6 @@ void SystemDictionary::define_instance_class(instanceKlassHandle k, TRAPS) {
 
   }
 
-  post_class_define_event(k(), loader_data);
 }
 
 // Support parallel classloading
@@ -1752,7 +1716,6 @@ bool SystemDictionary::do_unloading(BoolObjectClosure* is_alive, bool clean_aliv
   // First, mark for unload all ClassLoaderData referencing a dead class loader.
   bool unloading_occurred = ClassLoaderDataGraph::do_unloading(is_alive, clean_alive);
   if (unloading_occurred) {
-    JFR_ONLY(Jfr::on_unloading_classes();)
     dictionary()->do_unloading();
     constraints()->purge_loader_constraints();
     resolution_errors()->purge_resolution_errors();
@@ -2722,6 +2685,26 @@ void SystemDictionary::verify() {
   // Verify constraint table
   guarantee(constraints() != NULL, "Verify of loader constraints failed");
   constraints()->verify(dictionary(), placeholders());
+}
+
+// utility function for class load event
+void SystemDictionary::post_class_load_event(const Ticks& start_time,
+                                             instanceKlassHandle k,
+                                             Handle initiating_loader) {
+#if INCLUDE_TRACE
+  EventClassLoad event(UNTIMED);
+  if (event.should_commit()) {
+    event.set_starttime(start_time);
+    event.set_loadedClass(k());
+    oop defining_class_loader = k->class_loader();
+    event.set_definingClassLoader(defining_class_loader !=  NULL ?
+                                    defining_class_loader->klass() : (Klass*)NULL);
+    oop class_loader = initiating_loader.is_null() ? (oop)NULL : initiating_loader();
+    event.set_initiatingClassLoader(class_loader != NULL ?
+                                      class_loader->klass() : (Klass*)NULL);
+    event.commit();
+  }
+#endif // INCLUDE_TRACE
 }
 
 #ifndef PRODUCT
