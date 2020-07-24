@@ -62,8 +62,6 @@ void coroutine_start(Coroutine* coroutine, const void* coroutineObjAddr) {
 }
 #endif
 void Coroutine::TerminateCoroutine(Coroutine* coro) {
-	//cannot reclaim here,must recaim before swithto
-  //Coroutine::ReclaimJavaCallStack(coro);
   JavaThread* thread = coro->thread();
   if (TraceCoroutine) {
     ResourceMark rm;
@@ -142,7 +140,6 @@ Coroutine::Coroutine()
 	_JavaCallWrapper = NULL;
 	_last_handle_mark = NULL;
 	_has_javacall = false;
-	_active_handles = NULL;
   _monitor_chunks = NULL;
   _jni_frames = 0;
 }
@@ -152,42 +149,7 @@ Coroutine::~Coroutine() {
     delete resource_area();
     delete handle_area();
     delete metadata_handles();
-    JNIHandleBlock* JNIHandles = active_handles();
-    guarantee(JNIHandles != NULL, "stop with null active handles");
-    set_active_handles(NULL);
-    JNIHandleBlock::release_block(JNIHandles);
     assert(_monitor_chunks == NULL, "not empty _monitor_chunks");
-  }
-}
-
-/*
- * Norma exitflow is in startInternal, it invokes switchToAndTerminate(current, target)
- * This method will switch from current to target and release all resources in current coroutine
- * 1. In switchToAndTerminate, before switch context invoke Coroutine::ReclaimJavaCallStack
- * 2. In switchToAndTerminate, after switch context, invoke CoroutineSupport_switchToAndTerminate
- *    2.1 release stack
- *    2.2 release coroutine
- *
- * This method is to release stack object allcoated in first Java call to CoroutineBase.startInternal
- * Because JavaCallWrapper\CallInfo\HandleMark is allocated on coroutine's own stack, they will be
- * released automatically in 2.1.
- *
- * HandleMark release is to maintain Coroutine::_handle_area, actually no need release.
- */
-void Coroutine::ReclaimJavaCallStack(Coroutine* coro) {
-	if(!coro->_is_thread_coroutine && coro->_has_javacall) {
-    guarantee(coro->_JavaCallWrapper != NULL, "Recaim live stack without call wrapper");
-    guarantee(coro == JavaThread::current()->current_coroutine(), "Not expect coroutine");
-    coro->_JavaCallWrapper->ClearForCoro();//reclaim jnihandle
-
-    // remove method handle from _thread->metadata_handles()
-    // _thread->metadata_handles() will be released in Coroutine's destructor
-
-    // handle mark can be discarded without destructor
-    guarantee(coro->_hm2 != NULL, "Recaim live stack without hm2");
-    coro->_hm2->~HandleMark();
-    guarantee(coro->_hm != NULL, "Recaim live stack without hm");
-    coro->_hm->~HandleMark();
   }
 }
 
@@ -264,6 +226,35 @@ void Coroutine::switchFrom_current_thread(Coroutine* coro, JavaThread* to) {
     // can not get to thread name
     tty->print_cr("[Co]: SwitchFromCurrent Coroutine %s(%p) from %s(%p) to (%p)",
       coro->name(), coro, from->name(), from, to);
+  }
+}
+
+/*
+ * 1. check yield is from thread coroutine or to thread coroutine
+ * 2. check java_call_counter is 1 when terminate coroutine
+ */
+void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
+  if (TraceCoroutine) {
+    tty->print_cr("yield_verify from %p to %p", from, to);
+  }
+  if (from->is_thread_coroutine()) {
+    // save snapshot
+    guarantee(terminate == false, "switch from kernel to continnuation");
+    JavaThread* thread = from->_thread;
+    JNIHandleBlock* jni_handle_block = thread->active_handles();
+    to->saved_active_handles = jni_handle_block;
+    to->saved_active_handle_count = jni_handle_block->get_number_of_live_handles();
+  } else {
+    // switch to thread corotuine, compare status
+    JavaThread* thread = from->_thread;
+    JNIHandleBlock* jni_handle_block = thread->active_handles();
+    guarantee(from->saved_active_handles == jni_handle_block, "must same handle");
+    guarantee(from->saved_active_handle_count == jni_handle_block->get_number_of_live_handles(), "must same count");
+    to->saved_active_handles = NULL;
+    to->saved_active_handle_count = 0;
+    if (terminate) {
+      assert(thread->java_call_counter() == 1, "must be 1 when terminate");
+    }
   }
 }
 
@@ -396,7 +387,6 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, Coro
   coro->set_resource_area(new (mtThread) ResourceArea(32));
   coro->set_handle_area(new (mtThread) HandleArea(NULL, 32));
   coro->set_metadata_handles(new (ResourceObj::C_HEAP, mtClass) GrowableArray<Metadata*>(30, true));
-  coro->set_active_handles(JNIHandleBlock::allocate_block());
 
 #ifdef ASSERT
   coro->_java_call_counter = 0;
@@ -454,11 +444,6 @@ void Coroutine::oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) {
     {
         DEBUG_CORO_ONLY(tty->print_cr("collecting handle area %08x", _handle_area));
         _handle_area->oops_do(f);
-    }
-    if (_active_handles != NULL)
-    {
-        DEBUG_CORO_ONLY(tty->print_cr("collecting _active_handles %08x", _active_handles));
-        _active_handles->oops_do(f);
     }
   }
 }
@@ -814,6 +799,11 @@ JVM_ENTRY(void, JVM_RegisterContinuationNativeMethods(JNIEnv *env, jclass cls)) 
     ThreadToNativeFromVM trans((JavaThread*)thread);
     int status = env->RegisterNatives(cls, CONT_methods, sizeof(CONT_methods)/sizeof(JNINativeMethod));
     guarantee(status == JNI_OK && !env->ExceptionOccurred(), "register java.lang.Continuation natives");
+#ifdef ASSERT
+    if (FLAG_IS_DEFAULT(VerifyCoroutineStateOnYield)) {
+      FLAG_SET_DEFAULT(VerifyCoroutineStateOnYield, true);
+    }
+#endif
     initializeForceWrapper(env, cls, thread, switchToIndex);
     initializeForceWrapper(env, cls, thread, switchToAndTerminateIndex);
     Coroutine::Initialize();
