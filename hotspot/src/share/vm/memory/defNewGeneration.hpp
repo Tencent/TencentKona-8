@@ -129,7 +129,7 @@ protected:
   }
 
   // Tenuring
-  void adjust_desired_tenuring_threshold(GCTracer &tracer);
+  void adjust_desired_tenuring_threshold();
 
   // Spaces
   EdenSpace*       _eden_space;

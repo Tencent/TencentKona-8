@@ -32,7 +32,6 @@
 #include "interpreter/interpreter.hpp"
 #include "interpreter/linkResolver.hpp"
 #include "interpreter/oopMapCache.hpp"
-#include "jfr/jfrEvents.hpp"
 #include "jvmtifiles/jvmtiEnv.hpp"
 #include "memory/gcLocker.inline.hpp"
 #include "memory/metaspaceShared.hpp"
@@ -78,6 +77,8 @@
 #include "services/management.hpp"
 #include "services/memTracker.hpp"
 #include "services/threadService.hpp"
+#include "trace/tracing.hpp"
+#include "trace/traceMacros.hpp"
 #include "utilities/defaultStream.hpp"
 #include "utilities/dtrace.hpp"
 #include "utilities/events.hpp"
@@ -110,9 +111,6 @@
 #endif
 #if INCLUDE_RTM_OPT
 #include "runtime/rtmLocking.hpp"
-#endif
-#if INCLUDE_JFR
-#include "jfr/jfr.hpp"
 #endif
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
@@ -344,6 +342,8 @@ void Thread::record_stack_base_and_size() {
 Thread::~Thread() {
   // Reclaim the objectmonitors from the omFreeList of the moribund thread.
   ObjectSynchronizer::omFlush (this) ;
+
+  EVENT_THREAD_DESTRUCT(this);
 
   // stack_base can be NULL if the thread is never started or exited before
   // record_stack_base_and_size called. Although, we would like to ensure
@@ -1217,7 +1217,6 @@ NamedThread::NamedThread() : Thread() {
 }
 
 NamedThread::~NamedThread() {
-  JFR_ONLY(Jfr::on_thread_exit(this);)
   if (_name != NULL) {
     FREE_C_HEAP_ARRAY(char, _name, mtThread);
     _name = NULL;
@@ -1675,7 +1674,11 @@ void JavaThread::run() {
     JvmtiExport::post_thread_start(this);
   }
 
-  JFR_ONLY(Jfr::on_thread_start(this);)
+  EventThreadStart event;
+  if (event.should_commit()) {
+     event.set_javalangthread(java_lang_Thread::thread_id(this->threadObj()));
+     event.commit();
+  }
 
   // We call another function to do the rest so we are sure that the stack addresses used
   // from there will be lower than the stack base just computed
@@ -1802,7 +1805,17 @@ void JavaThread::exit(bool destroy_vm, ExitType exit_type) {
         }
       }
     }
-    JFR_ONLY(Jfr::on_java_thread_dismantle(this);)
+
+    // Called before the java thread exit since we want to read info
+    // from java_lang_Thread object
+    EventThreadEnd event;
+    if (event.should_commit()) {
+        event.set_javalangthread(java_lang_Thread::thread_id(this->threadObj()));
+        event.commit();
+    }
+
+    // Call after last event on thread
+    EVENT_THREAD_EXIT(this);
 
     // Call Thread.exit(). We try 3 times in case we got another Thread.stop during
     // the execution of the method. If that is not enough, then we don't really care. Thread.stop
@@ -1879,7 +1892,6 @@ void JavaThread::exit(bool destroy_vm, ExitType exit_type) {
   // These things needs to be done while we are still a Java Thread. Make sure that thread
   // is in a consistent state, in case GC happens
   assert(_privileged_stack_top == NULL, "must be NULL when we get here");
-  JFR_ONLY(Jfr::on_thread_exit(this);)
 
   if (active_handles() != NULL) {
     JNIHandleBlock* block = active_handles();
@@ -2179,8 +2191,6 @@ void JavaThread::handle_special_runtime_exit_condition(bool check_asyncs) {
   if (check_asyncs) {
     check_and_handle_async_exceptions();
   }
-
-  JFR_ONLY(SUSPEND_THREAD_CONDITIONAL(this);)
 }
 
 void JavaThread::send_thread_stop(oop java_throwable)  {
@@ -2419,8 +2429,6 @@ void JavaThread::check_safepoint_and_suspend_for_native_trans(JavaThread *thread
       fatal("missed deoptimization!");
     }
   }
-
-  JFR_ONLY(SUSPEND_THREAD_CONDITIONAL(thread);)
 }
 
 // Slow path when the native==>VM/Java barriers detect a safepoint is in
@@ -3309,14 +3317,6 @@ void Threads::threads_do(ThreadClosure* tc) {
   if (wt != NULL)
     tc->do_thread(wt);
 
-#if INCLUDE_JFR
-  Thread* sampler_thread = Jfr::sampler_thread();
-  if (sampler_thread != NULL) {
-    tc->do_thread(sampler_thread);
-  }
-
-#endif
-
   // If CompilerThreads ever become non-JavaThreads, add them here
 }
 
@@ -3442,8 +3442,6 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
     *canTryAgain = false; // don't let caller call JNI_CreateJavaVM again
     return status;
   }
-
-  JFR_ONLY(Jfr::on_vm_init();)
 
   // Should be done after the heap is fully created
   main_thread->cache_global_variables();
@@ -3572,6 +3570,11 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
 
   quicken_jni_functions();
 
+  // Must be run after init_ft which initializes ft_enabled
+  if (TRACE_INITIALIZE() != JNI_OK) {
+    vm_exit_during_initialization("Failed to initialize tracing backend");
+  }
+
   // Set flag that basic initialization has completed. Used by exceptions and various
   // debug stuff, that does not work until all basic classes have been initialized.
   set_init_completed();
@@ -3640,7 +3643,9 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   // Notify JVMTI agents that VM initialization is complete - nop if no agents.
   JvmtiExport::post_vm_initialized();
 
-  JFR_ONLY(Jfr::on_vm_start();)
+  if (TRACE_START() != JNI_OK) {
+    vm_exit_during_initialization("Failed to start tracing backend.");
+  }
 
   if (CleanChunkPoolAsync) {
     Chunk::start_chunk_pool_cleaner_task();
@@ -4009,12 +4014,6 @@ bool Threads::destroy_vm() {
       //
       Threads_lock->wait(!Mutex::_no_safepoint_check_flag, 0,
                          Mutex::_as_suspend_equivalent_flag);
-  }
-
-  EventShutdown e;
-  if (e.should_commit()) {
-    e.set_reason("No remaining non-daemon Java threads");
-    e.commit();
   }
 
   // Hang forever on exit if we are reporting an error.

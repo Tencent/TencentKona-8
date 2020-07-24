@@ -42,14 +42,6 @@
 # include "utilities/globalDefinitions_xlc.hpp"
 #endif
 
-// Defaults for macros that might be defined per compiler.
-#ifndef NOINLINE
-#define NOINLINE
-#endif
-#ifndef ALWAYSINLINE
-#define ALWAYSINLINE inline
-#endif
-
 #ifndef PRAGMA_DIAG_PUSH
 #define PRAGMA_DIAG_PUSH
 #endif

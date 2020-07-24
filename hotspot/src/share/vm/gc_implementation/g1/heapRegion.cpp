@@ -37,7 +37,6 @@
 #include "memory/space.inline.hpp"
 #include "oops/oop.inline.hpp"
 #include "runtime/orderAccess.inline.hpp"
-#include "gc_implementation/g1/heapRegionTracer.hpp"
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
@@ -212,31 +211,6 @@ void HeapRegion::calc_gc_efficiency() {
   _gc_efficiency = (double) reclaimable_bytes() / region_elapsed_time_ms;
 }
 
-void HeapRegion::set_free() {
-  report_region_type_change(G1HeapRegionTraceType::Free);
-  _type.set_free();
-}
-
-void HeapRegion::set_eden() {
-  report_region_type_change(G1HeapRegionTraceType::Eden);
-  _type.set_eden();
-}
-
-void HeapRegion::set_eden_pre_gc() {
-  report_region_type_change(G1HeapRegionTraceType::Eden);
-  _type.set_eden_pre_gc();
-}
-
-void HeapRegion::set_survivor() {
-  report_region_type_change(G1HeapRegionTraceType::Survivor);
-  _type.set_survivor();
-}
-
-void HeapRegion::set_old() {
-  report_region_type_change(G1HeapRegionTraceType::Old);
-  _type.set_old();
-}
-
 void HeapRegion::set_startsHumongous(HeapWord* new_top, HeapWord* new_end) {
   assert(!isHumongous(), "sanity / pre-condition");
   assert(end() == _orig_end,
@@ -244,7 +218,6 @@ void HeapRegion::set_startsHumongous(HeapWord* new_top, HeapWord* new_end) {
   assert(top() == bottom(), "should be empty");
   assert(bottom() <= new_top && new_top <= new_end, "pre-condition");
 
-  report_region_type_change(G1HeapRegionTraceType::StartsHumongous);
   _type.set_starts_humongous();
   _humongous_start_region = this;
 
@@ -259,7 +232,6 @@ void HeapRegion::set_continuesHumongous(HeapRegion* first_hr) {
   assert(top() == bottom(), "should be empty");
   assert(first_hr->startsHumongous(), "pre-condition");
 
-  report_region_type_change(G1HeapRegionTraceType::ContinuesHumongous);
   _type.set_continues_humongous();
   _humongous_start_region = first_hr;
 }
@@ -329,14 +301,6 @@ void HeapRegion::initialize(MemRegion mr, bool clear_space, bool mangle_space) {
   hr_clear(false /*par*/, false /*clear_space*/);
   set_top(bottom());
   record_timestamp();
-}
-
-void HeapRegion::report_region_type_change(G1HeapRegionTraceType::Type to) {
-  HeapRegionTracer::send_region_type_change(_hrm_index,
-                                            get_trace_type(),
-                                            to,
-                                            (uintptr_t)bottom(),
-                                            used());
 }
 
 CompactibleSpace* HeapRegion::next_compaction_space() const {

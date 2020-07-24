@@ -37,7 +37,6 @@
                 _JVM_ArrayCopy
                 _JVM_AssertionStatusDirectives
                 _JVM_Available
-                _JVM_BeforeHalt
                 _JVM_Bind
                 _JVM_ClassDepth
                 _JVM_ClassLoaderDepth

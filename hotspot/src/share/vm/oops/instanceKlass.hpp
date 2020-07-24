@@ -38,9 +38,7 @@
 #include "utilities/accessFlags.hpp"
 #include "utilities/bitMap.inline.hpp"
 #include "utilities/macros.hpp"
-#if INCLUDE_JFR
-#include "jfr/support/jfrKlassExtension.hpp"
-#endif
+#include "trace/traceMacros.hpp"
 
 // An InstanceKlass is the VM level representation of a Java class.
 // It contains all information needed for at class at execution runtime.
@@ -840,7 +838,7 @@ class InstanceKlass: public Klass {
 
   // support for stub routines
   static ByteSize init_state_offset()  { return in_ByteSize(offset_of(InstanceKlass, _init_state)); }
-  JFR_ONLY(DEFINE_KLASS_TRACE_ID_OFFSET;)
+  TRACE_DEFINE_OFFSET;
   static ByteSize init_thread_offset() { return in_ByteSize(offset_of(InstanceKlass, _init_thread)); }
 
   // subclass/subinterface checks

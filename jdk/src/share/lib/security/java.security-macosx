@@ -226,10 +226,7 @@ package.access=sun.,\
                jdk.nashorn.tools.,\
                jdk.xml.internal.,\
                com.sun.activation.registries.,\
-               apple.,\
-               jdk.jfr.events.,\
-               jdk.jfr.internal.,\
-               jdk.management.jfr.internal.
+               apple.
 
 #
 # List of comma-separated packages that start with or equal this string
