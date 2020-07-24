@@ -132,9 +132,6 @@ JNIEXPORT void JNICALL
 JVM_Exit(jint code);
 
 JNIEXPORT void JNICALL
-JVM_BeforeHalt();
-
-JNIEXPORT void JNICALL
 JVM_Halt(jint code);
 
 JNIEXPORT void JNICALL

@@ -72,8 +72,7 @@ static uintx chunk_oops_do(OopClosure* f, Chunk* chunk, char* chunk_top) {
   while (bottom < top) {
     // This test can be moved up but for now check every oop.
 
-    // JFR is known to set mark word to 0 for duration of leak analysis VM operaiton
-    assert((*bottom)->is_oop(INCLUDE_JFR), "handle should point to oop");
+    assert((*bottom)->is_oop(), "handle should point to oop");
 
     f->do_oop(bottom++);
   }

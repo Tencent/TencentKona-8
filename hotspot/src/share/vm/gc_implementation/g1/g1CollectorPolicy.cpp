@@ -839,11 +839,11 @@ void G1CollectorPolicy::record_stop_world_start() {
   _stop_world_start = os::elapsedTime();
 }
 
-void G1CollectorPolicy::record_collection_pause_start(double start_time_sec, GCTracer &tracer) {
+void G1CollectorPolicy::record_collection_pause_start(double start_time_sec) {
   // We only need to do this here as the policy will only be applied
   // to the GC we're about to start. so, no point is calculating this
   // every time we calculate / recalculate the target young length.
-  update_survivors_policy(tracer);
+  update_survivors_policy();
 
   assert(_g1->used() == _g1->recalculate_used(),
          err_msg("sanity, used: " SIZE_FORMAT " recalculate_used: " SIZE_FORMAT,
@@ -1453,7 +1453,7 @@ void G1CollectorPolicy::update_max_gc_locker_expansion() {
 }
 
 // Calculates survivor space parameters.
-void G1CollectorPolicy::update_survivors_policy(GCTracer &tracer) {
+void G1CollectorPolicy::update_survivors_policy() {
   double max_survivor_regions_d =
                  (double) _young_list_target_length / (double) SurvivorRatio;
   // We use ceiling so that if max_survivor_regions_d is > 0.0 (but
@@ -1461,7 +1461,7 @@ void G1CollectorPolicy::update_survivors_policy(GCTracer &tracer) {
   _max_survivor_regions = (uint) ceil(max_survivor_regions_d);
 
   _tenuring_threshold = _survivors_age_table.compute_tenuring_threshold(
-        HeapRegion::GrainWords * _max_survivor_regions, tracer);
+        HeapRegion::GrainWords * _max_survivor_regions);
 }
 
 bool G1CollectorPolicy::force_initial_mark_if_outside_cycle(

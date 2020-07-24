@@ -844,7 +844,6 @@ JDK_MICRO_VERSION
 JDK_MINOR_VERSION
 JDK_MAJOR_VERSION
 USER_RELEASE_SUFFIX
-ENABLE_JFR
 COMPRESS_JARS
 UNLIMITED_CRYPTO
 CACERTS_FILE
@@ -1014,7 +1013,6 @@ infodir
 docdir
 oldincludedir
 includedir
-runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -1062,7 +1060,6 @@ enable_headful
 enable_hotspot_test_in_build
 with_cacerts_file
 enable_unlimited_crypto
-enable_jfr
 with_milestone
 with_update_version
 with_user_release_suffix
@@ -1258,7 +1255,6 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
-runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1511,15 +1507,6 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
-  -runstatedir | --runstatedir | --runstatedi | --runstated \
-  | --runstate | --runstat | --runsta | --runst | --runs \
-  | --run | --ru | --r)
-    ac_prev=runstatedir ;;
-  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
-  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
-  | --run=* | --ru=* | --r=*)
-    runstatedir=$ac_optarg ;;
-
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1657,7 +1644,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir runstatedir
+		libdir localedir mandir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1810,7 +1797,6 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
-  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -1861,7 +1847,6 @@ Optional Features:
                           run the Queens test after Hotspot build [disabled]
   --enable-unlimited-crypto
                           Enable unlimited crypto policy [disabled]
-  --enable-jfr            Enable Java Flight Recorder support [disabled]
   --disable-debug-symbols disable generation of debug symbols [enabled]
   --disable-zip-debug-info
                           disable zipping of debug-info files [enabled]
@@ -19864,30 +19849,6 @@ fi
   #
   COMPRESS_JARS=false
 
-
-
-  ###############################################################################
-  #
-  # Enable or disable JFR
-  #
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to build jfr" >&5
-$as_echo_n "checking whether to build jfr... " >&6; }
-  # Check whether --enable-jfr was given.
-if test "${enable_jfr+set}" = set; then :
-  enableval=$enable_jfr;
-else
-  enable_jfr=no
-fi
-
-  if test "x$enable_jfr" = "xno"; then
-    ENABLE_JFR=false
-  elif test "x$enable_jfr" = "xyes"; then
-    ENABLE_JFR=true
-  else
-    as_fn_error $? "--enable-jfr must either be set to yes or no" "$LINENO" 5
-  fi
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ENABLE_JFR" >&5
-$as_echo "$ENABLE_JFR" >&6; }
 
 
 
