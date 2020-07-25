@@ -476,7 +476,7 @@ void JavaCalls::call_helper(JavaValue* result, methodHandle* m, JavaCallArgument
  * 2. suspend/has_special_runtime_exit_condition on kernel thread should not affect newly created continuation
  * 3. no pending exception to clear as call from java to java
  */
-JavaCallWrapper::JavaCallWrapper(Method* method, Handle receiver, TRAPS) {
+JavaCallWrapper::JavaCallWrapper(Method* method, oop cont_obj, TRAPS) {
   JavaThread* thread = (JavaThread *)THREAD;
   assert(!thread->owns_locks(), "must release all locks when leaving VM");
   if (VerifyCoroutineStateOnYield) {
@@ -489,7 +489,7 @@ JavaCallWrapper::JavaCallWrapper(Method* method, Handle receiver, TRAPS) {
   _thread = thread;
   _handles = NULL;
   _callee_method = method;
-  _receiver = receiver();
+  _receiver = cont_obj;
   _anchor.clear();
   _result = NULL;
   debug_only(_thread->inc_java_call_counter());
@@ -526,16 +526,19 @@ JavaCallWrapper::JavaCallWrapper(Method* method, Handle receiver, TRAPS) {
  * When continuation yield back to thread, check HandleMark/ResourceMark/JNI/MetadataHandle
  * is same with before call continuation
  */
-void JavaCalls::call_continuation_start(JavaCallArguments* args, TRAPS) {
+void JavaCalls::call_continuation_start(oop cont_obj, TRAPS) {
   // During dumping, Java execution environment is not fully initialized. Also, Java execution
   // may cause undesirable side-effects in the class metadata.
   assert(!DumpSharedSpaces, "must not execute Java bytecodes when dumping");
 
   JavaThread* thread = (JavaThread*)THREAD;
+  HandleMark hm(thread);
+  HandleMark hm2(thread);
+  Coroutine* coro = thread->current_coroutine();
   methodHandle method = methodHandle(Coroutine::cont_start_method());
+  Handle receiver = Handle(cont_obj);
   assert(thread->is_Java_thread(), "must be called by a java thread");
-  assert(thread->current_coroutine() != NULL && !thread->current_coroutine()->is_thread_coroutine(),
-    "must be in coroutine");
+  assert(coro != NULL && !coro->is_thread_coroutine(), "must be in coroutine");
   assert(method.not_null(), "must have a method to call");
   assert(!SafepointSynchronize::is_at_safepoint(), "call to Java code during VM operation");
   assert(!thread->handle_area()->no_handle_mark_active(), "cannot call out to Java here");
@@ -558,16 +561,19 @@ void JavaCalls::call_continuation_start(JavaCallArguments* args, TRAPS) {
   }
 
   // Find receiver
-  Handle receiver = args->receiver();
   // call from Java in VM, no stack zone is change
   // no stack overflow check is needed
 
   // do call
   {
-    JavaCallWrapper link(method(), receiver, CHECK);
-    Coroutine::SetJavaCallWrapper(thread, &link);
+    JavaCallWrapper link(method(), receiver(), CHECK);
     {
       HandleMark hm(thread);  // HandleMark used by HandleMarkCleaner
+      coro->set_has_javacall(true);
+      if (VerifyCoroutineStateOnYield) {
+        coro->set_saved_handle_area_hwm(thread->handle_area()->hwm());
+      }
+      oop param = receiver();
       StubRoutines::call_stub()(
         (address)&link,
         // (intptr_t*)&(result->_value), // see NOTE above (compiler problem)
@@ -575,8 +581,8 @@ void JavaCalls::call_continuation_start(JavaCallArguments* args, TRAPS) {
         T_VOID,
         method(),
         entry_point,
-        args->parameters(),
-        args->size_of_parameters(),
+        (intptr_t*)&param, //args->parameters(),
+        1, //args->size_of_parameters(),
         CHECK
       );
       ShouldNotReachHere();

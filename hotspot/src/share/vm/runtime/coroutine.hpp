@@ -98,6 +98,7 @@ private:
   // for verify check
   JNIHandleBlock* saved_active_handles;
   size_t saved_active_handle_count;
+  char* saved_handle_area_hwm;
 
   // mutable
   MonitorChunk*   _monitor_chunks;  // if deoptimizing happens in corutine it should record own monitor chunks
@@ -120,9 +121,6 @@ private:
   void frames_do(FrameClosure* fc);
 
   //for javacall stack reclaim
-  JavaCallWrapper* _JavaCallWrapper;
-  HandleMark*      _hm;
-  HandleMark*      _hm2;
   bool             _has_javacall;
 
   char _name[64];
@@ -133,8 +131,6 @@ private:
 public:
   static void UpdateJniFrame(Thread* t, bool enter);
   static void Initialize();
-  
-  static void SetJavaCallWrapper(JavaThread* thread, JavaCallWrapper* jcw);
 
   void set_name(const char* inname) 
   {
@@ -165,8 +161,6 @@ public:
   bool has_javacall() const { return _has_javacall; }
   void set_has_javacall(bool hjc) { _has_javacall = hjc; }
 
-  void run(oop coroutine);
-
   static Coroutine* create_thread_coroutine(const char* name,JavaThread* thread, CoroutineStack* stack);
   static Coroutine* create_coroutine(const char* name,JavaThread* thread, CoroutineStack* stack, oop coroutineObj);
   static void free_coroutine(Coroutine* coroutine, JavaThread* thread);
@@ -193,6 +187,9 @@ public:
 
   HandleMark* last_handle_mark() const    { return _last_handle_mark; }
   void set_last_handle_mark(HandleMark* x){ _last_handle_mark = x; }
+
+  void set_saved_handle_area_hwm(char* wm) { saved_handle_area_hwm = wm; }
+  char* get_saved_handle_area_hwm()        { return saved_handle_area_hwm; }
 
   void set_monitor_chunks(MonitorChunk* monitor_chunks) { _monitor_chunks = monitor_chunks; }
   MonitorChunk* monitor_chunks() const           { return _monitor_chunks; }
