@@ -67,7 +67,7 @@ class JavaCallWrapper: StackObj {
   // Construction/destruction
   JavaCallWrapper(methodHandle callee_method, Handle receiver, JavaValue* result, TRAPS);
   // Used for continuation wrapper
-  JavaCallWrapper(Method* method, Handle receiver, TRAPS);
+  JavaCallWrapper(Method* method, oop cont_obj, TRAPS);
   ~JavaCallWrapper();
   void initialize(JavaThread* thread, JNIHandleBlock* handles, Method* callee_method, oop receiver, JavaValue* result);
 
@@ -265,7 +265,7 @@ class JavaCalls: AllStatic {
   static void call(JavaValue* result, methodHandle method, JavaCallArguments* args, TRAPS);
 
   // Continuation Entry call
-  static void call_continuation_start(JavaCallArguments* args, TRAPS);
+  static void call_continuation_start(oop cont_obj, TRAPS);
 };
 
 #endif // SHARE_VM_RUNTIME_JAVACALLS_HPP

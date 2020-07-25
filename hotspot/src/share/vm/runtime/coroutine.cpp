@@ -57,7 +57,7 @@ void coroutine_start(Coroutine* coroutine, const void* coroutineObjAddr) {
 #else
   oop coroutineObj = (oop)coroutineObjAddr;
 #endif
-  coroutine->run(coroutineObj);
+  JavaCalls::call_continuation_start(coroutineObj, coroutine->thread());
   ShouldNotReachHere();
 }
 #endif
@@ -111,33 +111,11 @@ void Coroutine::cont_metadata_do(void f(Metadata*)) {
   }
 }
 
-// there is no safepoint from coroutine_start invoke to add handle mark here
-// so safe to use raw oop
-void Coroutine::run(oop coroutine) {
-  HandleMark hm(_thread);
-  HandleMark hm2(_thread);
-  _hm = &hm;
-  _hm2 = &hm2;
-  Handle obj(_thread, coroutine);
-  //JavaValue result(T_VOID);
-  set_has_javacall(true);
-
-  {
-    JavaCallArguments args(obj); // One oop argument
-    assert(_thread->is_Java_thread(), "only JavaThreads can make JavaCalls");
-    //methodHandle method = methodHandle(_continuation_start);
-    //JavaCalls::call_helper(&result, &method, &args, _thread);
-    JavaCalls::call_continuation_start(&args, _thread);
-    ShouldNotReachHere();
-  }
-}
-
 Coroutine::Coroutine() 
 {
 	_resource_area = NULL;
 	_handle_area = NULL;
 	_metadata_handles = NULL;
-	_JavaCallWrapper = NULL;
 	_last_handle_mark = NULL;
 	_has_javacall = false;
   _monitor_chunks = NULL;
@@ -150,14 +128,6 @@ Coroutine::~Coroutine() {
     delete handle_area();
     delete metadata_handles();
     assert(_monitor_chunks == NULL, "not empty _monitor_chunks");
-  }
-}
-
-void Coroutine::SetJavaCallWrapper(JavaThread* thread, JavaCallWrapper* jcw) {
-  Coroutine* co = thread->current_coroutine();
-  if(co && co->_JavaCallWrapper == NULL)	{
-    guarantee(jcw != NULL, "NULL JavaCallWrapper");
-    co->_JavaCallWrapper = jcw;
   }
 }
 
@@ -250,10 +220,14 @@ void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
     JNIHandleBlock* jni_handle_block = thread->active_handles();
     guarantee(from->saved_active_handles == jni_handle_block, "must same handle");
     guarantee(from->saved_active_handle_count == jni_handle_block->get_number_of_live_handles(), "must same count");
-    to->saved_active_handles = NULL;
-    to->saved_active_handle_count = 0;
+    from->saved_active_handles = NULL;
+    from->saved_active_handle_count = 0;
     if (terminate) {
       assert(thread->java_call_counter() == 1, "must be 1 when terminate");
+    }
+    if (from->saved_handle_area_hwm != thread->handle_area()->hwm()) {
+      tty->print_cr("%p failed %p, %p", from, from->saved_handle_area_hwm, thread->handle_area()->hwm());
+      guarantee(false, "handle area leak");
     }
   }
 }
