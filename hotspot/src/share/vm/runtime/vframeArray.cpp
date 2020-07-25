@@ -57,7 +57,7 @@ void vframeArrayElement::free_monitors(JavaThread* jt) {
 }
 
 void vframeArrayElement::fill_in(compiledVFrame* vf, bool realloc_failures) {
-
+   HandleMark hm;
 // Copy the information from the compiled vframe to the
 // interpreter frame we will be creating to replace vf
 
