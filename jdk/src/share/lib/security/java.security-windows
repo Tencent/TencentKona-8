@@ -276,10 +276,7 @@ package.definition=sun.,\
                    jdk.nashorn.tools.,\
                    jdk.xml.internal.,\
                    com.sun.activation.registries.,\
-                   com.sun.java.accessibility.,\
-                   jdk.jfr.events.,\
-                   jdk.jfr.internal.,\
-                   jdk.management.jfr.internal.
+                   com.sun.java.accessibility.
 
 #
 # Determines whether this properties file can be appended to
