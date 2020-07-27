@@ -277,9 +277,6 @@ package.definition=sun.,\
                    jdk.nashorn.tools.,\
                    jdk.xml.internal.,\
                    com.sun.activation.registries.,\
-                   jdk.jfr.events.,\
-                   jdk.jfr.internal.,\
-                   jdk.management.jfr.internal.,\
                    apple.
 
 #
