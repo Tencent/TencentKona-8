@@ -83,6 +83,7 @@ SUNWprivate_1.1 {
                 JVM_DTraceDispose;
                 JVM_DumpAllStacks;
                 JVM_DumpThreads;
+                JVM_RegisterContinuationMethods;
                 JVM_EnableCompiler;
                 JVM_Exit;
                 JVM_FillInStackTrace;

@@ -768,7 +768,7 @@ static void initializeForceWrapper(JNIEnv *env, jclass cls, JavaThread* thread, 
   }
 }
 
-JVM_ENTRY(void, JVM_RegisterContinuationNativeMethods(JNIEnv *env, jclass cls)) {
+void CONT_RegisterNativeMethods(JNIEnv *env, jclass cls, JavaThread* thread) {
     assert(thread->is_Java_thread(), "");
     ThreadToNativeFromVM trans((JavaThread*)thread);
     int status = env->RegisterNatives(cls, CONT_methods, sizeof(CONT_methods)/sizeof(JNINativeMethod));
@@ -782,4 +782,3 @@ JVM_ENTRY(void, JVM_RegisterContinuationNativeMethods(JNIEnv *env, jclass cls)) 
     initializeForceWrapper(env, cls, thread, switchToAndTerminateIndex);
     Coroutine::Initialize();
 }
-JVM_END
