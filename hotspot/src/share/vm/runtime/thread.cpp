@@ -69,6 +69,7 @@
 #include "runtime/thread.inline.hpp"
 #include "runtime/threadCritical.hpp"
 #include "runtime/threadLocalStorage.hpp"
+#include "runtime/threadStatisticalInfo.hpp"
 #include "runtime/vframe.hpp"
 #include "runtime/vframeArray.hpp"
 #include "runtime/vframe_hp.hpp"
@@ -857,13 +858,28 @@ void Thread::metadata_do(void f(Metadata*)) {
   }
 }
 
-void Thread::print_on(outputStream* st) const {
+void Thread::print_on(outputStream* st, bool print_extended_info) const {
   // get_priority assumes osthread initialized
   if (osthread() != NULL) {
     int os_prio;
     if (os::get_native_priority(this, &os_prio) == OS_OK) {
       st->print("os_prio=%d ", os_prio);
     }
+    st->print("cpu=%.2fms ",
+            os::thread_cpu_time(const_cast<Thread*>(this), true) / 1000000.0
+            );
+    st->print("elapsed=%.2fs ",
+            _statistical_info.getElapsedTime() / 1000.0
+            );
+    if (is_Java_thread() && (PrintExtendedThreadInfo || print_extended_info)) {
+        size_t allocated_bytes = (size_t) const_cast<Thread*>(this)->cooked_allocated_bytes();
+        st->print("allocated=" SIZE_FORMAT "%s ",
+                byte_size_in_proper_unit(allocated_bytes),
+                proper_unit_for_byte_size(allocated_bytes)
+                );
+        st->print("defined_classes=" INT64_FORMAT " ", _statistical_info.getDefineClassCount());
+    }
+
     st->print("tid=" INTPTR_FORMAT " ", this);
     ext().print_on(st);
     osthread()->print_on(st);
@@ -2853,7 +2869,7 @@ void JavaThread::print_thread_state() const {
 #endif // PRODUCT
 
 // Called by Threads::print() for VM_PrintThreads operation
-void JavaThread::print_on(outputStream *st) const {
+void JavaThread::print_on(outputStream *st, bool print_extended_info) const {
   st->print("\"%s\" ", get_thread_name());
   oop thread_oop = threadObj();
   if (thread_oop != NULL) {
@@ -2861,7 +2877,7 @@ void JavaThread::print_on(outputStream *st) const {
     if (java_lang_Thread::is_daemon(thread_oop))  st->print("daemon ");
     st->print("prio=%d ", java_lang_Thread::priority(thread_oop));
   }
-  Thread::print_on(st);
+  Thread::print_on(st, print_extended_info);
   // print guess for valid stack memory region (assume 4K pages); helps lock debugging
   st->print_cr("[" INTPTR_FORMAT "]", (intptr_t)last_Java_sp() & ~right_n_bits(12));
   if (thread_oop != NULL && JDK_Version::is_gte_jdk15x_version()) {
@@ -4352,7 +4368,9 @@ JavaThread *Threads::owning_thread_from_monitor_owner(address owner, bool doLock
 }
 
 // Threads::print_on() is called at safepoint by VM_PrintThreads operation.
-void Threads::print_on(outputStream* st, bool print_stacks, bool internal_format, bool print_concurrent_locks) {
+void Threads::print_on(outputStream* st, bool print_stacks,
+        bool internal_format, bool print_concurrent_locks,
+        bool print_extended_info) {
   char buf[32];
   st->print_cr("%s", os::local_time_string(buf, sizeof(buf)));
 
@@ -4373,7 +4391,7 @@ void Threads::print_on(outputStream* st, bool print_stacks, bool internal_format
 
   ALL_JAVA_THREADS(p) {
     ResourceMark rm;
-    p->print_on(st);
+    p->print_on(st, print_extended_info);
     if (print_stacks) {
       if (internal_format) {
         p->trace_stack();
