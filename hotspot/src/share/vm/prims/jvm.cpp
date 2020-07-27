@@ -771,6 +771,11 @@ JVM_LEAF(jint, JVM_GetLastErrorString(char *buf, int len))
   return (jint)os::lasterror(buf, len);
 JVM_END
 
+// java.lang.Continuation /////////////////////////////////////////////////////
+
+JVM_ENTRY(void, JVM_RegisterContinuationMethods(JNIEnv *env, jclass cls))
+  CONT_RegisterNativeMethods(env, cls, thread);
+JVM_END
 
 // java.io.File ///////////////////////////////////////////////////////////////
 

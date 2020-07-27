@@ -321,4 +321,5 @@ template<class T> void DoublyLinkedList<T>::insert_into_list(pointer& list) {
   }
 }
 
+void CONT_RegisterNativeMethods(JNIEnv *env, jclass cls, JavaThread* thread);
 #endif // SHARE_VM_RUNTIME_COROUTINE_HPP
