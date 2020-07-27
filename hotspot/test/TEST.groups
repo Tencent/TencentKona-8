@@ -56,6 +56,7 @@
 
 # Full JDK can run all tests
 #
+
 jdk = \
   :jre \
   :needs_jdk
@@ -101,10 +102,8 @@ needs_jdk = \
   serviceability/attach/AttachWithStalePidFile.java \
   serviceability/sa/jmap-hprof/JMapHProfLargeHeapTest.java \
   serviceability/dcmd/DynLibDcmdTest.java \
+  runtime/EnableTracing/TestEnableTracing.java \
   testlibrary_tests/
-
-hotspot_fail = \
-  runtime/EnableTracing/TestEnableTracing.java
 
 
 # JRE adds further tests to compact3

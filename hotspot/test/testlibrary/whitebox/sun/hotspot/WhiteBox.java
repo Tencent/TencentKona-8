@@ -75,11 +75,11 @@ public class WhiteBox {
   // Memory
   public native long getObjectAddress(Object o);
   public native int  getHeapOopSize();
+  public native long getHeapAlignment();
   public native int  getVMPageSize();
   public native long getVMAllocationGranularity();
   public native long getVMLargePageSize();
   public native long getHeapSpaceAlignment();
-  public native long getHeapAlignment();
 
   public native boolean isObjectInOldGen(Object o);
   public native long getObjectSize(Object o);
@@ -240,23 +240,18 @@ public class WhiteBox {
   public        boolean enqueueMethodForCompilation(Executable method, int compLevel) {
     return enqueueMethodForCompilation(method, compLevel, -1 /*InvocationEntryBci*/);
   }
-  private native boolean enqueueMethodForCompilation0(Executable method, int compLevel, int entry_bci);
-  public  boolean enqueueMethodForCompilation(Executable method, int compLevel, int entry_bci) {
-    Objects.requireNonNull(method);
+  public boolean enqueueMethodForCompilation(Executable method, int compLevel, int entry_bci) {
     return enqueueMethodForCompilation0(method, compLevel, entry_bci);
   }
-  private native boolean enqueueInitializerForCompilation0(Class<?> aClass, int compLevel);
-  public  boolean enqueueInitializerForCompilation(Class<?> aClass, int compLevel) {
-    Objects.requireNonNull(aClass);
-    return enqueueInitializerForCompilation0(aClass, compLevel);
-  }
+
+  public native boolean enqueueInitializerForCompilation0(Class clazz, int compLevel);
+  public native boolean enqueueMethodForCompilation0(Executable method, int compLevel, int entry_bci);
   public native void    clearMethodState(Executable method);
   public native void    markMethodProfiled(Executable method);
   public native void    lockCompilation();
   public native void    unlockCompilation();
   public native int     getMethodEntryBci(Executable method);
   public native Object[] getNMethod(Executable method, boolean isOsr);
-  public native long    allocateCodeBlob(int size, int type);
   public        long    allocateCodeBlob(long size, int type) {
       int intSize = (int) size;
       if ((long) intSize != size || size < 0) {
@@ -265,7 +260,6 @@ public class WhiteBox {
       }
       return allocateCodeBlob( intSize, type);
   }
-  public native void    freeCodeBlob(long addr);
   public native Object[] getCodeHeapEntries(int type);
   public native int     getCompilationActivityMode();
   private native long getMethodData0(Executable method);
@@ -273,7 +267,6 @@ public class WhiteBox {
     Objects.requireNonNull(method);
     return getMethodData0(method);
   }
-  public native Object[] getCodeBlob(long addr);
 
   private native void clearInlineCaches0(boolean preserve_static_stubs);
   public void clearInlineCaches() {
@@ -288,6 +281,9 @@ public class WhiteBox {
 
   // Memory
   public native void readReservedMemory();
+  public native long allocateCodeBlob(int size, int blobType);
+  public native void freeCodeBlob(long address);
+  public native Object[] getCodeBlob(long address);
   public native long allocateMetaspace(ClassLoader classLoader, long size);
   public native void freeMetaspace(ClassLoader classLoader, long addr, long size);
   public native long incMetaspaceCapacityUntilGC(long increment);
