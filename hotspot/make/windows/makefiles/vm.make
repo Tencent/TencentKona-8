@@ -141,7 +141,7 @@ CXX_USE_PCH=$(CXX_DONT_USE_PCH)
 VM_PATH=../generated
 VM_PATH=$(VM_PATH);../generated/adfiles
 VM_PATH=$(VM_PATH);../generated/jvmtifiles
-VM_PATH=$(VM_PATH);../generated/tracefiles
+VM_PATH=$(VM_PATH);../generated/jfrfiles
 VM_PATH=$(VM_PATH);$(WorkSpace)/src/share/vm/c1
 VM_PATH=$(VM_PATH);$(WorkSpace)/src/share/vm/compiler
 VM_PATH=$(VM_PATH);$(WorkSpace)/src/share/vm/code
@@ -168,11 +168,6 @@ VM_PATH=$(VM_PATH);$(WorkSpace)/src/os/windows/vm
 VM_PATH=$(VM_PATH);$(WorkSpace)/src/os_cpu/windows_$(Platform_arch)/vm
 VM_PATH=$(VM_PATH);$(WorkSpace)/src/cpu/$(Platform_arch)/vm
 VM_PATH=$(VM_PATH);$(WorkSpace)/src/share/vm/opto
-
-!if exists($(ALTSRC)\share\vm\jfr)
-VM_PATH=$(VM_PATH);$(ALTSRC)/share/vm/jfr
-VM_PATH=$(VM_PATH);$(ALTSRC)/share/vm/jfr/buffers
-!endif
 
 VM_PATH={$(VM_PATH)}
 
@@ -393,13 +388,79 @@ arguments.obj: $(WorkSpace)\src\share\vm\runtime\arguments.cpp
 {..\generated\jvmtifiles}.cpp.obj::
         $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
 
-{..\generated\tracefiles}.cpp.obj::
+{..\generated\jfrfiles}.cpp.obj::
         $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
 
-{$(ALTSRC)\share\vm\jfr}.cpp.obj::
+{$(COMMONSRC)\share\vm\jfr}.cpp.obj::
         $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
 
-{$(ALTSRC)\share\vm\jfr\buffers}.cpp.obj::
+{$(COMMONSRC)\share\vm\jfr\dcmd}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\instrumentation}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\jni}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\leakprofiler}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\leakprofiler\chains}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\leakprofiler\checkpoint}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\leakprofiler\sampling}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\leakprofiler\utilities}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\metadata}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\periodic}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\periodic\sampling}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\recorder}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\recorder\checkpoint}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\recorder\checkpoint\types}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\recorder\checkpoint\types\traceid}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\recorder\repository}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\recorder\service}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\recorder\stacktrace}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\recorder\storage}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\recorder\stringpool}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\support}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\utilities}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\jfr\writers}.cpp.obj::
         $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
 
 default::
