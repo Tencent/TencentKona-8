@@ -41,6 +41,7 @@
 #include "runtime/stubRoutines.hpp"
 #include "runtime/threadLocalStorage.hpp"
 #include "runtime/thread_ext.hpp"
+#include "runtime/threadStatisticalInfo.hpp"
 #include "runtime/unhandledOops.hpp"
 #include "utilities/exceptions.hpp"
 #include "utilities/macros.hpp"
@@ -263,6 +264,8 @@ class Thread: public ThreadShadow {
   // Thread-local buffer used by MetadataOnStackMark.
   MetadataOnStackBuffer* _metadata_on_stack_buffer;
 
+  ThreadStatisticalInfo _statistical_info;      // Statistics about the thread
+
   JFR_ONLY(DEFINE_THREAD_LOCAL_FIELD_JFR;)      // Thread-local data for jfr
 
   ThreadExt _ext;
@@ -444,6 +447,8 @@ class Thread: public ThreadShadow {
   void incr_allocated_bytes(jlong size) { _allocated_bytes += size; }
   inline jlong cooked_allocated_bytes();
 
+  ThreadStatisticalInfo& statistical_info() { return _statistical_info; }
+
   JFR_ONLY(DEFINE_THREAD_LOCAL_ACCESSOR_JFR;)
   JFR_ONLY(DEFINE_TRACE_SUSPEND_FLAG_METHODS)
 
@@ -568,7 +573,8 @@ protected:
   void    set_lgrp_id(int value) { _lgrp_id = value; }
 
   // Printing
-  void print_on(outputStream* st) const;
+  void print_on(outputStream* st, bool print_extended_info) const;
+  virtual void print_on(outputStream* st) const { print_on(st, false); }
   void print() const { print_on(tty); }
   virtual void print_on_error(outputStream* st, char* buf, int buflen) const;
 
@@ -1453,7 +1459,8 @@ class JavaThread: public Thread {
 
   // Misc. operations
   char* name() const { return (char*)get_thread_name(); }
-  void print_on(outputStream* st) const;
+  void print_on(outputStream* st, bool print_extended_info) const;
+  void print_on(outputStream* st) const { print_on(st, false); }
   void print() const { print_on(tty); }
   void print_value();
   void print_thread_state_on(outputStream* ) const      PRODUCT_RETURN;
@@ -1958,10 +1965,10 @@ class Threads: AllStatic {
 
   // Verification
   static void verify();
-  static void print_on(outputStream* st, bool print_stacks, bool internal_format, bool print_concurrent_locks);
+  static void print_on(outputStream* st, bool print_stacks, bool internal_format, bool print_concurrent_locks, bool print_extended_info);
   static void print(bool print_stacks, bool internal_format) {
     // this function is only used by debug.cpp
-    print_on(tty, print_stacks, internal_format, false /* no concurrent lock printed */);
+    print_on(tty, print_stacks, internal_format, false /* no concurrent lock printed */, false /* simple format */);
   }
   static void print_on_error(outputStream* st, Thread* current, char* buf, int buflen);
 

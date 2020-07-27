@@ -3741,6 +3741,10 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
   ClassFileStream* cfs = stream();
   // Timing
   assert(THREAD->is_Java_thread(), "must be a JavaThread");
+
+  // increment counter
+  THREAD->statistical_info().incr_define_class_count();
+
   JavaThread* jt = (JavaThread*) THREAD;
 
   PerfClassTraceTime ctimer(ClassLoader::perf_class_parse_time(),
