@@ -962,6 +962,9 @@ class CommandLineFlags {
   product(bool, PrintCompilation, false,                                    \
           "Print compilations")                                             \
                                                                             \
+  product(bool, PrintExtendedThreadInfo, false,                             \
+          "Print more information in thread dump")                          \
+                                                                            \
   diagnostic(bool, TraceNMethodInstalls, false,                             \
           "Trace nmethod installation")                                     \
                                                                             \

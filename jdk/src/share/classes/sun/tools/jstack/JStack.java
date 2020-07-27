@@ -48,6 +48,7 @@ public class JStack {
         boolean useSA = false;
         boolean mixed = false;
         boolean locks = false;
+        boolean extended = false;
 
         // Parse the options (arguments starting with "-" )
         int optionCount = 0;
@@ -69,7 +70,11 @@ public class JStack {
                     if (arg.equals("-l")) {
                        locks = true;
                     } else {
-                        usage(1);
+                        if (arg.equals("-e")) {
+                            extended = true;
+                        } else {
+                            usage(1);
+                        }
                     }
                 }
             }
@@ -107,11 +112,12 @@ public class JStack {
         } else {
             // pass -l to thread dump operation to get extra lock info
             String pid = args[optionCount];
-            String params[];
+            String params[]= new String[] { "" };
+            if (extended) {
+                params[0] += "-e ";
+            }
             if (locks) {
-                params = new String[] { "-l" };
-            } else {
-                params = new String[0];
+                params[0] += "-l";
             }
             runThreadDump(pid, params);
         }
@@ -205,7 +211,7 @@ public class JStack {
     // print usage message
     private static void usage(int exit) {
         System.err.println("Usage:");
-        System.err.println("    jstack [-l] <pid>");
+        System.err.println("    jstack [-l][-e] <pid>");
         System.err.println("        (to connect to running process)");
 
         if (loadSAClass() != null) {
@@ -227,6 +233,7 @@ public class JStack {
         }
 
         System.err.println("    -l  long listing. Prints additional information about locks");
+        System.err.println("    -e  extended listing. Prints additional information about threads");
         System.err.println("    -h or -help to print this help message");
         System.exit(exit);
     }
