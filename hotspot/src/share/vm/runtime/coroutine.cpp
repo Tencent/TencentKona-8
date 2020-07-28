@@ -113,7 +113,6 @@ void Coroutine::cont_metadata_do(void f(Metadata*)) {
 
 Coroutine::Coroutine() 
 {
-	_resource_area = NULL;
 	_handle_area = NULL;
 	_metadata_handles = NULL;
 	_last_handle_mark = NULL;
@@ -124,7 +123,6 @@ Coroutine::Coroutine()
 
 Coroutine::~Coroutine() {
   if(!is_thread_coroutine()) {
-    delete resource_area();
     delete handle_area();
     delete metadata_handles();
     assert(_monitor_chunks == NULL, "not empty _monitor_chunks");
@@ -214,6 +212,7 @@ void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
     JNIHandleBlock* jni_handle_block = thread->active_handles();
     to->saved_active_handles = jni_handle_block;
     to->saved_active_handle_count = jni_handle_block->get_number_of_live_handles();
+    to->saved_resource_area_hwm = thread->resource_area()->hwm();
   } else {
     // switch to thread corotuine, compare status
     JavaThread* thread = from->_thread;
@@ -228,6 +227,10 @@ void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
     if (from->saved_handle_area_hwm != thread->handle_area()->hwm()) {
       tty->print_cr("%p failed %p, %p", from, from->saved_handle_area_hwm, thread->handle_area()->hwm());
       guarantee(false, "handle area leak");
+    }
+    if (from->saved_resource_area_hwm != thread->resource_area()->hwm()) {
+      tty->print_cr("%p failed %p, %p", from, from->saved_resource_area_hwm, thread->resource_area()->hwm());
+      guarantee(false, "resource area leak");
     }
   }
 }
@@ -326,7 +329,6 @@ Coroutine* Coroutine::create_thread_coroutine(const char* name,JavaThread* threa
   coro->_is_thread_coroutine = true;
   coro->_thread = thread;
   coro->_stack = stack;
-  coro->set_resource_area(thread->resource_area());
   coro->set_handle_area(thread->handle_area());
   coro->set_metadata_handles(thread->metadata_handles());
   coro->set_last_handle_mark(thread->last_handle_mark());
@@ -358,7 +360,6 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, Coro
   coro->_is_thread_coroutine = false;
   coro->_thread = thread;
   coro->_stack = stack;
-  coro->set_resource_area(new (mtThread) ResourceArea(32));
   coro->set_handle_area(new (mtThread) HandleArea(NULL, 32));
   coro->set_metadata_handles(new (ResourceObj::C_HEAP, mtClass) GrowableArray<Metadata*>(30, true));
 
