@@ -4508,8 +4508,8 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
     }
     __ movptr(old_stack, Address(old_coroutine, Coroutine::stack_offset()));
     __ movl(Address(old_coroutine, Coroutine::state_offset()) , Coroutine::_onstack);
-    __ movptr(temp, Address(thread, Thread::last_handle_mark_offset()));
-    __ movptr(Address(old_coroutine, Coroutine::last_handle_mark_offset()), temp);
+    //__ movptr(temp, Address(thread, Thread::last_handle_mark_offset()));
+    //__ movptr(Address(old_coroutine, Coroutine::last_handle_mark_offset()), temp);
     //__ movptr(temp, Address(thread, Thread::active_handles_offset()));
     //__ movptr(Address(old_coroutine, Coroutine::active_handles_offset()), temp);
     __ movptr(Address(old_stack, CoroutineStack::last_sp_offset()), rsp);
@@ -4528,12 +4528,12 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
 	  __ movptr(Address(thread,JavaThread::current_coro_offset()),target_coroutine);
     {
       // set new handle and resource areas
-      __ movptr(temp, Address(target_coroutine, Coroutine::handle_area_offset()));
-      __ movptr(Address(thread, Thread::handle_area_offset()), temp);
+      //__ movptr(temp, Address(target_coroutine, Coroutine::handle_area_offset()));
+      //__ movptr(Address(thread, Thread::handle_area_offset()), temp);
       //__ movptr(temp, Address(target_coroutine, Coroutine::resource_area_offset()));
       //__ movptr(Address(thread, Thread::resource_area_offset()), temp);
-      __ movptr(temp, Address(target_coroutine, Coroutine::last_handle_mark_offset()));
-      __ movptr(Address(thread, Thread::last_handle_mark_offset()), temp);
+      //__ movptr(temp, Address(target_coroutine, Coroutine::last_handle_mark_offset()));
+      //__ movptr(Address(thread, Thread::last_handle_mark_offset()), temp);
       __ movptr(temp, Address(target_coroutine, Coroutine::metadata_handles_offset()));
       __ movptr(Address(thread,Thread::metadata_handles_offset()) , temp);
       //__ movptr(temp, Address(thread, Thread::active_handles_offset()));

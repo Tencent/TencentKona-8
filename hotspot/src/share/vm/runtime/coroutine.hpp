@@ -90,9 +90,7 @@ private:
   bool            _is_thread_coroutine;
 
   CoroutineStack* _stack;
-  HandleArea*     _handle_area;
   GrowableArray<Metadata*>* _metadata_handles;//the first javacall stack handles cannot be deallocate so devide them to coros, discard them when destruct coro
-  HandleMark*     _last_handle_mark;
 
   // for verify check
   JNIHandleBlock* saved_active_handles;
@@ -179,12 +177,6 @@ public:
 
   CoroutineStack* stack() const     { return _stack; }
 
-  HandleArea* handle_area() const         { return _handle_area; }
-  void set_handle_area(HandleArea* x)     { _handle_area = x; }
-
-  HandleMark* last_handle_mark() const    { return _last_handle_mark; }
-  void set_last_handle_mark(HandleMark* x){ _last_handle_mark = x; }
-
   void set_saved_handle_area_hwm(char* wm) { saved_handle_area_hwm = wm; }
   char* get_saved_handle_area_hwm()        { return saved_handle_area_hwm; }
 
@@ -215,8 +207,6 @@ public:
 
   static ByteSize thread_offset()             { return byte_offset_of(Coroutine, _thread); }
   static ByteSize jni_frame_offset()          { return byte_offset_of(Coroutine, _jni_frames); }
-  static ByteSize handle_area_offset()        { return byte_offset_of(Coroutine, _handle_area); }
-  static ByteSize last_handle_mark_offset()   { return byte_offset_of(Coroutine, _last_handle_mark); }
   static ByteSize metadata_handles_offset()   { return byte_offset_of(Coroutine, _metadata_handles); }
   static ByteSize has_javacall_offset()   { return byte_offset_of(Coroutine, _has_javacall); }
 
