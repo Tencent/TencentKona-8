@@ -90,7 +90,6 @@ private:
   bool            _is_thread_coroutine;
 
   CoroutineStack* _stack;
-  ResourceArea*   _resource_area;
   HandleArea*     _handle_area;
   GrowableArray<Metadata*>* _metadata_handles;//the first javacall stack handles cannot be deallocate so devide them to coros, discard them when destruct coro
   HandleMark*     _last_handle_mark;
@@ -99,6 +98,7 @@ private:
   JNIHandleBlock* saved_active_handles;
   size_t saved_active_handle_count;
   char* saved_handle_area_hwm;
+  char* saved_resource_area_hwm;
 
   // mutable
   MonitorChunk*   _monitor_chunks;  // if deoptimizing happens in corutine it should record own monitor chunks
@@ -179,9 +179,6 @@ public:
 
   CoroutineStack* stack() const     { return _stack; }
 
-  ResourceArea* resource_area() const     { return _resource_area; }
-  void set_resource_area(ResourceArea* x) { _resource_area = x; }
-
   HandleArea* handle_area() const         { return _handle_area; }
   void set_handle_area(HandleArea* x)     { _handle_area = x; }
 
@@ -218,7 +215,6 @@ public:
 
   static ByteSize thread_offset()             { return byte_offset_of(Coroutine, _thread); }
   static ByteSize jni_frame_offset()          { return byte_offset_of(Coroutine, _jni_frames); }
-  static ByteSize resource_area_offset()      { return byte_offset_of(Coroutine, _resource_area); }
   static ByteSize handle_area_offset()        { return byte_offset_of(Coroutine, _handle_area); }
   static ByteSize last_handle_mark_offset()   { return byte_offset_of(Coroutine, _last_handle_mark); }
   static ByteSize metadata_handles_offset()   { return byte_offset_of(Coroutine, _metadata_handles); }
