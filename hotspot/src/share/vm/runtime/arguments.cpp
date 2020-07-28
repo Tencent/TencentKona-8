@@ -3859,23 +3859,16 @@ char* Arguments::get_default_shared_archive_path() {
 static char* get_shared_archive_path() {
   char *shared_archive_path;
   if (SharedArchiveFile == NULL) {
-    char jvm_path[JVM_MAXPATHLEN];
-    os::jvm_path(jvm_path, sizeof(jvm_path));
-    char *end = strrchr(jvm_path, *os::file_separator());
-    if (end != NULL) *end = '\0';
-    size_t jvm_path_len = strlen(jvm_path);
-    size_t file_sep_len = strlen(os::file_separator());
-    const size_t len = jvm_path_len + file_sep_len + 20;
-    shared_archive_path = NEW_C_HEAP_ARRAY(char, len, mtInternal);
-    if (shared_archive_path != NULL) {
-      jio_snprintf(shared_archive_path, len, "%s%sclasses.jsa",
-        jvm_path, os::file_separator());
-    }
+    shared_archive_path = Arguments::get_default_shared_archive_path();
   } else {
-    shared_archive_path = os::strdup(SharedArchiveFile, mtInternal);
+    shared_archive_path = NEW_C_HEAP_ARRAY(char, strlen(SharedArchiveFile) + 1, mtInternal);
+    if (shared_archive_path != NULL) {
+      strncpy(shared_archive_path, SharedArchiveFile, strlen(SharedArchiveFile) + 1);
+    }
   }
   return shared_archive_path;
 }
+
 
 #ifndef PRODUCT
 // Determine whether LogVMOutput should be implicitly turned on.
