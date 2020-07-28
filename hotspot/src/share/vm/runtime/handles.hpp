@@ -294,7 +294,6 @@ public:
 class HandleMark {
  private:
   Thread *_thread;              // thread that owns this mark
-  Coroutine *_coroutine;        // coroutine own this mark
   HandleArea *_area;            // saved handle area
   Chunk *_chunk;                // saved arena chunk
   char *_hwm, *_max;            // saved arena info
