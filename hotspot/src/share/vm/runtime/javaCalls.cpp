@@ -525,6 +525,9 @@ JavaCallWrapper::JavaCallWrapper(Method* method, oop cont_obj, TRAPS) {
  *
  * When continuation yield back to thread, check HandleMark/ResourceMark/JNI/MetadataHandle
  * is same with before call continuation
+ *
+ * special handling, keep cont_obj live without using handle Mark in common path
+ * GC might happen in blocking compilation, only save it in handle mark if need compile
  */
 void JavaCalls::call_continuation_start(oop cont_obj, TRAPS) {
   // During dumping, Java execution environment is not fully initialized. Also, Java execution
@@ -532,11 +535,8 @@ void JavaCalls::call_continuation_start(oop cont_obj, TRAPS) {
   assert(!DumpSharedSpaces, "must not execute Java bytecodes when dumping");
 
   JavaThread* thread = (JavaThread*)THREAD;
-  HandleMark hm(thread);
-  HandleMark hm2(thread);
   Coroutine* coro = thread->current_coroutine();
   methodHandle method = methodHandle(Coroutine::cont_start_method());
-  Handle receiver = Handle(cont_obj);
   assert(thread->is_Java_thread(), "must be called by a java thread");
   assert(coro != NULL && !coro->is_thread_coroutine(), "must be in coroutine");
   assert(method.not_null(), "must have a method to call");
@@ -547,9 +547,12 @@ void JavaCalls::call_continuation_start(oop cont_obj, TRAPS) {
 
   assert(!thread->is_Compiler_thread(), "cannot compile from the compiler");
   if (CompilationPolicy::must_be_compiled(method)) {
+    HandleMark hm(thread);
+    Handle receiver = Handle(cont_obj);
     CompileBroker::compile_method(method, InvocationEntryBci,
                                   CompilationPolicy::policy()->initial_compile_level(),
                                   methodHandle(), 0, "must_be_compiled", CHECK);
+    cont_obj = receiver();
   }
 
   // Since the call stub sets up like the interpreter we call the from_interpreted_entry
@@ -566,14 +569,9 @@ void JavaCalls::call_continuation_start(oop cont_obj, TRAPS) {
 
   // do call
   {
-    JavaCallWrapper link(method(), receiver(), CHECK);
+    JavaCallWrapper link(method(), cont_obj, CHECK);
     {
-      HandleMark hm(thread);  // HandleMark used by HandleMarkCleaner
       coro->set_has_javacall(true);
-      if (VerifyCoroutineStateOnYield) {
-        coro->set_saved_handle_area_hwm(thread->handle_area()->hwm());
-      }
-      oop param = receiver();
       StubRoutines::call_stub()(
         (address)&link,
         // (intptr_t*)&(result->_value), // see NOTE above (compiler problem)
@@ -581,7 +579,7 @@ void JavaCalls::call_continuation_start(oop cont_obj, TRAPS) {
         T_VOID,
         method(),
         entry_point,
-        (intptr_t*)&param, //args->parameters(),
+        (intptr_t*)&cont_obj, //args->parameters(),
         1, //args->size_of_parameters(),
         CHECK
       );

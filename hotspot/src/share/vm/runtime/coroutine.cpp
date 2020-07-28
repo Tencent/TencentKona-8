@@ -111,11 +111,8 @@ void Coroutine::cont_metadata_do(void f(Metadata*)) {
   }
 }
 
-Coroutine::Coroutine() 
-{
-	_handle_area = NULL;
+Coroutine::Coroutine() {
 	_metadata_handles = NULL;
-	_last_handle_mark = NULL;
 	_has_javacall = false;
   _monitor_chunks = NULL;
   _jni_frames = 0;
@@ -123,7 +120,6 @@ Coroutine::Coroutine()
 
 Coroutine::~Coroutine() {
   if(!is_thread_coroutine()) {
-    delete handle_area();
     delete metadata_handles();
     assert(_monitor_chunks == NULL, "not empty _monitor_chunks");
   }
@@ -213,6 +209,7 @@ void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
     to->saved_active_handles = jni_handle_block;
     to->saved_active_handle_count = jni_handle_block->get_number_of_live_handles();
     to->saved_resource_area_hwm = thread->resource_area()->hwm();
+    to->saved_handle_area_hwm = thread->handle_area()->hwm();
   } else {
     // switch to thread corotuine, compare status
     JavaThread* thread = from->_thread;
@@ -329,9 +326,7 @@ Coroutine* Coroutine::create_thread_coroutine(const char* name,JavaThread* threa
   coro->_is_thread_coroutine = true;
   coro->_thread = thread;
   coro->_stack = stack;
-  coro->set_handle_area(thread->handle_area());
   coro->set_metadata_handles(thread->metadata_handles());
-  coro->set_last_handle_mark(thread->last_handle_mark());
   coro->_has_javacall = true;
 #ifdef ASSERT
   coro->_java_call_counter = 0;
@@ -360,7 +355,6 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, Coro
   coro->_is_thread_coroutine = false;
   coro->_thread = thread;
   coro->_stack = stack;
-  coro->set_handle_area(new (mtThread) HandleArea(NULL, 32));
   coro->set_metadata_handles(new (ResourceObj::C_HEAP, mtClass) GrowableArray<Metadata*>(30, true));
 
 #ifdef ASSERT
@@ -414,13 +408,6 @@ void Coroutine::oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) {
 	}
   oops_do_Closure fc(f, cld_f, cf);
   frames_do(&fc);
-  if (_state == _onstack ) {
-    if (_handle_area != NULL)
-    {
-        DEBUG_CORO_ONLY(tty->print_cr("collecting handle area %08x", _handle_area));
-        _handle_area->oops_do(f);
-    }
-  }
 }
 
 class nmethods_do_Closure: public FrameClosure {
