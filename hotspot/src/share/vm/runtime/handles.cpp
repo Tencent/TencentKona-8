@@ -108,7 +108,6 @@ void HandleArea::oops_do(OopClosure* f) {
 
 void HandleMark::initialize(Thread* thread) {
   _thread = thread;
-  _coroutine = get_thread_coroutine(thread);
   // Save area
   _area  = thread->handle_area();
   // Save current top
@@ -127,7 +126,6 @@ void HandleMark::initialize(Thread* thread) {
 
 HandleMark::HandleMark(Thread* thread, HandleArea* area, HandleMark* last_handle_mark) {
   _thread = thread;
-  _coroutine = get_thread_coroutine(thread); // not used now
   // Save area
   _area  = area;
   // Save current top
@@ -146,8 +144,7 @@ HandleMark::HandleMark(Thread* thread, HandleArea* area, HandleMark* last_handle
 
 HandleMark::~HandleMark() {
   HandleArea* area = _area;   // help compilers with poor alias analysis
-  assert(area == _thread->handle_area() || 
-    (_coroutine != NULL && area == _coroutine->handle_area()), "sanity check");
+  assert(area == _thread->handle_area(), "sanity check");
   assert(area->_handle_mark_nesting > 0, "must stack allocate HandleMarks" );
   debug_only(area->_handle_mark_nesting--);
 
@@ -199,14 +196,7 @@ HandleMark::~HandleMark() {
 #endif
 
   // Unlink this from the thread
-  if (_coroutine != NULL) {
-    guarantee(_coroutine == get_thread_coroutine(Thread::current()), "must same coroutine");
-    guarantee(_coroutine->handle_area() == Thread::current()->handle_area(), "must same area");
-    guarantee(_coroutine->handle_area() == area, "must same area");
-    Thread::current()->set_last_handle_mark(previous_handle_mark());
-  } else {
-    _thread->set_last_handle_mark(previous_handle_mark());
-  }
+  _thread->set_last_handle_mark(previous_handle_mark());
 }
 
 void* HandleMark::operator new(size_t size) throw() {
