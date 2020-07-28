@@ -4530,8 +4530,8 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
       // set new handle and resource areas
       __ movptr(temp, Address(target_coroutine, Coroutine::handle_area_offset()));
       __ movptr(Address(thread, Thread::handle_area_offset()), temp);
-      __ movptr(temp, Address(target_coroutine, Coroutine::resource_area_offset()));
-      __ movptr(Address(thread, Thread::resource_area_offset()), temp);
+      //__ movptr(temp, Address(target_coroutine, Coroutine::resource_area_offset()));
+      //__ movptr(Address(thread, Thread::resource_area_offset()), temp);
       __ movptr(temp, Address(target_coroutine, Coroutine::last_handle_mark_offset()));
       __ movptr(Address(thread, Thread::last_handle_mark_offset()), temp);
       __ movptr(temp, Address(target_coroutine, Coroutine::metadata_handles_offset()));
