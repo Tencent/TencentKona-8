@@ -3490,8 +3490,7 @@ void Arguments::fix_appclasspath() {
       src ++;
     }
 
-    char* copy = AllocateHeap(strlen(src) + 1, mtInternal);
-    strncpy(copy, src, strlen(src) + 1);
+    char* copy = os::strdup(src, mtInternal);
 
     // trim all trailing empty paths
     for (char* tail = copy + strlen(copy) - 1; tail >= copy && *tail == separator; tail--) {
@@ -3891,6 +3890,7 @@ static char* get_shared_archive_path() {
   }
   return shared_archive_path;
 }
+
 
 #ifndef PRODUCT
 // Determine whether LogVMOutput should be implicitly turned on.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,37 +22,37 @@
  *
  */
 
-#ifndef SHARE_VM_JFR_JFR_HPP
-#define SHARE_VM_JFR_JFR_HPP
+#ifndef SHARE_JFR_LEAKPROFILER_CHECKPOINT_EVENTEMITTER_HPP
+#define SHARE_JFR_LEAKPROFILER_CHECKPOINT_EVENTEMITTER_HPP
 
-#include "jni.h"
 #include "memory/allocation.hpp"
+#include "jfr/utilities/jfrTime.hpp"
 
-class BoolObjectClosure;
-class JavaThread;
-class OopClosure;
+typedef u8 traceid;
+
+class EdgeStore;
+class JfrThreadLocal;
+class ObjectSample;
+class ObjectSampler;
 class Thread;
 
-extern "C" void JNICALL jfr_register_natives(JNIEnv*, jclass);
+class EventEmitter : public CHeapObj<mtTracing> {
+  friend class LeakProfiler;
+  friend class PathToGcRootsOperation;
+ private:
+  const JfrTicks& _start_time;
+  const JfrTicks& _end_time;
+  Thread* _thread;
+  JfrThreadLocal* _jfr_thread_local;
+  traceid _thread_id;
 
-//
-// The VM interface to Flight Recorder.
-//
-class Jfr : AllStatic {
- public:
-  static bool is_enabled();
-  static bool is_disabled();
-  static bool is_recording();
-  static void on_vm_init();
-  static void on_vm_start();
-  static void on_unloading_classes();
-  static void on_thread_exit(JavaThread* thread);
-  static void on_thread_destruct(Thread* thread);
-  static void on_vm_shutdown(bool exception_handler = false);
-  static bool on_flight_recorder_option(const JavaVMOption** option, char* delimiter);
-  static bool on_start_flight_recording_option(const JavaVMOption** option, char* delimiter);
-  static void weak_oops_do(BoolObjectClosure* is_alive, OopClosure* f);
-  static Thread* sampler_thread();
+  EventEmitter(const JfrTicks& start_time, const JfrTicks& end_time);
+  ~EventEmitter();
+
+  void write_event(const ObjectSample* sample, EdgeStore* edge_store);
+  size_t write_events(ObjectSampler* sampler, EdgeStore* store, bool emit_all);
+
+  static void emit(ObjectSampler* sampler, int64_t cutoff_ticks, bool emit_all);
 };
 
-#endif // SHARE_VM_JFR_JFR_HPP
+#endif // SHARE_JFR_LEAKPROFILER_CHECKPOINT_EVENTEMITTER_HPP

@@ -24,6 +24,7 @@
  */
 package jdk.jfr.internal.dcmd;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -81,7 +82,7 @@ final class DCmdStart extends AbstractDCmd {
      */
     @SuppressWarnings("resource")
     public String execute(String name, String[] settings, Long delay, Long duration, Boolean disk, String path, Long maxAge, Long maxSize, Boolean dumpOnExit, Boolean pathToGcRoots) throws DCmdException {
-        if (LogTag.JFR_DCMD.shouldLog(LogLevel.DEBUG)) {
+        if (Logger.shouldLog(LogTag.JFR_DCMD, LogLevel.DEBUG)) {
             Logger.log(LogTag.JFR_DCMD, LogLevel.DEBUG, "Executing DCmdStart: name=" + name +
                     ", settings=" + (settings != null ? Arrays.asList(settings) : "(none)") +
                     ", delay=" + delay +
@@ -105,19 +106,17 @@ final class DCmdStart extends AbstractDCmd {
         if (duration == null && Boolean.FALSE.equals(dumpOnExit) && path != null) {
             throw new DCmdException("Filename can only be set for a time bound recording or if dumponexit=true. Set duration/dumponexit or omit filename.");
         }
-
-
-        Map<String, String> s = new HashMap<>();
-
-        if (settings == null || settings.length == 0) {
-            settings = new String[] { "default" };
+        if (settings.length == 1 && settings[0].length() == 0) {
+            throw new DCmdException("No settings specified. Use settings=none to start without any settings");
         }
-
+        Map<String, String> s = new HashMap<>();
         for (String configName : settings) {
             try {
                 s.putAll(JFC.createKnown(configName).getSettings());
+            } catch(FileNotFoundException e) {
+                throw new DCmdException("Could not find settings file'" + configName + "'", e);
             } catch (IOException | ParseException e) {
-                throw new DCmdException("Could not parse setting " + settings[0], e);
+                throw new DCmdException("Could not parse settings file '" + settings[0] + "'", e);
             }
         }
 

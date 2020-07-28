@@ -434,7 +434,13 @@ void JfrStartFlightRecordingDCmd::execute(DCmdSource source, TRAPS) {
 
   jobjectArray settings = NULL;
   if (_settings.is_set()) {
-    const int length = _settings.value()->array()->length();
+    int length = _settings.value()->array()->length();
+    if (length == 1) {
+      const char* c_str = _settings.value()->array()->at(0);
+      if (strcmp(c_str, "none") == 0) {
+        length = 0;
+      }
+    }
     settings = JfrJavaSupport::new_string_array(length, CHECK);
     assert(settings != NULL, "invariant");
     for (int i = 0; i < length; ++i) {
@@ -442,6 +448,12 @@ void JfrStartFlightRecordingDCmd::execute(DCmdSource source, TRAPS) {
       assert(element != NULL, "invariant");
       JfrJavaSupport::set_array_element(settings, element, i, CHECK);
     }
+  } else {
+    settings = JfrJavaSupport::new_string_array(1, CHECK);
+    assert(settings != NULL, "invariant");
+    jobject element = JfrJavaSupport::new_string("default", CHECK);
+    assert(element != NULL, "invariant");
+    JfrJavaSupport::set_array_element(settings, element, 0, CHECK);
   }
 
   static const char klass[] = "jdk/jfr/internal/dcmd/DCmdStart";

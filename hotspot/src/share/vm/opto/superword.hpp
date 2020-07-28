@@ -201,7 +201,6 @@ class SWNodeInfo VALUE_OBJ_CLASS_SPEC {
   static const SWNodeInfo initial;
 };
 
-
 // JVMCI: OrderedPair is moved up to deal with compilation issues on Windows
 //------------------------------OrderedPair---------------------------
 // Ordered pair of Node*.
@@ -448,6 +447,7 @@ class SuperWord : public ResourceObj {
   void print_stmt(Node* s);
   char* blank(uint depth);
 };
+
 
 
 //------------------------------SWPointer---------------------------

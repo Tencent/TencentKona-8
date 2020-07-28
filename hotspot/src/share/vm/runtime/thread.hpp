@@ -560,7 +560,7 @@ protected:
 
   bool    on_local_stack(address adr) const {
     /* QQQ this has knowledge of direction, ought to be a stack method */
-    return (_stack_base >= adr && adr >= (_stack_base - _stack_size));
+    return (_stack_base > adr && adr >= (_stack_base - _stack_size));
   }
 
   uintptr_t self_raw_id()                    { return _self_raw_id; }
@@ -770,8 +770,6 @@ class WatcherThread: public Thread {
 
   static bool _startable;
   volatile static bool _should_terminate; // updated without holding lock
-
-  os::WatcherThreadCrashProtection* _crash_protection;
  public:
   enum SomeConstants {
     delay_interval = 10                          // interrupt delay in milliseconds
@@ -798,15 +796,6 @@ class WatcherThread: public Thread {
   // Only allow start once the VM is sufficiently initialized
   // Otherwise the first task to enroll will trigger the start
   static void make_startable();
-
-  void set_crash_protection(os::WatcherThreadCrashProtection* crash_protection) {
-    assert(Thread::current()->is_Watcher_thread(), "Can only be set by WatcherThread");
-    _crash_protection = crash_protection;
-  }
-
-  bool has_crash_protection() const { return _crash_protection != NULL; }
-  os::WatcherThreadCrashProtection* crash_protection() const { return _crash_protection; }
-
  private:
   int sleep() const;
 };

@@ -86,13 +86,13 @@ public class CheckPackageAccess {
         "oracle.jrockit.jfr.",
         "org.jcp.xml.dsig.internal.",
         "jdk.internal.",
+        "jdk.jfr.events.",
+        "jdk.jfr.internal.",
+        "jdk.management.jfr.internal.",
         "jdk.nashorn.internal.",
         "jdk.nashorn.tools.",
         "jdk.xml.internal.",
-        "com.sun.activation.registries.",
-        "jdk.jfr.events.",
-        "jdk.jfr.internal.",
-        "jdk.management.jfr.internal."
+        "com.sun.activation.registries."
     };
 
     public static void main(String[] args) throws Exception {

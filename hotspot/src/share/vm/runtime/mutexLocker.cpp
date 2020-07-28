@@ -288,7 +288,7 @@ void mutex_init() {
   def(PeriodicTask_lock            , Monitor, nonleaf+5,   true);
   def(RedefineClasses_lock         , Monitor, nonleaf+5,   true);
 
-#ifdef INCLUDE_JFR
+#if INCLUDE_JFR
   def(JfrMsg_lock                  , Monitor, leaf,        true);
   def(JfrBuffer_lock               , Mutex,   leaf,        true);
   def(JfrThreadGroups_lock         , Mutex,   leaf,        true);

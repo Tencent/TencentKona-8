@@ -277,9 +277,6 @@ sun/security/pkcs11/tls/TestKeyMaterial.java                    generic-all
 # 7164518
 sun/security/krb5/auto/Unreachable.java                         macosx-all
 
-# 7147060
-com/sun/org/apache/xml/internal/security/transforms/ClassLoaderTest.java	generic-all
-
 # 8160071
 sun/security/pkcs11/sslecc/ClientJSSEServerJSSE.java            linux-all
 
@@ -315,6 +312,8 @@ com/sun/crypto/provider/CICO/PBEFunc/CICOPBEFuncTest.java       solaris-sparcv9
 sun/security/krb5/auto/ReplayCacheTestProc.java                 solaris-sparcv9
 
 security/infra/java/security/cert/CertPathValidator/certification/ActalisCA.java  8224768 generic-all
+
+sun/security/mscapi/SignedObjectChain.java                      8176183 windows-all
 
 ############################################################################
 
@@ -382,3 +381,5 @@ com/tencent/crypto/provider/Cipher/SM4/PaddingTest.java         linux-i586,macos
 com/tencent/crypto/provider/Cipher/SM4/Sealtest.java            linux-i586,macosx-i586,windows-all,solaris-all,aix-all
 com/tencent/crypto/provider/Cipher/SM4/SM4APITest.java          linux-i586,macosx-i586,windows-all,solaris-all,aix-all
 com/tencent/crypto/provider/Cipher/SM4/TestCipherSM4.java       linux-i586,macosx-i586,windows-all,solaris-all,aix-all
+sample/mergesort/MergeSortTest.java				8178912 generic-all
+sample/chatserver/ChatTest.java					8178912 generic-all

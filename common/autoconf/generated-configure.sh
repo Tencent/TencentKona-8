@@ -3931,7 +3931,7 @@ pkgadd_help() {
 
 
 #
-# Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -4407,7 +4407,7 @@ VS_SDK_PLATFORM_NAME_2017=
 #CUSTOM_AUTOCONF_INCLUDE
 
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1585090987
+DATE_WHEN_GENERATED=1589212500
 
 ###############################################################################
 #
@@ -19876,13 +19876,19 @@ $as_echo_n "checking whether to build jfr... " >&6; }
 if test "${enable_jfr+set}" = set; then :
   enableval=$enable_jfr;
 else
-  enable_jfr=no
+  enable_jfr=auto
 fi
 
-  if test "x$enable_jfr" = "xno"; then
+  if test "x$enable_jfr" = "xno" -o "x$enable_jfr" = "xauto"; then
     ENABLE_JFR=false
-  elif test "x$enable_jfr" = "xyes"; then
-    ENABLE_JFR=true
+  elif test "x$enable_jfr" = "xyes" ; then
+    if test "x$JVM_VARIANT_MINIMAL1" = "xtrue" -o "x$JVM_VARIANT_ZERO" = "xtrue"; then
+      as_fn_error $? "cannot enable JFR on minimal1 VM or zero build" "$LINENO" 5
+    elif test "x$OPENJDK_TARGET_OS" = xaix; then
+      as_fn_error $? "AIX does not support JFR" "$LINENO" 5
+    else
+      ENABLE_JFR=true
+    fi
   else
     as_fn_error $? "--enable-jfr must either be set to yes or no" "$LINENO" 5
   fi
@@ -28042,7 +28048,7 @@ $as_echo "$as_me: The result from running with --version was: \"$COMPILER_VERSIO
     COMPILER_VERSION_STRING=`$ECHO $COMPILER_VERSION_OUTPUT | \
         $SED -e 's/ *Copyright .*//'`
     COMPILER_VERSION_NUMBER=`$ECHO $COMPILER_VERSION_OUTPUT | \
-        $SED -e 's/^.* \([1-9]\.[0-9.]*\) .*$/\1/'`
+        $SED -e 's/^.* \([1-9][0-9]*\.[0-9.]*\) .*$/\1/'`
   elif test  "x$TOOLCHAIN_TYPE" = xclang; then
     # clang --version output typically looks like
     #    Apple LLVM version 5.0 (clang-500.2.79) (based on LLVM 3.3svn)
@@ -29783,7 +29789,7 @@ $as_echo "$as_me: The result from running with --version was: \"$COMPILER_VERSIO
     COMPILER_VERSION_STRING=`$ECHO $COMPILER_VERSION_OUTPUT | \
         $SED -e 's/ *Copyright .*//'`
     COMPILER_VERSION_NUMBER=`$ECHO $COMPILER_VERSION_OUTPUT | \
-        $SED -e 's/^.* \([1-9]\.[0-9.]*\) .*$/\1/'`
+        $SED -e 's/^.* \([1-9][0-9]*\.[0-9.]*\) .*$/\1/'`
   elif test  "x$TOOLCHAIN_TYPE" = xclang; then
     # clang --version output typically looks like
     #    Apple LLVM version 5.0 (clang-500.2.79) (based on LLVM 3.3svn)
