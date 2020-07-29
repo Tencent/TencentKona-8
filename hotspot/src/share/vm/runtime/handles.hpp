@@ -140,7 +140,6 @@ DEF_HANDLE(typeArray        , is_typeArray        )
   class name##Handle : public StackObj {         \
     type*     _value;                            \
     Thread*   _thread;                           \
-    Coroutine* _coroutine;                       \
    protected:                                    \
     type*        obj() const                     { return _value; } \
     type*        non_null_obj() const            { assert(_value != NULL, "resolving NULL _value"); return _value; } \

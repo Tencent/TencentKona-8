@@ -4534,8 +4534,8 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
       //__ movptr(Address(thread, Thread::resource_area_offset()), temp);
       //__ movptr(temp, Address(target_coroutine, Coroutine::last_handle_mark_offset()));
       //__ movptr(Address(thread, Thread::last_handle_mark_offset()), temp);
-      __ movptr(temp, Address(target_coroutine, Coroutine::metadata_handles_offset()));
-      __ movptr(Address(thread,Thread::metadata_handles_offset()) , temp);
+      //__ movptr(temp, Address(target_coroutine, Coroutine::metadata_handles_offset()));
+      //__ movptr(Address(thread,Thread::metadata_handles_offset()) , temp);
       //__ movptr(temp, Address(thread, Thread::active_handles_offset()));
       //__ movptr(Address(old_coroutine, Coroutine::active_handles_offset()), temp);
 #ifdef ASSERT
