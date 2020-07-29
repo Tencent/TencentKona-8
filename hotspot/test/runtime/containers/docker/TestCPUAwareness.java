@@ -116,7 +116,7 @@ private static final String imageName = Common.imageName("cpu");
         Common.logNewTestCase("Test ActiveProcessorCount: valueToSet = " + valueToSet);
 
         DockerRunOptions opts = Common.newOpts(imageName)
-            .addJavaOpts("-XX:ActiveProcessorCount=" + valueToSet, "-XX:+UnlockDiagnosticVMOptions", "-XX:+PrintActiveCpus");
+            .addJavaOpts("-XX:ActiveProcessorCount=" + valueToSet, "-XX:+UnlockDiagnosticVMOptions","-XX:+UseContainerSupport", "-XX:+PrintActiveCpus");
         Common.run(opts)
             .shouldMatch("active processor count set by user.*" + expectedValue);
     }
@@ -127,6 +127,7 @@ private static final String imageName = Common.imageName("cpu");
         DockerRunOptions opts = Common.newOpts(imageName)
             .addDockerOpts("--cpu-period=" + 10000)
             .addDockerOpts("--cpu-quota=" + valueToSet * 10000);
+        opts.addJavaOpts("-XX:+UseContainerSupport");
         Common.run(opts)
             .shouldMatch("active_processor_count.*" + expectedTraceValue);
     }
@@ -155,7 +156,7 @@ private static final String imageName = Common.imageName("cpu");
         DockerRunOptions opts = Common.newOpts(imageName)
             .addDockerOpts("--cpu-period=" + period)
             .addDockerOpts("--cpu-quota=" + quota);
-
+        opts.addJavaOpts("-XX:+UseContainerSupport");
         Common.run(opts)
             .shouldMatch("CPU Period is.*" + period)
             .shouldMatch("CPU Quota is.*" + quota)
@@ -183,6 +184,8 @@ private static final String imageName = Common.imageName("cpu");
             .addDockerOpts("--cpu-quota=" + quota)
             .addDockerOpts("--cpu-shares=" + shares);
 
+        opts.addJavaOpts("-XX:+UseContainerSupport");
+
         if (!usePreferContainerQuotaForCPUCount) opts.addJavaOpts("-XX:-PreferContainerQuotaForCPUCount");
 
         Common.run(opts)
@@ -198,6 +201,7 @@ private static final String imageName = Common.imageName("cpu");
 
         DockerRunOptions opts = Common.newOpts(imageName)
             .addDockerOpts("--cpu-shares=" + shares);
+        opts.addJavaOpts("-XX:+UseContainerSupport");
         Common.run(opts)
             .shouldMatch("CPU Shares is.*" + shares)
             .shouldMatch("active_processor_count.*" + expectedAPC);

@@ -87,7 +87,7 @@ public class TestCPUSets {
         DockerRunOptions opts = new DockerRunOptions(imageName, "/jdk/bin/java",
                                                      "PrintContainerInfo");
         opts.addDockerOpts("--volume", Utils.TEST_CLASSES + ":/test-classes/");
-        opts.addJavaOpts("-XX:+UnlockDiagnosticVMOptions", "-XX:+PrintContainerInfo", "-cp", "/test-classes/");
+        opts.addJavaOpts("-XX:+UnlockDiagnosticVMOptions", "-XX:+UseContainerSupport", "-XX:+PrintContainerInfo", "-cp", "/test-classes/");
         Common.addWhiteBoxOpts(opts);
         return opts;
     }
