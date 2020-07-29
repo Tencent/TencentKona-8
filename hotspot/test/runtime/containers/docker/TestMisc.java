@@ -74,7 +74,7 @@ public class TestMisc {
 
         DockerRunOptions opts = Common.newOpts(imageName, "CheckContainerized");
         Common.addWhiteBoxOpts(opts);
-
+        opts.addJavaOpts("-XX:+UseContainerSupport");
         Common.run(opts)
             .shouldContain(CheckContainerized.INSIDE_A_CONTAINER);
     }
@@ -85,7 +85,7 @@ public class TestMisc {
 
         DockerRunOptions opts = Common.newOpts(imageName, "PrintContainerInfo");
         Common.addWhiteBoxOpts(opts);
-
+        opts.addJavaOpts("-XX:+UseContainerSupport");
         checkContainerInfo(Common.run(opts));
     }
 
