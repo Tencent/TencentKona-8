@@ -67,7 +67,7 @@ class JavaCallWrapper: StackObj {
   // Construction/destruction
   JavaCallWrapper(methodHandle callee_method, Handle receiver, JavaValue* result, TRAPS);
   // Used for continuation wrapper
-  JavaCallWrapper(Method* method, oop cont_obj, TRAPS);
+  JavaCallWrapper(Method* method, Handle receiver, TRAPS);
   ~JavaCallWrapper();
   void initialize(JavaThread* thread, JNIHandleBlock* handles, Method* callee_method, oop receiver, JavaValue* result);
 
