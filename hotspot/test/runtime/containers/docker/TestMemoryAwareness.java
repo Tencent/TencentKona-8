@@ -73,6 +73,8 @@ public class TestMemoryAwareness {
         DockerRunOptions opts = Common.newOpts(imageName)
             .addDockerOpts("--memory", valueToSet);
 
+        opts.addJavaOpts("-XX:+UseContainerSupport");
+
         Common.run(opts)
             .shouldMatch("Memory Limit is:.*" + expectedTraceValue);
     }
@@ -85,7 +87,7 @@ public class TestMemoryAwareness {
         DockerRunOptions opts = Common.newOpts(imageName, "PrintContainerInfo");
         Common.addWhiteBoxOpts(opts);
         opts.addDockerOpts("--memory-reservation=" + valueToSet);
-
+        opts.addJavaOpts("-XX:+UseContainerSupport");
         Common.run(opts)
             .shouldMatch("Memory Soft Limit.*" + expectedTraceValue);
     }
@@ -98,7 +100,7 @@ public class TestMemoryAwareness {
         DockerRunOptions opts = Common.newOpts(imageName, "AttemptOOM")
             .addDockerOpts("--memory", dockerMemLimit, "--memory-swap", dockerMemLimit);
         opts.classParams.add("" + sizeToAllocInMb);
-
+        opts.addJavaOpts("-XX:+UseContainerSupport");
         DockerTestUtils.dockerRunJava(opts)
             .shouldHaveExitValue(1)
             .shouldContain("Entering AttemptOOM main")
