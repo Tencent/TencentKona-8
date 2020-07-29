@@ -112,7 +112,6 @@ void Coroutine::cont_metadata_do(void f(Metadata*)) {
 }
 
 Coroutine::Coroutine() {
-	_metadata_handles = NULL;
 	_has_javacall = false;
   _monitor_chunks = NULL;
   _jni_frames = 0;
@@ -120,7 +119,6 @@ Coroutine::Coroutine() {
 
 Coroutine::~Coroutine() {
   if(!is_thread_coroutine()) {
-    delete metadata_handles();
     assert(_monitor_chunks == NULL, "not empty _monitor_chunks");
   }
 }
@@ -210,6 +208,7 @@ void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
     to->saved_active_handle_count = jni_handle_block->get_number_of_live_handles();
     to->saved_resource_area_hwm = thread->resource_area()->hwm();
     to->saved_handle_area_hwm = thread->handle_area()->hwm();
+    to->saved_methodhandles_len = thread->metadata_handles()->length();
   } else {
     // switch to thread corotuine, compare status
     JavaThread* thread = from->_thread;
@@ -326,7 +325,6 @@ Coroutine* Coroutine::create_thread_coroutine(const char* name,JavaThread* threa
   coro->_is_thread_coroutine = true;
   coro->_thread = thread;
   coro->_stack = stack;
-  coro->set_metadata_handles(thread->metadata_handles());
   coro->_has_javacall = true;
 #ifdef ASSERT
   coro->_java_call_counter = 0;
@@ -355,7 +353,6 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, Coro
   coro->_is_thread_coroutine = false;
   coro->_thread = thread;
   coro->_stack = stack;
-  coro->set_metadata_handles(new (ResourceObj::C_HEAP, mtClass) GrowableArray<Metadata*>(30, true));
 
 #ifdef ASSERT
   coro->_java_call_counter = 0;
@@ -436,11 +433,6 @@ void Coroutine::metadata_do(void f(Metadata*)) {
 	{
 		return;
 	}
-  if (metadata_handles() != NULL) {
-    for (int i = 0; i< metadata_handles()->length(); i++) {
-      f(metadata_handles()->at(i));
-    }
-  }
   metadata_do_Closure fc(f);
   frames_do(&fc);
 }
