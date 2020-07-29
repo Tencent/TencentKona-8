@@ -544,12 +544,13 @@ void JavaCalls::call_continuation_start(oop cont_obj, TRAPS) {
       coro->set_has_javacall(true);
       oop param = receiver();
       hm.~HandleMark();
+      method.remove();
       StubRoutines::call_stub()(
         (address)&link,
         // (intptr_t*)&(result->_value), // see NOTE above (compiler problem)
         NULL,          // result_val_address
         T_VOID,
-        method(),
+        Coroutine::cont_start_method(),
         entry_point,
         (intptr_t*)&param, //args->parameters(),
         1, //args->size_of_parameters(),

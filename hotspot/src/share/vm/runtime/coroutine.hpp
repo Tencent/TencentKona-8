@@ -90,13 +90,12 @@ private:
   bool            _is_thread_coroutine;
 
   CoroutineStack* _stack;
-  GrowableArray<Metadata*>* _metadata_handles;//the first javacall stack handles cannot be deallocate so devide them to coros, discard them when destruct coro
-
   // for verify check
   JNIHandleBlock* saved_active_handles;
   size_t saved_active_handle_count;
   char* saved_handle_area_hwm;
   char* saved_resource_area_hwm;
+  int saved_methodhandles_len;
 
   // mutable
   MonitorChunk*   _monitor_chunks;  // if deoptimizing happens in corutine it should record own monitor chunks
@@ -185,8 +184,6 @@ public:
   void add_monitor_chunk(MonitorChunk* chunk);
   void remove_monitor_chunk(MonitorChunk* chunk);
 
-  GrowableArray<Metadata*>* metadata_handles() const          { return _metadata_handles; }
-  void set_metadata_handles(GrowableArray<Metadata*>* handles){ _metadata_handles = handles; }
 #ifdef ASSERT
   int java_call_counter() const           { return _java_call_counter; }
   void set_java_call_counter(int x)       { _java_call_counter = x; }
@@ -207,7 +204,6 @@ public:
 
   static ByteSize thread_offset()             { return byte_offset_of(Coroutine, _thread); }
   static ByteSize jni_frame_offset()          { return byte_offset_of(Coroutine, _jni_frames); }
-  static ByteSize metadata_handles_offset()   { return byte_offset_of(Coroutine, _metadata_handles); }
   static ByteSize has_javacall_offset()   { return byte_offset_of(Coroutine, _has_javacall); }
 
 #ifdef ASSERT
