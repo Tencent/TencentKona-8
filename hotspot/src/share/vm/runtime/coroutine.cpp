@@ -166,6 +166,7 @@ void Coroutine::switchTo_current_thread(Coroutine* coro) {
   CoroutineStack* stack_ptr = extract_from(coro, old_thread);
   insert_into(coro, target_thread, stack_ptr);
   coro->set_thread(target_thread);
+  stack_ptr->set_thread(target_thread);
   if (TraceCoroutine) {
     ResourceMark rm;
     // can not get old thread name
@@ -183,6 +184,7 @@ void Coroutine::switchFrom_current_thread(Coroutine* coro, JavaThread* to) {
   CoroutineStack* stack_ptr = extract_from(coro, from);
   insert_into(coro, to, stack_ptr);
   coro->set_thread(to);
+  stack_ptr->set_thread(to);
   if (TraceCoroutine) {
     ResourceMark rm;
     // can not get to thread name
@@ -314,12 +316,6 @@ Coroutine* Coroutine::create_thread_coroutine(const char* name,JavaThread* threa
   Coroutine* coro = new Coroutine();
   if (coro == NULL)
     return NULL;
-  if (_main_thread == NULL) {
-    // this is not correct now, as this records first thread with continuation
-    // this can be removed later with global stack/coroutine structure
-    _main_thread = thread;
-  }
-
   coro->set_name(name);
   coro->_state = _current;
   coro->_is_thread_coroutine = true;
@@ -570,7 +566,11 @@ void CoroutineStack::print_stack_on(outputStream* st, void* frames, int* depth)
 
 					// Print out lock information
 					if (JavaMonitorsInStackTrace) {
-						jvf->print_lock_info_on(st, count);
+            // only has lock info if this coroutine is current coroutine
+            // TBD: remove this after merge stack to coroutine
+            if (_thread->current_coroutine()->stack() == this) {
+              jvf->print_lock_info_on(st, count);
+            }
 					}
 				} else {
 					add_stack_frame(frames, depth, jvf);
@@ -640,10 +640,16 @@ JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jstring name
   assert(cont != NULL, "cannot create coroutine with NULL Coroutine object");
 
   if (stackSize < 0) {
-    guarantee(thread->current_coroutine() == NULL, "current thread already has default continuation");
-    thread->initialize_coroutine_support();
-    if (TraceCoroutine) {
-      tty->print_cr("CONT_createContinuation: create thread continuation %p", thread->current_coroutine());
+    if (thread->current_coroutine() == NULL) {
+      thread->initialize_coroutine_support();
+      if (TraceCoroutine) {
+        tty->print_cr("CONT_createContinuation: create thread continuation %p", thread->current_coroutine());
+      }
+    } else {
+      guarantee(thread->current_coroutine()->is_thread_coroutine(), "current coroutine is not thread coroutine");
+      if (TraceCoroutine) {
+        tty->print_cr("CONT_createContinuation: reuse main thread continuation %p", thread->current_coroutine());
+      }
     }
     return (jlong)thread->current_coroutine();
   }

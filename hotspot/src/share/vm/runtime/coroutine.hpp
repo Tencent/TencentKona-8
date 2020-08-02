@@ -146,6 +146,7 @@ public:
   static void switchFrom_current_thread(Coroutine* coro, JavaThread* to);
   static void yield_verify(Coroutine* from, Coroutine* to, bool terminate);
   static JavaThread* main_thread() { return _main_thread; }
+  static void set_main_thread(JavaThread* t) { _main_thread = t; }
   static Method* cont_start_method() { return _continuation_start; }
 
   void print_on(outputStream* st) const;
@@ -257,6 +258,7 @@ public:
 
 
   JavaThread* thread() const                { return _thread; }
+  void set_thread(JavaThread* t)            { _thread = t; }
   bool is_thread_stack() const              { return _is_thread_stack; }
 
   address last_sp() const                   { return _last_sp; }
