@@ -45,12 +45,14 @@ public class Collectable {
     }
 
     // ensure that a parked virtual thread can be GC'ed
-    public void testGC2() {
+    // Coroutine is root and VT on stck can not be collected
+    // Loom keep objec on heap and no stack roots points to VT
+    /*public void testGC2() {
         Thread thread = Thread.startVirtualThread(LockSupport::park);
         WeakReference<Thread> ref = new WeakReference<>(thread);
         thread = null;
         waitUntilCleared(ref);
-    }
+    }*/
 
     // ensure that a terminated virtual thread can be GC'ed
     public void testGC3() throws Exception {
