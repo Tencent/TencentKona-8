@@ -566,11 +566,7 @@ void CoroutineStack::print_stack_on(outputStream* st, void* frames, int* depth)
 
 					// Print out lock information
 					if (JavaMonitorsInStackTrace) {
-            // only has lock info if this coroutine is current coroutine
-            // TBD: remove this after merge stack to coroutine
-            if (_thread->current_coroutine()->stack() == this) {
-              jvf->print_lock_info_on(st, count);
-            }
+						jvf->print_lock_info_on(st, count);
 					}
 				} else {
 					add_stack_frame(frames, depth, jvf);
