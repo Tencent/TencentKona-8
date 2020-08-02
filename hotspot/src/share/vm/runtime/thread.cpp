@@ -2985,9 +2985,11 @@ void JavaThread::print_coroutine_on(outputStream* st, bool printstack) const {
   Coroutine* current = _coroutine_list;
   if (current) {
     do {
-      current->print_on(st);
-      if(printstack)
-        current->print_stack_on(st);
+      if (current != _current_coroutine) {
+        current->print_on(st);
+        if(printstack)
+          current->print_stack_on(st);
+      }
       current = current->next();
     } while (current != _coroutine_list);
   }
@@ -3557,7 +3559,8 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   // stacksize. This adjusted size is what is used to figure the placement
   // of the guard pages.
   main_thread->record_stack_base_and_size();
-  //main_thread->initialize_coroutine_support();
+  main_thread->initialize_coroutine_support();
+  Coroutine::set_main_thread(main_thread);
   main_thread->initialize_thread_local_storage();
 
   main_thread->set_active_handles(JNIHandleBlock::allocate_block());
