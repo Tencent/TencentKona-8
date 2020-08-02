@@ -2985,11 +2985,9 @@ void JavaThread::print_coroutine_on(outputStream* st, bool printstack) const {
   Coroutine* current = _coroutine_list;
   if (current) {
     do {
-      if (current != _current_coroutine) {
-        current->print_on(st);
-        if(printstack)
-          current->print_stack_on(st);
-      }
+      current->print_on(st);
+      if(printstack)
+        current->print_stack_on(st);
       current = current->next();
     } while (current != _coroutine_list);
   }
