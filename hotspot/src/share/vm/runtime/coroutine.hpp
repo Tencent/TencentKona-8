@@ -75,7 +75,6 @@ public:
   virtual void frames_do(frame* fr, RegisterMap* map) = 0;
 };
 
-
 class Coroutine: public CHeapObj<mtThread>, public DoublyLinkedList<Coroutine> {
 public:
   enum CoroutineState {
@@ -126,7 +125,6 @@ private:
   static Method* _continuation_start;
 
 public:
-  static void UpdateJniFrame(Thread* t, bool enter);
   static void Initialize();
 
   void set_name(const char* inname) 
@@ -165,7 +163,7 @@ public:
 
   int jni_frames() const { return _jni_frames; }
   void inc_jni_frames()  { _jni_frames++; }
-  void dec_jni_frames()  { _jni_frames--; }
+  int  dec_jni_frames()  { _jni_frames--; return _jni_frames; }
 
   CoroutineState state() const      { return _state; }
   void set_state(CoroutineState x)  { _state = x; }
@@ -278,6 +276,40 @@ public:
   static ByteSize stack_size_offset()         { return byte_offset_of(CoroutineStack, _stack_size); }
   static ByteSize last_sp_offset()            { return byte_offset_of(CoroutineStack, _last_sp); }
 };
+
+/*
+ * Continuation can only yield from Java frame, if there is some call from
+ * runtime/native to Java code, these frame might use native monitor/thread/pointer
+ * address and resources(handle/metadata handle/JNI...)
+ *
+ * This mark is used when call java from native frame, when yield happen and there
+ * exists ContNativeFrameMark on stack, yield will fail with native pin.
+ *
+ * TBD: kernel thread might also has JNI frame and native lock used
+ */
+class ContNativeFrameMark: public StackObj {
+ private:
+  Coroutine* _cont;
+  bool _update;
+ public:
+  ContNativeFrameMark(JavaThread* thread, bool first_frame) {
+    guarantee(thread == JavaThread::current(), "not invoke in current thread");
+    _cont = thread->current_coroutine();
+    _update = (_cont != NULL && first_frame == false && _cont->is_thread_coroutine() == false);
+    if (_update) {
+      _cont->inc_jni_frames();
+    }
+  }
+
+  ~ContNativeFrameMark() {
+    guarantee(_cont == JavaThread::current()->current_coroutine(), "not same coroutine");
+    if (_update) {
+      int count = _cont->dec_jni_frames();
+      guarantee(count >= 0, "invalid frame count");
+    }
+  }
+};
+
 
 template<class T> void DoublyLinkedList<T>::remove_from_list(pointer& list) {
   if (list == this) {
