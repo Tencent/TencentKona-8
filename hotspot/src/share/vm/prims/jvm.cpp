@@ -4305,7 +4305,6 @@ JVM_ENTRY(jobject, JVM_InvokeMethod(JNIEnv *env, jobject method, jobject obj, jo
   JVMWrapper("JVM_InvokeMethod");
   Handle method_handle;
   if (thread->stack_available((address) &method_handle) >= JVMInvokeMethodSlack) {
-    Coroutine::UpdateJniFrame(THREAD, true);
     method_handle = Handle(THREAD, JNIHandles::resolve(method));
     Handle receiver(THREAD, JNIHandles::resolve(obj));
     objArrayHandle args(THREAD, objArrayOop(JNIHandles::resolve(args0)));
@@ -4320,7 +4319,6 @@ JVM_ENTRY(jobject, JVM_InvokeMethod(JNIEnv *env, jobject method, jobject obj, jo
         JvmtiExport::post_vm_object_alloc(JavaThread::current(), result);
       }
     }
-    Coroutine::UpdateJniFrame(THREAD, false);
     return res;
   } else {
     THROW_0(vmSymbols::java_lang_StackOverflowError());
@@ -4330,7 +4328,6 @@ JVM_END
 
 JVM_ENTRY(jobject, JVM_NewInstanceFromConstructor(JNIEnv *env, jobject c, jobjectArray args0))
   JVMWrapper("JVM_NewInstanceFromConstructor");
-  Coroutine::UpdateJniFrame(THREAD, true);
   oop constructor_mirror = JNIHandles::resolve(c);
   objArrayHandle args(THREAD, objArrayOop(JNIHandles::resolve(args0)));
   oop result = Reflection::invoke_constructor(constructor_mirror, args, CHECK_NULL);
@@ -4338,7 +4335,6 @@ JVM_ENTRY(jobject, JVM_NewInstanceFromConstructor(JNIEnv *env, jobject c, jobjec
   if (JvmtiExport::should_post_vm_object_alloc()) {
     JvmtiExport::post_vm_object_alloc(JavaThread::current(), result);
   }
-  Coroutine::UpdateJniFrame(THREAD, false);
   return res;
 JVM_END
 

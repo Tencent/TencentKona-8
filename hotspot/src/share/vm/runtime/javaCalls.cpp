@@ -434,6 +434,7 @@ void JavaCalls::call_helper(JavaValue* result, methodHandle* m, JavaCallArgument
 
   // do call
   { JavaCallWrapper link(method, receiver, result, CHECK);
+    ContNativeFrameMark contMark(thread, link.is_first_frame());
     { HandleMark hm(thread);  // HandleMark used by HandleMarkCleaner
 
       StubRoutines::call_stub()(

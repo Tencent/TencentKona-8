@@ -1712,7 +1712,7 @@ void JavaThread::run() {
   // Record real stack base and size.
   this->record_stack_base_and_size();
 
-  //this->initialize_coroutine_support();
+  this->initialize_coroutine_support();
 
   // Initialize thread local storage; set before calling MutexLocker
   this->initialize_thread_local_storage();

@@ -123,21 +123,6 @@ Coroutine::~Coroutine() {
   }
 }
 
-void Coroutine::UpdateJniFrame(Thread* t, bool enter) {
-  if (t->is_Java_thread()) {
-    JavaThread* thread  = (JavaThread*)t;
-    Coroutine* co = thread->current_coroutine();
-    if (co != NULL && !co->is_thread_coroutine()) {
-      if (enter) {
-        co->_jni_frames++;
-      } else {
-        co->_jni_frames--;
-        guarantee(co->_jni_frames >= 0, "invalid frames");
-      }
-    }
-  }
-}
-
 static inline CoroutineStack* extract_from(Coroutine* coro, JavaThread* from) {
   CoroutineStack* stack_ptr = coro->stack();
   guarantee(stack_ptr != NULL, "stack is NULL");
@@ -636,16 +621,9 @@ JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jstring name
   assert(cont != NULL, "cannot create coroutine with NULL Coroutine object");
 
   if (stackSize < 0) {
-    if (thread->current_coroutine() == NULL) {
-      thread->initialize_coroutine_support();
-      if (TraceCoroutine) {
-        tty->print_cr("CONT_createContinuation: create thread continuation %p", thread->current_coroutine());
-      }
-    } else {
-      guarantee(thread->current_coroutine()->is_thread_coroutine(), "current coroutine is not thread coroutine");
-      if (TraceCoroutine) {
-        tty->print_cr("CONT_createContinuation: reuse main thread continuation %p", thread->current_coroutine());
-      }
+    guarantee(thread->current_coroutine()->is_thread_coroutine(), "current coroutine is not thread coroutine");
+    if (TraceCoroutine) {
+      tty->print_cr("CONT_createContinuation: reuse main thread continuation %p", thread->current_coroutine());
     }
     return (jlong)thread->current_coroutine();
   }
