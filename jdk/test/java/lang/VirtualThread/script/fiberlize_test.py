@@ -88,6 +88,9 @@ while line:
         else:
             print newMainCode,
             print line.replace("main", "_main"),
+    elif "@compile/fail/ref=" in line:
+       # skip all the compile fail tests
+       exit(1)
     elif "@run main ClassFileInstaller" in line:
         # read unitl empty line line with @
         checkingClassFileInstaller = True
