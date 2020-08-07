@@ -91,7 +91,6 @@ DEBUG_ONLY(class ResourceMark;)
 class WorkerThread;
 
 class Coroutine;
-class CoroutineStack;
 
 // Class hierarchy
 // - Thread
@@ -990,9 +989,8 @@ class JavaThread: public Thread {
   int _frames_to_pop_failed_realloc;
 
   // coroutine support
-  CoroutineStack*   _coroutine_stack_cache;
-  uintx             _coroutine_stack_cache_size;
-  CoroutineStack*   _coroutine_stack_list;
+  Coroutine*        _coroutine_cache;
+  uintx             _coroutine_cache_size;
   Coroutine*        _coroutine_list;
   Mutex*            _coroutine_list_lock;
 
@@ -1002,9 +1000,8 @@ class JavaThread: public Thread {
  public:
 
   Coroutine* current_coroutine()                 { return _current_coroutine;}
-  CoroutineStack*& coroutine_stack_cache()       { return _coroutine_stack_cache; }
-  uintx& coroutine_stack_cache_size()            { return _coroutine_stack_cache_size; }
-  CoroutineStack*& coroutine_stack_list()        { return _coroutine_stack_list; }
+  Coroutine*& coroutine_cache()                  { return _coroutine_cache; }
+  uintx& coroutine_cache_size()                  { return _coroutine_cache_size; }
   Coroutine*& coroutine_list()                   { return _coroutine_list; }
   Mutex* coroutine_list_lock() const             { return _coroutine_list_lock; }
 
