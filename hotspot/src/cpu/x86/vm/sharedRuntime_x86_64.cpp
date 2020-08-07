@@ -4443,8 +4443,8 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
   Register temp                  = r8;   // [1-5]
   Register temp2                 = r9;   // [5-5]
   Register old_coroutine         = r9;   // [4-4]
-  Register old_stack             = r10;  // [4-4]
-  Register target_stack          = r12;  // [5-5]
+  //Register old_stack             = r10;  // [4-4]
+  //Register target_stack          = r12;  // [5-5]
 
   // check if continuation is pinned, return pinned result
   // terminate must happen in Continuation.start method no JNI and lock
@@ -4506,17 +4506,17 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
       __ movl(Address(old_coroutine, Coroutine::java_call_counter_offset()), temp);
 #endif
     }
-    __ movptr(old_stack, Address(old_coroutine, Coroutine::stack_offset()));
+    //__ movptr(old_stack, Address(old_coroutine, Coroutine::stack_offset()));
     __ movl(Address(old_coroutine, Coroutine::state_offset()) , Coroutine::_onstack);
     //__ movptr(temp, Address(thread, Thread::last_handle_mark_offset()));
     //__ movptr(Address(old_coroutine, Coroutine::last_handle_mark_offset()), temp);
     //__ movptr(temp, Address(thread, Thread::active_handles_offset()));
     //__ movptr(Address(old_coroutine, Coroutine::active_handles_offset()), temp);
-    __ movptr(Address(old_stack, CoroutineStack::last_sp_offset()), rsp);
+    __ movptr(Address(old_coroutine, Coroutine::last_sp_offset()), rsp);
   }
   // load again as r10 overlap with old_stack
   __ movptr(target_coroutine, Address(target_coroutine_obj, java_lang_Continuation::get_data_offset()));
-  __ movptr(target_stack, Address(target_coroutine, Coroutine::stack_offset()));
+  //__ movptr(target_stack, Address(target_coroutine, Coroutine::stack_offset()));
 
   {
     //////////////////////////////////////////////////////////////////////////
@@ -4546,13 +4546,13 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
 #endif
 
       // update the thread's stack base and size
-      __ movptr(temp, Address(target_stack, CoroutineStack::stack_base_offset()));
+      __ movptr(temp, Address(target_coroutine, Coroutine::stack_base_offset()));
       __ movptr(Address(thread, JavaThread::stack_base_offset()), temp);
-      __ movl(temp2, Address(target_stack, CoroutineStack::stack_size_offset()));
+      __ movl(temp2, Address(target_coroutine, Coroutine::stack_size_offset()));
       __ movl(Address(thread, JavaThread::stack_size_offset()), temp2);
     }
     // restore the stack pointer
-    __ movptr(temp, Address(target_stack, CoroutineStack::last_sp_offset()));
+    __ movptr(temp, Address(target_coroutine, Coroutine::last_sp_offset()));
     __ movptr(rsp, temp);
     __ pop(rbp);
 

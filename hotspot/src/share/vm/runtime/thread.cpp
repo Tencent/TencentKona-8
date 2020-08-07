@@ -1489,10 +1489,9 @@ void JavaThread::initialize() {
   _special_runtime_exit_condition = _no_async_condition;
   _pending_async_exception = NULL;
   
-  _coroutine_stack_cache = NULL;
-  _coroutine_stack_cache_size = 0;
+  _coroutine_cache = NULL;
+  _coroutine_cache_size = 0;
   
-  _coroutine_stack_list = NULL;
   _coroutine_list = NULL;
   _coroutine_list_lock = new Mutex(Mutex::leaf, "Coroutine Lock", false);
 
@@ -1634,10 +1633,10 @@ JavaThread::~JavaThread() {
   // Need fix
   if (current_coroutine() != NULL) {
     guarantee(current_coroutine()->is_thread_coroutine(), "must thread coroutine");
-    while (coroutine_stack_cache() != NULL) {
-      CoroutineStack* stack = coroutine_stack_cache();
-      stack->remove_from_list(coroutine_stack_cache());
-      CoroutineStack::free_stack(stack, this);
+    while (coroutine_cache() != NULL) {
+      Coroutine* coro_cache = coroutine_cache();
+      coro_cache->remove_from_list(coroutine_cache());
+      delete coro_cache;
     }
     while(coroutine_list() != NULL) {
       Coroutine* coro = coroutine_list();
@@ -1655,11 +1654,6 @@ JavaThread::~JavaThread() {
         tty->print_cr("[Co]: ClearCoroutine %s(%p) when exit thread %s(%p)", coro->name(), coro, name(), this);
       }
       Coroutine::free_coroutine(coro,this);
-    }
-    while (coroutine_stack_list() != NULL) {
-        CoroutineStack* stack = coroutine_stack_list();
-        stack->remove_from_list(coroutine_stack_list());
-        CoroutineStack::free_stack(stack, this);
     }
   }
 
@@ -4858,8 +4852,6 @@ void Threads::verify() {
 
 void JavaThread::initialize_coroutine_support() {
   // no lock in thread initialization
-  CoroutineStack* stack = CoroutineStack::create_thread_stack(this);
-  stack->insert_into_list(_coroutine_stack_list);
   char buff[64];
 #ifdef TARGET_OS_FAMILY_windows
   _snprintf(buff, sizeof(buff), INTPTR_FORMAT "_thread_coroutine", this);
@@ -4868,7 +4860,7 @@ void JavaThread::initialize_coroutine_support() {
 #endif
   buff[63] = '\0';
   // no lock in thread initialization
-  Coroutine* coro = Coroutine::create_thread_coroutine(buff,this, stack);
+  Coroutine* coro = Coroutine::create_thread_coroutine(buff,this);
   coro->insert_into_list(_coroutine_list);
   _current_coroutine = coro;
   OrderAccess::release();

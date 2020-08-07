@@ -46,8 +46,6 @@
 #endif
 
 class Coroutine;
-class CoroutineStack;
-
 
 template<class T>
 class DoublyLinkedList {
@@ -88,7 +86,12 @@ private:
   CoroutineState  _state;
   bool            _is_thread_coroutine;
 
-  CoroutineStack* _stack;
+  ReservedSpace   _reserved_space;
+  VirtualSpace    _virtual_space;
+  address         _stack_base;
+  intptr_t        _stack_size;
+  address         _last_sp;
+
   // for verify check
   JNIHandleBlock* saved_active_handles;
   size_t saved_active_handle_count;
@@ -110,9 +113,7 @@ private:
 #endif
 
   // objects of this type can only be created via static functions
-   Coroutine();
-
-  virtual ~Coroutine();
+  Coroutine(intptr_t size);
 
   void frames_do(FrameClosure* fc);
 
@@ -124,7 +125,13 @@ private:
   static JavaThread* _main_thread;
   static Method* _continuation_start;
 
+  bool init_stack(JavaThread* thread, intptr_t size);
+
+  void add_stack_frame(void* frames, int* depth, javaVFrame* jvf);
+  void print_stack_on(outputStream* st, void* frames, int* depth);
+
 public:
+  virtual ~Coroutine();
   static void Initialize();
 
   void set_name(const char* inname) 
@@ -157,8 +164,10 @@ public:
   bool has_javacall() const { return _has_javacall; }
   void set_has_javacall(bool hjc) { _has_javacall = hjc; }
 
-  static Coroutine* create_thread_coroutine(const char* name,JavaThread* thread, CoroutineStack* stack);
-  static Coroutine* create_coroutine(const char* name,JavaThread* thread, CoroutineStack* stack, oop coroutineObj);
+  static Coroutine* create_thread_coroutine(const char* name,JavaThread* thread);
+  static Coroutine* create_coroutine(const char* name,JavaThread* thread, long stack_size, oop coroutineObj);
+  static void reset_coroutine(Coroutine* coro);
+  static void init_coroutine(Coroutine* coro, const char* name, JavaThread* thread);
   static void free_coroutine(Coroutine* coroutine, JavaThread* thread);
 
   int jni_frames() const { return _jni_frames; }
@@ -172,8 +181,6 @@ public:
 
   JavaThread* thread() const        { return _thread; }
   void set_thread(JavaThread* x)    { _thread = x; }
-
-  CoroutineStack* stack() const     { return _stack; }
 
   void set_saved_handle_area_hwm(char* wm) { saved_handle_area_hwm = wm; }
   char* get_saved_handle_area_hwm()        { return saved_handle_area_hwm; }
@@ -199,11 +206,23 @@ public:
   static void TerminateCoroutineObj(jobject coro);
   static void TerminateCoroutine(Coroutine* coro);
   static ByteSize state_offset()              { return byte_offset_of(Coroutine, _state); }
-  static ByteSize stack_offset()              { return byte_offset_of(Coroutine, _stack); }
 
   static ByteSize thread_offset()             { return byte_offset_of(Coroutine, _thread); }
   static ByteSize jni_frame_offset()          { return byte_offset_of(Coroutine, _jni_frames); }
   static ByteSize has_javacall_offset()   { return byte_offset_of(Coroutine, _has_javacall); }
+
+  void init_thread_stack(JavaThread* thread);
+  void free_stack();
+  void on_stack_frames_do(FrameClosure* fc, bool isThreadCoroutine);
+  bool on_local_stack(address adr) const {
+    /* QQQ this has knowledge of direction, ought to be a stack method */
+    return (_stack_base >= adr && adr >= (_stack_base - _stack_size));
+  }
+  void set_last_sp(address x)               { _last_sp = x; }
+
+  static ByteSize stack_base_offset()         { return byte_offset_of(Coroutine, _stack_base); }
+  static ByteSize stack_size_offset()         { return byte_offset_of(Coroutine, _stack_size); }
+  static ByteSize last_sp_offset()            { return byte_offset_of(Coroutine, _last_sp); }
 
 #ifdef ASSERT
   static ByteSize java_call_counter_offset()  { return byte_offset_of(Coroutine, _java_call_counter); }
@@ -219,62 +238,6 @@ private:
 public:
   static ByteSize last_SEH_offset()           { return byte_offset_of(Coroutine, _last_SEH); }
 #endif
-};
-
-class CoroutineStack: public CHeapObj<mtThread>, public DoublyLinkedList<CoroutineStack> {
-private:
-  JavaThread*     _thread;
-
-  bool            _is_thread_stack;
-  ReservedSpace   _reserved_space;
-  VirtualSpace    _virtual_space;
-
-  address         _stack_base;
-  intptr_t        _stack_size;
-  bool            _default_size;
-
-  address         _last_sp;
-
-  // objects of this type can only be created via static functions
-  CoroutineStack(intptr_t size) : _reserved_space(size) { }
-  virtual ~CoroutineStack() { }
-
-  void add_stack_frame(void* frames, int* depth, javaVFrame* jvf);
-  void print_stack_on(outputStream* st, void* frames, int* depth);
-
-public:
-  static CoroutineStack* create_thread_stack(JavaThread* thread);
-  static CoroutineStack* create_stack(JavaThread* thread, intptr_t size = -1);
-  static void free_stack(CoroutineStack* stack, JavaThread* THREAD);
-
-  static intptr_t get_start_method();
-
-    bool    on_local_stack(address adr) const {
-    /* QQQ this has knowledge of direction, ought to be a stack method */
-    return (_stack_base >= adr && adr >= (_stack_base - _stack_size));
-  }
-
-
-  JavaThread* thread() const                { return _thread; }
-  void set_thread(JavaThread* t)            { _thread = t; }
-  bool is_thread_stack() const              { return _is_thread_stack; }
-
-  address last_sp() const                   { return _last_sp; }
-  void set_last_sp(address x)               { _last_sp = x; }
-
-  address stack_base() const                { return _stack_base; }
-  intptr_t stack_size() const               { return _stack_size; }
-  bool is_default_size() const              { return _default_size; }
-
-  frame last_frame(Coroutine* coro, RegisterMap& map) const;
-  void print_stack_on(outputStream* st);
-  void print_stack_on(void* frames, int* depth);
-  // GC support
-  void frames_do(FrameClosure* fc, bool isThreadCoroutine);
-
-  static ByteSize stack_base_offset()         { return byte_offset_of(CoroutineStack, _stack_base); }
-  static ByteSize stack_size_offset()         { return byte_offset_of(CoroutineStack, _stack_size); }
-  static ByteSize last_sp_offset()            { return byte_offset_of(CoroutineStack, _last_sp); }
 };
 
 /*
