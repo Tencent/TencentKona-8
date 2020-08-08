@@ -218,7 +218,7 @@ BUNDLE_UP_AND_EXIT = \
 ################################################################
 
 # Default make rule (runs jtreg_tests)
-all: hotspot_all hotspot_problem hotspot_standalone
+all: hotspot_all
 	@$(ECHO) "Testing completed successfully"
 
 # Support "hotspot_" prefixed test make targets (too)
@@ -249,6 +249,23 @@ ifndef JT_HOME
     JT_HOME = $(JPRT_JTREG_HOME)
   endif
 endif
+
+# Problematic tests to be excluded
+PROBLEM_LISTS=$(call MixedDirs,$(wildcard ProblemList.txt closed/ProblemList.txt))
+
+# Create exclude list for this platform and arch
+ifdef NO_EXCLUDES
+  JTREG_EXCLUSIONS =
+else
+  ifeq ($(JTREG_EXCLUSIONS),)
+    JTREG_EXCLUSIONS = $(PROBLEM_LISTS:%=-exclude:%)
+  endif
+endif
+
+# convert list of directories to dos paths
+define MixedDirs
+$(foreach i,$1,$(shell $(GETMIXEDPATH) "${i}"))
+endef
 
 # When called from JPRT the TESTDIRS variable is set to the jtreg tests to run
 ifdef TESTDIRS
