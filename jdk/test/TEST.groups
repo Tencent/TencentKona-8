@@ -29,11 +29,6 @@ jdk_local = \
     java/util/Calendar/CalendarRegression.java \
     java/util/Calendar/JapanEraNameCompatTest.java
 
-
-jdk_fail = \
-    javax/net/ssl/ciphersuites/DisabledAlgorithms.java \
-    sun/security/ssl/sanity/interop/ClientJSSEServerJSSE.java
-
 jdk_all = \
     :jdk_tier1 \
     :jdk_tier2 \
