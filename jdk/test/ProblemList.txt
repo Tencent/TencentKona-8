@@ -365,6 +365,31 @@ sun/tools/jps/TestJpsJarRelative.java				generic-all
 
 ############################################################################
 
+# These failed cases are also hanging on Openjdk-8u262-b08
+javax/net/ssl/ciphersuites/DisabledAlgorithms.java           linux-all
+sun/security/ssl/sanity/interop/ClientJSSEServerJSSE.java    linux-all
+java/lang/invoke/lambda/LogGeneratedClassesTest.java         linux-all
+sun/misc/Version/Version.java                                linux-all
+sun/security/lib/cacerts/VerifyCACerts.java                  linux-all
+sun/security/pkcs11/rsa/TestCACerts.java                     linux-all
+sun/security/rsa/TestCACerts.java                            linux-all
+sun/tools/jconsole/WorkerDeadlockTest.java                   linux-all
+
+# occasional failure cases
+# The following tests fail when runt with all
+# but they pass when run standalone
+sun/text/IntHashtable/Bug4170614Test.sha                     linux-all
+sun/tools/jinfo/Basic.sh                                     linux-all
+java/nio/file/Files/CheckPermissions.java                    linux-all
+java/nio/file/WatchService/Basic.java                        linux-all
+java/nio/file/WatchService/LotsOfCancels.java                linux-all
+java/nio/file/WatchService/LotsOfEvents.java                 linux-all
+java/nio/file/WatchService/MayFlies.java                     linux-all
+java/nio/file/WatchService/SensitivityModifier.java          linux-all
+java/nio/file/WatchService/UpdateInterference.java           linux-all
+
+############################################################################
+
 # 8141370
 com/sun/jndi/ldap/DeadSSLLdapTimeoutTest.java			linux-i586,macosx-all
 

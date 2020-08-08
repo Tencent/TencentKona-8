@@ -297,7 +297,9 @@ PROBLEM_LISTS=$(call MixedDirs,$(wildcard ProblemList.txt closed/ProblemList.txt
 ifdef NO_EXCLUDES
   JTREG_EXCLUSIONS =
 else
-  JTREG_EXCLUSIONS = $(PROBLEM_LISTS:%=-exclude:%)
+  ifeq ($(JTREG_EXCLUSIONS),)
+    JTREG_EXCLUSIONS = $(PROBLEM_LISTS:%=-exclude:%)
+  endif
 endif
 
 # convert list of directories to dos paths
