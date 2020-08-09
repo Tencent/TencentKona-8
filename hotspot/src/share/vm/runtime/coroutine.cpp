@@ -46,9 +46,12 @@ void Coroutine::add_stack_frame(void* frames, int* depth, javaVFrame* jvf) {
 }
 
 #if defined(LINUX) || defined(_ALLBSD_SOURCE)
-
-void coroutine_start(Coroutine* coroutine, const void* coroutineObjAddr) {
-  coroutine->thread()->set_thread_state(_thread_in_vm);
+void coroutine_start(void* dummy, const void* coroutineObjAddr) {
+#ifndef AMD64
+  fatal("Corotuine not supported on current platform");
+#endif
+  JavaThread* thread = JavaThread::current();
+  thread->set_thread_state(_thread_in_vm);
   // passing raw object address form stub to C method
   // normally oop is OopDesc*, can use raw object directly
   // in fastdebug mode, oop is "class oop", raw object addrss is stored in class oop structure
@@ -57,7 +60,7 @@ void coroutine_start(Coroutine* coroutine, const void* coroutineObjAddr) {
 #else
   oop coroutineObj = (oop)coroutineObjAddr;
 #endif
-  JavaCalls::call_continuation_start(coroutineObj, coroutine->thread());
+  JavaCalls::call_continuation_start(coroutineObj, thread);
   ShouldNotReachHere();
 }
 #endif
@@ -639,13 +642,13 @@ JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jstring name
 }
 JVM_END
 
-JVM_ENTRY(void, CONT_switchTo(JNIEnv* env, jclass klass, jobject from, jobject to)) {
+JVM_ENTRY(void, CONT_switchTo(JNIEnv* env, jclass klass, jobject target, jobject current)) {
   ShouldNotReachHere();
 }
 JVM_END
 
-JVM_ENTRY(void, CONT_switchToAndTerminate(JNIEnv* env, jclass klass, jobject from, jobject to)) {
-  Coroutine::TerminateCoroutineObj(from);
+JVM_ENTRY(void, CONT_switchToAndTerminate(JNIEnv* env, jclass klass, jobject target, jobject current)) {
+  Coroutine::TerminateCoroutineObj(current);
 }
 JVM_END
 
