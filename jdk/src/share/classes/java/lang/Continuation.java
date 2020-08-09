@@ -102,7 +102,7 @@ public class Continuation {
             t.printStackTrace();
         } finally {
             done = true;
-            switchToAndTerminate(this, parent);
+            switchToAndTerminate(parent, this);
         }
         assert false : "should not reach here";
     }
@@ -210,7 +210,7 @@ public class Continuation {
             if (data == 0) {
                 data = createContinuation(null, this, stackSize);
             }
-            switchTo(parent, this);
+            switchTo(this, parent);
             if (switchResult != 0) {
                 parent = null;
 
@@ -239,7 +239,7 @@ public class Continuation {
             onPinned(Pinned.CRITICAL_SECTION);
             return false;
         }
-        switchTo(this, parent);
+        switchTo(parent, this);
         if (switchResult != 0) {
             int pinnedReason = switchResult;
             switchResult = 0;
@@ -391,8 +391,8 @@ public class Continuation {
     private static native void registerNatives();
     private static native int isPinned0(long data);
     private static native long createContinuation(String name, Continuation cont, long stackSize);
-    private static native void switchTo(Continuation from, Continuation to);
-    private static native void switchToAndTerminate(Continuation from, Continuation to);
+    private static native void switchTo(Continuation target, Continuation current);
+    private static native void switchToAndTerminate(Continuation target, Continuation current);
     private static native StackTraceElement[] dumpStackTrace(Continuation cont);
 
     private boolean fence() {
