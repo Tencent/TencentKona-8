@@ -325,6 +325,7 @@ void Coroutine::init_coroutine(Coroutine* coro, const char* name, JavaThread* th
   intptr_t** d = (intptr_t**)coro->_stack_base;
   *(--d) = NULL;
   *(--d) = NULL;
+  *(--d) = NULL;
   *(--d) = (intptr_t*)coroutine_start;
   *(--d) = NULL;
 
