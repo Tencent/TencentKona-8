@@ -47,6 +47,50 @@
 
 class Coroutine;
 
+const size_t CONT_BITMAP_LEN = 10;
+const size_t CONT_CONTAINER_SIZE = 1 << CONT_BITMAP_LEN;
+const size_t CONT_MASK_SHIFT = 5;
+const size_t CONT_MASK = CONT_CONTAINER_SIZE - 1;
+
+class ContBucket : public CHeapObj<mtThread> {
+private:
+  Mutex      _lock;
+  Coroutine* _head;
+  int        _count;
+public:
+  Mutex* lock() { return &_lock; }
+  Coroutine* head() const { return _head; }
+  int count() const { return _count; }
+  void insert(Coroutine* cont);
+  void remove(Coroutine* cont);
+  ContBucket();
+
+  void frames_do(void f(frame*, const RegisterMap*));
+  void oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf);
+  void nmethods_do(CodeBlobClosure* cf);
+  void metadata_do(void f(Metadata*));
+  void print_stack_on(outputStream* st);
+};
+
+class ContContainer {
+private:
+  static ContBucket* _buckets;
+  static size_t hash_code(Coroutine* cont);
+public:
+  static ContBucket* bucket(size_t index);
+  static ContBucket* buckets() { return _buckets; };
+  static void insert(Coroutine* cont);
+  static void remove(Coroutine* cont);
+  static void init();
+  static void verify();
+
+  static void frames_do(void f(frame*, const RegisterMap*));
+  static void oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf);
+  static void nmethods_do(CodeBlobClosure* cf);
+  static void metadata_do(void f(Metadata*));
+  static void print_stack_on(outputStream* st);
+};
+
 template<class T>
 class DoublyLinkedList {
 private:
@@ -147,8 +191,7 @@ public:
   {
 	  return _name;
   }
-  static void switchTo_current_thread(Coroutine* coro);
-  static void switchFrom_current_thread(Coroutine* coro, JavaThread* to);
+
   static void yield_verify(Coroutine* from, Coroutine* to, bool terminate);
   static JavaThread* main_thread() { return _main_thread; }
   static void set_main_thread(JavaThread* t) { _main_thread = t; }
@@ -168,7 +211,6 @@ public:
   static Coroutine* create_coroutine(const char* name,JavaThread* thread, long stack_size, oop coroutineObj);
   static void reset_coroutine(Coroutine* coro);
   static void init_coroutine(Coroutine* coro, const char* name, JavaThread* thread);
-  static void free_coroutine(Coroutine* coroutine, JavaThread* thread);
 
   int jni_frames() const { return _jni_frames; }
   void inc_jni_frames()  { _jni_frames++; }

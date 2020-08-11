@@ -991,10 +991,6 @@ class JavaThread: public Thread {
   // coroutine support
   Coroutine*        _coroutine_cache;
   uintx             _coroutine_cache_size;
-  Coroutine*        _coroutine_list;
-  Mutex*            _coroutine_list_lock;
-
-  intptr_t          _coroutine_temp;
   Coroutine*        _current_coroutine;
 
  public:
@@ -1002,10 +998,6 @@ class JavaThread: public Thread {
   Coroutine* current_coroutine()                 { return _current_coroutine;}
   Coroutine*& coroutine_cache()                  { return _coroutine_cache; }
   uintx& coroutine_cache_size()                  { return _coroutine_cache_size; }
-  Coroutine*& coroutine_list()                   { return _coroutine_list; }
-  Mutex* coroutine_list_lock() const             { return _coroutine_list_lock; }
-
-  static ByteSize coroutine_temp_offset()        { return byte_offset_of(JavaThread, _coroutine_temp); }
   
   void initialize_coroutine_support();
 
