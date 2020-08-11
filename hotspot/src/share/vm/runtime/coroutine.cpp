@@ -38,6 +38,147 @@
 
 JavaThread* Coroutine::_main_thread = NULL;
 Method* Coroutine::_continuation_start = NULL;
+ContBucket* ContContainer::_buckets= NULL;
+
+ContBucket::ContBucket() : _lock(Mutex::leaf, "ContBucket", false) {
+  _head = NULL;
+  _count = 0;
+}
+
+void ContBucket::insert(Coroutine* cont) {
+  cont->insert_into_list(_head);
+  _count++;
+}
+
+void ContBucket::remove(Coroutine* cont) {
+  cont->remove_from_list(_head);
+  _count--;
+  assert(_count >= 0, "illegal count");
+}
+
+#define ALL_BUCKET_CONTS(OPR)      \
+  {                                \
+    Coroutine* head = _head;       \
+    if (head != NULL) {            \
+      Coroutine* current = head;   \
+      do {                         \
+        current->OPR;              \
+        current = current->next(); \
+      } while (current != head);   \
+    }                              \
+  }
+
+void ContBucket::frames_do(void f(frame*, const RegisterMap*)) {
+  ALL_BUCKET_CONTS(frames_do(f));
+}
+
+void ContBucket::oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) {
+  ALL_BUCKET_CONTS(oops_do(f, cld_f, cf));
+}
+
+void ContBucket::nmethods_do(CodeBlobClosure* cf) {
+  ALL_BUCKET_CONTS(nmethods_do(cf));
+}
+
+void ContBucket::metadata_do(void f(Metadata*)) {
+  ALL_BUCKET_CONTS(metadata_do(f));
+}
+
+void ContBucket::print_stack_on(outputStream* st) {
+  ALL_BUCKET_CONTS(print_stack_on(st));
+}
+
+void ContContainer::init() {
+  assert(is_power_of_2(CONT_CONTAINER_SIZE), "Must be a power of two");
+  _buckets = new ContBucket[CONT_CONTAINER_SIZE];
+}
+
+ContBucket* ContContainer::bucket(size_t i) {
+  return &(_buckets[i]);
+}
+
+size_t ContContainer::hash_code(Coroutine* cont) {
+  return ((uintptr_t)cont >> CONT_MASK_SHIFT) & CONT_MASK;
+}
+
+void ContContainer::insert(Coroutine* cont) {
+  size_t index = hash_code(cont);
+  guarantee(index < CONT_CONTAINER_SIZE, "Must in the range from 0 to CONT_CONTAINER_SIZE - 1");
+  {
+    ContBucket* bucket = ContContainer::bucket(index);
+    MutexLockerEx ml(bucket->lock(), Mutex::_no_safepoint_check_flag);
+    bucket->insert(cont);
+    if (TraceCoroutine) {
+      ResourceMark rm;
+      tty->print_cr("[insert] cont: %p, index: %d, count : %d", cont, (int)index, bucket->count());
+    }
+  }
+}
+
+void ContContainer::remove(Coroutine* cont) {
+  size_t index = hash_code(cont);
+  guarantee(index < CONT_CONTAINER_SIZE, "Must in the range from 0 to CONT_CONTAINER_SIZE - 1");
+  {
+    ContBucket* bucket = ContContainer::bucket(index);
+    MutexLockerEx ml(bucket->lock(), Mutex::_no_safepoint_check_flag);
+    bucket->remove(cont);
+    if (TraceCoroutine) {
+      ResourceMark rm;
+      tty->print_cr("[remove] cont: %p, index: %d, count : %d", cont, (int)index, bucket->count());
+    }
+  }
+}
+
+#define ALL_BUCKETS_DO(OPR)                                     \
+  {                                                             \
+    for (size_t i = 0; i < CONT_CONTAINER_SIZE; i++) {          \
+      ContBucket* bucket = ContContainer::bucket(i);            \
+      MutexLockerEx ml(bucket->lock(), Mutex::_no_safepoint_check_flag); \
+      bucket->OPR;                                              \
+    }                                                           \
+  }
+
+void ContContainer::frames_do(void f(frame*, const RegisterMap*)) {
+  ALL_BUCKETS_DO(frames_do(f));
+}
+
+void ContContainer::oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) {
+  ALL_BUCKETS_DO(oops_do(f, cld_f, cf));
+}
+
+void ContContainer::nmethods_do(CodeBlobClosure* cf) {
+  ALL_BUCKETS_DO(nmethods_do(cf));
+}
+
+void ContContainer::metadata_do(void f(Metadata*)) {
+  ALL_BUCKETS_DO(metadata_do(f));
+}
+
+void ContContainer::print_stack_on(outputStream* st) {
+  ALL_BUCKETS_DO(print_stack_on(st));
+}
+
+// count is same with real count in list
+// all elements in a bucket has correct hash code
+void ContContainer::verify() {
+  for (size_t i = 0; i < CONT_CONTAINER_SIZE; i++) {
+    ContBucket* bucket = ContContainer::bucket(i);
+    MutexLockerEx ml(bucket->lock(), Mutex::_no_safepoint_check_flag);
+    Coroutine* head = bucket->head();
+    if (head == NULL) {
+      continue;
+    }
+
+    Coroutine* current = head;
+    int num = 0;
+    do {
+      guarantee(hash_code(current) == i, "invalid hash location");
+      num++;
+      current = current->next();
+    } while (current != head);
+    guarantee(num == bucket->count(), "mismatch count");
+  }
+}
 
 void Coroutine::add_stack_frame(void* frames, int* depth, javaVFrame* jvf) {
   StackFrameInfo* frame = new StackFrameInfo(jvf, false);
@@ -73,9 +214,7 @@ void Coroutine::TerminateCoroutine(Coroutine* coro) {
   guarantee(thread == JavaThread::current(), "thread not match");
 
   {
-    MutexLockerEx ml(thread->coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
-    coro->remove_from_list(thread->coroutine_list());
-
+    ContContainer::remove(coro);
     if (thread->coroutine_cache_size() < MaxFreeCoroutinesCacheSize) {
       coro->insert_into_list(thread->coroutine_cache());
       thread->coroutine_cache_size() ++;
@@ -124,56 +263,6 @@ Coroutine::~Coroutine() {
   }
 
   free_stack();
-}
-
-static inline void extract_from(Coroutine* coro, JavaThread* from) {
-  MutexLockerEx ml(from->coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
-  coro->remove_from_list(from->coroutine_list());
-}
-
-static inline void insert_into(Coroutine* coro, JavaThread* to) {
-  MutexLockerEx ml(to->coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
-  coro->insert_into_list(to->coroutine_list());
-}
-
-/*
- * switch from coroutine running _thread to target_thread
- * extract coroutine/stack from _thread, insert into target thread
- */
-void Coroutine::switchTo_current_thread(Coroutine* coro) {
-  JavaThread* target_thread = JavaThread::current();
-  JavaThread* old_thread = coro->thread();
-  if (old_thread == target_thread) {
-    return;
-  }
-
-  extract_from(coro, old_thread);
-  insert_into(coro, target_thread);
-  coro->set_thread(target_thread);
-  if (TraceCoroutine) {
-    ResourceMark rm;
-    // can not get old thread name
-    tty->print_cr("[Co]: SwitchToCurrent Coroutine %s(%p) from (%p) to %s(%p)",
-      coro->name(), coro, old_thread, target_thread->name(), target_thread);
-  }
-}
-
-void Coroutine::switchFrom_current_thread(Coroutine* coro, JavaThread* to) {
-  JavaThread* from = JavaThread::current();
-  guarantee(from == coro->thread(), "not from current thread");
-  if (from == to) {
-    return;
-  }
-
-  extract_from(coro, from);
-  insert_into(coro, to);
-  coro->set_thread(to);
-  if (TraceCoroutine) {
-    ResourceMark rm;
-    // can not get to thread name
-    tty->print_cr("[Co]: SwitchFromCurrent Coroutine %s(%p) from %s(%p) to (%p)",
-      coro->name(), coro, from->name(), from, to);
-  }
 }
 
 /*
@@ -311,6 +400,7 @@ Coroutine* Coroutine::create_thread_coroutine(const char* name,JavaThread* threa
 #if defined(_WINDOWS)
   coro->_last_SEH = NULL;
 #endif
+  ContContainer::insert(coro);
   return coro;
 }
 
@@ -367,11 +457,6 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, long
 
   Coroutine::init_coroutine(coro, name, thread);
   return coro;
-}
-
-void Coroutine::free_coroutine(Coroutine* coroutine, JavaThread* thread) {
-  coroutine->remove_from_list(thread->coroutine_list());
-  delete coroutine;
 }
 
 void Coroutine::frames_do(FrameClosure* fc) {
@@ -431,8 +516,7 @@ public:
 };
 
 void Coroutine::metadata_do(void f(Metadata*)) {
-	if(state() != Coroutine::_onstack)
-	{
+	if(state() != Coroutine::_onstack) {
 		return;
 	}
   metadata_do_Closure fc(f);
@@ -611,7 +695,6 @@ JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jstring name
   Coroutine* coro = NULL;
   if (stackSize == 0) {
     {
-      MutexLockerEx ml(thread->coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
       if (thread->coroutine_cache_size() > 0) {
         coro = thread->coroutine_cache();
         coro->remove_from_list(thread->coroutine_cache());
@@ -619,7 +702,6 @@ JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jstring name
         Coroutine::reset_coroutine(coro);
         Coroutine::init_coroutine(coro, NULL, thread);
         DEBUG_CORO_ONLY(tty->print("reused coroutine stack at %08x\n", _stack_base));
-        guarantee(coro != NULL, "get NULL from cache");
       }
     }
   }
@@ -631,11 +713,7 @@ JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jstring name
       THROW_0(vmSymbols::java_lang_OutOfMemoryError());
     }
   }
-
-  {
-    MutexLockerEx ml(thread->coroutine_list_lock(), Mutex::_no_safepoint_check_flag);
-    coro->insert_into_list(thread->coroutine_list());
-  }
+  ContContainer::insert(coro);
   if (TraceCoroutine) {
     tty->print_cr("CONT_createContinuation: create continuation %p", coro);
   }

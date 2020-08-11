@@ -602,7 +602,6 @@ class MacroAssembler: public Assembler {
   // prints msg and continues
   void warn(const char* msg);
 
-  void SwitchJavaCallStack(Register target_coroutine);
   void VerifyCoroutineState(Register old_coroutine, Register target_coroutine, bool terminate);
 
   // dumps registers and other state

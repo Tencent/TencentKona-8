@@ -822,21 +822,6 @@ void MacroAssembler::stop(const char* msg) {
 }
 
 #include "runtime/coroutine.hpp"
-
-// switch target_coroutine from previous thread to current thread
-void MacroAssembler::SwitchJavaCallStack(Register target_coroutine) {
-  address rip = pc();
-  push(rbp);
-  movq(rbp, rsp);
-  andq(rsp, -16);     // align stack as required by push_CPU_state and call
-  push_CPU_state();   // keeps alignment at 16 bytes
-  movq(c_rarg0, target_coroutine);
-  call_VM_leaf(CAST_FROM_FN_PTR(address, Coroutine::switchTo_current_thread),c_rarg0);
-  pop_CPU_state();
-  mov(rsp, rbp);
-  pop(rbp);
-}
-
 void MacroAssembler::VerifyCoroutineState(Register old_coroutine, Register target_coroutine,
                                           bool terminate) {
   address rip = pc();

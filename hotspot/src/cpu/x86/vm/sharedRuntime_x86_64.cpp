@@ -4433,17 +4433,9 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
   }
   // push the current IP and frame pointer onto the stack
   __ push(rbp);
-  __ movptr(target_coroutine, Address(target_coroutine_obj, java_lang_Continuation::get_data_offset()));
-  {
-    Label finish_switch_thread;
-    __ movptr(temp, Address(target_coroutine, in_bytes(Coroutine::thread_offset())));
-    __ cmpptr(temp, thread);
-    __ jcc(Assembler::equal, finish_switch_thread);
-    __ SwitchJavaCallStack(target_coroutine);
-    __ bind(finish_switch_thread);
-  }
 
   // invoke verification with old and target coroutine
+  __ movptr(target_coroutine, Address(target_coroutine_obj, java_lang_Continuation::get_data_offset()));
   __ movptr(old_coroutine, Address(old_coroutine_obj, java_lang_Continuation::get_data_offset()));
   if (VerifyCoroutineStateOnYield) {
     __ VerifyCoroutineState(old_coroutine, target_coroutine, terminate);
@@ -4464,6 +4456,7 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
   __ movl(temp, Address(target_coroutine, Coroutine::java_call_counter_offset()));
   __ movl(Address(thread, JavaThread::java_call_counter_offset()), temp);
 #endif
+  __ movptr(Address(target_coroutine, in_bytes(Coroutine::thread_offset())), thread);
   __ movl(Address(target_coroutine, Coroutine::state_offset()), Coroutine::_current);
 	__ movptr(Address(thread,JavaThread::current_coro_offset()),target_coroutine);
   __ movptr(temp, Address(target_coroutine, Coroutine::stack_base_offset()));
