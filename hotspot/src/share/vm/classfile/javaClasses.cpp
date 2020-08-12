@@ -3314,13 +3314,10 @@ void java_nio_Buffer::compute_offsets() {
 
 /* stack manipulation */
 int java_lang_Continuation::data_offset = 0;
-int java_lang_Continuation::switch_result_offset = 0;
 void java_lang_Continuation::compute_offsets() {
   Klass* k = SystemDictionary::continuation_klass();
   if (k != NULL) {
     compute_offset(data_offset,          k, vmSymbols::data_name(),    vmSymbols::long_signature());
-    compute_offset(switch_result_offset, k, vmSymbols::cont_switch_result_name(), vmSymbols::int_signature());
-    // tty->print_cr("java_lang_Continuation %d %d", data_offset, switch_result_offset);
   }
 }
 
