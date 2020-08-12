@@ -1492,9 +1492,6 @@ void JavaThread::initialize() {
   _coroutine_cache = NULL;
   _coroutine_cache_size = 0;
   
-  //_coroutine_list = NULL;
-  //_coroutine_list_lock = new Mutex(Mutex::leaf, "Coroutine Lock", false);
-
   _thread_stat = NULL;
   _thread_stat = new ThreadStatistics();
   _blocked_on_compilation = false;
