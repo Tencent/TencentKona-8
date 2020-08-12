@@ -2542,6 +2542,10 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     __ jcc(Assembler::notEqual, exception_pending);
   }
 
+  if (method->intrinsic_id() == vmIntrinsics::_contSwitchToAndTerminate) {
+    // yield back to kernel thread, return "cont.run"
+    __ xorl(rax, rax);
+  }
   __ ret(0);
 
   // Unexpected paths are out of line and go here
@@ -4420,14 +4424,14 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
     __ movl(temp, Address(thread, in_bytes(Thread::locksAcquired_offset())));
     __ testl(temp, temp);
     __ jcc(Assembler::zero, check_JNI_frame);
-    __ movl(Address(old_coroutine_obj, java_lang_Continuation::get_switch_result_offset()), 3);
+    __ movl(rax, cont_pin_monitor);
     __ ret(0);
     __ bind(check_JNI_frame);
     __ movptr(temp, Address(old_coroutine_obj, java_lang_Continuation::get_data_offset()));
     __ movl(temp, Address(temp, Coroutine::jni_frame_offset()));
     __ testl(temp, temp);
     __ jcc(Assembler::zero, lockOK);
-    __ movl(Address(old_coroutine_obj, java_lang_Continuation::get_switch_result_offset()), 2);
+    __ movl(rax, cont_pin_jni);
     __ ret(0);
     __ bind(lockOK);
   }
@@ -4477,6 +4481,7 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
       __ movq(c_rarg1, target_coroutine_obj);
       __ bind(normal);
     }
+    __ xorl(rax, rax);
     __ ret(0);
   } else {
     if (j_rarg1 != old_coroutine_obj) {

@@ -612,7 +612,6 @@
   template(java_lang_Continuation,                     "java/lang/Continuation")                                  \
   template(cont_start_method_name,                     "start")                                                   \
   template(data_name,                                  "data")                                                    \
-  template(cont_switch_result_name,                    "switchResult")                                            \
   template(reflect_method_signature,                   "Ljava/lang/reflect/Method;")                              \
                                                                                                                   \
   /* jfr signatures */                                                                                            \
@@ -1093,8 +1092,9 @@
   /* continuation */                                                                                                    \
   do_intrinsic(_contSwitchTo,             java_lang_Continuation, switchTo_name, contSwitchTo_signature, F_SN)          \
    do_name(     switchTo_name,                                    "switchTo")                                           \
-   do_signature(contSwitchTo_signature,                           "(Ljava/lang/Continuation;Ljava/lang/Continuation;)V")\
-  do_intrinsic(_contSwitchToAndTerminate, java_lang_Continuation, switchToAndTerminate_name, contSwitchTo_signature, F_SN)  \
+   do_signature(contSwitchTo_signature,                           "(Ljava/lang/Continuation;Ljava/lang/Continuation;)I")\
+  do_intrinsic(_contSwitchToAndTerminate, java_lang_Continuation, switchToAndTerminate_name, contSwitchToTerminate_signature, F_SN)  \
+   do_signature(contSwitchToTerminate_signature,                  "(Ljava/lang/Continuation;Ljava/lang/Continuation;)V")\
    do_name(     switchToAndTerminate_name,                        "switchToAndTerminate")                               \
                                                                                                                         \
   do_intrinsic(_fillInStackTrace,         java_lang_Throwable, fillInStackTrace_name, void_throwable_signature,  F_RNY) \
