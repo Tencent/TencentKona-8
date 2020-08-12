@@ -721,8 +721,9 @@ JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jstring name
 }
 JVM_END
 
-JVM_ENTRY(void, CONT_switchTo(JNIEnv* env, jclass klass, jobject target, jobject current)) {
+JVM_ENTRY(jint, CONT_switchTo(JNIEnv* env, jclass klass, jobject target, jobject current)) {
   ShouldNotReachHere();
+  return 0;
 }
 JVM_END
 
@@ -752,7 +753,7 @@ JVM_END
 static JNINativeMethod CONT_methods[] = {
   {CC"isPinned0",                 CC"(J)I", FN_PTR(CONT_isPinned0)},
   {CC"createContinuation",        CC"("JLSTR JLCONT "J)J", FN_PTR(CONT_createContinuation)},
-  {CC"switchTo",                  CC"("JLCONT JLCONT")V", FN_PTR(CONT_switchTo)},
+  {CC"switchTo",                  CC"("JLCONT JLCONT")I", FN_PTR(CONT_switchTo)},
   {CC"switchToAndTerminate",      CC"("JLCONT JLCONT")V", FN_PTR(CONT_switchToAndTerminate)},
   {CC"dumpStackTrace",            CC"("JLCONT ")[" JLSTE, FN_PTR(CONT_dumpStackTrace)},
 };

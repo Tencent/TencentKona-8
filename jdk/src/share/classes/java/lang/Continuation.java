@@ -88,7 +88,6 @@ public class Continuation {
     private volatile int mounted = 0;  // 1 means true
     private boolean done;
     private short cs; // critical section semaphore
-    private int switchResult;
     private final int stackSize;
 
     private final void start() {
@@ -210,13 +209,10 @@ public class Continuation {
             if (data == 0) {
                 data = createContinuation(null, this, stackSize);
             }
-            switchTo(this, parent);
-            if (switchResult != 0) {
+            int result = switchTo(this, parent);
+            if (result != 0) {
                 parent = null;
-
-                int pinnedReason = switchResult;
-                switchResult = 0;
-                onPinned0(pinnedReason);
+                onPinned0(result);
                 if (TRACE) System.out.println("Continuation run after pin");
             }
         } catch (Throwable e) {
@@ -239,14 +235,12 @@ public class Continuation {
             onPinned(Pinned.CRITICAL_SECTION);
             return false;
         }
-        switchTo(parent, this);
-        if (switchResult != 0) {
-            int pinnedReason = switchResult;
-            switchResult = 0;
-            onPinned0(pinnedReason);
+        int result = switchTo(parent, this);
+        if (result != 0) {
+            onPinned0(result);
+            if (TRACE) System.out.println("Continuation run after pin");
             return false;
         }
-        // System.out.println("after yield");
         return true;
     }
 
@@ -391,7 +385,7 @@ public class Continuation {
     private static native void registerNatives();
     private static native int isPinned0(long data);
     private static native long createContinuation(String name, Continuation cont, long stackSize);
-    private static native void switchTo(Continuation target, Continuation current);
+    private static native int switchTo(Continuation target, Continuation current);
     private static native void switchToAndTerminate(Continuation target, Continuation current);
     private static native StackTraceElement[] dumpStackTrace(Continuation cont);
 
