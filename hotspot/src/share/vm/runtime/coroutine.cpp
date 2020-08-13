@@ -673,6 +673,9 @@ JVM_ENTRY(jint, CONT_isPinned0(JNIEnv* env, jclass klass, long data)) {
 JVM_END
 
 JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jstring name, jobject cont, long stackSize)) {
+  if (!UseKonaFiber) {
+    fatal("can not create continuation when UseKonaFiber is false");
+  }
   DEBUG_CORO_PRINT("CONT_createContinuation\n");
   assert(cont != NULL, "cannot create coroutine with NULL Coroutine object");
 
