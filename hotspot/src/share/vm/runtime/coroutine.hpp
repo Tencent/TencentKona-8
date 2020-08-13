@@ -51,6 +51,8 @@ const size_t CONT_BITMAP_LEN = 10;
 const size_t CONT_CONTAINER_SIZE = 1 << CONT_BITMAP_LEN;
 const size_t CONT_MASK_SHIFT = 5;
 const size_t CONT_MASK = CONT_CONTAINER_SIZE - 1;
+static const int cont_pin_monitor = 3;
+static const int cont_pin_jni = 2;
 
 class ContBucket : public CHeapObj<mtThread> {
 private:
@@ -145,7 +147,6 @@ private:
 
   // mutable
   MonitorChunk*   _monitor_chunks;  // if deoptimizing happens in corutine it should record own monitor chunks
-  int             _jni_frames;      // jni frame count in current coroutine stack, pinned
   JavaThread*     _thread;
 
 #ifdef ASSERT
@@ -212,10 +213,6 @@ public:
   static void reset_coroutine(Coroutine* coro);
   static void init_coroutine(Coroutine* coro, const char* name, JavaThread* thread);
 
-  int jni_frames() const { return _jni_frames; }
-  void inc_jni_frames()  { _jni_frames++; }
-  int  dec_jni_frames()  { _jni_frames--; return _jni_frames; }
-
   CoroutineState state() const      { return _state; }
   void set_state(CoroutineState x)  { _state = x; }
 
@@ -250,7 +247,6 @@ public:
   static ByteSize state_offset()              { return byte_offset_of(Coroutine, _state); }
 
   static ByteSize thread_offset()             { return byte_offset_of(Coroutine, _thread); }
-  static ByteSize jni_frame_offset()          { return byte_offset_of(Coroutine, _jni_frames); }
   static ByteSize has_javacall_offset()   { return byte_offset_of(Coroutine, _has_javacall); }
 
   void init_thread_stack(JavaThread* thread);
@@ -298,19 +294,18 @@ class ContNativeFrameMark: public StackObj {
   bool _update;
  public:
   ContNativeFrameMark(JavaThread* thread, bool first_frame) {
-    guarantee(thread == JavaThread::current(), "not invoke in current thread");
+    assert(thread == JavaThread::current(), "not invoke in current thread");
     _cont = thread->current_coroutine();
     _update = (_cont != NULL && first_frame == false && _cont->is_thread_coroutine() == false);
     if (_update) {
-      _cont->inc_jni_frames();
+      thread->inc_cont_jni_frames();
     }
   }
 
   ~ContNativeFrameMark() {
-    guarantee(_cont == JavaThread::current()->current_coroutine(), "not same coroutine");
+    assert(_cont == JavaThread::current()->current_coroutine(), "not same coroutine");
     if (_update) {
-      int count = _cont->dec_jni_frames();
-      guarantee(count >= 0, "invalid frame count");
+      JavaThread::current()->dec_cont_jni_frames();
     }
   }
 };

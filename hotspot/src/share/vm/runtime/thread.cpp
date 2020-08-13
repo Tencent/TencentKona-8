@@ -264,6 +264,7 @@ Thread::Thread() {
   omInUseList = NULL ;
   omInUseCount = 0 ;
   locksAcquired = 0;
+  contJniFrames = 0;
 
 #ifdef ASSERT
   _visited_for_critical_count = false;

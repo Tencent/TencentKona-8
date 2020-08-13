@@ -30,10 +30,12 @@
 import java.util.concurrent.*;
 import java.util.concurrent.locks.*;
 import static org.testng.Assert.*;
+import org.testng.annotations.Test;
 
 public class VTInterruptTest {
     static int val = 0;
-    public static void main(String args[]) throws Exception {
+    @Test
+    public static void test() throws Exception {
         SingleSleepInterrupt();
         System.out.println("finish SingleSleepInterrupt");
         multipleSleepInterrupt();

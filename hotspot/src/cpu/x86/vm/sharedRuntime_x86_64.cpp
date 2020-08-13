@@ -4394,8 +4394,6 @@ void OptoRuntime::generate_exception_blob() {
  * 5. If normal switch, return and execute in new coroutine
  * 6. If terminate, invoke terminate on current thread
  */
-static const int cont_pin_monitor = 3;
-static const int cont_pin_jni = 2;
 void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* oop_maps, int &stack_slots, int total_in_args,
                                     BasicType *in_sig_bt, VMRegPair *in_regs, BasicType ret_type, bool terminate) {
   assert(total_in_args == 2, "wrong number of arguments");
@@ -4419,21 +4417,11 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
 
   // check if continuation is pinned, return pinned result
   // terminate must happen in Continuation.start method no JNI and lock
+  Label pinSlowPath;
   if (terminate == false) {
-    Label lockOK, check_JNI_frame;
-    __ movl(temp, Address(thread, in_bytes(Thread::locksAcquired_offset())));
-    __ testl(temp, temp);
-    __ jcc(Assembler::zero, check_JNI_frame);
-    __ movl(rax, cont_pin_monitor);
-    __ ret(0);
-    __ bind(check_JNI_frame);
-    __ movptr(temp, Address(old_coroutine_obj, java_lang_Continuation::get_data_offset()));
-    __ movl(temp, Address(temp, Coroutine::jni_frame_offset()));
-    __ testl(temp, temp);
-    __ jcc(Assembler::zero, lockOK);
-    __ movl(rax, cont_pin_jni);
-    __ ret(0);
-    __ bind(lockOK);
+    __ movq(temp, Address(thread, in_bytes(Thread::ContAlignedLong_offset())));
+    __ testq(temp, temp);
+    __ jcc(Assembler::notZero, pinSlowPath);
   }
   // push the current IP and frame pointer onto the stack
   __ push(rbp);
@@ -4462,7 +4450,7 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
 #endif
   __ movptr(Address(target_coroutine, in_bytes(Coroutine::thread_offset())), thread);
   __ movl(Address(target_coroutine, Coroutine::state_offset()), Coroutine::_current);
-	__ movptr(Address(thread,JavaThread::current_coro_offset()),target_coroutine);
+  __ movptr(Address(thread,JavaThread::current_coro_offset()), target_coroutine);
   __ movptr(temp, Address(target_coroutine, Coroutine::stack_base_offset()));
   __ movptr(Address(thread, JavaThread::stack_base_offset()), temp);
   __ movl(temp, Address(target_coroutine, Coroutine::stack_size_offset()));
@@ -4483,6 +4471,14 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
     }
     __ xorl(rax, rax);
     __ ret(0);
+    if (terminate == false) {
+      __ bind(pinSlowPath);
+      __ movl(rax, cont_pin_monitor);
+      __ movl(r9, cont_pin_jni);
+      __ testl(temp, temp); // check lower 32 bits for moinitor pin
+      __ cmovl(Assembler::zero, rax, r9);
+      __ ret(0);
+    }
   } else {
     if (j_rarg1 != old_coroutine_obj) {
       __ movptr(j_rarg1, old_coroutine_obj);

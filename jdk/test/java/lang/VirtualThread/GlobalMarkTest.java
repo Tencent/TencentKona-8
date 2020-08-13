@@ -37,14 +37,9 @@ import static org.testng.Assert.*;
 public class GlobalMarkTest {
     static long count = 0;
     static ContinuationScope scope = new ContinuationScope("test");
-    public static void main(String args[]) throws Exception {
-        foo();
-        System.out.println("finish foo");
-        bar();
-        System.out.println("finish bar");
-    }
 
-    static void foo() throws Exception {
+    @Test
+    public static void foo() throws Exception {
         Runnable target = new Runnable() {
             public void run() {
                 String tmp_str = new String("string in continuation");
@@ -92,7 +87,8 @@ public class GlobalMarkTest {
         thread.join();
     }
 
-    static void bar() throws Exception {
+    @Test
+    public static void bar() throws Exception {
         Runnable target = new Runnable() {
             public void run() {
                 String tmp_str = new String("string in continuation");

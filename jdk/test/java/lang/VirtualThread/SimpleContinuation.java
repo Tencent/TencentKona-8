@@ -28,11 +28,12 @@
  */
 
 import static org.testng.Assert.*;
-
+import org.testng.annotations.Test;
 public class SimpleContinuation {
     static long count = 0;
     static ContinuationScope scope = new ContinuationScope("test");
-    public static void main(String args[]) throws Exception {
+    @Test
+    public static void test() {
         foo();
         System.out.println("finish first");
         assertEquals(count, 2);
