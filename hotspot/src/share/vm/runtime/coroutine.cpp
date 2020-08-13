@@ -254,7 +254,6 @@ void Coroutine::cont_metadata_do(void f(Metadata*)) {
 Coroutine::Coroutine(intptr_t size) : _reserved_space(size) {
 	_has_javacall = false;
   _monitor_chunks = NULL;
-  _jni_frames = 0;
 }
 
 Coroutine::~Coroutine() {
@@ -407,7 +406,6 @@ Coroutine* Coroutine::create_thread_coroutine(const char* name,JavaThread* threa
 void Coroutine::reset_coroutine(Coroutine* coro) {
   coro->_has_javacall = false;
   assert(coro->_monitor_chunks == NULL, "monitor_chunks must be NULL");
-  assert(coro->_jni_frames == 0, "jni_frames must be 0");
 }
 
 void Coroutine::init_coroutine(Coroutine* coro, const char* name, JavaThread* thread) {
@@ -662,11 +660,10 @@ void Coroutine::on_stack_frames_do(FrameClosure* fc, bool isThreadCoroutine) {
 JVM_ENTRY(jint, CONT_isPinned0(JNIEnv* env, jclass klass, long data)) {
   JavaThread* thread = JavaThread::thread_from_jni_environment(env);
   if (thread->locksAcquired != 0) {
-    return 3;
+    return cont_pin_monitor;
   }
-  Coroutine* coro = (Coroutine*)data;
-  if (coro->jni_frames() != 0) {
-    return 2; // JNI
+  if (thread->contJniFrames != 0) {
+    return cont_pin_jni;
   }
   return 0;
 }
@@ -778,6 +775,9 @@ static void initializeForceWrapper(JNIEnv *env, jclass cls, JavaThread* thread, 
 }
 
 void CONT_RegisterNativeMethods(JNIEnv *env, jclass cls, JavaThread* thread) {
+    if (UseKonaFiber == false) {
+      fatal("UseKonaFiber is off");
+    }
     assert(thread->is_Java_thread(), "");
     ThreadToNativeFromVM trans((JavaThread*)thread);
     int status = env->RegisterNatives(cls, CONT_methods, sizeof(CONT_methods)/sizeof(JNINativeMethod));

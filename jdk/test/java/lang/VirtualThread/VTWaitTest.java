@@ -30,10 +30,12 @@
 import java.util.concurrent.*;
 import java.util.concurrent.locks.*;
 import static org.testng.Assert.*;
+import org.testng.annotations.Test;
 
 public class VTWaitTest {
     static int val = 0;
-    public static void main(String args[]) throws Exception {
+    @Test
+    public static void test() throws Exception {
         SingleReentrantLockTest();
         System.out.println("finish SingleReentrantLockTest");
         SingleConditionTest();

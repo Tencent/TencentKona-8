@@ -28,32 +28,23 @@
  */
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.*;
+import org.testng.annotations.Test;
 import static org.testng.Assert.*;
 
 public class MultiContinuation {
     static long count = 0;
     static ContinuationScope scope = new ContinuationScope("test");
-    public static void main(String args[]) throws Exception {
-        foo();
-        System.out.println("finish foo 1");
-        bar();
-        System.out.println("finish bar 1");
-        qux();
-        System.out.println("finish qux 1");
-        baz();
-        System.out.println("finish baz 1");
-        quux();
-        System.out.println("finish quux 1");
-    }
 
-    static void foo() throws Exception {
+    @Test
+    public static void foo() throws Exception {
+        final Thread kernel = Thread.currentThread();
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("Continuation first run in " + Thread.currentThread().getName());
-                assertEquals(Thread.currentThread().getName(), "main");
+                assertEquals(Thread.currentThread(), kernel);
                 Continuation.yield(scope);
                 System.out.println("Continuation second run in " + Thread.currentThread().getName());
-                assertEquals(Thread.currentThread().getName(), "main");
+                assertEquals(Thread.currentThread(), kernel);
             }
         };
         Continuation[] conts = new Continuation[10];
@@ -68,17 +59,19 @@ public class MultiContinuation {
         }
     }
 
-    static void bar() throws Exception {
+    @Test
+    public static void bar() throws Exception {
+        final Thread kernel = Thread.currentThread();
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("Continuation first run in " + Thread.currentThread().getName());
-                assertEquals(Thread.currentThread().getName(), "main");
+                assertEquals(Thread.currentThread(), kernel);
                 Continuation.yield(scope);
                 System.out.println("Continuation second run in " + Thread.currentThread().getName());
                 assertEquals(Thread.currentThread().getName(), "bar-thread-0");
                 Continuation.yield(scope);
                 System.out.println("Continuation third run in " + Thread.currentThread().getName());
-                assertEquals(Thread.currentThread().getName(), "main");
+                assertEquals(Thread.currentThread(), kernel);
             }
         };
         Continuation[] conts = new Continuation[10];
@@ -102,15 +95,18 @@ public class MultiContinuation {
         }
         //cont.run();
     }
+
     // create in other thread and run in main
-    static void qux() throws Exception {
+    @Test
+    public static void qux() throws Exception {
+        final Thread kernel = Thread.currentThread();
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("Continuation first run in " + Thread.currentThread().getName());
                 assertEquals(Thread.currentThread().getName(), "qux-thread-0");
                 Continuation.yield(scope);
                 System.out.println("Continuation second run in " + Thread.currentThread().getName());
-                assertEquals(Thread.currentThread().getName(), "main");
+                assertEquals(Thread.currentThread(), kernel);
                 Continuation.yield(scope);
                 System.out.println("Continuation third run in " + Thread.currentThread().getName());
                 assertEquals(Thread.currentThread().getName(), "qux-thread-0");
@@ -143,7 +139,8 @@ public class MultiContinuation {
     }
 
     // racing processing multiple continuations in threads
-    static void baz() throws Exception {
+    @Test
+    public static void baz() throws Exception {
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("Continuation first run in " + Thread.currentThread().getName());
@@ -189,18 +186,19 @@ public class MultiContinuation {
         thread.join();
     }
 
-
-    static void quux() throws Exception {
+    @Test
+    public static void quux() throws Exception {
+        final Thread kernel = Thread.currentThread();
         Runnable target = new Runnable() {
             public void run() {
                 //System.out.println("Continuation first run in " + Thread.currentThread().getName());
-                assertNotEquals(Thread.currentThread().getName(), "main");
+                assertNotEquals(Thread.currentThread(), kernel);
                 Continuation.yield(scope);
                 //System.out.println("Continuation second run in " + Thread.currentThread().getName());
-                assertNotEquals(Thread.currentThread().getName(), "main");
+                assertNotEquals(Thread.currentThread(), kernel);
                 Continuation.yield(scope);
                 //System.out.println("Continuation third run in " + Thread.currentThread().getName());
-                assertNotEquals(Thread.currentThread().getName(), "main");
+                assertNotEquals(Thread.currentThread(), kernel);
             }
         };
         LinkedBlockingDeque<Continuation> queue = new LinkedBlockingDeque();

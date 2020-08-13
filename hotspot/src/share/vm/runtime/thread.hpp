@@ -289,13 +289,22 @@ class Thread: public ThreadShadow {
   int omFreeProvision;                          // reload chunk size
   ObjectMonitor* omInUseList;                   // SLL to track monitors in circulation
   int omInUseCount;                             // length of omInUseList
-  int locksAcquired;                            // number of locks acquired by this thread
+
+  union {
+    struct {
+      int locksAcquired;                            // number of locks acquired by this thread
+      int contJniFrames;                            // number of JNI frames in current continuation
+    };
+    uint64_t contAlignedLong;                       // make locksAcquired and contJniFrames in 8 bytes aligned space
+  };
   void inc_locks_acquired()                     {
     if (CouroutineCheckMonitrAtYield > 0) { locksAcquired++; assert(locksAcquired >= 1, "invalid state"); }
   }
   void dec_locks_acquired()                     {
     if (CouroutineCheckMonitrAtYield > 0) {locksAcquired--; assert(locksAcquired >= 0, "invalid state"); }
   }
+  void inc_cont_jni_frames()                    { contJniFrames++; }
+  void dec_cont_jni_frames()                    { contJniFrames--; assert(contJniFrames >= 0, "invalid state"); }
 
 #ifdef ASSERT
  private:
@@ -634,6 +643,8 @@ protected:
   static ByteSize metadata_handles_offset()      { return byte_offset_of(Thread, _metadata_handles); }
 
   static ByteSize locksAcquired_offset()         { return byte_offset_of(Thread, locksAcquired); }
+  static ByteSize ContJniFrames_offset()         { return byte_offset_of(Thread, contJniFrames); }
+  static ByteSize ContAlignedLong_offset()       { return byte_offset_of(Thread, contAlignedLong); }
 #define TLAB_FIELD_OFFSET(name) \
   static ByteSize tlab_##name##_offset()         { return byte_offset_of(Thread, _tlab) + ThreadLocalAllocBuffer::name##_offset(); }
 

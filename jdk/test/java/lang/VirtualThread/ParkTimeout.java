@@ -30,17 +30,14 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import sun.misc.VirtualThreads;
 import static org.testng.Assert.*;
-
+import org.testng.annotations.Test;
 public class ParkTimeout {
     static long finished_vt_count = 0;
     static final long nanosPerSecond = 1000L * 1000L * 1000L;
-    public static void main(String args[]) throws Exception {
-        SingleVTPark();
-        System.out.println("finish SingleVTTimeOut");
-    }
 
     // park two times, first timeout and second is not timeout
-    static void SingleVTPark() throws Exception {
+    @Test
+    public static void SingleVTPark() throws Exception {
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("first park");
