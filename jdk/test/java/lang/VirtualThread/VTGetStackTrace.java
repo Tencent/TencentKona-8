@@ -30,6 +30,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import sun.misc.VirtualThreads;
 import static org.testng.Assert.*;
+import org.testng.annotations.Test;
 
 public class VTGetStackTrace {
     static volatile boolean releaseFlag = false;
@@ -68,7 +69,8 @@ public class VTGetStackTrace {
         return result;
     }
 
-    public static void main(String args[]) throws Exception {
+    @Test
+    public static void test() throws Exception {
         GetMountedVT();
         System.out.println("GetMountedVT finished");
         GetUnmountedVT();

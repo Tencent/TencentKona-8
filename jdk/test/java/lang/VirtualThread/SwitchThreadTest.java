@@ -28,11 +28,13 @@
  */
 
 import static org.testng.Assert.*;
+import org.testng.annotations.Test;
 
 public class SwitchThreadTest {
     static long count = 0;
     static ContinuationScope scope = new ContinuationScope("test");
-    public static void main(String args[]) throws Exception {
+    @Test
+    public static void test() throws Exception {
         foo();
         System.out.println("finish first");
         foo();
@@ -48,18 +50,19 @@ public class SwitchThreadTest {
     }
 
     static void foo() throws Exception {
+        final Thread kernel = Thread.currentThread();
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("before yield, Continuation run in " + Thread.currentThread().getName());
-                assertNotEquals(Thread.currentThread().getName(), "main");
+                assertNotEquals(Thread.currentThread(), kernel);
                 Continuation.yield(scope);
                 System.out.println("resume yield, Continuation run in " + Thread.currentThread().getName());
-                assertNotEquals(Thread.currentThread().getName(), "main");
+                assertNotEquals(Thread.currentThread(), kernel);
             }
         };
         Continuation cont = new Continuation(scope, target);
         System.out.println("Continuation create in " + Thread.currentThread().getName());
-        assertEquals(Thread.currentThread().getName(), "main");
+        assertEquals(Thread.currentThread(), kernel);
         Thread thread = new Thread(){
             public void run() {
                 cont.run();
@@ -71,18 +74,19 @@ public class SwitchThreadTest {
     }
 
     static void bar() throws Exception {
+        final Thread kernel = Thread.currentThread();
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("before yield, Continuation run in " + Thread.currentThread().getName());
                 assertEquals(Thread.currentThread().getName(), "bar-thread-0");
                 Continuation.yield(scope);
                 System.out.println("resume yield, Continuation run in " + Thread.currentThread().getName());
-                assertEquals(Thread.currentThread().getName(), "main");
+                assertEquals(Thread.currentThread(), kernel);
             }
         };
         Continuation cont = new Continuation(scope, target);
         System.out.println("Continuation create in " + Thread.currentThread().getName());
-        assertEquals(Thread.currentThread().getName(), "main");
+        assertEquals(Thread.currentThread(), kernel);
         Thread thread = new Thread("bar-thread-0"){
             public void run() {
                 cont.run();
@@ -96,13 +100,14 @@ public class SwitchThreadTest {
     // create in other thread and run in main
     static Continuation internal;
     static void qux() throws Exception {
+        final Thread kernel = Thread.currentThread();
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("before yield, Continuation run in " + Thread.currentThread().getName());
-                assertEquals(Thread.currentThread().getName(), "main");
+                assertEquals(Thread.currentThread(), kernel);
                 Continuation.yield(scope);
                 System.out.println("resume yield, Continuation run in " + Thread.currentThread().getName());
-                assertEquals(Thread.currentThread().getName(), "main");
+                assertEquals(Thread.currentThread(), kernel);
             }
         };
         Thread thread = new Thread("qux-thread-0"){
@@ -121,10 +126,11 @@ public class SwitchThreadTest {
     }
 
     static void baz() throws Exception {
+        final Thread kernel = Thread.currentThread();
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("before yield, Continuation run in " + Thread.currentThread().getName());
-                assertEquals(Thread.currentThread().getName(), "main");
+                assertEquals(Thread.currentThread(), kernel);
                 Continuation.yield(scope);
                 System.out.println("resume yield, Continuation run in " + Thread.currentThread().getName());
                 assertEquals(Thread.currentThread().getName(), "baz-thread-0");
