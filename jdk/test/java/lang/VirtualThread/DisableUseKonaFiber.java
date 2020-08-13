@@ -63,7 +63,7 @@ public class DisableUseKonaFiber {
             throw new Error("Expected to get non zero exit value");
         }
 
-        output.shouldContain("can not create continuation when UseKonaFiber is false");
+        output.shouldContain("UseKonaFiber is off");
         // extract hs-err file
         String hs_err_file = output.firstMatch("# *(\\S*hs_err_pid\\d+\\.log)", 1);
         if (hs_err_file == null) {
