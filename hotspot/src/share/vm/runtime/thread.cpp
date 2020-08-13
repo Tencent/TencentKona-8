@@ -1488,10 +1488,12 @@ void JavaThread::initialize() {
   _interp_only_mode    = 0;
   _special_runtime_exit_condition = _no_async_condition;
   _pending_async_exception = NULL;
-  
-  _coroutine_cache = NULL;
-  _coroutine_cache_size = 0;
-  
+
+  if (UseKonaFiber) {
+    _coroutine_cache = NULL;
+    _coroutine_cache_size = 0;
+  }
+
   _thread_stat = NULL;
   _thread_stat = new ThreadStatistics();
   _blocked_on_compilation = false;
@@ -1688,7 +1690,9 @@ void JavaThread::run() {
   // Record real stack base and size.
   this->record_stack_base_and_size();
 
-  this->initialize_coroutine_support();
+  if (UseKonaFiber) {
+    this->initialize_coroutine_support();
+  }
 
   // Initialize thread local storage; set before calling MutexLocker
   this->initialize_thread_local_storage();
@@ -2827,7 +2831,7 @@ void JavaThread::oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) 
     }
   }
 
-  if (this == Coroutine::main_thread()) {
+  if (UseKonaFiber && this == Coroutine::main_thread()) {
     ContContainer::oops_do(f, cld_f, cf);
   }
 
@@ -3486,10 +3490,11 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   // of the guard pages.
   main_thread->record_stack_base_and_size();
   main_thread->initialize_thread_local_storage();
-  ContContainer::init();
-  Coroutine::set_main_thread(main_thread);
-  main_thread->initialize_coroutine_support();
-
+  if (UseKonaFiber) {
+    ContContainer::init();
+    Coroutine::set_main_thread(main_thread);
+    main_thread->initialize_coroutine_support();
+  }
   main_thread->set_active_handles(JNIHandleBlock::allocate_block());
 
   if (!main_thread->set_as_starting_thread()) {
@@ -4315,29 +4320,39 @@ void Threads::nmethods_do(CodeBlobClosure* cf) {
     p->nmethods_do(cf);
   }
   VMThread::vm_thread()->nmethods_do(cf);
-  ContContainer::nmethods_do(cf);
+  if (UseKonaFiber) {
+    ContContainer::nmethods_do(cf);
+  }
 }
 
 void Threads::metadata_do(void f(Metadata*)) {
-  Coroutine::cont_metadata_do(f);
+  if (UseKonaFiber) {
+    Coroutine::cont_metadata_do(f);
+  }
   ALL_JAVA_THREADS(p) {
     p->metadata_do(f);
   }
-  ContContainer::metadata_do(f);
+  if (UseKonaFiber) {
+    ContContainer::metadata_do(f);
+  }
 }
 
 void Threads::gc_epilogue() {
   ALL_JAVA_THREADS(p) {
     p->gc_epilogue();
   }
-  ContContainer::frames_do(frame_gc_epilogue);
+  if (UseKonaFiber) {
+    ContContainer::frames_do(frame_gc_epilogue);
+  }
 }
 
 void Threads::gc_prologue() {
   ALL_JAVA_THREADS(p) {
     p->gc_prologue();
   }
-  ContContainer::frames_do(frame_gc_prologue);
+  if (UseKonaFiber) {
+    ContContainer::frames_do(frame_gc_prologue);
+  }
 }
 
 void Threads::deoptimized_wrt_marked_nmethods() {
@@ -4444,10 +4459,14 @@ void Threads::print_on(outputStream* st, bool print_stacks,
         p->print_stack_on(st);
       }
     }
-	st->cr();
-	st->print_cr("Print all Coroutines:");
-	st->cr();
-	p->print_coroutine_on(st, print_stacks);
+
+    if (UseKonaFiber) {
+      st->cr();
+      st->print_cr("Print all Coroutines:");
+      st->cr();
+      p->print_coroutine_on(st, print_stacks);
+    }
+
     st->cr();
 #if INCLUDE_ALL_GCS
     if (print_concurrent_locks) {
@@ -4789,7 +4808,9 @@ void Threads::verify() {
   VMThread* thread = VMThread::vm_thread();
   if (thread != NULL) thread->verify();
   // TODO: oops_do
-  ContContainer::frames_do(frame_verify);
+  if (UseKonaFiber) {
+    ContContainer::frames_do(frame_verify);
+  }
 }
 
 void JavaThread::initialize_coroutine_support() {
