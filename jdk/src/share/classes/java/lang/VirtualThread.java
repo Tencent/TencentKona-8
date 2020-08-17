@@ -43,6 +43,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import sun.misc.InnocuousThread;
 import sun.misc.Unsafe;
@@ -116,6 +117,7 @@ class VirtualThread extends Thread {
     // lock/condition used when waiting (join or pinned)
     private volatile ReentrantLock lock;   // created lazily
     private Condition condition;           // created lazily while holding lock
+    private final boolean isThreadPoolExecutor;
 
     /**
      * Creates a new {@code VirtualThread} to run the given task with the given scheduler.
@@ -138,6 +140,7 @@ class VirtualThread extends Thread {
         };
 
         this.scheduler = (scheduler != null) ? scheduler : DEFAULT_SCHEDULER;
+        this.isThreadPoolExecutor = (scheduler == null) ? false : (scheduler instanceof ThreadPoolExecutor);
         this.cont = new Continuation(VTHREAD_SCOPE, target) {
             @Override
             protected void onPinned(Continuation.Pinned reason) {
@@ -178,7 +181,7 @@ class VirtualThread extends Thread {
             throw new IllegalThreadStateException("Already started");
         }
         try {
-            scheduler.execute(runContinuation);
+            ScheduleContinuation();
         } catch (RejectedExecutionException ree) {
             // assume executor has been shutdown
             afterTerminate(false);
@@ -320,12 +323,12 @@ class VirtualThread extends Thread {
             setState(PARKED);
             // may have been unparked while parking
             if (parkPermit == PARK_PERMIT_TRUE && compareAndSetState(PARKED, RUNNABLE)) {
-                scheduler.execute(runContinuation);  // may throw REE
+                ScheduleContinuation();
             }
         } else if (s == RUNNING) {
             // Thread.yield, submit task to continue
             setState(RUNNABLE);
-            scheduler.execute(runContinuation);  // may throw REE
+            ScheduleContinuation();
         } else {
             throw new InternalError();
         }
@@ -491,7 +494,7 @@ class VirtualThread extends Thread {
         if (getAndSetParkPermit(PARK_PERMIT_TRUE) == PARK_PERMIT_FALSE && Thread.currentThread() != this) {
             int s = state();
             if (s == PARKED && compareAndSetState(PARKED, RUNNABLE)) {
-                scheduler.execute(runContinuation);
+                ScheduleContinuation();
             } else if (s == PINNED) {
                 // signal pinned thread so that it continues
                 final ReentrantLock lock = getLock();
@@ -814,7 +817,7 @@ class VirtualThread extends Thread {
                 // may have been unparked while suspended
                 if (parkPermit == PARK_PERMIT_TRUE && compareAndSetState(PARKED, RUNNABLE)) {
                     try {
-                        scheduler.execute(runContinuation);
+                        ScheduleContinuation();
                     } catch (RejectedExecutionException ignore) { }
                 }
             }
@@ -1075,5 +1078,21 @@ class VirtualThread extends Thread {
      */
     Continuation Cont() {
         return cont;
+    }
+
+    final private void ScheduleContinuation() {
+        VirtualThread vt = null;
+        Thread carrier = null;
+        if (isThreadPoolExecutor) {
+            carrier = Thread.currentCarrierThread();
+            vt = carrier.getVirtualThread();
+            if (vt != null) {
+                carrier.setVirtualThread(null);
+            }
+        }
+        scheduler.execute(runContinuation);
+        if (vt != null) {
+            carrier.setVirtualThread(vt);
+        }
     }
 }
