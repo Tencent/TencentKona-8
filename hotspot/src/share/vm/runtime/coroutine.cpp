@@ -209,7 +209,7 @@ void Coroutine::TerminateCoroutine(Coroutine* coro) {
   JavaThread* thread = coro->thread();
   if (TraceCoroutine) {
     ResourceMark rm;
-    tty->print_cr("[Co]: TerminateCoroutine %s(%p) in thread %s(%p)", coro->name(), coro, coro->thread()->name(), coro->thread());
+    tty->print_cr("[Co]: TerminateCoroutine %p in thread %s(%p)", coro, coro->thread()->name(), coro->thread());
   }
   guarantee(thread == JavaThread::current(), "thread not match");
 
@@ -304,10 +304,6 @@ void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
   }
 }
 
-const char* Coroutine::get_coroutine_name() const
-{
-	return name();
-}
 const char* Coroutine::get_coroutine_state_name(CoroutineState state)
 {
 	switch (state)
@@ -331,8 +327,11 @@ const char* Coroutine::get_coroutine_state_name(CoroutineState state)
 }
 void Coroutine::print_on(outputStream* st) const
 {
-	st->print("\"%s\" ", get_coroutine_name());
 	st->print("#" INT64_FORMAT " ", (long int)(this));
+	if (is_thread_coroutine()) {
+		st->print(" is_thread_coroutine");
+	}
+
 	if (!has_javacall())
 	{
 		st->print(" no_java_call");
@@ -383,11 +382,10 @@ void Coroutine::remove_monitor_chunk(MonitorChunk* chunk) {
   }
 }
 
-Coroutine* Coroutine::create_thread_coroutine(const char* name,JavaThread* thread) {
+Coroutine* Coroutine::create_thread_coroutine(JavaThread* thread) {
   Coroutine* coro = new Coroutine(0);
   if (coro == NULL)
     return NULL;
-  coro->set_name(name);
   coro->_state = _current;
   coro->_is_thread_coroutine = true;
   coro->_thread = thread;
@@ -408,8 +406,7 @@ void Coroutine::reset_coroutine(Coroutine* coro) {
   assert(coro->_monitor_chunks == NULL, "monitor_chunks must be NULL");
 }
 
-void Coroutine::init_coroutine(Coroutine* coro, const char* name, JavaThread* thread) {
-  coro->set_name(name);
+void Coroutine::init_coroutine(Coroutine* coro, JavaThread* thread) {
   intptr_t** d = (intptr_t**)coro->_stack_base;
   *(--d) = NULL;
   *(--d) = NULL;
@@ -431,11 +428,11 @@ void Coroutine::init_coroutine(Coroutine* coro, const char* name, JavaThread* th
 #endif
   if (TraceCoroutine) {
     ResourceMark rm;
-    tty->print_cr("[Co]: CreateCoroutine %s(%p) in thread %s(%p)", coro->name(), coro, coro->thread()->name(), coro->thread());
+    tty->print_cr("[Co]: CreateCoroutine %p in thread %s(%p)", coro, coro->thread()->name(), coro->thread());
   }
 }
 
-Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, long stack_size, oop coroutineObj) {
+Coroutine* Coroutine::create_coroutine(JavaThread* thread, long stack_size, oop coroutineObj) {
   if (stack_size <= 0) {
     stack_size = DefaultCoroutineStackSize;
   }
@@ -453,7 +450,7 @@ Coroutine* Coroutine::create_coroutine(const char* name,JavaThread* thread, long
     return NULL;
   }
 
-  Coroutine::init_coroutine(coro, name, thread);
+  Coroutine::init_coroutine(coro, thread);
   return coro;
 }
 
@@ -669,7 +666,7 @@ JVM_ENTRY(jint, CONT_isPinned0(JNIEnv* env, jclass klass, long data)) {
 }
 JVM_END
 
-JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jstring name, jobject cont, long stackSize)) {
+JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jobject cont, long stackSize)) {
   if (!UseKonaFiber) {
     fatal("can not create continuation when UseKonaFiber is false");
   }
@@ -700,13 +697,13 @@ JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jstring name
         coro->remove_from_list(thread->coroutine_cache());
         thread->coroutine_cache_size()--;
         Coroutine::reset_coroutine(coro);
-        Coroutine::init_coroutine(coro, NULL, thread);
+        Coroutine::init_coroutine(coro, thread);
         DEBUG_CORO_ONLY(tty->print("reused coroutine stack at %08x\n", _stack_base));
       }
     }
   }
   if (coro == NULL) {
-    coro = Coroutine::create_coroutine(NULL, thread, stackSize, JNIHandles::resolve(cont));
+    coro = Coroutine::create_coroutine(thread, stackSize, JNIHandles::resolve(cont));
     if (coro == NULL) {
       ThreadInVMfromNative tivm(thread);
       HandleMark mark(thread);
@@ -752,7 +749,7 @@ JVM_END
 
 static JNINativeMethod CONT_methods[] = {
   {CC"isPinned0",                 CC"(J)I", FN_PTR(CONT_isPinned0)},
-  {CC"createContinuation",        CC"("JLSTR JLCONT "J)J", FN_PTR(CONT_createContinuation)},
+  {CC"createContinuation",        CC"("JLCONT "J)J", FN_PTR(CONT_createContinuation)},
   {CC"switchTo",                  CC"("JLCONT JLCONT")I", FN_PTR(CONT_switchTo)},
   {CC"switchToAndTerminate",      CC"("JLCONT JLCONT")V", FN_PTR(CONT_switchToAndTerminate)},
   {CC"dumpStackTrace",            CC"("JLCONT ")[" JLSTE, FN_PTR(CONT_dumpStackTrace)},

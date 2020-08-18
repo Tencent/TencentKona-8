@@ -165,8 +165,6 @@ private:
   //for javacall stack reclaim
   bool             _has_javacall;
 
-  char _name[64];
-
   static JavaThread* _main_thread;
   static Method* _continuation_start;
 
@@ -179,20 +177,6 @@ public:
   virtual ~Coroutine();
   static void Initialize();
 
-  void set_name(const char* inname) 
-  {
-#ifdef TARGET_OS_FAMILY_windows
-	  _snprintf(_name, sizeof(_name), "%s",inname);
-#else
-	  snprintf(_name, sizeof(_name), "%s", inname);
-#endif
-  }
-
-  const char* name() const
-  {
-	  return _name;
-  }
-
   static void yield_verify(Coroutine* from, Coroutine* to, bool terminate);
   static JavaThread* main_thread() { return _main_thread; }
   static void set_main_thread(JavaThread* t) { _main_thread = t; }
@@ -201,17 +185,16 @@ public:
   void print_on(outputStream* st) const;
   void print_stack_on(outputStream* st);
   void print_stack_on(void* frames, int* depth);
-  const char* get_coroutine_name() const;
   static const char* get_coroutine_state_name(CoroutineState state);
   bool is_lock_owned(address adr) const;
 
   bool has_javacall() const { return _has_javacall; }
   void set_has_javacall(bool hjc) { _has_javacall = hjc; }
 
-  static Coroutine* create_thread_coroutine(const char* name,JavaThread* thread);
-  static Coroutine* create_coroutine(const char* name,JavaThread* thread, long stack_size, oop coroutineObj);
+  static Coroutine* create_thread_coroutine(JavaThread* thread);
+  static Coroutine* create_coroutine(JavaThread* thread, long stack_size, oop coroutineObj);
   static void reset_coroutine(Coroutine* coro);
-  static void init_coroutine(Coroutine* coro, const char* name, JavaThread* thread);
+  static void init_coroutine(Coroutine* coro, JavaThread* thread);
 
   CoroutineState state() const      { return _state; }
   void set_state(CoroutineState x)  { _state = x; }
