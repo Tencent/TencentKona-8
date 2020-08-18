@@ -2598,14 +2598,6 @@ class CommandLineFlags {
           "generate locking/unlocking code for synchronized methods and "   \
           "monitors")                                                       \
                                                                             \
-  product(uintx, CouroutineCheckMonitrAtYield, 1,                           \
-          "Check if java monitor is locked when coroutine yield, "          \
-          "now only support Linux X86_64 platform "                         \
-          "0 off"                                                           \
-          "1 log error message when found"                                  \
-          "2 throw Illegal Monitor Exception: NYI"                          \
-          "3 abort with stack inforamtion")                                 \
-                                                                            \
   develop(bool, GenerateCompilerNullChecks, true,                           \
           "Generate explicit null checks for loads/stores/calls")           \
                                                                             \
