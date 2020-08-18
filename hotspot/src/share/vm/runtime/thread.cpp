@@ -1920,7 +1920,7 @@ void JavaThread::exit(bool destroy_vm, ExitType exit_type) {
     assert(!this->has_pending_exception(), "release_monitors should have cleared");
   }
 
-  if (CouroutineCheckMonitrAtYield > 0) {
+  if (UseKonaFiber) {
     guarantee(this->locksAcquired == 0, "java monitor not release before exit");
   }
 
