@@ -216,9 +216,10 @@ public class VTWaitTest {
         executor.shutdown();  
     }
     
-
+    static CountDownLatch doneSignal;
     // complex condition, multiple VTs condition wait/notify, find some cases
     static void MultiThreadCondRace() throws Exception {
+        doneSignal = new CountDownLatch(100);
         val = 0;
         Lock lock = new ReentrantLock();
         Condition cond = lock.newCondition();
@@ -228,6 +229,7 @@ public class VTWaitTest {
             public void run() {
                 lock.lock();
                 try {
+                    doneSignal.countDown();
                     cond.await();
                     val++;
                 } catch (InterruptedException e) {
@@ -248,8 +250,9 @@ public class VTWaitTest {
             vts[i].start();
         }
 
+        doneSignal.await();
+
         for (int i = 0; i < 100; i++) {
-            Thread.sleep(20);
             lock.lock();
             cond.signal();
             lock.unlock();
