@@ -4831,15 +4831,7 @@ void Threads::verify() {
 
 void JavaThread::initialize_coroutine_support() {
   // no lock in thread initialization
-  char buff[64];
-#ifdef TARGET_OS_FAMILY_windows
-  _snprintf(buff, sizeof(buff), INTPTR_FORMAT "_thread_coroutine", this);
-#else
-  snprintf(buff, sizeof(buff), INTPTR_FORMAT "_thread_coroutine", this);
-#endif
-  buff[63] = '\0';
-  // no lock in thread initialization
-  Coroutine* coro = Coroutine::create_thread_coroutine(buff,this);
+  Coroutine* coro = Coroutine::create_thread_coroutine(this);
   _current_coroutine = coro;
   OrderAccess::release();
 }

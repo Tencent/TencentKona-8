@@ -131,7 +131,7 @@ public class Continuation {
         this.scope = kernelScope;
         this.target = null;
         this.stackSize = 0;
-        data = createContinuation("kernel", this, -1);
+        data = createContinuation(this, -1);
     }
 
     @Override
@@ -207,7 +207,7 @@ public class Continuation {
         try {
             if (TRACE) System.out.println("Continuation run before call");
             if (data == 0) {
-                data = createContinuation(null, this, stackSize);
+                data = createContinuation(this, stackSize);
             }
             int result = switchTo(this, parent);
             if (result != 0) {
@@ -384,7 +384,7 @@ public class Continuation {
     // check runtime structure if it has monitor/jni frame
     private static native void registerNatives();
     private static native int isPinned0(long data);
-    private static native long createContinuation(String name, Continuation cont, long stackSize);
+    private static native long createContinuation(Continuation cont, long stackSize);
     private static native int switchTo(Continuation target, Continuation current);
     private static native void switchToAndTerminate(Continuation target, Continuation current);
     private static native StackTraceElement[] dumpStackTrace(Continuation cont);
