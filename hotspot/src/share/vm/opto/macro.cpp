@@ -2362,12 +2362,12 @@ void PhaseMacroExpand::expand_lock_node(LockNode *lock) {
   _igvn.replace_node(_fallthroughproj, region);
 
   Node *memproj = transform_later( new(C) ProjNode(call, TypeFunc::Memory) );
-  if (CouroutineCheckMonitrAtYield > 0) {
+  if (UseKonaFiber) {
     memproj = updateLockCounter(slow_ctrl, memproj, false);
   }
   mem_phi->init_req(1, memproj );
   transform_later(mem_phi);
-  if (CouroutineCheckMonitrAtYield > 0) {
+  if (UseKonaFiber) {
     mem_phi = updateLockCounter(region, mem_phi, true);
   }
   _igvn.replace_node(_memproj_fallthrough, mem_phi);
@@ -2433,14 +2433,14 @@ void PhaseMacroExpand::expand_unlock_node(UnlockNode *unlock) {
   _igvn.replace_node(_fallthroughproj, region);
 
   Node *memproj = transform_later( new(C) ProjNode(call, TypeFunc::Memory) );
-  if (CouroutineCheckMonitrAtYield > 0) {
+  if (UseKonaFiber) {
     memproj = updateLockCounter(slow_ctrl, memproj, true);
   }
 
   mem_phi->init_req(1, memproj );
   mem_phi->init_req(2, mem);
   transform_later(mem_phi);
-  if (CouroutineCheckMonitrAtYield > 0) {
+  if (UseKonaFiber) {
     mem_phi = updateLockCounter(region, mem_phi, false);
   }
   _igvn.replace_node(_memproj_fallthrough, mem_phi);

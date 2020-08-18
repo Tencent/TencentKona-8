@@ -2336,7 +2336,7 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     // Slow path will re-enter here
 
     __ bind(lock_done);
-    if (CouroutineCheckMonitrAtYield > 0) {
+    if (UseKonaFiber) {
       __ addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
     }
   }
@@ -2503,7 +2503,7 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
 
     __ bind(done);
 
-    if (CouroutineCheckMonitrAtYield > 0) {
+    if (UseKonaFiber) {
       __ subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
     }
   }
@@ -2586,7 +2586,7 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     __ bind(L);
     }
 #endif
-    if (CouroutineCheckMonitrAtYield > 0) {
+    if (UseKonaFiber) {
       __ subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
     }
     __ jmp(lock_done);
@@ -2633,7 +2633,7 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     if (ret_type == T_FLOAT || ret_type == T_DOUBLE ) {
       restore_native_result(masm, ret_type, stack_slots);
     }
-    if (CouroutineCheckMonitrAtYield > 0) {
+    if (UseKonaFiber) {
       __ addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
     }
     __ jmp(unlock_done);
