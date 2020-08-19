@@ -27,11 +27,11 @@ package java.lang;
 import sun.misc.Unsafe;
 
 /**
- * Continuation implemenation use JKU coroutine runtime.
- * Continuation main interface is run/yield/try force yield.
- * Run method start/continue this continuation. Static method yield give up
- * running current continuation. Try force yield will try to yield continuation
- * at next safepoint.
+ * An instance of {@code Continuation} represent a runnable task's
+ * context. Compare with runnable task, Continuation can run on thread,
+ * yield at some point and resume execution later.
+ *
+ * @since   KonaJDK8
  */
 public class Continuation {
     private static final Unsafe unsafe = Unsafe.getUnsafe();
@@ -50,7 +50,7 @@ public class Continuation {
         }
     }
     /** Reason for pinning */
-    public enum Pinned { 
+    public enum Pinned {
         /** Native frame on stack */ NATIVE,
         /** Monitor held */          MONITOR,
         /** In critical section */   CRITICAL_SECTION
@@ -70,7 +70,8 @@ public class Continuation {
         return Thread.currentCarrierThread();
     }
 
-    /* While the native JVM code is aware that every continuation has a scope, it is, for the most part,
+    /**
+     * While the native JVM code is aware that every continuation has a scope, it is, for the most part,
      * oblivious to the continuation hierarchy. The only time this hierarchy is traversed in native code
      * is when a hierarchy of continuations is mounted on the native stack.
      *
@@ -83,13 +84,17 @@ public class Continuation {
     private final ContinuationScope scope;
     private final Runnable target;
     private long data;
-    private Continuation parent;   // null for native stack -- Kona NYI
-    private Continuation child;    // non-null when we're yielded in a child continuation -- Kona NYI
-    private volatile int mounted = 0;  // 1 means true
+    private final int stackSize;
     private boolean done;
     private short cs; // critical section semaphore
-    private final int stackSize;
 
+    private Continuation child;    // Kona Not used yet
+    private Continuation parent;   // null for native stack -- Kona NYI
+    private volatile int mounted;  // 1 means true
+
+    /**
+     * Invoked from runtime continuation_start
+     */
     private final void start() {
         assert (Thread.currentCarrierThread() == Thread.currentThread()) ||
            (((VirtualThread)Thread.currentThread()).Cont() == this)
@@ -97,8 +102,10 @@ public class Continuation {
         try {
             target.run();
         } catch (Throwable t) {
-            System.out.println("stop coroutine with exception" + this);
-            t.printStackTrace();
+            if (TRACE) {
+                System.out.println("stop continuation with Throwable" + this);
+                t.printStackTrace();
+            }
         } finally {
             done = true;
             switchToAndTerminate(parent, this);
@@ -146,20 +153,6 @@ public class Continuation {
     Continuation getParent() {
         return parent;
     }
-
-    /**
-     * TBD
-     * @param scope TBD
-     * @return TBD
-     */
-    public static Continuation getCurrentContinuation(ContinuationScope scope) {
-        throw new Error("getCurrentContinuation(ContinuationScope scope) NYI");
-        /*Continuation cont = currentCarrierThread().getContinuation();
-        while (cont != null && cont.scope != scope) {
-            cont = cont.parent;
-        }
-        return cont;*/
-    }
     
     /**
      * TBD
@@ -198,8 +191,7 @@ public class Continuation {
         mount();
         if (done)
             throw new IllegalStateException("Continuation terminated");
-        if (parent != null)
-            throw new IllegalStateException("parent continuation set");
+        assert parent == null : "parent continuation is not null";
             
         Thread t = currentCarrierThread();
         parent = t.getThreadContinuation();
@@ -217,9 +209,11 @@ public class Continuation {
             }
         } catch (Throwable e) {
             done = true;
-            e.printStackTrace();
+            if (TRACE) {
+                e.printStackTrace();
+            }
         } finally {
-            fence();
+            fence();  // ? why need this
             assert t == currentCarrierThread() : "thread change";
             parent = null;
             t.setContinuation(null);
