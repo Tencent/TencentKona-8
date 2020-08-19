@@ -86,6 +86,17 @@ inline Klass* oopDesc::klass_or_null() const volatile {
   }
 }
 
+inline Klass* oopDesc::klass_or_null_acquire() const volatile {
+  if (UseCompressedClassPointers) {
+    // Workaround for non-const load_acquire parameter.
+    const volatile narrowKlass* addr = &_metadata._compressed_klass;
+    volatile narrowKlass* xaddr = const_cast<volatile narrowKlass*>(addr);
+    return Klass::decode_klass(OrderAccess::load_acquire(xaddr));
+  } else {
+    return (Klass*)OrderAccess::load_ptr_acquire(&_metadata._klass);
+  }
+}
+
 inline int oopDesc::klass_gap_offset_in_bytes() {
   assert(UseCompressedClassPointers, "only applicable to compressed klass pointers");
   return oopDesc::klass_offset_in_bytes() + sizeof(narrowKlass);
