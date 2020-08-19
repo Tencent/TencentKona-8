@@ -31,7 +31,6 @@ import sun.misc.SharedSecrets;
 /**
  * Supporting methods to park/unpark virtual threads.
  */
-
 public final class VirtualThreads {
     private static final JavaLangAccess JLA;
     static {

@@ -2187,51 +2187,61 @@ class Thread implements Runnable {
     private native void setNativeName(String name);
 
     /* Continuation support */
-    /**
-     * Returns a reference to the currently executing thread object.
-     *
-     * @return  the currently executing thread.
-     */
-    private Continuation cont;
     private Continuation threadCont;
+    private Continuation cont;
     private VirtualThread vthread;
 
     VirtualThread getVirtualThread() {
-        // assert this == currentThread0();
         return vthread;
     }
     void setVirtualThread(VirtualThread vthread) {
-        // assert this == currentThread0();
         this.vthread = vthread;
     }
 
+    /**
+     * Invoke from VirutalThread inerrupt or interrupted VirtualThread get scheduled
+     * set its kernel thread also interrupted
+     */
     void setInterrupt() {
         interrupt0();
     }
 
+    /**
+     *
+     */
     boolean getAndClearInterrupt() {
         return isInterrupted(true);
     }
 
+    /**
+     * Invoke from VirutalThread when clear interrupt/resume executing
+     * clear kernel thread's interrupt status.
+     */
     void clearInterrupt() {
         isInterrupted(true);
     }
 
     /**
-     * Returns the current carrier thread.
+     * Returns a reference to the currently executing carrier thread object.
+     * <p>currentThread returns VirtualThread if VirtualThread is running on
+     * current carrier thread.
+     *
+     * @return  the currently executing carrier thread.
      */
     public static Thread currentCarrierThread() {
         return currentThread0();
     }
+
     /**
-     * TBD
+     * Invoke from Continuation, try get continuation running on current carrier Thread
      */
     Continuation getContinuation() {
         return cont;
     }
 
-    // only invoked when inovke continuation on current thread
-    // no race
+    /**
+     * Invoke from Continuation run, get continuation represent carrier thread
+     */
     Continuation getThreadContinuation() {
         if (threadCont == null) {
             threadCont = new Continuation();
@@ -2240,14 +2250,26 @@ class Thread implements Runnable {
     }
 
     /**
-     * TBD
+     * Invoke from Continuation mount/unmount, update carrier thread's cont
      */
     void setContinuation(Continuation cont) {
         this.cont = cont;
     }
 
-    protected Interruptible getBlocker() { return blocker; }
-    protected Object getBlockerLock() { return blockerLock; }
+    /**
+     * Invoke from VirtualThread interrupt, interrupt blocker object
+     */
+    protected Interruptible getBlocker() {
+        return blocker;
+    }
+
+    /**
+     * Invoke from Continuation interrupt/resume execution, block when
+     * status/interupt might change
+     */
+    protected Object getBlockerLock() {
+        return blockerLock;
+    }
 
     /**
      * Characteristic value signifying that the thread should be scheduled by

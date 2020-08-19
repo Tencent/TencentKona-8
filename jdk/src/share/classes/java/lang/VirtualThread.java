@@ -1080,7 +1080,7 @@ class VirtualThread extends Thread {
         return cont;
     }
 
-    final private void ScheduleContinuation() {
+    private final void ScheduleContinuation() {
         VirtualThread vt = null;
         Thread carrier = null;
         if (isThreadPoolExecutor) {
