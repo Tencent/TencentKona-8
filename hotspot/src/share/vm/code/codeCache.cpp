@@ -748,8 +748,6 @@ void CodeCache::mark_all_nmethods_for_deoptimization() {
       if (nm->method()->intrinsic_id() != vmIntrinsics::_contSwitchTo &&
           nm->method()->intrinsic_id() != vmIntrinsics::_contSwitchToAndTerminate) {
         nm->mark_for_deoptimization();
-      } else {
-        tty->print_cr("protected method %s mark_all_nmethods_for_deoptimization", nm->method()->name()->as_C_string());
       }
     }
   }
