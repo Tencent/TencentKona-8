@@ -726,7 +726,7 @@ class HeapRegion: public G1OffsetTableContigSpace {
   // mr: the memory region covered by the card, trimmed to the
   // allocated space for this region.  Must not be empty.
   // This region must be old or humongous.
-  // Returns true if the designated objects were successfully
+  // Returns true if the card was successfully processed, false if an
   // processed, false if an unparsable part of the heap was
   // encountered; that only happens when invoked concurrently with the
   // mutator.
