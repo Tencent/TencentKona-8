@@ -22,6 +22,8 @@
  *
  */
 
+#if INCLUDE_KONA_FIBER
+
 #include "precompiled.hpp"
 #include "runtime/coroutine.hpp"
 #ifdef TARGET_ARCH_x86
@@ -785,3 +787,4 @@ void CONT_RegisterNativeMethods(JNIEnv *env, jclass cls, JavaThread* thread) {
     initializeForceWrapper(env, cls, thread, switchToAndTerminateIndex);
     Coroutine::Initialize();
 }
+#endif// INCLUDE_KONA_FIBER
