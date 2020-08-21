@@ -464,6 +464,24 @@ AC_DEFUN_ONCE([JDKOPT_SETUP_JDK_OPTIONS],
   fi
   AC_MSG_RESULT([$ENABLE_JFR])
   AC_SUBST(ENABLE_JFR)
+
+  ###############################################################################
+  #
+  # Enable or disable KonaFiber
+  #
+  AC_MSG_CHECKING([whether to build kona-fiber])
+  AC_ARG_ENABLE(kona-fiber, [AS_HELP_STRING([--disable-kona-fiber],
+      [disable using kona fiber @<:@enabled@:>@])],,
+      [enable_kona_fiber=yes])
+  if test "x$enable_kona_fiber" = "xno"; then
+    ENABLE_KONA_FIBER=false
+  elif test "x$enable_kona_fiber" = "xyes"; then
+    ENABLE_KONA_FIBER=true
+  else
+    AC_MSG_ERROR([--disable-kona-fiber must either be set to yes or no])
+  fi
+  AC_MSG_RESULT([$ENABLE_KONA_FIBER])
+  AC_SUBST(ENABLE_KONA_FIBER)
 ])
 
 ###############################################################################

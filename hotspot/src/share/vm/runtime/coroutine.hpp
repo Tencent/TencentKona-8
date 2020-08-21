@@ -22,6 +22,7 @@
  *
  */
 
+#if INCLUDE_KONA_FIBER
 #ifndef SHARE_VM_RUNTIME_COROUTINE_HPP
 #define SHARE_VM_RUNTIME_COROUTINE_HPP
 
@@ -322,3 +323,4 @@ template<class T> void DoublyLinkedList<T>::insert_into_list(pointer& list) {
 
 void CONT_RegisterNativeMethods(JNIEnv *env, jclass cls, JavaThread* thread);
 #endif // SHARE_VM_RUNTIME_COROUTINE_HPP
+#endif // INCLUDE_KONA_FIBER

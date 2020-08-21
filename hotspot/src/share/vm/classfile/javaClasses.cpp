@@ -3313,6 +3313,7 @@ void java_nio_Buffer::compute_offsets() {
 }
 
 /* stack manipulation */
+#if INCLUDE_KONA_FIBER
 int java_lang_Continuation::data_offset = 0;
 void java_lang_Continuation::compute_offsets() {
   Klass* k = SystemDictionary::continuation_klass();
@@ -3328,7 +3329,7 @@ jlong java_lang_Continuation::data(oop obj) {
 void java_lang_Continuation::set_data(oop obj, jlong value) {
   obj->long_field_put(data_offset, value);
 }
-
+#endif
 void java_util_concurrent_locks_AbstractOwnableSynchronizer::initialize(TRAPS) {
   if (_owner_offset != 0) return;
 
@@ -3438,8 +3439,9 @@ void JavaClasses::compute_offsets() {
 
   // generated interpreter code wants to know about the offsets we just computed:
   AbstractAssembler::update_delayed_values();
-
+#if INCLUDE_KONA_FIBER
   java_lang_Continuation::compute_offsets();
+#endif
 }
 
 #ifndef PRODUCT

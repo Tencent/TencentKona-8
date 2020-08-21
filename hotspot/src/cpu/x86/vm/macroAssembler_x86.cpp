@@ -821,6 +821,7 @@ void MacroAssembler::stop(const char* msg) {
   hlt();
 }
 
+#if INCLUDE_KONA_FIBER
 #include "runtime/coroutine.hpp"
 void MacroAssembler::VerifyCoroutineState(Register old_coroutine, Register target_coroutine,
                                           bool terminate) {
@@ -841,6 +842,7 @@ void MacroAssembler::VerifyCoroutineState(Register old_coroutine, Register targe
   mov(rsp, rbp);
   pop(rbp);
 }
+#endif
 
 void MacroAssembler::warn(const char* msg) {
   push(rbp);

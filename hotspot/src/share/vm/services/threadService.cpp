@@ -62,6 +62,7 @@ ThreadDumpResult* ThreadService::_threaddump_list = NULL;
 
 static const int INITIAL_ARRAY_SIZE = 10;
 
+#if INCLUDE_KONA_FIBER
 VirtualThreadStackTrace::VirtualThreadStackTrace(Coroutine* coro) : ThreadStackTrace(NULL, false) {
   _coro = coro;
 }
@@ -69,6 +70,7 @@ VirtualThreadStackTrace::VirtualThreadStackTrace(Coroutine* coro) : ThreadStackT
 void VirtualThreadStackTrace::dump_stack() {
   _coro->print_stack_on(_frames, &_depth);
 }
+#endif
 
 void ThreadService::init() {
   EXCEPTION_MARK;
