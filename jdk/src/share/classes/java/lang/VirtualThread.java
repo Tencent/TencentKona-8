@@ -59,7 +59,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  */
 
 class VirtualThread extends Thread {
-    private static final Executor DEFAULT_SCHEDULER = defaultScheduler();
+    private static final Executor DEFAULT_SCHEDULER = createDefaultScheduler();
     private static final ScheduledExecutorService UNPARKER = delayedTaskScheduler();
     private static final int TRACE_PINNING_MODE = tracePinningMode();
     private static final Unsafe UNSAFE = Unsafe.getUnsafe();
@@ -139,7 +139,15 @@ class VirtualThread extends Thread {
             }
         };
 
-        this.scheduler = (scheduler != null) ? scheduler : DEFAULT_SCHEDULER;
+        if (scheduler == null) {
+            Thread parent = Thread.currentThread();
+            if (parent.isVirtual()) {
+                scheduler = ((VirtualThread)parent).scheduler;
+            } else {
+                scheduler = DEFAULT_SCHEDULER;
+            }
+        }
+        this.scheduler = scheduler;
         this.isThreadPoolExecutor = (scheduler == null) ? false : (scheduler instanceof ThreadPoolExecutor);
         this.cont = new Continuation(VTHREAD_SCOPE, target) {
             @Override
@@ -919,10 +927,14 @@ class VirtualThread extends Thread {
         registerNatives();
     }*/
 
+
+    static Executor defaultScheduler() {
+        return DEFAULT_SCHEDULER;
+    }
     /**
      * Creates the default scheduler as ForkJoinPool.
      */
-    private static Executor defaultScheduler() {
+    private static Executor createDefaultScheduler() {
         ForkJoinWorkerThreadFactory factory = pool -> {
             PrivilegedAction<ForkJoinWorkerThread> pa = () -> new CarrierThread(pool);
             return AccessController.doPrivileged(pa);
