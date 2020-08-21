@@ -40,7 +40,9 @@
 #include "runtime/signature.hpp"
 #include "runtime/stubRoutines.hpp"
 #include "runtime/thread.inline.hpp"
+#if INCLUDE_KONA_FIBER
 #include "runtime/coroutine.hpp"
+#endif
 // -----------------------------------------------------
 // Implementation of JavaCallWrapper
 
@@ -107,6 +109,7 @@ JavaCallWrapper::JavaCallWrapper(methodHandle callee_method, Handle receiver, Ja
   }
 }
 
+#if INCLUDE_KONA_FIBER
 void JavaCallWrapper::initialize(JavaThread* thread, JNIHandleBlock* handles, Method* callee_method, oop receiver, JavaValue* result) {
   _thread = thread;
   _handles = handles;
@@ -115,6 +118,7 @@ void JavaCallWrapper::initialize(JavaThread* thread, JNIHandleBlock* handles, Me
   _result = result;
   _anchor.clear();
 }
+#endif
 
 // only coroutine first JavaCallWrapper can switch, other JavaCallWrapper means
 // invoke from native to java, can not yield, assert _thread == JavaThread::current() still keep
@@ -153,9 +157,13 @@ JavaCallWrapper::~JavaCallWrapper() {
 
 void JavaCallWrapper::oops_do(OopClosure* f) {
   f->do_oop((oop*)&_receiver);
+#if INCLUDE_KONA_FIBER
   if (handles() != NULL) {
     handles()->oops_do(f);
   }
+#else
+  handles()->oops_do(f);
+#endif
 }
 
 
@@ -434,7 +442,9 @@ void JavaCalls::call_helper(JavaValue* result, methodHandle* m, JavaCallArgument
 
   // do call
   { JavaCallWrapper link(method, receiver, result, CHECK);
+#if INCLUDE_KONA_FIBER
     ContNativeFrameMark contMark(thread, link.is_first_frame());
+#endif
     { HandleMark hm(thread);  // HandleMark used by HandleMarkCleaner
 
       StubRoutines::call_stub()(
@@ -477,6 +487,7 @@ void JavaCalls::call_helper(JavaValue* result, methodHandle* m, JavaCallArgument
  * 2. suspend/has_special_runtime_exit_condition on kernel thread should not affect newly created continuation
  * 3. no pending exception to clear as call from java to java
  */
+#if INCLUDE_KONA_FIBER
 JavaCallWrapper::JavaCallWrapper(Method* method, Handle receiver, TRAPS) {
   JavaThread* thread = (JavaThread *)THREAD;
   assert(!thread->owns_locks(), "must release all locks when leaving VM");
@@ -591,7 +602,7 @@ void JavaCalls::call_continuation_start(oop cont_obj, TRAPS) {
     }
   }
 }
-
+#endif //INCLUDE_KONA_FIBER
 
 //--------------------------------------------------------------------------------------
 // Implementation of JavaCallArguments

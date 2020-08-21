@@ -772,9 +772,12 @@ JVM_LEAF(jint, JVM_GetLastErrorString(char *buf, int len))
 JVM_END
 
 // java.lang.Continuation /////////////////////////////////////////////////////
-
 JVM_ENTRY(void, JVM_RegisterContinuationMethods(JNIEnv *env, jclass cls))
+#if INCLUDE_KONA_FIBER
   CONT_RegisterNativeMethods(env, cls, thread);
+#else
+  fatal("can not regist continuation methods when using --disable-kona-fiber");
+#endif
 JVM_END
 
 // java.io.File ///////////////////////////////////////////////////////////////

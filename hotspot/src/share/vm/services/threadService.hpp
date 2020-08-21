@@ -247,7 +247,11 @@ public:
 };
 
 class ThreadStackTrace : public CHeapObj<mtInternal> {
+#if INCLUDE_KONA_FIBER
  protected:
+#else
+ private:
+#endif
   JavaThread*                     _thread;
   int                             _depth;  // number of stack frames added
   bool                            _with_locked_monitors;
@@ -275,6 +279,7 @@ class ThreadStackTrace : public CHeapObj<mtInternal> {
   void            add_jni_locked_monitor(oop object) { _jni_locked_monitors->append(object); }
 };
 
+#if INCLUDE_KONA_FIBER
 class VirtualThreadStackTrace : public ThreadStackTrace {
   private:
     Coroutine* _coro;
@@ -283,6 +288,7 @@ class VirtualThreadStackTrace : public ThreadStackTrace {
     VirtualThreadStackTrace(Coroutine* coro);
     void dump_stack();
 };
+#endif
 
 // StackFrameInfo for keeping Method* and bci during
 // stack walking for later construction of StackTraceElement[]

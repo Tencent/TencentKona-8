@@ -77,7 +77,6 @@ class CallInfo VALUE_OBJ_CLASS_SPEC {
   // utility to extract an effective CallInfo from a method and an optional receiver limit
   // does not queue the method for compilation
   CallInfo(Method* resolved_method, Klass* resolved_klass = NULL);
-  virtual ~CallInfo(){};
   KlassHandle  resolved_klass() const            { return _resolved_klass; }
   KlassHandle  selected_klass() const            { return _selected_klass; }
   methodHandle resolved_method() const           { return _resolved_method; }

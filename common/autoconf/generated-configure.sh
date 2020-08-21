@@ -846,6 +846,7 @@ JDK_MINOR_VERSION
 JDK_MAJOR_VERSION
 USER_RELEASE_SUFFIX
 ENABLE_JFR
+ENABLE_KONA_FIBER
 COMPRESS_JARS
 UNLIMITED_CRYPTO
 CACERTS_FILE
@@ -1064,6 +1065,7 @@ enable_hotspot_test_in_build
 with_cacerts_file
 enable_unlimited_crypto
 enable_jfr
+enable_kona_fiber
 with_milestone
 with_update_version
 with_user_release_suffix
@@ -1863,6 +1865,7 @@ Optional Features:
   --enable-unlimited-crypto
                           Enable unlimited crypto policy [disabled]
   --disable-jfr           Disable Java Flight Recorder support [enabled]
+  --disable-kona-fiber    disable using kona fiber [enabled]
   --disable-debug-symbols disable generation of debug symbols [enabled]
   --disable-zip-debug-info
                           disable zipping of debug-info files [enabled]
@@ -19864,7 +19867,28 @@ fi
   #
   COMPRESS_JARS=false
 
+  ###############################################################################
+  #
+  # Enable or disable KonaFiber
+  #
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to build kona-fiber" >&5
+$as_echo_n "checking whether to build kona-fiber... " >&6; }
+  # Check whether --disable-kona-fiber was given.
+if test "${enable_kona_fiber+set}" = set; then :
+  enableval=$enable_kona_fiber;
+else
+  enable_kona_fiber=yes
+fi
 
+  if test "x$enable_kona_fiber" = "xno"; then
+    ENABLE_KONA_FIBER=false
+  elif test "x$enable_kona_fiber" = "xyes"; then
+    ENABLE_KONA_FIBER=true
+  else
+    as_fn_error $? "--disable-kona-fiber must either be set to yes or no" "$LINENO" 5
+  fi
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ENABLE_KONA_FIBER" >&5
+$as_echo "$ENABLE_KONA_FIBER" >&6; }
 
   ###############################################################################
   #

@@ -1438,7 +1438,7 @@ class InjectedField {
   CLASS_INJECTED_FIELDS(macro)              \
   CLASSLOADER_INJECTED_FIELDS(macro)        \
   MEMBERNAME_INJECTED_FIELDS(macro)
-
+#if INCLUDE_KONA_FIBER
 class java_lang_Continuation: AllStatic {
 private:
   // Note that to reduce dependencies on the JDK we compute these offsets at run-time.
@@ -1456,7 +1456,7 @@ public:
   // Debugging
   friend class JavaClasses;
 };
-
+#endif
 // Interface to hard-coded offset checking
 
 class JavaClasses : AllStatic {

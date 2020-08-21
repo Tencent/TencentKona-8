@@ -1119,7 +1119,9 @@ void ThreadSafepointState::handle_polling_page_exception() {
     // See if return type is an oop.
     bool return_oop = nm->method()->is_returning_oop();
     // Todo guard with Continuation macro
+#if INCLUDE_KONA_FIBER 
     HandleMark hm;
+#endif
     Handle return_value;
     if (return_oop) {
       // The oop result has been saved on the stack together with all
