@@ -582,7 +582,7 @@ public class BuilderTest {
     public void testNulls() {
         Thread.Builder builder = Thread.builder();
         assertThrows(NullPointerException.class, () -> builder.group(null));
-        assertThrows(NullPointerException.class, () -> builder.virtual(null));
+        //assertThrows(NullPointerException.class, () -> builder.virtual(null));
         assertThrows(NullPointerException.class, () -> builder.name(null));
         assertThrows(NullPointerException.class, () -> builder.name(null, 0));
         assertThrows(NullPointerException.class, () -> builder.task(null));
