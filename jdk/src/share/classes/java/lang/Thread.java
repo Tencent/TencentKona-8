@@ -2729,10 +2729,11 @@ class Thread implements Runnable {
 
         @Override
         public Builder virtual(Executor scheduler) {
-            Objects.requireNonNull(scheduler);
             if (group != null)
                 throw new IllegalStateException();
             this.virtual = true;
+            if (scheduler == null)
+                scheduler = VirtualThread.defaultScheduler();
             this.scheduler = scheduler;
             return this;
         }
