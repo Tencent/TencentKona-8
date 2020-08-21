@@ -1461,10 +1461,12 @@ StackFrameStream::StackFrameStream(JavaThread *thread, bool update) : _reg_map(t
   _is_done = false;
 }
 
+#if INCLUDE_KONA_FIBER
 StackFrameStream::StackFrameStream(JavaThread *thread, frame last_frame, bool update) : _reg_map(thread, update) {
   _fr = last_frame;
   _is_done = false;
 }
+#endif
 
 
 #ifndef PRODUCT

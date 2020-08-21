@@ -43,11 +43,10 @@
 #ifdef COMPILER2
 #include "opto/runtime.hpp"
 #endif
-
+#if INCLUDE_KONA_FIBER
 #include "runtime/coroutine.hpp"
-
 void coroutine_start(void* dummy, const void* coroutineObj);
-
+#endif
 
 #define __ masm->
 
@@ -1724,9 +1723,9 @@ static void gen_special_dispatch(MacroAssembler* masm,
   MethodHandles::generate_method_handle_dispatch(masm, iid,
                                                  receiver_reg, member_reg, /*for_compiler_entry:*/ true);
 }
-
+#if INCLUDE_KONA_FIBER
 void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* oop_maps, int &stack_slots, int total_in_args, BasicType *in_sig_bt, VMRegPair *in_regs, BasicType ret_type, bool terminate);
-
+#endif
 // ---------------------------------------------------------------------------
 // Generate a native wrapper for a given method.  The method takes arguments
 // in the Java compiled code convention, marshals them to the native
@@ -2015,12 +2014,13 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
   }
 
   // the continuation support methods have a hand-coded fast version that will handle the most common cases
+#if INCLUDE_KONA_FIBER
   if (method->intrinsic_id() == vmIntrinsics::_contSwitchTo) {
     continuation_switchTo_contents(masm, start, oop_maps, stack_slots, total_in_args, in_sig_bt, in_regs, ret_type, false);
   } else if (method->intrinsic_id() == vmIntrinsics::_contSwitchToAndTerminate) {
     continuation_switchTo_contents(masm, start, oop_maps, stack_slots, total_in_args, in_sig_bt, in_regs, ret_type, true);
   }
-
+#endif
   // Generate a new frame for the wrapper.
   __ enter();
   // -2 because return address is already present and so is saved rbp
@@ -2336,9 +2336,11 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     // Slow path will re-enter here
 
     __ bind(lock_done);
+#if INCLUDE_KONA_FIBER
     if (UseKonaFiber) {
       __ addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
     }
+#endif
   }
 
 
@@ -2502,10 +2504,11 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     }
 
     __ bind(done);
-
+#if INCLUDE_KONA_FIBER
     if (UseKonaFiber) {
       __ subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
     }
+#endif
   }
   {
     SkipIfEqual skip(masm, &DTraceMethodProbes, false);
@@ -2541,11 +2544,12 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     __ cmpptr(Address(r15_thread, in_bytes(Thread::pending_exception_offset())), (int32_t)NULL_WORD);
     __ jcc(Assembler::notEqual, exception_pending);
   }
-
+#if INCLUDE_KONA_FIBER
   if (method->intrinsic_id() == vmIntrinsics::_contSwitchToAndTerminate) {
     // yield back to kernel thread, return "cont.run"
     __ xorl(rax, rax);
   }
+#endif
   __ ret(0);
 
   // Unexpected paths are out of line and go here
@@ -2586,9 +2590,11 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     __ bind(L);
     }
 #endif
+#if INCLUDE_KONA_FIBER
     if (UseKonaFiber) {
       __ subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
     }
+#endif
     __ jmp(lock_done);
 
     // END Slow path lock
@@ -2633,9 +2639,11 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     if (ret_type == T_FLOAT || ret_type == T_DOUBLE ) {
       restore_native_result(masm, ret_type, stack_slots);
     }
+#if INCLUDE_KONA_FIBER
     if (UseKonaFiber) {
       __ addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
     }
+#endif
     __ jmp(unlock_done);
 
     // END Slow path unlock
@@ -4394,6 +4402,7 @@ void OptoRuntime::generate_exception_blob() {
  * 5. If normal switch, return and execute in new coroutine
  * 6. If terminate, invoke terminate on current thread
  */
+#if INCLUDE_KONA_FIBER
 void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* oop_maps, int &stack_slots, int total_in_args,
                                     BasicType *in_sig_bt, VMRegPair *in_regs, BasicType ret_type, bool terminate) {
   assert(total_in_args == 2, "wrong number of arguments");
@@ -4486,3 +4495,4 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
     __ movptr(j_rarg0, 0);
   }
 }
+#endif // INCLUDE_KONA_FIBER

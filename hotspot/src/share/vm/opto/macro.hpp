@@ -100,7 +100,9 @@ private:
   bool eliminate_locking_node(AbstractLockNode *alock);
   void expand_lock_node(LockNode *lock);
   void expand_unlock_node(UnlockNode *unlock);
+#if INCLUDE_KONA_FIBER
   Node *updateLockCounter(Node *ctrl, Node *mem, bool inc);
+#endif
 
   int replace_input(Node *use, Node *oldref, Node *newref);
   void copy_call_debug_info(CallNode *oldcall, CallNode * newcall);

@@ -47,8 +47,10 @@ class ThreadLocalStorage : AllStatic {
   static void    init();
   static bool    is_initialized();
 
+#if INCLUDE_KONA_FIBER
   static void    add_coroutine_stack(Thread* thread, address stack_base, size_t stack_size);
   static void    remove_coroutine_stack(Thread* thread, address stack_base, size_t stack_size);
+#endif
 
   // Machine dependent stuff
 #ifdef TARGET_OS_ARCH_linux_x86
@@ -102,9 +104,11 @@ class ThreadLocalStorage : AllStatic {
   // Processor dependent parts of set_thread and initialization
   static void pd_set_thread(Thread* thread);
   static void pd_init();
-  
+
+#if INCLUDE_KONA_FIBER 
   static void pd_add_coroutine_stack(Thread* thread, address stack_base, size_t stack_size);
   static void pd_remove_coroutine_stack(Thread* thread, address stack_base, size_t stack_size);  
+#endif
 
 #endif // SOLARIS
 

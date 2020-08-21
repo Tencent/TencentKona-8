@@ -96,7 +96,7 @@ void ThreadLocalStorage::pd_init() {
 void ThreadLocalStorage::pd_set_thread(Thread* thread) {
   os::thread_local_storage_at_put(ThreadLocalStorage::thread_index(), thread);
 }
-
+#if INCLUDE_KONA_FIBER
 void ThreadLocalStorage::pd_add_coroutine_stack(Thread* thread, address stack_base, size_t stack_size) {
 #ifndef AMD64
   for (address p = stack_base - stack_size; p < stack_base; p += PAGE_SIZE) {
@@ -118,5 +118,5 @@ void ThreadLocalStorage::pd_remove_coroutine_stack(Thread* thread, address stack
   }
 #endif // !AMD64
 }
-
+#endif // INCLUDE_KONA_FIBER
 #endif // !AMD64 && !MINIMIZE_RAM_USAGE
