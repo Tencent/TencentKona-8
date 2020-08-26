@@ -64,7 +64,7 @@ public class VTWaitTest {
             lock.unlock();
         }).build();
 
-        Thread vt2 = Thread.builder().virtual(executor).name("vt-1").task(() -> {
+        Thread vt2 = Thread.builder().virtual(executor).name("vt-2").task(() -> {
             assertEquals(val, 0);
             val++;
         }).build();
@@ -74,11 +74,10 @@ public class VTWaitTest {
         Thread.sleep(100);
 
         vt2.start();
-        Thread.sleep(100);
+        vt2.join();
 
         lock.unlock();
         vt1.join();
-        vt2.join();
 
         assertEquals(val, 2);
         executor.shutdown();
@@ -90,14 +89,17 @@ public class VTWaitTest {
     // 3. Continue run VT2 and check value is still 0, update value to 1
     // 3. Lock and Condition notify in main thread this will unpark VT1, in VT1 check value is 1 update value to 2
     // 4. In main wait VTs join and value is 2
+    static volatile boolean enter_lock = false;
     static void SingleConditionTest() throws Exception {
         val = 0;
+        enter_lock = false;
         Lock lock = new ReentrantLock();
         Condition cond = lock.newCondition();
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Thread vt1 = Thread.builder().virtual(executor).name("vt-1").task(() -> {
             lock.lock();
+            enter_lock = true;
             try {
                 cond.await();
             } catch (InterruptedException e) {
@@ -115,17 +117,18 @@ public class VTWaitTest {
         }).build();
 
         vt1.start();
-        Thread.sleep(100);
-
         vt2.start();
-        Thread.sleep(100);
+
+        while (enter_lock == false) {
+            Thread.sleep(100);
+        }
+        vt2.join();
 
         lock.lock();
         cond.signal();
         lock.unlock();
 
         vt1.join();
-        vt2.join();
 
         assertEquals(val, 2);
         executor.shutdown();

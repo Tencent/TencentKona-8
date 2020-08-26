@@ -33,10 +33,13 @@ import org.testng.annotations.Test;
 
 public class VTGetStackTrace {
     static volatile boolean releaseFlag = false;
-
+    static volatile boolean level2_mounted = false;
+     
     public static void level2_mounted() throws Exception {
         while (true) {
+            level2_mounted = true;
             if (releaseFlag) {
+                level2_mounted = false;
                 break;
             }
         }
@@ -92,7 +95,9 @@ public class VTGetStackTrace {
         Thread vt = f.newThread(target);
 
         vt.start();
-        Thread.sleep(100);
+        while (level2_mounted == false) {
+            Thread.sleep(100);
+        }
 
         assertEquals(getStackTraceLevelNum(vt.getStackTrace()), 2);
 
@@ -117,7 +122,9 @@ public class VTGetStackTrace {
         Thread vt = f.newThread(target);
 
         vt.start();
-        Thread.sleep(100);
+        while (vt.getState() != Thread.State.WAITING) {
+            Thread.sleep(100);
+        }
 
         assertEquals(getStackTraceLevelNum(vt.getStackTrace()), 2);
         VirtualThreads.unpark(vt);

@@ -68,7 +68,7 @@ public class ThreadExecutorTest {
 
         ArrayList<Future<?>> results = new ArrayList<Future<?>>();
         //ExecutorService executor = Executors.newThreadExecutor(factory2);
-        ExecutorService executor = Executors.newCachedThreadPool(factory2);
+        ExecutorService executor = Executors.newFixedThreadPool(NUM_TASKS, factory2);
         /*try (executor)*/ {
             for (int i=0; i<NUM_TASKS; i++) {
                 Future<?> result = executor.submit(() -> {
