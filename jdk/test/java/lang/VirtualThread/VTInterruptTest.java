@@ -54,14 +54,18 @@ public class VTInterruptTest {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Thread vt = Thread.builder().virtual(executor).name("vt").task(() -> {
             try {
-                Thread.sleep(1000);
+                while (true) {
+                    Thread.sleep(1000);
+                }
             } catch (InterruptedException e) {
                 val++;
             }
         }).build();
 
         vt.start();
-        Thread.sleep(100);
+        while (vt.getState() != Thread.State.WAITING) {
+            Thread.sleep(100);
+        }
         vt.interrupt();
         vt.join();
 
@@ -86,17 +90,33 @@ public class VTInterruptTest {
             }
         };
 
+        Runnable target1 = new Runnable() {
+            public void run() {
+                try {
+                    while (true) {
+                        Thread.sleep(1000);
+                    }
+                } catch (InterruptedException e) {
+                    val++;
+                }
+                val++;
+            }
+        };
+
         Thread[] vts = new Thread[40];
         ThreadFactory f = Thread.builder().virtual(executor).name("multipleSleepInterrupt_", 0).factory();
-        for (int i = 0; i < 40; i++) {
-            vts[i] = f.newThread(target);
+        for (int i = 0; i < 40; i+=2) {
+            vts[i] = f.newThread(target1);
+            vts[i+1] = f.newThread(target);
         }
         for (int i = 0; i < 40; i++) {
             vts[i].start();
         }
 
-        Thread.sleep(100);
         for (int i = 0; i < 40; i += 2) {
+            while (vts[i].getState() != Thread.State.WAITING) {
+                Thread.sleep(100);
+            }
             vts[i].interrupt();
         }
 
@@ -130,7 +150,9 @@ public class VTInterruptTest {
         Thread vt = Thread.builder().virtual(executor).name("vt-0").task(target).build();
         lock.lock();
         vt.start();
-        Thread.sleep(100);
+        while (vt.getState() != Thread.State.WAITING) {
+            Thread.sleep(100);
+        }
         vt.interrupt();
 
         vt.join();
@@ -164,18 +186,24 @@ public class VTInterruptTest {
 
         lock.lock();
         vt.start();
-        Thread.sleep(100);
-        vt.interrupt();
-        Thread.sleep(100);
+        while (vt.getState() != Thread.State.WAITING) {
+            Thread.sleep(100);
+        }
 
+        vt.interrupt();
         lock.unlock();
+
+        vt.join();
+
         assertEquals(val, 0);
         executor.shutdown();
     }
  
     // condition wait and interrupt
+    static volatile boolean enter_lock = false;
     static void conditionInterruptTest() throws Exception {
         val = 0;
+        enter_lock = false;
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Lock lock = new ReentrantLock();
         Condition cond = lock.newCondition();
@@ -183,6 +211,7 @@ public class VTInterruptTest {
         Runnable target = new Runnable() {
             public void run() {
                 lock.lock();
+                enter_lock = true;
                 try {
                     cond.await();
                 } catch (InterruptedException e) {
@@ -199,10 +228,12 @@ public class VTInterruptTest {
         Thread vt = Thread.builder().virtual(executor).name("vt-0").task(target).build(); 
 
         vt.start();
-        Thread.sleep(100);
+        while (enter_lock == false) {
+            Thread.sleep(100);
+        }
 
         vt.interrupt();
-        Thread.sleep(100);
+        vt.join();
 
         assertEquals(val, 1);
         executor.shutdown();
