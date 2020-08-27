@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,15 +49,11 @@ class G1ParCopyClosure;
 class G1ParScanClosure;
 class G1ParPushHeapRSClosure;
 
-class FilterIntoCSClosure;
-class FilterOutOfRegionClosure;
+class G1UpdateRSOrPushRefOopClosure;
 class G1CMOopClosure;
 class G1RootRegionScanClosure;
 
 // Specialized oop closures from g1RemSet.cpp
-class G1Mux2Closure;
-class G1TriggerClosure;
-class G1InvokeIfNotTriggeredClosure;
 class G1UpdateRSOrPushRefOopClosure;
 
 #ifdef FURTHER_SPECIALIZED_OOP_OOP_ITERATE_CLOSURES
@@ -67,13 +63,8 @@ class G1UpdateRSOrPushRefOopClosure;
 #define FURTHER_SPECIALIZED_OOP_OOP_ITERATE_CLOSURES(f) \
       f(G1ParScanClosure,_nv)                           \
       f(G1ParPushHeapRSClosure,_nv)                     \
-      f(FilterIntoCSClosure,_nv)                        \
-      f(FilterOutOfRegionClosure,_nv)                   \
       f(G1CMOopClosure,_nv)                             \
       f(G1RootRegionScanClosure,_nv)                    \
-      f(G1Mux2Closure,_nv)                              \
-      f(G1TriggerClosure,_nv)                           \
-      f(G1InvokeIfNotTriggeredClosure,_nv)              \
       f(G1UpdateRSOrPushRefOopClosure,_nv)
 
 #ifdef FURTHER_SPECIALIZED_SINCE_SAVE_MARKS_CLOSURES

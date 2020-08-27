@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,31 +34,6 @@
 #include "gc_implementation/g1/heapRegionRemSet.hpp"
 #include "memory/iterator.inline.hpp"
 #include "runtime/prefetch.inline.hpp"
-
-/*
- * This really ought to be an inline function, but apparently the C++
- * compiler sometimes sees fit to ignore inline declarations.  Sigh.
- */
-
-template <class T>
-inline void FilterIntoCSClosure::do_oop_nv(T* p) {
-  T heap_oop = oopDesc::load_heap_oop(p);
-  if (!oopDesc::is_null(heap_oop) &&
-      _g1->is_in_cset_or_humongous(oopDesc::decode_heap_oop_not_null(heap_oop))) {
-    _oc->do_oop(p);
-  }
-}
-
-template <class T>
-inline void FilterOutOfRegionClosure::do_oop_nv(T* p) {
-  T heap_oop = oopDesc::load_heap_oop(p);
-  if (!oopDesc::is_null(heap_oop)) {
-    HeapWord* obj_hw = (HeapWord*)oopDesc::decode_heap_oop_not_null(heap_oop);
-    if (obj_hw < _r_bottom || obj_hw >= _r_end) {
-      _oc->do_oop(p);
-    }
-  }
-}
 
 // This closure is applied to the fields of the objects that have just been copied.
 template <class T>
@@ -135,26 +110,6 @@ inline void G1RootRegionScanClosure::do_oop_nv(T* p) {
 }
 
 template <class T>
-inline void G1Mux2Closure::do_oop_nv(T* p) {
-  // Apply first closure; then apply the second.
-  _c1->do_oop(p);
-  _c2->do_oop(p);
-}
-
-template <class T>
-inline void G1TriggerClosure::do_oop_nv(T* p) {
-  // Record that this closure was actually applied (triggered).
-  _triggered = true;
-}
-
-template <class T>
-inline void G1InvokeIfNotTriggeredClosure::do_oop_nv(T* p) {
-  if (!_trigger_cl->triggered()) {
-    _oop_cl->do_oop(p);
-  }
-}
-
-template <class T>
 inline void G1UpdateRSOrPushRefOopClosure::do_oop_nv(T* p) {
   oop obj = oopDesc::load_decode_heap_oop(p);
   if (obj == NULL) {
@@ -206,6 +161,7 @@ inline void G1UpdateRSOrPushRefOopClosure::do_oop_nv(T* p) {
       // instance for this worker thread.
       _push_ref_cl->do_oop(p);
      }
+     _has_refs_into_cset = true;
 
     // Deferred updates to the CSet are either discarded (in the normal case),
     // or processed (if an evacuation failure occurs) at the end
