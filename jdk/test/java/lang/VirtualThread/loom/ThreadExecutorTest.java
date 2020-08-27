@@ -166,7 +166,7 @@ public class ThreadExecutorTest {
     // Test invokeAny where all tasks complete normally.
     public void testInvokeAnyCompleteNormally2() throws Exception {
         ThreadFactory factory = Thread.builder().virtual().factory();
-        ExecutorService executor = Executors.newSingleThreadExecutor(factory);
+        ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         /*try (var executor = Executors.newVirtualThreadExecutor())*/ {
             Callable<String> task1 = () -> "foo";
             Callable<String> task2 = () -> {
@@ -322,8 +322,8 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         /*try (var executor = Executors.newVirtualThreadExecutor())*/ {
-            Callable<String> task1 = () -> "foo";
-            Callable<String> task2 = () -> "bar";
+            Callable<String> task1 = () -> { while(true) { Thread.sleep(100); } };
+            Callable<String> task2 = () -> { while(true) { Thread.sleep(100); } };
             Thread.currentThread().interrupt();
             try {
                 executor.invokeAny(Arrays.asList(task1, task2));
