@@ -1552,8 +1552,7 @@ public:
   // is not marked.
   bool is_obj_dead(const oop obj, const HeapRegion* hr) const {
     return
-      !hr->obj_allocated_since_prev_marking(obj) &&
-      !isMarkedPrev(obj);
+      hr->is_obj_dead(obj, _cm->prevMarkBitMap());
   }
 
   // This function returns true when an object has been
