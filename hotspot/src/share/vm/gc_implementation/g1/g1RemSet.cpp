@@ -583,9 +583,12 @@ bool G1RemSet::refine_card(jbyte* card_ptr, uint worker_i,
                                                  worker_i);
   update_rs_oop_cl.set_from(r);
 
-  bool card_processed =
-    r->oops_on_card_seq_iterate_careful(dirty_region,
-                                        &update_rs_oop_cl);
+  bool card_processed;
+  if (_g1->is_gc_active()) {
+    card_processed = r->oops_on_card_seq_iterate_careful<true>(dirty_region, &update_rs_oop_cl);
+  } else {
+    card_processed = r->oops_on_card_seq_iterate_careful<false>(dirty_region, &update_rs_oop_cl);
+  }
 
   // If unable to process the card then we encountered an unparsable
   // part of the heap (e.g. a partially allocated object) while
