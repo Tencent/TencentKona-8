@@ -706,7 +706,7 @@ class HeapRegion: public G1OffsetTableContigSpace {
   // encountered; that only happens when invoked concurrently with the
   // mutator.
   bool oops_on_card_seq_iterate_careful(MemRegion mr,
-                                        FilterOutOfRegionClosure* cl);
+                                        G1UpdateRSOrPushRefOopClosure* cl);
 
   size_t recorded_rs_length() const        { return _recorded_rs_length; }
   double predicted_elapsed_time_ms() const { return _predicted_elapsed_time_ms; }
