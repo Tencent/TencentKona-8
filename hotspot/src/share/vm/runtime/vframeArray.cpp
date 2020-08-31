@@ -57,9 +57,6 @@ void vframeArrayElement::free_monitors(JavaThread* jt) {
 }
 
 void vframeArrayElement::fill_in(compiledVFrame* vf, bool realloc_failures) {
-#if INCLUDE_KONA_FIBER
-   HandleMark hm;
-#endif
 // Copy the information from the compiled vframe to the
 // interpreter frame we will be creating to replace vf
 
