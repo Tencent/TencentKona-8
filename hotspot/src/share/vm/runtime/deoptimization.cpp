@@ -173,6 +173,9 @@ Deoptimization::UnrollBlock* Deoptimization::fetch_unroll_info_helper(JavaThread
   // via vanilla deopt or uncommon trap we MUST NOT stop at a safepoint once
   // the vframeArray is created.
   //
+#if INCLUDE_KONA_FIBER
+  HandleMark hm;
+#endif
 
   // Allocate our special deoptimization ResourceMark
   DeoptResourceMark* dmark = new DeoptResourceMark(thread);
