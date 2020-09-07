@@ -22,9 +22,8 @@
  *
  */
 
-#if INCLUDE_KONA_FIBER
-
 #include "precompiled.hpp"
+#if INCLUDE_KONA_FIBER
 #include "runtime/coroutine.hpp"
 #ifdef TARGET_ARCH_x86
 # include "vmreg_x86.inline.hpp"
@@ -206,7 +205,12 @@ void coroutine_start(void* dummy, const void* coroutineObjAddr) {
   JavaCalls::call_continuation_start(coroutineObj, thread);
   ShouldNotReachHere();
 }
+#elif defined(_WINDOWS)
+void coroutine_start(void* dummy, const void* coroutineObjAddr) {
+    ShouldNotReachHere();
+}
 #endif
+
 void Coroutine::TerminateCoroutine(Coroutine* coro) {
   JavaThread* thread = coro->thread();
   if (TraceCoroutine) {
@@ -266,10 +270,8 @@ Coroutine::~Coroutine() {
   free_stack();
 }
 
-/*
- * 1. check yield is from thread coroutine or to thread coroutine
- * 2. check java_call_counter is 1 when terminate coroutine
- */
+// check yield is from thread contianuation or to thread contianuation
+// check resource is not still hold by contianuation when yield back to thread contianuation
 void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
   if (TraceCoroutine) {
     tty->print_cr("yield_verify from %p to %p", from, to);
