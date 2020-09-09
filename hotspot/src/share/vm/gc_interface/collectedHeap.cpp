@@ -622,7 +622,7 @@ void CollectedHeap::update_minor_gc_frequency_histogram() {
        _last_minor_gc_time = os::javaTimeMillis();
      }else {
        size_t now = os::javaTimeMillis();
-       _minor_gc_frequency_histogram->add(now - _last_minor_gc_time);
+       _minor_gc_frequency_histogram->add((long)(now - _last_minor_gc_time));
        _last_minor_gc_time = now;
      }
    }
