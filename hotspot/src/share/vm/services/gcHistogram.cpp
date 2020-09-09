@@ -19,6 +19,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#include "precompiled.hpp"
 #include "gcHistogram.hpp"
 #include <float.h>
 #include <math.h>
