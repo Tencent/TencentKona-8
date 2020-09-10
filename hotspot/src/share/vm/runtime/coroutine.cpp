@@ -353,9 +353,17 @@ void Coroutine::print_stack_on(void* frames, int* depth)
 
 void Coroutine::print_stack_on(outputStream* st)
 {
-	if (!has_javacall()) return;
-	if( state() == Coroutine::_onstack)
-		print_stack_on(st, NULL, NULL);
+    if (!has_javacall()) return;
+    if (state() == Coroutine::_onstack) {
+        st->cr();
+        st->print("   Coroutine: %p", this);
+        if (is_thread_coroutine()) {
+            st->print_cr("  [thread coroutine]");
+        } else {
+            st->cr();
+        }
+        print_stack_on(st, NULL, NULL);
+    }
 }
 
 bool Coroutine::is_lock_owned(address adr) const {
