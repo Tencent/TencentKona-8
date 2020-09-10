@@ -158,8 +158,7 @@ class VirtualThread extends Thread {
                     VirtualThread vthread = carrier.getVirtualThread();
                     carrier.setVirtualThread(null);
                     try {
-                        boolean printAll = (TRACE_PINNING_MODE == 1);
-                        PinnedThreadPrinter.printStackTrace(printAll);
+                        PinnedThreadPrinter.printStackTrace();
                     } finally {
                         carrier.setVirtualThread(vthread);
                     }
@@ -1040,32 +1039,27 @@ class VirtualThread extends Thread {
      * pinned.
      */
     private static class PinnedThreadPrinter {
-        /*static final StackWalker INSTANCE;
-        static {
-            var options = Set.of(SHOW_REFLECT_FRAMES, RETAIN_CLASS_REFERENCE);
-            PrivilegedAction<StackWalker> pa = () -> LiveStackFrame.getStackWalker(options, VTHREAD_SCOPE);
-            INSTANCE = AccessController.doPrivileged(pa);
-        }*/
-
         /**
          * Prints a stack trace of the current virtual thread to the standard output stream.
          * This method is synchronized to reduce interference in the output.
          * @param printAll true to print all stack frames, false to only print the
          *        frames that are native or holding a monitor
          */
-        static synchronized void printStackTrace(boolean printAll) {
-            /*System.out.println(Thread.currentThread());
-            INSTANCE.forEach(f -> {
-                if (f.getDeclaringClass() != PinnedThreadPrinter.class) {
-                    var ste = f.toStackTraceElement();
-                    int monitorCount = ((LiveStackFrame) f).getMonitors().length;
-                    if (monitorCount > 0 || f.isNativeMethod()) {
-                        System.out.format("    %s <== monitors:%d%n", ste, monitorCount);
-                    } else if (printAll) {
-                        System.out.format("    %s%n", ste);
-                    }
+        static synchronized void printStackTrace() {
+            assert !(Thread.currentThread() instanceof VirtualThread);
+
+            System.out.println(Thread.currentThread());
+            StackTraceElement[] ste = virtualThreadStackTrace((new Exception()).getStackTrace());
+            boolean afterYield = false;
+
+            for (int i = 0; i < ste.length; i++) {
+                if (afterYield) {
+                    System.out.format("    %s%n", ste[i]);
+                } else if ("java.lang.Continuation".equals(ste[i].getClassName())
+                           && "yield".equals(ste[i].getMethodName())) {
+                    afterYield = true;
                 }
-            });*/
+            }
         }
     }
 
