@@ -2944,6 +2944,8 @@ void JavaThread::print_thread_state() const {
 #if INCLUDE_KONA_FIBER
 void JavaThread::print_coroutine_on(outputStream* st, bool printstack) const {
   if (this == Coroutine::main_thread()) {
+    st->cr();
+    st->print_cr("Print all Coroutines:");
     ContContainer::print_stack_on(st);
   }
 }
@@ -4497,9 +4499,6 @@ void Threads::print_on(outputStream* st, bool print_stacks,
     }
 #if INCLUDE_KONA_FIBER
     if (UseKonaFiber) {
-      st->cr();
-      st->print_cr("Print all Coroutines:");
-      st->cr();
       p->print_coroutine_on(st, print_stacks);
     }
 #endif
