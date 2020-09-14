@@ -68,5 +68,24 @@ public class ContinuationBasic {
         System.out.println(value);
         assertEquals(value, 4);
     }
+
+    static Continuation current = null;
+    @Test
+    public static void test_getCurrentContinuation() {
+        ContinuationScope scope = new ContinuationScope("scope");
+        assertEquals(Continuation.getCurrentContinuation(scope), null);
+        Continuation cont = new Continuation(scope, () -> {
+           System.out.println("enter cont");
+           assertEquals(Continuation.getCurrentContinuation(scope), current);
+           Continuation.yield(scope);
+           assertEquals(Continuation.getCurrentContinuation(scope), current);
+           System.out.println("exit cont");
+        });
+        current = cont;
+        cont.run();
+        assertEquals(Continuation.getCurrentContinuation(scope), null);
+        cont.run();
+        assertEquals(Continuation.getCurrentContinuation(scope), null);
+    }
 }
 

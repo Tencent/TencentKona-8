@@ -364,6 +364,13 @@ public class Continuation {
         return cont.isPinnedInternal();
     }
 
+    public static Continuation getCurrentContinuation(ContinuationScope scope) {
+        Continuation cont = currentCarrierThread().getContinuation();
+        while (cont != null && cont.scope != scope)
+            cont = cont.parent;
+        return cont;
+    }
+
     private boolean isPinnedInternal() {
         if (cs > 0) {
             return true;
