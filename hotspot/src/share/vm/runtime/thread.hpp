@@ -1542,7 +1542,6 @@ class JavaThread: public Thread {
   char* name() const { return (char*)get_thread_name(); }
   void print_on(outputStream* st, bool print_extended_info) const;
   void print_on(outputStream* st) const { print_on(st, false); }
-  void print_coroutine_on(outputStream* st,bool printstack) const;
 #if INCLUDE_KONA_FIBER
   void print_coroutine_on(outputStream* st,bool printstack) const;
 #endif
