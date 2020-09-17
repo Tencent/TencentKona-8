@@ -136,26 +136,38 @@ public interface JavaLangAccess {
     /**
      * Returns a reference to the Thread object for the currently executing
      * carrier thread.
+     *
+     * @return carrier Thread object
      */
     Thread currentCarrierThread();
 
     /**
-     * Parks the current virtual thread.
+     * Parks the current virtual thread. If current thread is not virutal,
+     * will throw InternalError.
      */
     void parkVirtualThread();
 
     /**
      * Parks the current virtual thread.for up to the given waiting time.
+     * If current thread is not virutal, will throw InternalError.
+     *
+     * @param nanoseconds for waiting
      */
     void parkVirtualThread(long nanos);
 
     /**
-     * Unparks the given virtual thread.
+     * Unparks the given virtual thread. If thread is not virtual, will
+     * throw ClassCastException.
+     *
+     * @param VirtualThread to unaprk
      */
     void unparkVirtualThread(Thread thread);
 
     /**
-     * Returns true if the given virtual thread is parking.
+     * Returns true if the given virtual thread is parking. If thread is
+     * not virtual, will throw ClassCastException.
+     *
+     * @return true if thread is virtual and parking, otherwise false
      */
     boolean isVirtualThreadParking(Thread thread);
 }
