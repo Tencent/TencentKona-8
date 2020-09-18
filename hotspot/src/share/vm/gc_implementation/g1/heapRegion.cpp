@@ -153,7 +153,7 @@ void HeapRegion::reset_after_compaction() {
   init_top_at_mark_start();
 }
 
-void HeapRegion::hr_clear(bool par, bool clear_space, bool locked) {
+void HeapRegion::hr_clear(bool keep_remset, bool clear_space, bool locked) {
   assert(_humongous_start_region == NULL,
          "we should have already filtered out humongous regions");
   assert(_end == _orig_end,
@@ -165,13 +165,11 @@ void HeapRegion::hr_clear(bool par, bool clear_space, bool locked) {
   set_free();
   reset_pre_dummy_top();
 
-  if (!par) {
-    // If this is parallel, this will be done later.
-    HeapRegionRemSet* hrrs = rem_set();
+  if (!keep_remset) {
     if (locked) {
-      hrrs->clear_locked();
+      rem_set()->clear_locked();
     } else {
-      hrrs->clear();
+      rem_set()->clear();
     }
     _claimed = InitialClaimValue;
   }

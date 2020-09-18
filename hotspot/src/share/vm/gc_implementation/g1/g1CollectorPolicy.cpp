@@ -1163,7 +1163,7 @@ void G1CollectorPolicy::record_collection_pause_end(double pause_time_ms, Evacua
     if (young_cset_region_length() > 0) {
       young_other_time_ms =
         phase_times()->young_cset_choice_time_ms() +
-        phase_times()->young_free_cset_time_ms();
+        phase_times()->average_time_ms(G1GCPhaseTimes::YoungFreeCSet);
       _young_other_cost_per_region_ms_seq->add(young_other_time_ms /
                                           (double) young_cset_region_length());
     }
@@ -1171,14 +1171,14 @@ void G1CollectorPolicy::record_collection_pause_end(double pause_time_ms, Evacua
     if (old_cset_region_length() > 0) {
       non_young_other_time_ms =
         phase_times()->non_young_cset_choice_time_ms() +
-        phase_times()->non_young_free_cset_time_ms();
+        phase_times()->average_time_ms(G1GCPhaseTimes::NonYoungFreeCSet);
 
       _non_young_other_cost_per_region_ms_seq->add(non_young_other_time_ms /
                                             (double) old_cset_region_length());
     }
 
     double constant_other_time_ms = all_other_time_ms -
-      (young_other_time_ms + non_young_other_time_ms);
+      phase_times()->total_free_cset_time_ms();
     _constant_other_time_ms_seq->add(constant_other_time_ms);
 
     double survival_ratio = 0.0;
