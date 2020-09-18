@@ -744,13 +744,15 @@ public:
   // adding it to the free list that's passed as a parameter (this is
   // usually a local list which will be appended to the master free
   // list later). The used bytes of freed regions are accumulated in
-  // pre_used. If par is true, the region's RSet will not be freed
-  // up. The assumption is that this will be done later.
+  // pre_used. If skip_remset is true, the region's RSet will not be freed
+  // up. If skip_hot_card_cache is true, the region's hot card cache will not
+  // be freed up. The assumption is that this will be done later.
   // The locked parameter indicates if the caller has already taken
   // care of proper synchronization. This may allow some optimizations.
   void free_region(HeapRegion* hr,
                    FreeRegionList* free_list,
-                   bool par,
+                   bool skip_remset,
+                   bool skip_hot_card_cache = false,
                    bool locked = false);
 
   // Frees a humongous region by collapsing it into individual regions
@@ -758,11 +760,11 @@ public:
   // will be added to the free list that's passed as a parameter (this
   // is usually a local list which will be appended to the master free
   // list later). The used bytes of freed regions are accumulated in
-  // pre_used. If par is true, the region's RSet will not be freed
+  // pre_used. If skip_remset is true, the region's RSet will not be freed
   // up. The assumption is that this will be done later.
   void free_humongous_region(HeapRegion* hr,
                              FreeRegionList* free_list,
-                             bool par);
+                             bool skip_remset);
 protected:
 
   // Shrink the garbage-first heap by at most the given size (in bytes!).

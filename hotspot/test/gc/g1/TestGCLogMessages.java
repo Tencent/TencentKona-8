@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,8 +77,10 @@ public class TestGCLogMessages {
         new LogMessageWithLevel("Code Root Purge", Level.FINER),
         new LogMessageWithLevel("String Dedup Fixup", Level.FINER),
         // Free CSet
-        new LogMessageWithLevel("Young Free CSet", Level.FINEST),
-        new LogMessageWithLevel("Non-Young Free CSet", Level.FINEST),
+        new LogMessageWithLevel("Free CSet", Level.FINER),
+        new LogMessageWithLevel("Free CSet Serial", Level.FINEST),
+        new LogMessageWithLevel("Young Free CSet (ms)", Level.FINEST),
+        new LogMessageWithLevel("Non-Young Free CSet (ms)", Level.FINEST),
         // Humongous Eager Reclaim
         new LogMessageWithLevel("Humongous Reclaim", Level.FINER),
         new LogMessageWithLevel("Humongous Register", Level.FINER),

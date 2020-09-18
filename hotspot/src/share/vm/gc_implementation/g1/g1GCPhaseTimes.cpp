@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -290,6 +290,9 @@ G1GCPhaseTimes::G1GCPhaseTimes(uint max_gc_threads) :
   _gc_par_phases[RedirtyCards] = new WorkerDataArray<double>(max_gc_threads, "Parallel Redirty", true, G1Log::LevelFinest, 3);
   _redirtied_cards = new WorkerDataArray<size_t>(max_gc_threads, "Redirtied Cards", true, G1Log::LevelFinest, 3);
   _gc_par_phases[RedirtyCards]->link_thread_work_items(_redirtied_cards);
+
+  _gc_par_phases[YoungFreeCSet] = new WorkerDataArray<double>(max_gc_threads, "Young Free CSet (ms)", true, G1Log::LevelFinest, 3);
+  _gc_par_phases[NonYoungFreeCSet] = new WorkerDataArray<double>(max_gc_threads, "Non-Young Free CSet (ms)", true, G1Log::LevelFinest, 3);
 }
 
 void G1GCPhaseTimes::note_gc_start(uint active_gc_threads, bool mark_in_progress) {
@@ -568,12 +571,11 @@ void G1GCPhaseTimes::print(double pause_time_sec) {
       print_stats(3, "Humongous Reclaimed", _cur_fast_reclaim_humongous_reclaimed);
     }
   }
-  print_stats(2, "Free CSet",
-    (_recorded_young_free_cset_time_ms +
-    _recorded_non_young_free_cset_time_ms));
+  print_stats(2, "Free CSet", _recorded_total_free_cset_time_ms);
   if (G1Log::finest()) {
-    print_stats(3, "Young Free CSet", _recorded_young_free_cset_time_ms);
-    print_stats(3, "Non-Young Free CSet", _recorded_non_young_free_cset_time_ms);
+    print_stats(3, "Free CSet Serial", _recorded_serial_free_cset_time_ms);
+    par_phase_printer.print(YoungFreeCSet);
+    par_phase_printer.print(NonYoungFreeCSet);
   }
   if (_cur_verify_after_time_ms > 0.0) {
     print_stats(2, "Verify After", _cur_verify_after_time_ms);

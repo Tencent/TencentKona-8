@@ -5864,7 +5864,8 @@ void G1CollectedHeap::evacuate_collection_set(EvacuationInfo& evacuation_info) {
 
 void G1CollectedHeap::free_region(HeapRegion* hr,
                                   FreeRegionList* free_list,
-                                  bool par,
+                                  bool skip_remset,
+                                  bool skip_hot_card_cache,
                                   bool locked) {
   assert(!hr->is_free(), "the region should not be free");
   assert(!hr->is_empty(), "the region should not be empty");
@@ -5879,16 +5880,16 @@ void G1CollectedHeap::free_region(HeapRegion* hr,
   // Clear the card counts for this region.
   // Note: we only need to do this if the region is not young
   // (since we don't refine cards in young regions).
-  if (!hr->is_young()) {
+  if (!skip_hot_card_cache && !hr->is_young()) {
     _cg1r->hot_card_cache()->reset_card_counts(hr);
   }
-  hr->hr_clear(par, true /* clear_space */, locked /* locked */);
+  hr->hr_clear(skip_remset, true /* clear_space */, locked /* locked */);
   free_list->add_ordered(hr);
 }
 
 void G1CollectedHeap::free_humongous_region(HeapRegion* hr,
-                                     FreeRegionList* free_list,
-                                     bool par) {
+                                            FreeRegionList* free_list,
+                                            bool skip_remset) {
   assert(hr->startsHumongous(), "this is only for starts humongous regions");
   assert(free_list != NULL, "pre-condition");
 
@@ -5897,14 +5898,14 @@ void G1CollectedHeap::free_humongous_region(HeapRegion* hr,
   // otherwise the information will be gone.
   uint last_index = hr->last_hc_index();
   hr->clear_humongous();
-  free_region(hr, free_list, par);
+  free_region(hr, free_list, skip_remset);
 
   uint i = hr->hrm_index() + 1;
   while (i < last_index) {
     HeapRegion* curr_hr = region_at(i);
     assert(curr_hr->continuesHumongous(), "invariant");
     curr_hr->clear_humongous();
-    free_region(curr_hr, free_list, par);
+    free_region(curr_hr, free_list, skip_remset);
     i += 1;
   }
 }
@@ -6192,96 +6193,251 @@ void G1CollectedHeap::cleanUpCardTable() {
   g1_policy()->phase_times()->record_clear_ct_time(elapsed * 1000.0);
 }
 
-class G1FreeCollectionSetClosure : public HeapRegionClosure {
+class G1FreeCollectionSetTask : public AbstractGangTask {
 private:
-  const size_t* _surviving_young_words;
 
-  FreeRegionList _local_free_list;
-  size_t _rs_lengths;
-  // Bytes used in successfully evacuated regions before the evacuation.
-  size_t _before_used_bytes;
-  // Bytes used in unsucessfully evacuated regions before the evacuation
-  size_t _after_used_bytes;
+  // Closure applied to all regions in the collection set to do work that needs to
+  // be done serially in a single thread.
+  class G1SerialFreeCollectionSetClosure : public HeapRegionClosure {
+  private:
+    EvacuationInfo* _evacuation_info;
+    const size_t* _surviving_young_words;
+    FreeRegionList _local_free_list;
 
-  double _young_time_sec;
-  double _non_young_time_sec;
-public:
-  G1FreeCollectionSetClosure(const size_t* surviving_young_words) :
+    // Bytes used in successfully evacuated regions before the evacuation.
+    size_t _before_used_bytes;
+    // Bytes used in unsucessfully evacuated regions before the evacuation
+    size_t _after_used_bytes;
+
+
+  public:
+    G1SerialFreeCollectionSetClosure(EvacuationInfo* evacuation_info, const size_t* surviving_young_words) :
       HeapRegionClosure(),
+      _evacuation_info(evacuation_info),
       _surviving_young_words(surviving_young_words),
-      _local_free_list("Local Region List for CSet Freeing"),
-      _rs_lengths(0),
       _before_used_bytes(0),
       _after_used_bytes(0),
-      _young_time_sec(0.0),
-      _non_young_time_sec(0.0) {
+      _local_free_list("Local Region List for CSet Freeing") {
+    }
+
+    virtual bool doHeapRegion(HeapRegion* r) {
+      G1CollectedHeap* g1h = G1CollectedHeap::heap();
+      G1CollectorPolicy* policy = g1h->g1_policy();
+
+      assert(!g1h->is_on_master_free_list(r), "sanity");
+
+      assert(r->in_collection_set(),
+             err_msg("Region %u should be in collection set.", r->hrm_index()));
+      g1h->clear_cset_fast_test(r);
+
+      if (r->is_young()) {
+        int index = r->young_index_in_cset();
+        assert(index != -1,
+               err_msg("Young index in collection set must not be -1 for region %u", r->hrm_index()));
+        assert((uint) index < policy->young_cset_region_length(),
+               err_msg("Young index %d is wrong for region %u of type %s with %u young regions",
+                       index, r->hrm_index(), r->get_type_str(),
+                       policy->young_cset_region_length()));
+        size_t words_survived = _surviving_young_words[index];
+        r->record_surv_words_in_group(words_survived);
+
+        // At this point the we have 'popped' cur from the collection set
+        // (linked via next_in_collection_set()) but it is still in the
+        // young list (linked via next_young_region()). Clear the
+        // _next_young_region field.
+        r->set_next_young_region(NULL);
+      } else {
+        int index = r->young_index_in_cset();
+        assert(index == -1, err_msg("Young index for old region %u in collection set must be -1", r->hrm_index()));
+      }
+
+      if (!r->evacuation_failed()) {
+        MemRegion used_mr = r->used_region();
+
+        // And the region is empty.
+        assert(!used_mr.is_empty(),
+               err_msg("Region %u is an empty region in the collection set.", r->hrm_index()));
+        _before_used_bytes += r->used();
+        g1h->free_region(r, &_local_free_list,
+                         true, /* skip_remset */
+                         true, /* skip_hot_card_cache */
+                         true  /* locked */);
+      } else {
+        r->uninstall_surv_rate_group();
+        if (r->is_young()) {
+          r->set_young_index_in_cset(-1);
+        }
+        r->set_evacuation_failed(false);
+        // The region is now considered to be old.
+        r->set_old();
+        g1h->old_set_add(r);
+        _after_used_bytes += r->used();
+      }
+      return false;
+    }
+
+    void complete_work() {
+      G1CollectedHeap* g1h = G1CollectedHeap::heap();
+
+      _evacuation_info->increment_collectionset_used_after(_after_used_bytes);
+      _evacuation_info->set_regions_freed(_local_free_list.length());
+
+      g1h->prepend_to_freelist(&_local_free_list);
+      g1h->decrement_summary_bytes(_before_used_bytes);
+    }
+  };
+
+  G1CollectorPolicy* _policy;
+  G1SerialFreeCollectionSetClosure _cl;
+  const size_t* _surviving_young_words;
+
+  size_t _rs_lengths;
+
+  volatile jint _serial_work_claim;
+
+  struct WorkItem {
+    uint region_idx;
+    bool is_young;
+    bool evacuation_failed;
+
+    WorkItem(HeapRegion* r) {
+      region_idx = r->hrm_index();
+      is_young = r->is_young();
+      evacuation_failed = r->evacuation_failed();
+    }
+  };
+
+  volatile size_t _parallel_work_claim;
+  size_t _num_work_items;
+  WorkItem* _work_items;
+
+  void do_serial_work() {
+    // Need to grab the lock to be allowed to modify the old region list.
+    MutexLockerEx x(OldSets_lock, Mutex::_no_safepoint_check_flag);
+    _policy->iterate_cset(&_cl);
   }
 
-  virtual bool doHeapRegion(HeapRegion* r) {
+  void do_parallel_work_for_region(uint region_idx, bool is_young, bool evacuation_failed) {
     G1CollectedHeap* g1h = G1CollectedHeap::heap();
-    G1CollectorPolicy* policy = g1h->g1_policy();
 
-    double start_sec = os::elapsedTime();
-
+    HeapRegion* r = g1h->region_at(region_idx);
     assert(!g1h->is_on_master_free_list(r), "sanity");
 
-    _rs_lengths += r->rem_set()->occupied_locked();
+    Atomic::add_ptr((intptr_t) r->rem_set()->occupied_locked(), (volatile intptr_t*) &_rs_lengths);
 
-    assert(r->in_collection_set(), err_msg("Region %u should be in collection set.", r->hrm_index()));
-    g1h->clear_cset_fast_test(r);
-
-    if (r->is_young()) {
-      int index = r->young_index_in_cset();
-      assert(index != -1, err_msg("Young index in collection set must not be -1 for region %u", r->hrm_index()));
-      assert((uint) index < policy->young_cset_region_length(), "invariant");
-      size_t words_survived = _surviving_young_words[index];
-      r->record_surv_words_in_group(words_survived);
-
-      // At this point the we have 'popped' cur from the collection set
-      // (linked via next_in_collection_set()) but it is still in the
-      // young list (linked via next_young_region()). Clear the
-      // _next_young_region field.
-      r->set_next_young_region(NULL);
-    } else {
-      int index = r->young_index_in_cset();
-      assert(index == -1, err_msg("Young index for old region %u in collection set must be -1", r->hrm_index()));
+    if (!is_young) {
+      g1h->concurrent_g1_refine()->hot_card_cache()->reset_card_counts(r);
     }
 
-    if (!r->evacuation_failed()) {
-      MemRegion used_mr = r->used_region();
-
-      // And the region is empty.
-      assert(!used_mr.is_empty(),
-             err_msg("Region %u is an empty region in the collection set.", r->hrm_index()));
-      _before_used_bytes += r->used();
-      g1h->free_region(r, &_local_free_list, false /* par */, true /* locked */);
-    } else {
-      r->uninstall_surv_rate_group();
-      if (r->is_young()) {
-        r->set_young_index_in_cset(-1);
-      }
-      r->set_evacuation_failed(false);
-      // The region is now considered to be old.
-      r->set_old();
-      g1h->old_set_add(r);
-      _after_used_bytes += r->used();
+    if (!evacuation_failed) {
+      r->rem_set()->clear_locked();
     }
-
-    if (r->is_young()) {
-      _young_time_sec += os::elapsedTime() - start_sec;
-    } else {
-      _non_young_time_sec += os::elapsedTime() - start_sec;
-    }
-    return false;
   }
 
-  FreeRegionList* local_free_list() { return &_local_free_list; }
-  size_t rs_lengths() const { return _rs_lengths; }
-  size_t before_used_bytes() const { return _before_used_bytes; }
-  size_t after_used_bytes() const { return _after_used_bytes; }
+  class G1PrepareFreeCollectionSetClosure : public HeapRegionClosure {
+  private:
+    size_t _cur_idx;
+    WorkItem* _work_items;
+  public:
+    G1PrepareFreeCollectionSetClosure(WorkItem* work_items) : HeapRegionClosure(), _cur_idx(0), _work_items(work_items) { }
 
-  double young_sec() const { return _young_time_sec; }
-  double non_young_sec() const { return _non_young_time_sec; }
+    virtual bool doHeapRegion(HeapRegion* r) {
+      _work_items[_cur_idx++] = WorkItem(r);
+      r->rem_set()->reset_for_par_iteration();
+      return false;
+    }
+  };
+
+  void prepare_work() {
+    G1PrepareFreeCollectionSetClosure cl(_work_items);
+    _policy->iterate_cset(&cl);
+  }
+
+  void complete_work() {
+    _cl.complete_work();
+
+    _policy->record_max_rs_lengths(_rs_lengths);
+    _policy->cset_regions_freed();
+  }
+public:
+  G1FreeCollectionSetTask(G1CollectorPolicy *policy, EvacuationInfo* evacuation_info, const size_t* surviving_young_words) :
+    AbstractGangTask("G1 Free-Collection-Set"),
+    _policy(policy),
+    _cl(evacuation_info, surviving_young_words),
+    _surviving_young_words(surviving_young_words),
+    _serial_work_claim(0),
+    _rs_lengths(0),
+    _parallel_work_claim(0),
+    _num_work_items(policy->cset_region_length()),
+    _work_items(NEW_C_HEAP_ARRAY(WorkItem, _num_work_items, mtGC)) {
+    prepare_work();
+  }
+
+  ~G1FreeCollectionSetTask() {
+    complete_work();
+    FREE_C_HEAP_ARRAY(WorkItem, _work_items, mtGC);
+  }
+
+  // Chunk size for work distribution. The chosen value has been determined experimentally
+  // to be a good tradeoff between overhead and achievable parallelism.
+  static uint chunk_size() { return 32; }
+
+  virtual void work(uint worker_id) {
+    G1GCPhaseTimes* timer = _policy->phase_times();
+
+    // Claim serial work.
+    if (_serial_work_claim == 0) {
+      jint value = Atomic::add(1, &_serial_work_claim) - 1;
+      if (value == 0) {
+        double serial_time = os::elapsedTime();
+        do_serial_work();
+        timer->record_serial_free_cset_time_ms((os::elapsedTime() - serial_time) * 1000.0);
+      }
+    }
+
+    // Start parallel work.
+    double young_time = 0.0;
+    bool has_young_time = false;
+    double non_young_time = 0.0;
+    bool has_non_young_time = false;
+
+    while (true) {
+      size_t end = (size_t) Atomic::add_ptr((intptr_t) chunk_size(), (volatile intptr_t*) &_parallel_work_claim);
+      size_t cur = end - chunk_size();
+
+      if (cur >= _num_work_items) {
+        break;
+      }
+
+      double start_time = os::elapsedTime();
+
+      end = MIN2(end, _num_work_items);
+
+      for (; cur < end; cur++) {
+        bool is_young = _work_items[cur].is_young;
+
+        do_parallel_work_for_region(_work_items[cur].region_idx, is_young, _work_items[cur].evacuation_failed);
+
+        double end_time = os::elapsedTime();
+        double time_taken = end_time - start_time;
+        if (is_young) {
+          young_time += time_taken;
+          has_young_time = true;
+        } else {
+          non_young_time += time_taken;
+          has_non_young_time = true;
+        }
+        start_time = end_time;
+      }
+    }
+
+    if (has_young_time) {
+      timer->record_time_secs(G1GCPhaseTimes::YoungFreeCSet, worker_id, young_time);
+    }
+    if (has_non_young_time) {
+      timer->record_time_secs(G1GCPhaseTimes::NonYoungFreeCSet, worker_id, young_time);
+    }
+  }
 };
 
 void G1CollectedHeap::free_collection_set(EvacuationInfo& evacuation_info) {
@@ -6290,22 +6446,23 @@ void G1CollectedHeap::free_collection_set(EvacuationInfo& evacuation_info) {
   // head and length, and unlink any young regions in the code below
   _young_list->clear();
 
-  G1FreeCollectionSetClosure cl(_surviving_young_words);
-  collection_set_iterate(&cl);
+  double free_cset_start_time = os::elapsedTime();
 
   G1CollectorPolicy* policy = g1_policy();
 
-  evacuation_info.increment_collectionset_used_after(cl.after_used_bytes());
-  evacuation_info.set_regions_freed(cl.local_free_list()->length());
+  {
+    uint const num_chunks = MAX2(g1_policy()->cset_region_length() / G1FreeCollectionSetTask::chunk_size(), 1U);
+    uint const num_workers = MIN2(workers()->active_workers(), num_chunks);
 
-  policy->record_max_rs_lengths(cl.rs_lengths());
-  policy->cset_regions_freed();
+    G1FreeCollectionSetTask cl(policy, &evacuation_info, _surviving_young_words);
 
-  prepend_to_freelist(cl.local_free_list());
-  decrement_summary_bytes(cl.before_used_bytes());
-
-  policy->phase_times()->record_young_free_cset_time_ms(cl.young_sec() * 1000.0);
-  policy->phase_times()->record_non_young_free_cset_time_ms(cl.non_young_sec() * 1000.0);
+    if (G1Log::finest()) {
+      gclog_or_tty->print("Running %s using %u workers for collection set length %u",
+                          cl.name(), num_workers, g1_policy()->cset_region_length());
+    }
+    workers()->run_task(&cl);
+  }
+  policy->phase_times()->record_total_free_cset_time_ms((os::elapsedTime() - free_cset_start_time) * 1000.0);
 
   policy->clear_collection_set();
 }
