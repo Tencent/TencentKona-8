@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -239,13 +239,12 @@ void G1RemSet::scanRS(G1ParPushHeapRSClosure* oc,
                       CodeBlobClosure* code_root_cl,
                       uint worker_i) {
   double rs_time_start = os::elapsedTime();
-  HeapRegion *startRegion = _g1->start_cset_region_for_worker(worker_i);
 
   ScanRSClosure scanRScl(oc, code_root_cl, worker_i);
 
-  _g1->collection_set_iterate_from(startRegion, &scanRScl);
+  _g1->collection_set_iterate_from(&scanRScl, worker_i);
   scanRScl.set_try_claimed();
-  _g1->collection_set_iterate_from(startRegion, &scanRScl);
+  _g1->collection_set_iterate_from(&scanRScl, worker_i);
 
   double scan_rs_time_sec = (os::elapsedTime() - rs_time_start)
                             - scanRScl.strong_code_root_scan_time_sec();

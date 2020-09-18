@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -230,17 +230,8 @@ class HeapRegion: public G1OffsetTableContigSpace {
   // For the start region of a humongous sequence, it's original end().
   HeapWord* _orig_end;
 
-  // True iff the region is in current collection_set.
-  bool _in_collection_set;
-
   // True iff an attempt to evacuate an object in the region failed.
   bool _evacuation_failed;
-
-  // A heap region may be a member one of a number of special subsets, each
-  // represented as linked lists through the field below.  Currently, there
-  // is only one set:
-  //   The collection set.
-  HeapRegion* _next_in_special_set;
 
   // next region in the young "generation" region set
   HeapRegion* _next_young_region;
@@ -499,24 +490,7 @@ class HeapRegion: public G1OffsetTableContigSpace {
   }
 
   // True iff the region is in current collection_set.
-  bool in_collection_set() const {
-    return _in_collection_set;
-  }
-  void set_in_collection_set(bool b) {
-    _in_collection_set = b;
-  }
-  HeapRegion* next_in_collection_set() {
-    assert(in_collection_set(), "should only invoke on member of CS.");
-    assert(_next_in_special_set == NULL ||
-           _next_in_special_set->in_collection_set(),
-           "Malformed CS.");
-    return _next_in_special_set;
-  }
-  void set_next_in_collection_set(HeapRegion* r) {
-    assert(in_collection_set(), "should only invoke on member of CS.");
-    assert(r == NULL || r->in_collection_set(), "Malformed CS.");
-    _next_in_special_set = r;
-  }
+  inline bool in_collection_set() const;
 
   void set_allocation_context(AllocationContext_t context) {
     _allocation_context = context;
@@ -800,7 +774,7 @@ class HeapRegion: public G1OffsetTableContigSpace {
 // Terminates the iteration when the "doHeapRegion" method returns "true".
 class HeapRegionClosure : public StackObj {
   friend class HeapRegionManager;
-  friend class G1CollectedHeap;
+  friend class G1CollectorPolicy;
 
   bool _complete;
   void incomplete() { _complete = false; }

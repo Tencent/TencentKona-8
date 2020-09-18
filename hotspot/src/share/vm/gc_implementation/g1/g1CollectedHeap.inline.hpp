@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,16 +109,17 @@ inline HeapRegion* G1CollectedHeap::heap_region_containing(const T addr) const {
 }
 
 inline void G1CollectedHeap::reset_gc_time_stamp() {
+  assert_at_safepoint(true);
   _gc_time_stamp = 0;
-  OrderAccess::fence();
-  // Clear the cached CSet starting regions and time stamps.
-  // Their validity is dependent on the GC timestamp.
-  clear_cset_start_regions();
 }
 
 inline void G1CollectedHeap::increment_gc_time_stamp() {
+  assert_at_safepoint(true);
   ++_gc_time_stamp;
-  OrderAccess::fence();
+}
+
+inline void G1CollectedHeap::old_set_add(HeapRegion* hr) {
+  _old_set.add(hr);
 }
 
 inline void G1CollectedHeap::old_set_remove(HeapRegion* hr) {
@@ -232,6 +233,10 @@ inline bool G1CollectedHeap::is_in_cset(oop obj) {
   assert( ret || !obj_in_cs(obj), "sanity");
   assert(!ret ||  obj_in_cs(obj), "sanity");
   return ret;
+}
+
+inline bool G1CollectedHeap::is_in_cset(const HeapRegion* hr) {
+  return _in_cset_fast_test.is_in_cset(hr);
 }
 
 bool G1CollectedHeap::is_in_cset_or_humongous(const oop obj) {

@@ -1,5 +1,5 @@
   /*
- * Copyright (c) 2001, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -704,6 +704,10 @@ public:
     _in_cset_fast_test.clear();
   }
 
+  void clear_cset_fast_test(const HeapRegion* hr) {
+    _in_cset_fast_test.clear(hr);
+  }
+
   // This is called at the start of either a concurrent cycle or a Full
   // GC to update the number of old marking cycles started.
   void increment_old_marking_cycles_started();
@@ -826,13 +830,13 @@ protected:
   // set in the event of an evacuation failure.
   DirtyCardQueueSet _into_cset_dirty_card_queue_set;
 
-  // After a collection pause, make the regions in the CS into free
+  // After a collection pause, convert the regions in the collection set into free
   // regions.
-  void free_collection_set(HeapRegion* cs_head, EvacuationInfo& evacuation_info);
+  void free_collection_set(EvacuationInfo& evacuation_info);
 
   // Abandon the current collection set without recording policy
   // statistics or updating free lists.
-  void abandon_collection_set(HeapRegion* cs_head);
+  void abandon_collection_set();
 
   // The concurrent marker (and the thread it runs in.)
   ConcurrentMark* _cm;
@@ -992,16 +996,6 @@ protected:
   // unnecessary additions to the discovered lists during reference
   // discovery.
   G1CMIsAliveClosure _is_alive_closure_cm;
-
-  // Cache used by G1CollectedHeap::start_cset_region_for_worker().
-  HeapRegion** _worker_cset_start_region;
-
-  // Time stamp to validate the regions recorded in the cache
-  // used by G1CollectedHeap::start_cset_region_for_worker().
-  // The heap region entry for a given worker is valid iff
-  // the associated time stamp value matches the current value
-  // of G1CollectedHeap::_gc_time_stamp.
-  uint* _worker_cset_start_region_time_stamp;
 
   volatile bool _free_regions_coming;
 
@@ -1199,6 +1193,7 @@ public:
     }
   }
 
+  inline void old_set_add(HeapRegion* hr);
   inline void old_set_remove(HeapRegion* hr);
 
   size_t non_young_capacity_bytes() {
@@ -1247,6 +1242,8 @@ public:
   // Return "TRUE" iff the given object address is within the collection
   // set. Slow implementation.
   inline bool obj_in_cs(oop obj);
+
+  inline bool is_in_cset(const HeapRegion* hr);
 
   inline bool is_in_cset(oop obj);
 
@@ -1350,19 +1347,14 @@ public:
   bool check_cset_heap_region_claim_values(jint claim_value);
 #endif // ASSERT
 
-  // Clear the cached cset start regions and (more importantly)
-  // the time stamps. Called when we reset the GC time stamp.
-  void clear_cset_start_regions();
-
-  // Given the id of a worker, obtain or calculate a suitable
-  // starting region for iterating over the current collection set.
-  HeapRegion* start_cset_region_for_worker(uint worker_i);
-
   // Iterate over the regions (if any) in the current collection set.
   void collection_set_iterate(HeapRegionClosure* blk);
 
-  // As above but starting from region r
-  void collection_set_iterate_from(HeapRegion* r, HeapRegionClosure *blk);
+  // Iterate over the regions (if any) in the current collection set. Starts the
+  // iteration over the entire collection set so that the start regions of a given
+  // worker id over the set active_workers are evenly spread across the set of
+  // collection set regions.
+    void collection_set_iterate_from(HeapRegionClosure *cl, uint worker_id);
 
   HeapRegion* next_compaction_region(const HeapRegion* from) const;
 

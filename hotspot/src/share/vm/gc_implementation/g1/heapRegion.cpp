@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -163,8 +163,6 @@ void HeapRegion::hr_clear(bool par, bool clear_space, bool locked) {
   assert(_end == _orig_end,
          "we should have already filtered out humongous regions");
 
-  _in_collection_set = false;
-
   set_allocation_context(AllocationContext::system());
   set_young_index_in_cset(-1);
   uninstall_surv_rate_group();
@@ -301,8 +299,7 @@ HeapRegion::HeapRegion(uint hrm_index,
     _hrm_index(hrm_index),
     _allocation_context(AllocationContext::system()),
     _humongous_start_region(NULL),
-    _in_collection_set(false),
-    _next_in_special_set(NULL), _orig_end(NULL),
+    _orig_end(NULL),
     _claimed(InitialClaimValue), _evacuation_failed(false),
     _prev_marked_bytes(0), _next_marked_bytes(0), _gc_efficiency(0.0),
     _next_young_region(NULL),
