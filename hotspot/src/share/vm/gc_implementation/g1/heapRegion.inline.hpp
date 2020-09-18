@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -193,6 +193,10 @@ inline void HeapRegion::note_end_of_copying(bool during_initial_mark) {
       assert(top() >= _next_top_at_mark_start, "invariant");
     }
   }
+}
+
+inline bool HeapRegion::in_collection_set() const {
+  return G1CollectedHeap::heap()->is_in_cset(this);
 }
 
 #endif // SHARE_VM_GC_IMPLEMENTATION_G1_HEAPREGION_INLINE_HPP
