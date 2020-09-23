@@ -113,20 +113,31 @@
 # These failed cases are also hanging on Openjdk-8u262-b08
 runtime/SharedArchiveFile/SharedBaseAddress.java               linux-all
 
-# The following tests fail when runt with all.
+# The following tests fail when run with all.
 # but they pass when run standalone
-compiler/rtm/locking/TestUseRTMForInflatedLocks.java           linux-all
-compiler/rtm/locking/TestUseRTMAfterLockInflation.java         linux-all
-compiler/rtm/locking/TestRTMLockingThreshold.java              linux-all
-compiler/rtm/locking/TestRTMAfterNonRTMDeopt.java              linux-all
+
+# The RTM related tests fail possibly related to this issue and its patch:
+# https://bugs.openjdk.java.net/browse/JDK-8223660,
+# http://hg.openjdk.java.net/jdk/jdk/rev/82fe7292ca5c.
+# In addition, notice that this patch will introduce JNI calls, and since 
+# jdk8 has no auto-build function for JNI calls, the following patch might
+# be helpful to solve this problem. Or the native libraries should be compiled
+# manually.
+# https://bugs.openjdk.java.net/browse/JDK-8223660
 compiler/rtm/locking/TestRTMAbortRatio.java                    linux-all
+compiler/rtm/locking/TestRTMAbortThreshold.java                linux-all
+compiler/rtm/locking/TestRTMAfterNonRTMDeopt.java              linux-all
 compiler/rtm/locking/TestRTMDeoptOnHighAbortRatio.java         linux-all
 compiler/rtm/locking/TestRTMDeoptOnLowAbortRatio.java          linux-all
 compiler/rtm/locking/TestRTMLockingCalculationDelay.java       linux-all
+compiler/rtm/locking/TestRTMLockingThreshold.java              linux-all
 compiler/rtm/locking/TestRTMTotalCountIncrRate.java            linux-all
+compiler/rtm/locking/TestUseRTMAfterLockInflation.java         linux-all
+compiler/rtm/locking/TestUseRTMForInflatedLocks.java           linux-all
 compiler/rtm/locking/TestUseRTMForStackLocks.java              linux-all
-serviceability/sa/jmap-hashcode/Test8028623.java               linux-all
 compiler/rtm/method_options/TestUseRTMLockElidingOption.java   linux-all
+
+serviceability/sa/jmap-hashcode/Test8028623.java               linux-all
 gc/metaspace/CompressedClassSpaceSizeInJmapHeap.java           linux-all
 
 ############################################################################
