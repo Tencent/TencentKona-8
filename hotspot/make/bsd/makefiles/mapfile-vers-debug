@@ -81,6 +81,7 @@
                 _JVM_DTraceDispose
                 _JVM_DumpAllStacks
                 _JVM_DumpThreads
+                _JVM_RegisterContinuationMethods
                 _JVM_EnableCompiler
                 _JVM_Exit
                 _JVM_FillInStackTrace
