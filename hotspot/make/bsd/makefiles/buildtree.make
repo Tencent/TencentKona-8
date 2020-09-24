@@ -211,6 +211,12 @@ else
   INCLUDE_JFR = 0
 endif
 
+ifeq ($(ENABLE_KONA_FIBER), true)
+  INCLUDE_KONA_FIBER = 1
+else
+  INCLUDE_KONA_FIBER = 0
+endif
+
 flags.make: $(BUILDTREE_MAKE) ../shared_dirs.lst
 	@echo Creating $@ ...
 	$(QUIETLY) ( \
@@ -291,6 +297,7 @@ flags.make: $(BUILDTREE_MAKE) ../shared_dirs.lst
 	    echo "HOTSPOT_EXTRA_SYSDEFS\$$(HOTSPOT_EXTRA_SYSDEFS) = $(HOTSPOT_EXTRA_SYSDEFS)" && \
 	    echo "SYSDEFS += \$$(HOTSPOT_EXTRA_SYSDEFS)"; \
 	echo && echo "CFLAGS += -DINCLUDE_JFR=$(INCLUDE_JFR)"; \
+	    echo && echo "CFLAGS += -DINCLUDE_KONA_FIBER=$(INCLUDE_KONA_FIBER)"; \
 	echo; \
 	[ -n "$(SPEC)" ] && \
 	    echo "include $(SPEC)"; \
