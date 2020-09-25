@@ -800,6 +800,14 @@ void ConcurrentMark::reset() {
   set_concurrent_marking_in_progress();
 }
 
+void ConcurrentMark::humongous_object_eagerly_reclaimed(HeapRegion* r) {
+  assert(SafepointSynchronize::is_at_safepoint(), "May only be called at a safepoint.");
+
+  // Need to clear mark bit of the humongous object if already set and during a marking cycle.
+  if (_nextMarkBitMap->isMarked(r->bottom())) {
+    _nextMarkBitMap->clear(r->bottom());
+  }
+}
 
 void ConcurrentMark::reset_marking_state(bool clear_overflow) {
   _markStack.set_should_expand();
