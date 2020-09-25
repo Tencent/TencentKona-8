@@ -3701,21 +3701,22 @@ size_t G1CollectedHeap::cards_scanned() {
   return g1_rem_set()->cardsScanned();
 }
 
+bool G1CollectedHeap::is_potential_eager_reclaim_candidate(HeapRegion* r) const {
+  // We don't nominate objects with many remembered set entries, on
+  // the assumption that such objects are likely still live.
+  HeapRegionRemSet* rem_set = r->rem_set();
+
+  return G1EagerReclaimHumongousObjectsWithStaleRefs ?
+         rem_set->occupancy_less_or_equal_than(G1RSetSparseRegionEntries) :
+         G1EagerReclaimHumongousObjects && rem_set->is_empty();
+}
+
 class RegisterHumongousWithInCSetFastTestClosure : public HeapRegionClosure {
  private:
   size_t _total_humongous;
   size_t _candidate_humongous;
 
   DirtyCardQueue _dcq;
-
-  // We don't nominate objects with many remembered set entries, on
-  // the assumption that such objects are likely still live.
-  bool is_remset_small(HeapRegion* region) const {
-    HeapRegionRemSet* const rset = region->rem_set();
-    return G1EagerReclaimHumongousObjectsWithStaleRefs
-      ? rset->occupancy_less_or_equal_than(G1RSetSparseRegionEntries)
-      : rset->is_empty();
-  }
 
   bool is_typeArray_region(HeapRegion* region) const {
     return oop(region->bottom())->is_typeArray();
@@ -3760,7 +3761,8 @@ class RegisterHumongousWithInCSetFastTestClosure : public HeapRegionClosure {
     // important use case for eager reclaim, and this special handling
     // may reduce needed headroom.
 
-    return is_typeArray_region(region) && is_remset_small(region);
+    return is_typeArray_region(region) &&
+           heap->is_potential_eager_reclaim_candidate(region);
   }
 
  public:
@@ -6596,10 +6598,7 @@ class G1FreeHumongousRegionClosure : public HeapRegionClosure {
                              obj->is_typeArray()
                             );
     }
-    // Need to clear mark bit of the humongous object if already set.
-    if (next_bitmap->isMarked(r->bottom())) {
-      next_bitmap->clear(r->bottom());
-    }
+    g1h->concurrent_mark()->humongous_object_eagerly_reclaimed(r);
     _freed_bytes += r->used();
     r->set_containing_set(NULL);
     _humongous_regions_removed.increment(1u, r->capacity());

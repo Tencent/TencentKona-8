@@ -708,6 +708,9 @@ public:
   // Calculates the number of GC threads to be used in a concurrent phase.
   uint calc_parallel_marking_threads();
 
+  // Notification for eagerly reclaimed regions to clean up.
+  void humongous_object_eagerly_reclaimed(HeapRegion* r);
+
   // The following three are interaction between CM and
   // G1CollectedHeap
 
