@@ -95,6 +95,25 @@ class ThreadRootsTask : public GCTask {
 };
 
 //
+// ContBucketRootsTask
+//
+// This task scans the roots of a single continuation bucket. This task
+// enables scanning of continuation roots in parallel.
+//
+
+#if INCLUDE_KONA_FIBER
+class ContBucketRootsTask : public GCTask {
+ private:
+  int _bucket_index;
+ public:
+  ContBucketRootsTask(int bucket_index) { _bucket_index = bucket_index; }
+  char* name() { return (char *)"continuation-roots-task"; }
+
+  virtual void do_it(GCTaskManager* manager, uint which);
+};
+#endif
+
+//
 // StealTask
 //
 // This task is used to distribute work to idle threads.

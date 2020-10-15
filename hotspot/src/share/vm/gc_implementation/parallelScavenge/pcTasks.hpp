@@ -78,6 +78,17 @@ class ThreadRootsMarkingTask : public GCTask {
   virtual void do_it(GCTaskManager* manager, uint which);
 };
 
+#if INCLUDE_KONA_FIBER
+class ContBucketRootsMarkingTask : public GCTask {
+ private:
+  int _bucket_index;
+ public:
+  ContBucketRootsMarkingTask(int bucket_index) { _bucket_index = bucket_index; }
+  char* name() { return (char *)"continuation-roots-marking-task"; }
+
+  virtual void do_it(GCTaskManager* manager, uint which);
+};
+#endif
 
 //
 // MarkFromRootsTask
