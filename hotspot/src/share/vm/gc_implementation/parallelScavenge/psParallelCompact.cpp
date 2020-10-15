@@ -2386,6 +2386,11 @@ void PSParallelCompact::marking_phase(ParCompactionManager* cm,
     q->enqueue(new MarkFromRootsTask(MarkFromRootsTask::jni_handles));
     // We scan the thread roots in parallel
     Threads::create_thread_roots_marking_tasks(q);
+#if INCLUDE_KONA_FIBER
+    if (UseKonaFiber) {
+      ContBucket::create_cont_bucket_roots_marking_tasks(q);
+    }
+#endif
     q->enqueue(new MarkFromRootsTask(MarkFromRootsTask::object_synchronizer));
     q->enqueue(new MarkFromRootsTask(MarkFromRootsTask::flat_profiler));
     q->enqueue(new MarkFromRootsTask(MarkFromRootsTask::management));
@@ -2464,6 +2469,11 @@ void PSParallelCompact::adjust_roots() {
   JNIHandles::oops_do(adjust_pointer_closure());   // Global (strong) JNI handles
   CLDToOopClosure adjust_from_cld(adjust_pointer_closure());
   Threads::oops_do(adjust_pointer_closure(), &adjust_from_cld, NULL);
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    ContContainer::oops_do(adjust_pointer_closure(), &adjust_from_cld, NULL);
+  }
+#endif
   ObjectSynchronizer::oops_do(adjust_pointer_closure());
   FlatProfiler::oops_do(adjust_pointer_closure());
   Management::oops_do(adjust_pointer_closure());
