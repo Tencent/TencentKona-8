@@ -36,6 +36,11 @@
 #endif
 
 #include "services/threadService.hpp"
+#if INCLUDE_ALL_GCS
+#include "gc_implementation/concurrentMarkSweep/concurrentMarkSweepThread.hpp"
+#include "gc_implementation/g1/concurrentMarkThread.inline.hpp"
+#include "gc_implementation/parallelScavenge/pcTasks.hpp"
+#endif
 
 JavaThread* Coroutine::_main_thread = NULL;
 Method* Coroutine::_continuation_start = NULL;
@@ -44,6 +49,9 @@ ContBucket* ContContainer::_buckets= NULL;
 ContBucket::ContBucket() : _lock(Mutex::leaf, "ContBucket", false) {
   _head = NULL;
   _count = 0;
+
+  // This initial value ==> never claimed.
+  _oops_do_parity = 0;
 }
 
 void ContBucket::insert(Coroutine* cont) {
@@ -56,6 +64,38 @@ void ContBucket::remove(Coroutine* cont) {
   _count--;
   assert(_count >= 0, "illegal count");
 }
+
+// GC Support
+bool ContBucket::claim_oops_do_par_case(int strong_roots_parity) {
+  jint cont_bucket_parity = _oops_do_parity;
+  if (cont_bucket_parity != strong_roots_parity) {
+    jint res = Atomic::cmpxchg(strong_roots_parity, &_oops_do_parity, cont_bucket_parity);
+    if (res == cont_bucket_parity) {
+      return true;
+    } else {
+      guarantee(res == strong_roots_parity, "Or else what?");
+    }
+  }
+  assert(SharedHeap::heap()->workers()->active_workers() > 0,
+         "Should only fail when parallel.");
+  return false;
+}
+
+#if INCLUDE_ALL_GCS
+// Used by ParallelScavenge
+void ContBucket::create_cont_bucket_roots_tasks(GCTaskQueue* q) {
+  for (size_t i = 0; i < CONT_CONTAINER_SIZE; i++) {
+    q->enqueue(new ContBucketRootsTask(i));
+  }
+}
+
+// Used by Parallel Old
+void ContBucket::create_cont_bucket_roots_marking_tasks(GCTaskQueue* q) {
+  for (size_t i = 0; i < CONT_CONTAINER_SIZE; i++) {
+    q->enqueue(new ContBucketRootsMarkingTask(i));
+  }
+}
+#endif // INCLUDE_ALL_GCS
 
 #define ALL_BUCKET_CONTS(OPR)      \
   {                                \

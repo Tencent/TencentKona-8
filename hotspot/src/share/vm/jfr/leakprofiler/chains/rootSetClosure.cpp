@@ -82,6 +82,11 @@ void RootSetClosure<Delegate>::process() {
   ClassLoaderDataGraph::always_strong_cld_do(&cldt_closure);
   CodeBlobToOopClosure blobs(this, false);
   Threads::oops_do(this, NULL, &blobs); // XXX set CLDClosure to NULL
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    ContContainer::oops_do(this, NULL, &blobs);
+  }
+#endif
   ObjectSynchronizer::oops_do(this);
   Universe::oops_do(this);
   JNIHandles::oops_do(this);

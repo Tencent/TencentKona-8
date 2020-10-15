@@ -2835,6 +2835,29 @@ class G1RemarkThreadsClosure : public ThreadClosure {
   }
 };
 
+#if INCLUDE_KONA_FIBER
+class G1RemarkContsClosure {
+  G1CMOopClosure _cm_cl;
+  MarkingCodeBlobClosure _code_cl;
+  int _continuation_parity;
+  bool _is_par;
+
+ public:
+  G1RemarkContsClosure(G1CollectedHeap* g1h, CMTask* task, bool is_par) :
+    _cm_cl(g1h, g1h->concurrent_mark(), task),
+    _code_cl(&_cm_cl, !CodeBlobToOopClosure::FixRelocations),
+    _continuation_parity(SharedHeap::heap()->strong_roots_parity()), _is_par(is_par) {}
+
+  void do_continuation(ContBucket* bucket) {
+    assert(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
+    guarantee(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
+    if (bucket->claim_oops_do(_is_par, _continuation_parity)) {
+      bucket->nmethods_do(&_code_cl);
+    }
+  }
+};
+#endif
+
 class CMRemarkTask: public AbstractGangTask {
 private:
   ConcurrentMark* _cm;
@@ -2852,6 +2875,16 @@ public:
 
         G1RemarkThreadsClosure threads_f(G1CollectedHeap::heap(), task, !_is_serial);
         Threads::threads_do(&threads_f);
+
+#if INCLUDE_KONA_FIBER
+        if (UseKonaFiber) {
+          G1RemarkContsClosure continuations_f(G1CollectedHeap::heap(), task, !_is_serial);
+          for (size_t i = 0; i < CONT_CONTAINER_SIZE; i++) {
+            ContBucket* bucket = ContContainer::bucket(i);
+            continuations_f.do_continuation(bucket);
+          }
+        }
+#endif
       }
 
       do {

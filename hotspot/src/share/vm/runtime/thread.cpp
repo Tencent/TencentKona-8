@@ -2851,11 +2851,6 @@ void JavaThread::oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) 
       fst.current()->oops_do(f, cld_f, cf, fst.register_map());
     }
   }
-#if INCLUDE_KONA_FIBER
-  if (UseKonaFiber && this == Coroutine::main_thread()) {
-    ContContainer::oops_do(f, cld_f, cf);
-  }
-#endif
 
   // callee_target is never live across a gc point so NULL it here should
   // it still contain a methdOop.
@@ -4338,6 +4333,19 @@ void Threads::possibly_parallel_oops_do(OopClosure* f, CLDClosure* cld_f, CodeBl
   if (vmt->claim_oops_do(is_par, cp)) {
     vmt->oops_do(f, cld_f, cf);
   }
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    assert(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
+    guarantee(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
+
+    for (size_t i = 0; i < CONT_CONTAINER_SIZE; i++) {
+      ContBucket* bucket = ContContainer::bucket(i);
+      if (bucket->claim_oops_do(is_par, cp)) {
+        bucket->oops_do(f, cld_f, cf);
+      }
+    }
+  }
+#endif
 }
 
 #if INCLUDE_ALL_GCS
