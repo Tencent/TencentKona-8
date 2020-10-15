@@ -60,6 +60,12 @@ private:
   Mutex      _lock;
   Coroutine* _head;
   int        _count;
+
+  // The parity of the last strong_roots iteration in which this ContBucket was
+  // claimed as a task.
+  jint _oops_do_parity;
+  bool claim_oops_do_par_case(int collection_parity);
+
 public:
   Mutex* lock() { return &_lock; }
   Coroutine* head() const { return _head; }
@@ -67,6 +73,16 @@ public:
   void insert(Coroutine* cont);
   void remove(Coroutine* cont);
   ContBucket();
+  bool claim_oops_do(bool is_par, int collection_parity) {
+    if (!is_par) {
+      _oops_do_parity = collection_parity;
+      return true;
+    } else {
+      return claim_oops_do_par_case(collection_parity);
+    }
+  }
+  static void create_cont_bucket_roots_tasks(GCTaskQueue* q);
+  static void create_cont_bucket_roots_marking_tasks(GCTaskQueue* q);
 
   void frames_do(void f(frame*, const RegisterMap*));
   void oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf);
