@@ -1451,6 +1451,8 @@ class Thread implements Runnable {
 
     /**
      * Tests if this thread is a daemon thread.
+     * Note: if this thread is a virtual thread,
+     *       it will always return true.
      *
      * @return  <code>true</code> if this thread is a daemon thread;
      *          <code>false</code> otherwise.
@@ -2207,7 +2209,11 @@ class Thread implements Runnable {
     }
 
     /**
+     * Tests if this thread is interrupted and clean interrupt flag
+     * of thread.
      *
+     * @return  {@code true} if thread is interrupted;
+     *          {@code false} if thread is not interrupted.
      */
     boolean getAndClearInterrupt() {
         return isInterrupted(true);
