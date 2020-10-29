@@ -21,11 +21,9 @@
  */
 package com.tencent.crypto.provider;
 
-import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 
 import static com.tencent.crypto.provider.CipherCore.CBC_MODE;
-import static com.tencent.crypto.provider.CipherCore.ECB_MODE;
 
 public class CbcSM4Cipher extends AlgoCipher {
 

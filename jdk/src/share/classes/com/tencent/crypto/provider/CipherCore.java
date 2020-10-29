@@ -662,11 +662,6 @@ final class CipherCore {
                 // nothing to do .
                 return 0;
             }
-        } else {
-            if (len % unitBytes != 0) {
-                updateFailWithIllegalBlockSize = true;
-                return 0;
-            }
         }
 
         len -= minBytes;
@@ -716,6 +711,7 @@ final class CipherCore {
                     }
                     bufferd -= len;
                     if (bufferd != 0) {
+                        // reset buffer
                         System.arraycopy(buffer, len, buffer, 0, bufferd);
                     }
                     if (out != null) {
@@ -757,7 +753,6 @@ final class CipherCore {
                             outLen = out.length;
                             Arrays.fill(buffer, (byte) 0x00);
                         }
-                        outputOffset = Math.addExact(outputOffset, outLen);
                         bufferd = 0;
                         if (out != null) {
                             // check output buffer capacity only for encrypting mode.
@@ -769,8 +764,10 @@ final class CipherCore {
                                         + "(at least) " + outLen
                                         + " bytes long");
                             }
+                            int outLength =  Math.min(out.length, output.length - outputOffset);
+                            System.arraycopy(out, 0, output, outputOffset, outLength);
+                            outputOffset = Math.addExact(outputOffset, outLen);
                         }
-
                     }
                     if (inputConsumed > 0) { // still has input to process
                         byte[] out1;
@@ -954,6 +951,13 @@ final class CipherCore {
             // no work to do.
             return null;
         }
+
+        if (padding == SM4Padding.NoPadding) {
+            if (len % unitBytes != 0) {
+                throw new IllegalBlockSizeException("Illegal Block Size");
+            }
+        }
+
         // calculate padding length
         int totalLen = Math.addExact(len, cipher.getBufferedLength());
         int paddingLen = 0;
