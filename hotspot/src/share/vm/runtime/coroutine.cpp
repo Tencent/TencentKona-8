@@ -85,14 +85,14 @@ bool ContBucket::claim_oops_do_par_case(int strong_roots_parity) {
 // Used by ParallelScavenge
 void ContBucket::create_cont_bucket_roots_tasks(GCTaskQueue* q) {
   for (size_t i = 0; i < CONT_CONTAINER_SIZE; i++) {
-    q->enqueue(new ContBucketRootsTask(i));
+    q->enqueue(new ContBucketRootsTask((int)i));
   }
 }
 
 // Used by Parallel Old
 void ContBucket::create_cont_bucket_roots_marking_tasks(GCTaskQueue* q) {
   for (size_t i = 0; i < CONT_CONTAINER_SIZE; i++) {
-    q->enqueue(new ContBucketRootsMarkingTask(i));
+    q->enqueue(new ContBucketRootsMarkingTask((int)i));
   }
 }
 #endif // INCLUDE_ALL_GCS
