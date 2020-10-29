@@ -22,21 +22,119 @@
 
 package com.tencent.crypto.provider;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.rmi.server.ExportException;
+
 public class SMUtils {
     public static final String LIB_NAME = "TencentSM";
-    private static boolean isLoadSuccess = false;
+    private static volatile boolean isLoadSuccess = false;
     private volatile static SMUtils mInstance;
+    private static final String OS = System.getProperty("os.name").toLowerCase();
+    private static final String PT = System.getProperty("os.arch").toLowerCase();
 
     static {
-        try {
-            System.loadLibrary(LIB_NAME);
-            isLoadSuccess = true;
-        } catch (Exception e) {
+        loadNativeLibs();
+    }
+
+    private static String getFileFromJar(String name) throws Exception {
+        InputStream in = SMUtils.class.getClassLoader().getResourceAsStream(name);
+        byte[] buffer = new byte[16 *1024];
+        int read  = -1;
+        File temp = File.createTempFile(name,"");
+        temp.deleteOnExit();
+        FileOutputStream fos = new FileOutputStream(temp);
+        while((read = in.read(buffer)) != -1) {
+            fos.write(buffer, 0, read);
+        }
+        fos.flush();
+        fos.close();
+        in.close();
+        return temp.getAbsolutePath();
+    }
+
+    private static void loadJarDll(String name) throws Exception {
+        String nativeLibPath = getFileFromJar(name);
+        System.load(nativeLibPath);
+    }
+
+    private static void loadNativeLibs() {
+        if (isLoadSuccess) {
+            return;
+        }
+        // first try to find native lib in jar
+        String nPath = getNativeLibPath("lib" + LIB_NAME);
+        if (nPath == null) {
             isLoadSuccess = false;
+            return;
+        }
+        try {
+            loadJarDll(nPath);
+            isLoadSuccess = true;
+        } catch (final Throwable error) {
+            // try to load from system library path
+            try {
+                System.loadLibrary(LIB_NAME);
+                isLoadSuccess = true;
+            } catch (Exception e) {
+                isLoadSuccess = false;
+            }
         }
     }
 
+    private static boolean isMac() {
+        return (OS.indexOf("mac") >= 0 || OS.indexOf("Mac") >= 0);
+    }
+
+    private static boolean isUnix() {
+        return (OS.indexOf("nix") >= 0 || OS.indexOf("nux") >= 0 || OS.indexOf("aix") >= 0);
+    }
+
+    private static boolean isWindows() {
+        return (OS.indexOf("indows") >= 0);
+    }
+
+    private static boolean isAarch64() { return (PT.indexOf("aarch64") >= 0 || PT.indexOf("AARCH64") >= 0); }
+    private static boolean isAmd64() { return (PT.indexOf("amd64") >= 0 || PT.indexOf("AMD64") >= 0); }
+    private static boolean isX86_64() { return (PT.indexOf("x86_64") >= 0 || PT.indexOf("X86_64") >= 0); }
+
+    static String getNativeLibPath(String libName) {
+        final String parentFolder = "native_libs/";
+        String suffix = "";
+        String platform_name = "";
+        if (libName.isEmpty()) {
+            return null;
+        }
+
+        if (isAmd64() || isX86_64()) {
+            if (isMac()) {
+                platform_name = "macos_x86_64";
+                suffix = ".dylib";
+            } else if (isUnix()) {
+                platform_name = "linux_x86_64";
+                suffix = ".so";
+            } else if (isWindows()) {
+                platform_name = "windows_x86_64";
+                suffix = ".dll";
+            }
+        } else if (isAarch64()) {
+            // only support linux
+            if (isUnix()) {
+                platform_name = "linux_aarch64";
+                suffix = ".so";
+            }
+        }
+
+        if (suffix.isEmpty() && platform_name.isEmpty()) {
+            return null;
+        }
+
+        return parentFolder + platform_name + "/" + libName + suffix;
+    }
+
     private SMUtils() { }
+
     public static SMUtils getInstance() {
         if (mInstance == null) {
             synchronized (SMUtils.class) {

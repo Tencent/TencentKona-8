@@ -24,9 +24,7 @@ package com.tencent.crypto.provider;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 
-import static com.tencent.crypto.provider.CipherCore.CTR_MODE;
 import static com.tencent.crypto.provider.CipherCore.ECB_MODE;
-import static com.tencent.crypto.provider.SM4Constants.SM4_BLOCK_SIZE;
 
 public class EcbSM4Cipher extends AlgoCipher {
 

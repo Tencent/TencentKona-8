@@ -25,7 +25,6 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 
 import static com.tencent.crypto.provider.CipherCore.CTR_MODE;
-import static com.tencent.crypto.provider.CipherCore.ECB_MODE;
 
 public class CtrSM4Cipher extends AlgoCipher {
     public CtrSM4Cipher(SymmetricCipher rawImpl) {

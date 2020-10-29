@@ -22,10 +22,7 @@
 
 package com.tencent.crypto.provider;
 
-import java.security.AccessController;
-import java.security.NoSuchAlgorithmException;
-import java.security.Provider;
-import java.security.SecureRandom;
+import java.security.*;
 
 /**
  * The "SM  Cryptographic Service" Provider.
@@ -147,5 +144,9 @@ public final class SMCSProvider extends Provider {
             instance = new SMCSProvider();
         }
         return instance;
+    }
+
+    public static void install() {
+        Security.addProvider(getInstance());
     }
 }
