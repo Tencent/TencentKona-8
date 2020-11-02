@@ -29,6 +29,8 @@
 #include "gc_implementation/g1/g1CollectedHeap.inline.hpp"
 #include "gc_implementation/g1/g1ConcurrentMarkObjArrayProcessor.inline.hpp"
 #include "gc_implementation/g1/g1RegionMarkStatsCache.inline.hpp"
+#include "gc_implementation/g1/heapRegionRemSet.hpp"
+#include "gc_implementation/shared/suspendibleThreadSet.hpp"
 
 // Utility routine to set an exclusive range of cards on the given
 // card liveness bitmap
@@ -134,6 +136,19 @@ inline void ConcurrentMark::count_object(oop obj,
                                          BitMap* task_card_bm) {
   MemRegion mr((HeapWord*)obj, obj->size());
   count_region(mr, hr, marked_bytes_array, task_card_bm);
+}
+
+// We take a break if someone is trying to stop the world.
+inline bool ConcurrentMark::do_yield_check(uint worker_id) {
+  if (SuspendibleThreadSet::should_yield()) {
+    if (worker_id == 0) {
+      _g1h->g1_policy()->record_concurrent_pause();
+    }
+    SuspendibleThreadSet::yield();
+    return true;
+  } else {
+    return false;
+  }
 }
 
 // Attempts to mark the given object and, if successful, counts
@@ -432,6 +447,25 @@ inline void ConcurrentMark::grayRoot(oop obj, size_t word_size,
         add_to_liveness(worker_id, obj, word_size == 0 ? obj->size() : word_size);
       }
     }
+  }
+}
+
+inline HeapWord* ConcurrentMark::top_at_rebuild_start(uint region) const {
+  assert(region < _g1h->max_regions(), err_msg("Tried to access TARS for region %u out of bounds", region));
+  return _top_at_rebuild_starts[region];
+}
+
+inline void ConcurrentMark::update_top_at_rebuild_start(HeapRegion* r) {
+  uint const region = r->hrm_index();
+  assert(region < _g1h->max_regions(), err_msg("Tried to access TARS for region %u out of bounds", region));
+  assert(_top_at_rebuild_starts[region] == NULL,
+         err_msg("TARS for region %u has already been set to " PTR_FORMAT " should be NULL",
+                 region, p2i(_top_at_rebuild_starts[region])));
+  G1RemSetTrackingPolicy* tracker = _g1h->g1_policy()->remset_tracker();
+  if (tracker->needs_scan_for_rebuild(r)) {
+    _top_at_rebuild_starts[region] = r->top();
+  } else {
+    // Leave TARS at NULL.
   }
 }
 

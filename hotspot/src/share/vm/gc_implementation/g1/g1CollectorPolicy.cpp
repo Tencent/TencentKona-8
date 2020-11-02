@@ -113,6 +113,7 @@ G1CollectorPolicy::G1CollectorPolicy() :
   _pause_time_target_ms((double) MaxGCPauseMillis),
 
   _gcs_are_young(true),
+  _mixed_gc_pending(false),
 
   _during_marking(false),
   _in_marking_window(false),
@@ -166,7 +167,7 @@ G1CollectorPolicy::G1CollectorPolicy() :
   _recorded_survivor_head(NULL),
   _recorded_survivor_tail(NULL),
   _survivors_age_table(true),
-
+  _remset_tracker(),
   _gc_overhead_perc(0.0) {
 
   // Set up the region size and associated fields. Given that the
@@ -910,6 +911,24 @@ void G1CollectorPolicy::record_concurrent_mark_cleanup_start() {
   _mark_cleanup_start_sec = os::elapsedTime();
 }
 
+class G1ClearCollectionSetCandidateRemSets : public HeapRegionClosure {
+  bool doHeapRegion(HeapRegion* r) {
+    r->rem_set()->clear_locked(true /* only_cardset */);
+    return false;
+  }
+};
+
+void G1CollectorPolicy::clear_collection_set_candidates() {
+  // Clear remembered sets of remaining candidate regions and the actual candidate
+  // list.
+  if (G1TraceRebuildRemSet) {
+    gclog_or_tty->print_cr("clear_collection_set_candidates");
+  }
+  G1ClearCollectionSetCandidateRemSets cl;
+  _collectionSetChooser->iterate(&cl);
+  _collectionSetChooser->clear();
+}
+
 void G1CollectorPolicy::record_concurrent_mark_cleanup_completed() {
   _last_young_gc = true;
   _in_marking_window = false;
@@ -1088,6 +1107,9 @@ void G1CollectorPolicy::record_collection_pause_end(double pause_time_ms, Evacua
     if (!next_gc_should_be_mixed("continue mixed GCs",
                                  "do not continue mixed GCs")) {
       set_gcs_are_young(true);
+      if (G1RebuildRemSet) {
+        clear_collection_set_candidates();
+      }
     }
   }
 
@@ -1605,6 +1627,10 @@ public:
       // before we fill them up).
       if (_cset_updater.should_add(r) && !_g1h->is_old_gc_alloc_region(r)) {
         _cset_updater.add_region(r);
+      } else if (G1RebuildRemSet && r->is_old()) {
+        // Can clean out the remembered sets of all regions that we did not choose but
+        // we created the remembered set for.
+        r->rem_set()->clear(true);
       }
     }
     return false;
@@ -1670,6 +1696,14 @@ G1CollectorPolicy::record_concurrent_mark_cleanup_end(int no_of_gc_threads) {
   }
 
   _collectionSetChooser->sort_regions();
+
+  if (G1RebuildRemSet) {
+    bool mixed_gc_pending = next_gc_should_be_mixed("request mixed gcs", "request young-only gcs");
+    if (!mixed_gc_pending) {
+      clear_collection_set_candidates();
+    }
+    set_mixed_gc_pending(mixed_gc_pending);
+  }
 
   double end_sec = os::elapsedTime();
   double elapsed_time_ms = (end_sec - _mark_cleanup_start_sec) * 1000.0;
