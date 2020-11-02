@@ -26,6 +26,7 @@
 #define SHARE_VM_GC_IMPLEMENTATION_G1_G1REMSET_HPP
 
 #include "gc_implementation/g1/g1RemSetSummary.hpp"
+#include "gc_implementation/g1/g1OopClosures.hpp"
 
 // A G1RemSet provides ways of iterating over pointers into a selected
 // collection set.
@@ -34,6 +35,7 @@ class G1CollectedHeap;
 class CardTableModRefBarrierSet;
 class ConcurrentG1Refine;
 class G1ParPushHeapRSClosure;
+class CMBitMap;
 
 // A G1RemSet in which each heap region has a rem set that records the
 // external heap references into it.  Uses a mod ref bs to track updates,
@@ -154,6 +156,10 @@ public:
   size_t conc_refine_cards() const {
     return _conc_refine_cards;
   }
+
+  // Rebuilds the remembered set by scanning from bottom to TARS for all regions
+  // using the given work gang.
+  void rebuild_rem_set(ConcurrentMark* cm, FlexibleWorkGang* workers, uint worker_id_offset);
 };
 
 class CountNonCleanMemRegionClosure: public MemRegionClosure {

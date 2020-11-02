@@ -170,6 +170,21 @@ void ConcurrentMarkThread::run() {
         }
       } while (cm()->restart_for_overflow());
 
+      if (!cm()->has_aborted() && G1RebuildRemSet) {
+        double rebuild_start_time = os::elapsedTime();
+        if (G1Log::fine()) {
+          gclog_or_tty->gclog_stamp(cm()->concurrent_gc_id());
+          gclog_or_tty->print_cr("[GC concurrent-remset-rebuild-start]");
+        }
+        cm()->rebuild_rem_set_concurrently();
+        double rebuild_end_time = os::elapsedTime();
+        if (G1Log::fine()) {
+          gclog_or_tty->gclog_stamp(cm()->concurrent_gc_id());
+          gclog_or_tty->print_cr("[GC concurrent-remset-rebuild-end, %1.7lf secs]",
+                                 rebuild_end_time - rebuild_start_time);
+        }
+      }
+
       double end_time = os::elapsedVTime();
       // Update the total virtual time before doing this, since it will try
       // to measure it to get the vtime for this marking.  We purposely

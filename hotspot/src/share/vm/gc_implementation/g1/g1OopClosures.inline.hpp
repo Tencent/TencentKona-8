@@ -223,9 +223,35 @@ inline void G1UpdateRSOrPushRefOopClosure::do_oop_nv(T* p) {
     // the reference doesn't point into the collection set. Either way
     // we add the reference directly to the RSet of the region containing
     // the referenced object.
-    assert(to->rem_set() != NULL, "Need per-region 'into' remsets.");
-    to->rem_set()->add_reference(p, _worker_i);
+    if (!G1RebuildRemSet) {
+      to->rem_set()->add_reference(p, _worker_i);
+    } else {
+      HeapRegionRemSet* to_rem_set = _g1->heap_region_containing(obj)->rem_set();
+      assert(to->rem_set() != NULL, "Need per-region 'into' remsets.");
+      if (to_rem_set->is_tracked()) {
+        to_rem_set->add_reference(p, _worker_i);
+      }
+    }
   }
+}
+
+template <class T> void G1RebuildRemSetClosure::do_oop_nv(T* p) {
+  T heap_oop = oopDesc::load_heap_oop(p);
+  if (oopDesc::is_null(heap_oop)) {
+    return;
+  }
+  oop const obj = oopDesc::decode_heap_oop_not_null(heap_oop);
+  if (obj == NULL) {
+    return;
+  }
+
+  if (HeapRegion::is_in_same_region(p, obj)) {
+    return;
+  }
+
+  HeapRegion* to = _g1->heap_region_containing(obj);
+  HeapRegionRemSet* rem_set = to->rem_set();
+  rem_set->add_reference(p, _worker_id);
 }
 
 #endif // SHARE_VM_GC_IMPLEMENTATION_G1_G1OOPCLOSURES_INLINE_HPP

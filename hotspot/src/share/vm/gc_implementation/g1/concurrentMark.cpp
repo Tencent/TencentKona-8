@@ -553,6 +553,7 @@ ConcurrentMark::ConcurrentMark(G1CollectedHeap* g1h, G1RegionToSpaceMapper* prev
   _markStack(this),
   // _finger set in set_non_marking_state
 
+  _worker_id_offset(DirtyCardQueueSet::num_par_ids() + G1ConcRefinementThreads),
   _max_worker_id(MAX2((uint)ParallelGCThreads, 1U)),
   // _active_tasks set in set_non_marking_state
   // _tasks set inside the constructor
@@ -735,6 +736,10 @@ ConcurrentMark::ConcurrentMark(G1CollectedHeap* g1h, G1RegionToSpaceMapper* prev
   _count_card_bitmaps = NEW_C_HEAP_ARRAY(BitMap,  _max_worker_id, mtGC);
   _count_marked_bytes = NEW_C_HEAP_ARRAY(size_t*, _max_worker_id, mtGC);
 
+  if (G1RebuildRemSet) {
+    _top_at_rebuild_starts = NEW_C_HEAP_ARRAY(HeapWord*, _g1h->max_regions(), mtGC);
+  }
+
   BitMap::idx_t card_bm_size = _card_bm.size();
 
   // so that the assertion in MarkingTaskQueue::task_queue doesn't fail
@@ -801,6 +806,9 @@ void ConcurrentMark::reset() {
 
   uint max_regions = _g1h->max_regions();
   for (uint i = 0; i < max_regions; i++) {
+    if (G1RebuildRemSet) {
+      _top_at_rebuild_starts[i] = NULL;
+    }
     _region_mark_stats[i].clear();
   }
 
@@ -812,6 +820,9 @@ void ConcurrentMark::reset() {
 void ConcurrentMark::clear_statistics_in_region(uint region_idx) {
   for (uint j = 0; j < _max_worker_id; ++j) {
     _tasks[j]->clear_mark_stats_cache(region_idx);
+  }
+  if (G1RebuildRemSet) {
+    _top_at_rebuild_starts[region_idx] = NULL;
   }
   _region_mark_stats[region_idx].clear();
 }
@@ -1306,6 +1317,52 @@ void ConcurrentMark::markFromRoots() {
   print_stats();
 }
 
+class G1UpdateRemSetTrackingBeforeRebuild : public HeapRegionClosure {
+  G1CollectedHeap* _g1h;
+  ConcurrentMark* _cm;
+
+  uint _num_regions_selected_for_rebuild;  // The number of regions actually selected for rebuild.
+
+  void update_remset_before_rebuild(HeapRegion * hr) {
+    G1RemSetTrackingPolicy* tracking_policy = _g1h->g1_policy()->remset_tracker();
+
+    bool selected_for_rebuild;
+    if (hr->isHumongous()) {
+      bool const is_live = _cm->liveness(hr->humongous_start_region()->hrm_index()) > 0;
+      selected_for_rebuild = tracking_policy->update_humongous_before_rebuild(hr, is_live);
+    } else {
+      size_t const live_bytes = _cm->liveness(hr->hrm_index());
+      selected_for_rebuild = tracking_policy->update_before_rebuild(hr, live_bytes);
+    }
+    if (selected_for_rebuild) {
+      _num_regions_selected_for_rebuild++;
+    }
+    _cm->update_top_at_rebuild_start(hr);
+  }
+
+public:
+  G1UpdateRemSetTrackingBeforeRebuild(G1CollectedHeap* g1h, ConcurrentMark* cm) :
+    _g1h(g1h), _cm(cm), _num_regions_selected_for_rebuild(0) { }
+
+  bool doHeapRegion(HeapRegion* r) {
+    update_remset_before_rebuild(r);
+    return false;
+  }
+
+  uint num_selected_for_rebuild() const { return _num_regions_selected_for_rebuild; }
+};
+
+class G1UpdateRemSetTrackingAfterRebuild : public HeapRegionClosure {
+  G1CollectedHeap* _g1h;
+public:
+  G1UpdateRemSetTrackingAfterRebuild(G1CollectedHeap* g1h) : _g1h(g1h) { }
+
+  bool doHeapRegion(HeapRegion* r) {
+    _g1h->g1_policy()->remset_tracker()->update_after_rebuild(r);
+    return false;
+  }
+};
+
 void ConcurrentMark::checkpointRootsFinal(bool clear_all_soft_refs) {
   // world is stopped at this checkpoint
   assert(SafepointSynchronize::is_at_safepoint(),
@@ -1371,6 +1428,15 @@ void ConcurrentMark::checkpointRootsFinal(bool clear_all_soft_refs) {
                                        true /* expected_active */);
 
     flush_all_task_caches();
+
+    if (G1RebuildRemSet){
+      G1UpdateRemSetTrackingBeforeRebuild cl(_g1h, this);
+      g1h->heap_region_iterate(&cl);
+      if (G1TraceRebuildRemSet) {
+        gclog_or_tty->print_cr("Remembered Set Tracking update regions total %u, selected %u",
+                                _g1h->num_regions(), cl.num_selected_for_rebuild());
+      }
+    }
 
     if (VerifyDuringGC) {
       HandleMark hm;  // handle scope
@@ -2036,6 +2102,10 @@ void ConcurrentMark::cleanup() {
   double start = os::elapsedTime();
 
   HeapRegionRemSet::reset_for_cleanup_tasks();
+  if (G1RebuildRemSet) {
+    G1UpdateRemSetTrackingAfterRebuild cl(_g1h);
+    g1h->heap_region_iterate(&cl);
+  }
 
   uint n_workers;
 
@@ -2130,7 +2200,7 @@ void ConcurrentMark::cleanup() {
 
   // call below, since it affects the metric by which we sort the heap
   // regions.
-  if (G1ScrubRemSets) {
+  if (G1ScrubRemSets && !G1RebuildRemSet) {
     double rs_scrub_start = os::elapsedTime();
     G1ParScrubRemSetTask g1_par_scrub_rs_task(g1h, &_region_bm, &_card_bm);
     if (G1CollectedHeap::use_parallel_gc_threads()) {
@@ -3427,6 +3497,11 @@ void ConcurrentMark::clear_all_count_data() {
   }
 }
 
+void ConcurrentMark::rebuild_rem_set_concurrently() {
+  assert(G1RebuildRemSet, "pre-condition");
+  _g1h->g1_rem_set()->rebuild_rem_set(this, _parallel_workers, _worker_id_offset);
+}
+
 void ConcurrentMark::print_stats() {
   if (verbose_stats()) {
     gclog_or_tty->print_cr("---------------------------------------------------------------------");
@@ -3508,7 +3583,7 @@ void ConcurrentMark::print_summary_info() {
                          (_cleanup_times.num() > 0 ? _total_counting_time * 1000.0 /
                           (double)_cleanup_times.num()
                          : 0.0));
-  if (G1ScrubRemSets) {
+  if (G1ScrubRemSets && !G1RebuildRemSet) {
     gclog_or_tty->print_cr("    RS scrub total time = %8.2f s (avg = %8.2f ms).",
                            _total_rs_scrub_time,
                            (_cleanup_times.num() > 0 ? _total_rs_scrub_time * 1000.0 /
@@ -3535,19 +3610,6 @@ void ConcurrentMark::print_on_error(outputStream* st) const {
       p2i(_prevMarkBitMap), p2i(_nextMarkBitMap));
   _prevMarkBitMap->print_on_error(st, " Prev Bits: ");
   _nextMarkBitMap->print_on_error(st, " Next Bits: ");
-}
-
-// We take a break if someone is trying to stop the world.
-bool ConcurrentMark::do_yield_check(uint worker_id) {
-  if (SuspendibleThreadSet::should_yield()) {
-    if (worker_id == 0) {
-      _g1h->g1_policy()->record_concurrent_pause();
-    }
-    SuspendibleThreadSet::yield();
-    return true;
-  } else {
-    return false;
-  }
 }
 
 #ifndef PRODUCT
@@ -4651,7 +4713,7 @@ void CMTask::do_marking_step(double time_target_ms,
         if (_cm->concurrent() && _worker_id == 0) {
           // Worker 0 is responsible for clearing the global data structures because
           // of an overflow. During STW we should not clear the overflow flag (in
-          // G1ConcurrentMark::reset_marking_state()) since we rely on it being true when we exit
+          // ConcurrentMark::reset_marking_state()) since we rely on it being true when we exit
           // method to abort the pause and restart concurrent marking.
           _cm->reset_marking_state();
           if (G1Log::fine()) {
