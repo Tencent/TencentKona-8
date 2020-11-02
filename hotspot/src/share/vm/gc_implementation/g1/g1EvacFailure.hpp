@@ -228,6 +228,10 @@ public:
 
         hr->rem_set()->clean_strong_code_roots(hr);
 
+        if (G1RebuildRemSet) {
+          hr->rem_set()->clear_locked(true);
+        }
+
         hr->note_self_forwarding_removal_end(during_initial_mark,
                                              during_conc_mark,
                                              rspc.marked_bytes());

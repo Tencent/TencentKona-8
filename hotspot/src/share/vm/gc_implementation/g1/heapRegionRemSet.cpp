@@ -38,6 +38,8 @@
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
+const char* HeapRegionRemSet::_state_strings[] =  {"Untracked", "Updating", "Complete"};
+
 class PerRegionTable: public CHeapObj<mtGC> {
   friend class OtherRegionsTable;
   friend class HeapRegionRemSetIterator;
@@ -639,7 +641,6 @@ PerRegionTable* OtherRegionsTable::delete_region_table() {
   return max;
 }
 
-
 // At present, this must be called stop-world single-threaded.
 void OtherRegionsTable::scrub(CardTableModRefBS* ctbs,
                               BitMap* region_bm, BitMap* card_bm) {
@@ -858,7 +859,11 @@ OtherRegionsTable::do_cleanup_work(HRRSCleanupTask* hrrs_cleanup_task) {
 // This can be done by either mutator threads together with the
 // concurrent refinement threads or GC threads.
 uint HeapRegionRemSet::num_par_rem_sets() {
-  return MAX2(DirtyCardQueueSet::num_par_ids() + ConcurrentG1Refine::thread_num(), (uint)ParallelGCThreads);
+  if (!G1RebuildRemSet) {
+    return MAX2(DirtyCardQueueSet::num_par_ids() + ConcurrentG1Refine::thread_num(), (uint)ParallelGCThreads);
+  } else {
+    return DirtyCardQueueSet::num_par_ids() + ConcurrentG1Refine::thread_num() + MAX2(ConcGCThreads, ParallelGCThreads);
+  }
 }
 
 HeapRegionRemSet::HeapRegionRemSet(G1BlockOffsetSharedArray* bosa,
@@ -923,16 +928,21 @@ void HeapRegionRemSet::cleanup() {
   SparsePRT::cleanup_all();
 }
 
-void HeapRegionRemSet::clear() {
+void HeapRegionRemSet::clear(bool only_cardset) {
   MutexLockerEx x(&_m, Mutex::_no_safepoint_check_flag);
-  clear_locked();
+  clear_locked(only_cardset);
 }
 
-void HeapRegionRemSet::clear_locked() {
-  _code_roots.clear();
+void HeapRegionRemSet::clear_locked(bool only_cardset) {
+  if (!only_cardset) {
+    _code_roots.clear();
+  }
   _other_regions.clear();
   assert(occupied_locked() == 0, "Should be clear.");
   reset_for_par_iteration();
+  if (G1RebuildRemSet) {
+    set_state_empty();
+  }
 }
 
 void HeapRegionRemSet::reset_for_par_iteration() {

@@ -31,6 +31,7 @@
 #include "gc_implementation/g1/g1CollectorPolicy.hpp"
 #include "gc_implementation/g1/g1OopClosures.hpp"
 #include "gc_implementation/g1/g1RemSet.hpp"
+#include "gc_implementation/g1/heapRegionRemSet.hpp"
 #include "gc_implementation/shared/ageTable.hpp"
 #include "memory/allocation.hpp"
 #include "utilities/ticks.hpp"
@@ -111,7 +112,11 @@ class G1ParScanThreadState : public CHeapObj<mtGC> {
   template <class T> void update_rs(HeapRegion* from, T* p, int tid) {
     // If the new value of the field points to the same region or
     // is the to-space, we don't need to include it in the Rset updates.
-    if (!from->is_in_reserved(oopDesc::load_decode_heap_oop(p)) && !from->is_survivor()) {
+    oop o = oopDesc::load_decode_heap_oop(p);
+    if (!from->is_in_reserved(o) && !from->is_survivor()) {
+      if (G1RebuildRemSet && !_g1h->heap_region_containing((HeapWord*)o)->rem_set()->is_tracked()) {
+        return;
+      }
       size_t card_index = ctbs()->index_for(p);
       // If the card hasn't been added to the buffer, do it.
       if (ctbs()->mark_card_deferred(card_index)) {

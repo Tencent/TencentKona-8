@@ -28,6 +28,7 @@
 #include "gc_implementation/g1/collectionSetChooser.hpp"
 #include "gc_implementation/g1/g1Allocator.hpp"
 #include "gc_implementation/g1/g1MMUTracker.hpp"
+#include "gc_implementation/g1/g1RemSetTrackingPolicy.hpp"
 #include "memory/collectorPolicy.hpp"
 
 // A G1CollectorPolicy makes policy decisions that determine the
@@ -183,6 +184,8 @@ private:
 
   CollectionSetChooser* _collectionSetChooser;
 
+  G1RemSetTrackingPolicy _remset_tracker;
+
   double _full_collection_start_sec;
   uint   _cur_collection_pause_used_regions_at_start;
 
@@ -212,6 +215,9 @@ private:
   bool                  _during_marking;
   bool                  _in_marking_window;
   bool                  _in_marking_window_im;
+
+  // Are we going into a mixed gc phase.
+  bool _mixed_gc_pending;
 
   SurvRateGroup*        _short_lived_surv_rate_group;
   SurvRateGroup*        _survivor_surv_rate_group;
@@ -302,6 +308,11 @@ private:
 
 public:
   // Accessors
+  G1RemSetTrackingPolicy* remset_tracker() { return &_remset_tracker; }
+
+  bool mixed_gc_pending() const { return _mixed_gc_pending; }
+
+  void set_mixed_gc_pending(bool v) { _mixed_gc_pending = v; }
 
   void set_region_eden(HeapRegion* hr) {
     hr->set_eden();
@@ -490,6 +501,7 @@ private:
   volatile size_t _collection_set_cur_length;
   size_t _collection_set_max_length;
 
+  void clear_collection_set_candidates();
   // The number of bytes in the collection set before the pause. Set from
   // the incrementally built collection set at the start of an evacuation
   // pause, and incremented in finalize_cset() when adding old regions

@@ -219,4 +219,18 @@ public:
   virtual void do_oop(oop* p)       { do_oop_nv(p); }
 };
 
+class G1RebuildRemSetClosure : public ExtendedOopClosure {
+  G1CollectedHeap* _g1;
+  uint _worker_id;
+public:
+  G1RebuildRemSetClosure(G1CollectedHeap* g1, uint worker_id) : _g1(g1), _worker_id(worker_id) {
+  }
+
+  template <class T> void do_oop_nv(T* p);
+  virtual void do_oop(oop* p)       { do_oop_nv(p); }
+  virtual void do_oop(narrowOop* p) { do_oop_nv(p); }
+
+  bool apply_to_weak_ref_discovered_field() { return true; }
+};
+
 #endif // SHARE_VM_GC_IMPLEMENTATION_G1_G1OOPCLOSURES_HPP
