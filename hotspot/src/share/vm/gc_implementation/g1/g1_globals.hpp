@@ -339,7 +339,17 @@
           "Verify the code root lists attached to each heap region.")       \
                                                                             \
   develop(bool, G1VerifyBitmaps, false,                                     \
-          "Verifies the consistency of the marking bitmaps")
+          "Verifies the consistency of the marking bitmaps")                \
+                                                                            \
+  product(bool, G1RebuildRemSet, false,                                     \
+          "Enable G1 Concurrent Remembered Set Rebuild")                    \
+                                                                            \
+  diagnostic(bool, G1TraceRebuildRemSet, false,                             \
+          "Trace remember set rebuilding logs")                             \
+                                                                            \
+  experimental(size_t, G1RebuildRemSetChunkSize, 256 * K,                   \
+          "Chunk size used for rebuilding the remembered set.")             \
+
 
 G1_FLAGS(DECLARE_DEVELOPER_FLAG, DECLARE_PD_DEVELOPER_FLAG, DECLARE_PRODUCT_FLAG, DECLARE_PD_PRODUCT_FLAG, DECLARE_DIAGNOSTIC_FLAG, DECLARE_EXPERIMENTAL_FLAG, DECLARE_NOTPRODUCT_FLAG, DECLARE_MANAGEABLE_FLAG, DECLARE_PRODUCT_RW_FLAG)
 

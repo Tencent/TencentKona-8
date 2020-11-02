@@ -696,7 +696,8 @@ public:
       HeapRegion* to   = _g1h->heap_region_containing(obj);
       if (from != NULL && to != NULL &&
           from != to &&
-          !to->isHumongous()) {
+          !to->isHumongous() &&
+          (G1RebuildRemSet ? to->rem_set()->is_completed() : true)) {
         jbyte cv_obj = *_bs->byte_for_const(_containing_obj);
         jbyte cv_field = *_bs->byte_for_const(p);
         const jbyte dirty = CardTableModRefBS::dirty_card_val();

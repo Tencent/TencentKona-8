@@ -303,6 +303,42 @@ public:
 
   static jint n_coarsenings() { return OtherRegionsTable::n_coarsenings(); }
 
+private:
+  enum RemSetState {
+    Untracked,
+    Updating,
+    Completed
+  };
+
+  RemSetState _state;
+
+  static const char* _state_strings[];
+public:
+
+  const char* get_state_str() const { return _state_strings[_state]; }
+
+  bool is_tracked() { return _state != Untracked; }
+  bool is_updating() { return _state == Updating; }
+  bool is_completed() { return _state == Completed; }
+
+  void set_state_empty() {
+    if (_state == Untracked) {
+      return;
+    }
+    _other_regions.clear_fcc();
+    _state = Untracked;
+  }
+
+  void set_state_updating() {
+    _other_regions.clear_fcc();
+    _state = Updating;
+  }
+
+  void set_state_completed() {
+    _other_regions.clear_fcc();
+    _state = Completed;
+  }
+
   // Used in the sequential case.
   void add_reference(OopOrNarrowOopStar from) {
     _other_regions.add_reference(from, 0);
@@ -310,6 +346,12 @@ public:
 
   // Used in the parallel case.
   void add_reference(OopOrNarrowOopStar from, int tid) {
+    if (G1RebuildRemSet) {
+      RemSetState state = _state;
+      if (state == Untracked) {
+       return;
+      }
+    }
     _other_regions.add_reference(from, tid);
   }
 
@@ -319,8 +361,8 @@ public:
 
   // The region is being reclaimed; clear its remset, and any mention of
   // entries for this region in other remsets.
-  void clear();
-  void clear_locked();
+  void clear(bool only_cardset = false);
+  void clear_locked(bool only_cardset = false);
 
   // Attempt to claim the region.  Returns true iff this call caused an
   // atomic transition from Unclaimed to Claimed.

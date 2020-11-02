@@ -432,6 +432,7 @@ protected:
                                     // last claimed region
 
   // marking tasks
+  uint                    _worker_id_offset;
   uint                    _max_worker_id;// maximum worker id
   uint                    _active_tasks; // task num currently active
   CMTask**                _tasks;        // task queue array (max_worker_id len)
@@ -637,6 +638,11 @@ protected:
   void clear_statistics_in_region(uint region_idx);
   // Region statistics gathered during marking.
   G1RegionMarkStats* _region_mark_stats;
+  // Top pointer for each region at the start of the rebuild remembered set process
+  // for regions which remembered sets need to be rebuilt. A NULL for a given region
+  // means that this region does not be scanned during the rebuilding remembered
+  // set phase at all.
+  HeapWord* volatile* _top_at_rebuild_starts;
 
 public:
   void add_to_liveness(uint worker_id, oop const obj, size_t size);
@@ -721,6 +727,11 @@ public:
 
   // Calculates the number of GC threads to be used in a concurrent phase.
   uint calc_parallel_marking_threads();
+
+  // Sets the internal top_at_region_start for the given region to current top of the region.
+  inline void update_top_at_rebuild_start(HeapRegion* r);
+  // TARS for the given region during remembered set rebuilding.
+  inline HeapWord* top_at_rebuild_start(uint region) const;
 
   // Notification for eagerly reclaimed regions to clean up.
   void humongous_object_eagerly_reclaimed(HeapRegion* r);
@@ -955,6 +966,9 @@ protected:
 
   // Verification routine
   void verify_count_data();
+
+  // Rebuilds the remembered sets for chosen regions in parallel and concurrently to the application.
+  void rebuild_rem_set_concurrently();
 };
 
 // A class representing a marking task.
