@@ -25,6 +25,7 @@
 #include "precompiled.hpp"
 #include "gc_implementation/g1/collectionSetChooser.hpp"
 #include "gc_implementation/g1/g1CollectedHeap.inline.hpp"
+#include "gc_implementation/g1/heapRegionRemSet.hpp"
 #include "gc_implementation/g1/g1CollectorPolicy.hpp"
 #include "gc_implementation/g1/g1ErgoVerbose.hpp"
 #include "memory/space.inline.hpp"
@@ -232,6 +233,7 @@ bool CollectionSetChooser::should_add(HeapRegion* hr) const {
   assert(hr->is_marked(), "pre-condition");
   assert(!hr->is_young(), "should never consider young regions");
   return !hr->isHumongous() &&
-         region_occupancy_low_enough_for_evac(hr->live_bytes());
+         region_occupancy_low_enough_for_evac(hr->live_bytes()) &&
+         (G1RebuildRemSet ? hr->rem_set()->is_completed() : true);
 }
 

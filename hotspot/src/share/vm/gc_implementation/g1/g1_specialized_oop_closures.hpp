@@ -53,6 +53,7 @@ class G1UpdateRSOrPushRefOopClosure;
 class G1ConcurrentRefineOopClosure;
 class G1CMOopClosure;
 class G1RootRegionScanClosure;
+class G1RebuildRemSetClosure;
 
 // Specialized oop closures from g1RemSet.cpp
 class G1UpdateRSOrPushRefOopClosure;
@@ -73,7 +74,8 @@ class G1AdjustClosure;
       f(G1CMOopClosure,_nv)                             \
       f(G1RootRegionScanClosure,_nv)                    \
       f(G1UpdateRSOrPushRefOopClosure,_nv)              \
-      f(G1ConcurrentRefineOopClosure,_nv)
+      f(G1ConcurrentRefineOopClosure,_nv)               \
+      f(G1RebuildRemSetClosure,_nv)
 
 #ifdef FURTHER_SPECIALIZED_SINCE_SAVE_MARKS_CLOSURES
 #error "FURTHER_SPECIALIZED_SINCE_SAVE_MARKS_CLOSURES already defined."
