@@ -86,6 +86,7 @@ class VirtualThread extends Thread {
     private final Executor scheduler;
     private final Continuation cont;
     private final Runnable runContinuation;
+    private final Runnable vtTarget;
 
     // virtual thread state
     private static final int NEW      = 0;
@@ -148,6 +149,7 @@ class VirtualThread extends Thread {
             }
         }
         this.scheduler = scheduler;
+        this.vtTarget = task;
         this.isThreadPoolExecutor = (scheduler == null) ? false : (scheduler instanceof ThreadPoolExecutor);
         this.cont = new Continuation(VTHREAD_SCOPE, target) {
             @Override
@@ -577,6 +579,10 @@ class VirtualThread extends Thread {
         } finally {
             lock.unlock();
         }
+    }
+
+    Runnable target() {
+        return vtTarget;
     }
 
     @Override
