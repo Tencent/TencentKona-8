@@ -346,7 +346,7 @@ void GenericTaskQueue<E, F, N>::oops_do(OopClosure* f) {
     //            index, &_elems[index], _elems[index]);
     E* t = (E*)&_elems[index];      // cast away volatility
     oop* p = (oop*)t;
-    // G1 concurrent mark would put array slice instead of oop into queue
+    // G1 does its own checking
     assert(UseG1GC || (*t)->is_oop_or_null(), "Not an oop or null");
     f->do_oop(p);
   }

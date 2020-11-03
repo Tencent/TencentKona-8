@@ -944,6 +944,8 @@ private:
     // the regular clock call is called once the number of visited
     // references reaches this limit
     refs_reached_period           = 1024,
+    // initial value for the hash seed, used in the work stealing code
+    init_hash_seed                = 17,
     // how many entries will be transferred between global stack and
     // local queues
     global_stack_transfer_size    = 16
