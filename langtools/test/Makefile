@@ -16,6 +16,44 @@
 # JPRT may invoke this Makefile directly, as part of a langtools build,
 # or indirectly, via FOREST/test/Makefile, as part of a control build.
 
+
+# Utilities used
+AWK       = awk
+CAT       = cat
+CD        = cd
+CHMOD     = chmod
+CP        = cp
+CUT       = cut
+DIRNAME   = dirname
+ECHO      = echo
+EGREP     = egrep
+EXPAND    = expand
+FIND      = find
+MKDIR     = mkdir
+PWD       = pwd
+SED       = sed
+SORT      = sort
+TEE       = tee
+UNAME     = uname
+UNIQ      = uniq
+WC        = wc
+ZIP       = zip
+
+# Get OS name from uname (Cygwin inexplicably adds _NT-5.1)
+UNAME_S := $(shell $(UNAME) -s | $(CUT) -f1 -d_)
+
+# Commands to run on paths to make mixed paths for java on windows
+ifeq ($(UNAME_S), CYGWIN)
+  # Location of developer shared files
+  SLASH_JAVA = J:
+  GETMIXEDPATH = cygpath -m
+else
+  # Location of developer shared files
+  SLASH_JAVA = /java
+
+  GETMIXEDPATH=$(ECHO)
+endif
+
 # Get OS/ARCH specifics
 OSNAME = $(shell uname -s)
 ifeq ($(OSNAME), SunOS)
@@ -183,7 +221,7 @@ ifdef JTREG_TIMEOUT_FACTOR
 endif
 
 # Default verbosity setting for jtreg
-JTREG_VERBOSE = fail,error,nopass
+JTREG_VERBOSE = fail,error,summary
 
 # Default verbosity setting for jck
 JCK_VERBOSE = non-pass
@@ -224,11 +262,10 @@ else
   ABS_OUTPUTDIR := $(shell mkdir -p $(TEST_OUTPUT_DIR); cd $(TEST_OUTPUT_DIR) && pwd $(CYGPATH))
 endif
 ABS_TEST_OUTPUT_DIR := $(ABS_OUTPUTDIR)/testoutput/$(UNIQUE_DIR)
-
 # Subdirectories for different test runs
-JTREG_OUTPUT_DIR = $(ABS_TEST_OUTPUT_DIR)/jtreg
-JCK_COMPILER_OUTPUT_DIR = $(ABS_TEST_OUTPUT_DIR)/jck-compiler
-JCK_RUNTIME_OUTPUT_DIR = $(ABS_TEST_OUTPUT_DIR)/jck-runtime-Xcompile
+JTREG_OUTPUT_DIR = $(ABS_OUTPUTDIR)/jtreg
+JCK_COMPILER_OUTPUT_DIR = $(ABS_OUTPUTDIR)/jck-compiler
+JCK_RUNTIME_OUTPUT_DIR = $(ABS_OUTPUTDIR)/jck-runtime-Xcompile
 
 # Default make rule -- warning, may take a while
 all: $(JPRT_CLEAN) jtreg-tests jck-compiler-tests jck-runtime-tests $(JPRT_ARCHIVE_BUNDLE) all-summary
@@ -242,6 +279,8 @@ jck-compiler: $(JPRT_CLEAN) jck-compiler-tests $(JPRT_ARCHIVE_BUNDLE) jck-compil
 
 jck-runtime: $(JPRT_CLEAN) jck-runtime-tests $(JPRT_ARCHIVE_BUNDLE) jck-runtime-summary
 	@echo "Testing completed successfully"
+
+tier1: jtreg-tests-tier1
 
 # for use with JPRT -testrule
 all:		JTREG_TESTDIRS = .
@@ -286,7 +325,6 @@ jtreg-tests: check-jtreg FRC
           -jdk:$(TESTJAVA) \
           $(JAVA_ARGS:%=-vmoption:%) \
 	  $(JTREG_OPTIONS) \
-	  $(JTREG_EXCLUSIONS) \
           $(JTREG_TESTDIRS) \
 	|| ( $(call EXIT_IF_FATAL,$(FATAL_JTREG_EXIT)) ; \
 	    echo $$status > $(JTREG_OUTPUT_DIR)/status.txt \
@@ -308,7 +346,6 @@ jtreg-summary: FRC
 
 # Check to make sure these directories exist
 check-jtreg: $(PRODUCT_HOME) $(JTREG)
-
 
 # Run JCK-compiler tests
 #
@@ -438,7 +475,6 @@ clean:
 # Used to force a target rules to run
 FRC:
 
-<<<<<<< HEAD
 #
 # Tier 1 langtools testing logic
 #
@@ -510,23 +546,6 @@ BUNDLE_UP_AND_EXIT = \
   $(TESTEXIT) \
 )
 
-# Problematic tests to be excluded
-PROBLEM_LISTS=$(call MixedDirs,$(wildcard ProblemList.txt closed/ProblemList.txt))
-
-# # Create exclude list for this platform and arch
-ifdef NO_EXCLUDES
-  JTREG_EXCLUSIONS =
-else
-  ifeq ($(JTREG_EXCLUSIONS),)
-	JTREG_EXCLUSIONS = $(PROBLEM_LISTS:%=-exclude:%)
-  endif
-endif
-
-# convert list of directories to dos paths
-define MixedDirs
-  $(foreach i,$1,$(shell $(GETMIXEDPATH) "${i}"))
-endef
-
 prep-tier1:
 	@$(MKDIR) -p $(ABS_TEST_OUTPUT_DIR)
 
@@ -544,19 +563,17 @@ jtreg-tests-tier1: check-jtreg prep-tier1 FRC
               -jdk:$(shell $(GETMIXEDPATH) "$(TESTJAVA)")                    \
 	  $(JAVA_ARGS:%=-vmoption:%) \
 	  $(JTREG_OPTIONS) \
-	  $(JTREG_EXCLUSIONS) \
 	  :langtools_tier1 \
 	  ) ;                                                                \
 	  $(BUNDLE_UP_AND_EXIT)                                              \
 	) 2>&1 | $(TEE) $(ABS_TEST_OUTPUT_DIR)/output.txt ; $(TESTEXIT)
 
-=======
->>>>>>> parent of 4e982f744 (FEAT(test): Enable Running of full testcases)
 # Phony targets (e.g. these are not filenames)
 .PHONY: all clean \
 	jtreg javac javadoc javah javap jdeps jtreg-tests jtreg-summary check-jtreg \
 	jck-compiler jck-compiler-tests jck-compiler-summary \
-	jck-runtime jck-runtime-tests jck-runtime-summary check-jck
+	jck-runtime jck-runtime-tests jck-runtime-summary check-jck prep-tier1 \
+	jtreg-tests-tier1 tier1
 
 # No use of suffix rules
 .SUFFIXES:
