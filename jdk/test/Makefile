@@ -68,84 +68,21 @@ ifeq ($(UNAME_S), CYGWIN)
 else
   # Location of developer shared files
   SLASH_JAVA = /java
+
   GETMIXEDPATH=$(ECHO)
 endif
-
-ifeq ($(UNAME_S), SunOS)
-  PLATFORM = solaris
-  SLASH_JAVA = /java
-  ARCH = $(shell uname -p)
-  ifeq ($(ARCH), i386)
-    ARCH=i586
-  endif
-endif
-ifeq ($(UNAME_S), Linux)
-  PLATFORM = linux
-  SLASH_JAVA = /java
-  ARCH = $(shell uname -m)
-  ifeq ($(ARCH), i386)
-    ARCH = i586
-  endif
-endif
-ifeq ($(UNAME_S), Darwin)
-  PLATFORM = bsd
-  SLASH_JAVA = /java
-  ARCH = $(shell uname -m)
-  ifeq ($(ARCH), i386)
-    ARCH = i586
-  endif
-endif
-ifeq ($(findstring BSD,$(UNAME_S)), BSD)
-  PLATFORM = bsd
-  SLASH_JAVA = /java
-  ARCH = $(shell uname -m)
-  ifeq ($(ARCH), i386)
-    ARCH = i586
-  endif
-endif
-ifeq ($(PLATFORM),)
-  # detect whether we're running in MKS or cygwin
-  ifeq ($(UNAME_S), Windows_NT) # MKS
-    GETMIXEDPATH=dosname -s
-  endif
-  ifeq ($(findstring CYGWIN,$(UNAME_S)), CYGWIN)
-    GETMIXEDPATH=cygpath -m
-  endif
-  PLATFORM = windows
-  SLASH_JAVA = J:
-  ifeq ($(word 1, $(PROCESSOR_IDENTIFIER)),ia64)
-    ARCH = ia64
-  else
-    ifeq ($(word 1, $(PROCESSOR_IDENTIFIER)),AMD64)
-      ARCH = x64
-    else
-      ifeq ($(word 1, $(PROCESSOR_IDENTIFIER)),EM64T)
-        ARCH = x64
-      else
-        ARCH = i586
-      endif
-    endif
-  endif
-  EXESUFFIX = .exe
-endif
-
-ifdef ALT_SLASH_JAVA
-  SLASH_JAVA = $(ALT_SLASH_JAVA)
-  GETMIXEDPATH=$(ECHO)
-endif
-
 
 # Root of this test area (important to use full paths in some places)
 TEST_ROOT := $(shell $(PWD))
 
 # Root of all test results
 ifdef ALT_OUTPUTDIR
-  ABS_BUILD_ROOT = $(ALT_OUTPUTDIR)/$(PLATFORM)-$(ARCH)
+  ABS_OUTPUTDIR = $(shell $(CD) $(ALT_OUTPUTDIR) && $(PWD))
 else
-  ABS_BUILD_ROOT = $(TEST_ROOT)/../build/$(PLATFORM)-$(ARCH)
+  ABS_OUTPUTDIR = $(shell $(CD) $(TEST_ROOT)/.. && $(PWD))
 endif
 
-ABS_PLATFORM_BUILD_ROOT = $(ABS_BUILD_ROOT)
+ABS_PLATFORM_BUILD_ROOT = $(ABS_OUTPUTDIR)
 ABS_TEST_OUTPUT_DIR := $(ABS_PLATFORM_BUILD_ROOT)/testoutput/$(UNIQUE_DIR)
 
 # Expect JPRT to set PRODUCT_HOME (the product or jdk in this case to test)
@@ -250,7 +187,7 @@ BUNDLE_UP_AND_EXIT = \
 ################################################################
 
 # Default make rule (runs default jdk tests)
-all: jdk_all
+all: jdk_default
 	@$(ECHO) "Testing completed successfully"
 
 # Prep for output
@@ -337,7 +274,7 @@ JTREG_BASIC_OPTIONS += -a
 JTREG_ASSERT_OPTION = -ea -esa
 JTREG_BASIC_OPTIONS += $(JTREG_ASSERT_OPTION)
 # Report details on all failed or error tests, times too
-JTREG_BASIC_OPTIONS += -v:fail,error,summary
+JTREG_BASIC_OPTIONS += -v:fail,error,time
 # Retain all files for failing tests
 JTREG_BASIC_OPTIONS += -retain:fail,error
 # Ignore tests are not run and completely silent about it

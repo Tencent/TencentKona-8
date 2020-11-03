@@ -131,6 +131,7 @@ compact3 = \
  -:needs_jre \
  -:needs_jdk
 
+
 # When called from top level the test suites use the hotspot_ prefix
 hotspot_wbapitest = \
   sanity/
