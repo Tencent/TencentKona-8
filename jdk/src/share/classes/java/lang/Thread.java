@@ -2239,6 +2239,18 @@ class Thread implements Runnable {
     }
 
     /**
+     * TEMP:
+     * Returns a reference to VirutalThread's target runnable.
+     * Return null if thread is not VirtualThread.
+     */
+    public final Runnable VTTarget() {
+        if (isVirtual()) {
+            return ((VirtualThread)this).target();
+        }
+        return null;
+    }
+
+    /**
      * Invoke from Continuation, try get continuation running on current carrier Thread
      */
     Continuation getContinuation() {
