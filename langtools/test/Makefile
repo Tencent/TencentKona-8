@@ -267,6 +267,23 @@ JTREG_OUTPUT_DIR = $(ABS_OUTPUTDIR)/jtreg
 JCK_COMPILER_OUTPUT_DIR = $(ABS_OUTPUTDIR)/jck-compiler
 JCK_RUNTIME_OUTPUT_DIR = $(ABS_OUTPUTDIR)/jck-runtime-Xcompile
 
+# Problematic tests to be excluded
+PROBLEM_LISTS=$(call MixedDirs,$(wildcard ProblemList.txt closed/ProblemList.txt))
+
+# # Create exclude list for this platform and arch
+ifdef NO_EXCLUDES
+  JTREG_EXCLUSIONS =
+else
+  ifeq ($(JTREG_EXCLUSIONS),)
+	JTREG_EXCLUSIONS = $(PROBLEM_LISTS:%=-exclude:%)
+  endif
+endif
+
+# convert list of directories to dos paths
+define MixedDirs
+  $(foreach i,$1,$(shell $(GETMIXEDPATH) "${i}"))
+endef
+
 # Default make rule -- warning, may take a while
 all: $(JPRT_CLEAN) jtreg-tests jck-compiler-tests jck-runtime-tests $(JPRT_ARCHIVE_BUNDLE) all-summary
 	@echo "Testing completed successfully"
@@ -325,6 +342,7 @@ jtreg-tests: check-jtreg FRC
           -jdk:$(TESTJAVA) \
           $(JAVA_ARGS:%=-vmoption:%) \
 	  $(JTREG_OPTIONS) \
+	  $(JTREG_EXCLUSIONS) \
           $(JTREG_TESTDIRS) \
 	|| ( $(call EXIT_IF_FATAL,$(FATAL_JTREG_EXIT)) ; \
 	    echo $$status > $(JTREG_OUTPUT_DIR)/status.txt \
@@ -563,6 +581,7 @@ jtreg-tests-tier1: check-jtreg prep-tier1 FRC
               -jdk:$(shell $(GETMIXEDPATH) "$(TESTJAVA)")                    \
 	  $(JAVA_ARGS:%=-vmoption:%) \
 	  $(JTREG_OPTIONS) \
+	  $(JTREG_EXCLUSIONS) \
 	  :langtools_tier1 \
 	  ) ;                                                                \
 	  $(BUNDLE_UP_AND_EXIT)                                              \
