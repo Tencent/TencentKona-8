@@ -400,7 +400,7 @@ java/security/cert/PolicyNode/GetPolicyQualifiers.java       linux-all
 ############################################################################
 
 # 8141370
-com/sun/jndi/ldap/DeadSSLLdapTimeoutTest.java			linux-all,linux-i586,macosx-all
+com/sun/jndi/ldap/DeadSSLLdapTimeoutTest.java			linux-all,macosx-all
 
 
 ############################################################################
