@@ -1281,6 +1281,7 @@ public:
 
   inline bool is_in_cset_or_humongous(const oop obj);
 
+  size_t humongous_obj_size_in_regions(size_t word_size);
  private:
   // This array is used for a quick test on whether a reference points into
   // the collection set or not. Each of the array's elements denotes whether the
