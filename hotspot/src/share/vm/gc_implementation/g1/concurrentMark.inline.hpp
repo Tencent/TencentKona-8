@@ -28,6 +28,7 @@
 #include "gc_implementation/g1/concurrentMark.hpp"
 #include "gc_implementation/g1/g1CollectedHeap.inline.hpp"
 #include "gc_implementation/g1/g1ConcurrentMarkObjArrayProcessor.inline.hpp"
+#include "gc_implementation/g1/g1RegionMarkStatsCache.inline.hpp"
 
 // Utility routine to set an exclusive range of cards on the given
 // card liveness bitmap
@@ -303,9 +304,18 @@ inline void CMTask::abort_marking_if_regular_check_fail() {
   }
 }
 
+inline void CMTask::update_liveness(oop const obj, const size_t obj_size) {
+  _mark_stats_cache.add_live_words(_g1h->addr_to_region((HeapWord*)obj), obj_size);
+}
+
+inline void ConcurrentMark::add_to_liveness(uint worker_id, oop const obj, size_t size) {
+  task(worker_id)->update_liveness(obj, size);
+}
+
 inline void CMTask::make_reference_grey(oop obj, HeapRegion* hr) {
   if (_cm->par_mark_and_count(obj, hr, _marked_bytes_array, _card_bm)) {
 
+    _cm->add_to_liveness(_worker_id, obj, obj->size());
     if (_cm->verbose_high()) {
       gclog_or_tty->print_cr("[%u] marked object " PTR_FORMAT,
                              _worker_id, p2i(obj));
@@ -417,7 +427,10 @@ inline void ConcurrentMark::grayRoot(oop obj, size_t word_size,
 
   if (addr < hr->next_top_at_mark_start()) {
     if (!_nextMarkBitMap->isMarked(addr)) {
-      par_mark_and_count(obj, word_size, hr, worker_id);
+      bool success = par_mark_and_count(obj, word_size, hr, worker_id);
+      if (success) {
+        add_to_liveness(worker_id, obj, word_size == 0 ? obj->size() : word_size);
+      }
     }
   }
 }
