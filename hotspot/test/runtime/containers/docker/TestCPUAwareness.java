@@ -224,6 +224,7 @@ private static final String imageName = Common.imageName("cpu");
             .addDockerOpts(
                 "--cpus", cpuAllocation
             );
+	opts.addJavaOpts("-XX:+UseContainerSupport");
 
         DockerTestUtils.dockerRunJava(opts)
             .shouldHaveExitValue(0)
