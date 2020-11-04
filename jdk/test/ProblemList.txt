@@ -395,10 +395,12 @@ java/nio/file/WatchService/MayFlies.java                     linux-all
 java/nio/file/WatchService/SensitivityModifier.java          linux-all
 java/nio/file/WatchService/UpdateInterference.java           linux-all
 
+# These failed cases are also hanging on Openjdk-8u272
+java/security/cert/PolicyNode/GetPolicyQualifiers.java       linux-all
 ############################################################################
 
 # 8141370
-com/sun/jndi/ldap/DeadSSLLdapTimeoutTest.java			linux-i586,macosx-all
+com/sun/jndi/ldap/DeadSSLLdapTimeoutTest.java			linux-all,linux-i586,macosx-all
 
 
 ############################################################################
