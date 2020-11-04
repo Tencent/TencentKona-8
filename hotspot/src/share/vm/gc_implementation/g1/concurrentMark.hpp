@@ -27,6 +27,7 @@
 
 #include "classfile/javaClasses.hpp"
 #include "gc_implementation/g1/g1ConcurrentMarkObjArrayProcessor.hpp"
+#include "gc_implementation/g1/g1RegionMarkStatsCache.hpp"
 #include "gc_implementation/g1/heapRegionSet.hpp"
 #include "gc_implementation/g1/g1RegionToSpaceMapper.hpp"
 #include "gc_implementation/shared/gcId.hpp"
@@ -565,7 +566,7 @@ protected:
 
   // Returns the task with the given id
   CMTask* task(int id) {
-    assert(0 <= id && id < (int) _active_tasks,
+    assert(0 <= id && id < (int) _max_worker_id,
            "task id not within active bounds");
     return _tasks[id];
   }
@@ -631,7 +632,20 @@ protected:
   // Set to true when initialization is complete
   bool _completed_initialization;
 
+  // Clear statistics gathered during the concurrent cycle for the given region after
+  // it has been reclaimed.
+  void clear_statistics_in_region(uint region_idx);
+  // Region statistics gathered during marking.
+  G1RegionMarkStats* _region_mark_stats;
+
 public:
+  void add_to_liveness(uint worker_id, oop const obj, size_t size);
+  // Liveness of the given region as determined by concurrent marking, i.e. the amount of
+  // live words between bottom and nTAMS.
+  size_t liveness(uint region)  { return _region_mark_stats[region]._live_words; }
+  // Moves all per-task cached data into global state.
+  void flush_all_task_caches();
+
   // Manipulation of the global mark stack.
   // Notice that the first mark_stack_push is CAS-based, whereas the
   // two below are Mutex-based. This is OK since the first one is only
@@ -960,6 +974,10 @@ private:
     global_stack_transfer_size    = 16
   };
 
+  // Number of entries in the per-task stats entry. This seems enough to have a very
+  // low cache miss rate.
+  static const uint RegionMarkStatsCacheSize = 1024;
+
   G1CMObjArrayProcessor       _objArray_processor;
 
   uint                        _worker_id;
@@ -974,6 +992,8 @@ private:
   // indicates whether the task has been claimed---this is only  for
   // debugging purposes
   bool                        _claimed;
+
+  G1RegionMarkStatsCache      _mark_stats_cache;
 
   // number of calls to this task
   int                         _calls;
@@ -1221,7 +1241,16 @@ public:
          size_t* marked_bytes,
          BitMap* card_bm,
          CMTaskQueue* task_queue,
-         CMTaskQueueSet* task_queues);
+         CMTaskQueueSet* task_queues,
+         G1RegionMarkStats* mark_stats,
+         uint max_regions);
+
+  inline void update_liveness(oop const obj, size_t const obj_size);
+  // Clear (without flushing) the mark cache entry for the given region.
+  void clear_mark_stats_cache(uint region_idx);
+  // Evict the whole statistics cache into the global statistics. Returns the
+  // number of cache hits and misses so far.
+  Pair<size_t, size_t> flush_mark_stats_cache();
 
   // it prints statistics associated with this task
   void print_stats();
