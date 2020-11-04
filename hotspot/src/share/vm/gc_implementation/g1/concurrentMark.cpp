@@ -33,6 +33,7 @@
 #include "gc_implementation/g1/g1ErgoVerbose.hpp"
 #include "gc_implementation/g1/g1Log.hpp"
 #include "gc_implementation/g1/g1OopClosures.inline.hpp"
+#include "gc_implementation/g1/g1RegionMarkStatsCache.inline.hpp"
 #include "gc_implementation/g1/g1RemSet.hpp"
 #include "gc_implementation/g1/heapRegion.inline.hpp"
 #include "gc_implementation/g1/heapRegionManager.inline.hpp"
@@ -577,7 +578,9 @@ ConcurrentMark::ConcurrentMark(G1CollectedHeap* g1h, G1RegionToSpaceMapper* prev
 
   _count_card_bitmaps(NULL),
   _count_marked_bytes(NULL),
-  _completed_initialization(false) {
+  _completed_initialization(false),
+  _region_mark_stats(NEW_C_HEAP_ARRAY(G1RegionMarkStats, _g1h->max_regions(), mtGC))
+ {
   CMVerboseLevel verbose_level = (CMVerboseLevel) G1MarkingVerboseLevel;
   if (verbose_level < no_verbose) {
     verbose_level = no_verbose;
@@ -749,7 +752,9 @@ ConcurrentMark::ConcurrentMark(G1CollectedHeap* g1h, G1RegionToSpaceMapper* prev
     _tasks[i] = new CMTask(i, this,
                            _count_marked_bytes[i],
                            &_count_card_bitmaps[i],
-                           task_queue, _task_queues);
+                           task_queue, _task_queues,
+                           _region_mark_stats,
+                           max_regions);
 
     _accum_task_vtime[i] = 0.0;
   }
@@ -788,16 +793,27 @@ void ConcurrentMark::reset() {
     gclog_or_tty->print_cr("[global] resetting");
   }
 
-  // We do reset all of them, since different phases will use
-  // different number of active threads. So, it's easiest to have all
-  // of them ready.
+  // Reset all tasks, since different phases will use different number of active
+  // threads. So, it's easiest to have all of them ready.
   for (uint i = 0; i < _max_worker_id; ++i) {
     _tasks[i]->reset(_nextMarkBitMap);
+  }
+
+  uint max_regions = _g1h->max_regions();
+  for (uint i = 0; i < max_regions; i++) {
+    _region_mark_stats[i].clear();
   }
 
   // we need this to make sure that the flag is on during the evac
   // pause with initial mark piggy-backed
   set_concurrent_marking_in_progress();
+}
+
+void ConcurrentMark::clear_statistics_in_region(uint region_idx) {
+  for (uint j = 0; j < _max_worker_id; ++j) {
+    _tasks[j]->clear_mark_stats_cache(region_idx);
+  }
+  _region_mark_stats[region_idx].clear();
 }
 
 void ConcurrentMark::humongous_object_eagerly_reclaimed(HeapRegion* r) {
@@ -807,12 +823,24 @@ void ConcurrentMark::humongous_object_eagerly_reclaimed(HeapRegion* r) {
   if (_nextMarkBitMap->isMarked(r->bottom())) {
     _nextMarkBitMap->clear(r->bottom());
   }
+
+  // Clear any statistics about the region gathered so far.
+  uint const region_idx = r->hrm_index();
+  assert(r->startsHumongous(), "Got humongous continues region here");
+  uint const size_in_regions = (uint)_g1h->humongous_obj_size_in_regions(oop(r->humongous_start_region()->bottom())->size());
+  for (uint j = region_idx; j < (region_idx + size_in_regions); j++) {
+    clear_statistics_in_region(j);
+  }
 }
 
 void ConcurrentMark::reset_marking_state(bool clear_overflow) {
   _markStack.set_should_expand();
   _markStack.setEmpty();        // Also clears the _markStack overflow flag
   if (clear_overflow) {
+    uint max_regions = _g1h->max_regions();
+    for (uint i = 0; i < max_regions; i++) {
+      _region_mark_stats[i].clear_during_overflow();
+    }
     clear_has_overflown();
   } else {
     assert(has_overflown(), "pre-condition");
@@ -1038,33 +1066,6 @@ void ConcurrentMark::enter_first_sync_barrier(uint worker_id) {
     // just abort the whole marking phase as quickly as possible.
     return;
   }
-
-  // If we're executing the concurrent phase of marking, reset the marking
-  // state; otherwise the marking state is reset after reference processing,
-  // during the remark pause.
-  // If we reset here as a result of an overflow during the remark we will
-  // see assertion failures from any subsequent set_concurrency_and_phase()
-  // calls.
-  if (concurrent()) {
-    // let the task associated with with worker 0 do this
-    if (worker_id == 0) {
-      // task 0 is responsible for clearing the global data structures
-      // We should be here because of an overflow. During STW we should
-      // not clear the overflow flag since we rely on it being true when
-      // we exit this method to abort the pause and restart concurent
-      // marking.
-      reset_marking_state(true /* clear_overflow */);
-      force_overflow()->update();
-
-      if (G1Log::fine()) {
-        gclog_or_tty->gclog_stamp(concurrent_gc_id());
-        gclog_or_tty->print_cr("[GC concurrent-mark-reset-for-overflow]");
-      }
-    }
-  }
-
-  // after this, each task should reset its own data structures then
-  // then go into the second barrier
 }
 
 void ConcurrentMark::enter_second_sync_barrier(uint worker_id) {
@@ -1368,6 +1369,8 @@ void ConcurrentMark::checkpointRootsFinal(bool clear_all_soft_refs) {
     // threads to have SATB queues with active set to true.
     satb_mq_set.set_active_all_threads(false, /* new active value */
                                        true /* expected_active */);
+
+    flush_all_task_caches();
 
     if (VerifyDuringGC) {
       HandleMark hm;  // handle scope
@@ -2525,6 +2528,17 @@ class G1RemarkGCTraceTime : public GCTraceTime {
         G1CollectedHeap::heap()->concurrent_mark()->concurrent_gc_id()) {
   }
 };
+
+void ConcurrentMark::flush_all_task_caches() {
+  size_t hits = 0;
+  size_t misses = 0;
+  for (uint i = 0; i < _max_worker_id; i++) {
+    Pair<size_t, size_t> stats = _tasks[i]->flush_mark_stats_cache();
+    hits += stats.first;
+    misses += stats.second;
+  }
+  size_t sum = hits + misses;
+}
 
 void ConcurrentMark::weakRefsWork(bool clear_all_soft_refs) {
   if (has_overflown()) {
@@ -3717,6 +3731,7 @@ void CMTask::reset(CMBitMap* nextMarkBitMap) {
   _elapsed_time_ms               = 0.0;
   _termination_time_ms           = 0.0;
   _termination_start_time_ms     = 0.0;
+  _mark_stats_cache.reset();
 
 #if _MARKING_STATS_
   _local_pushes                  = 0;
@@ -4069,6 +4084,14 @@ void CMTask::drain_satb_buffers() {
   decrease_limits();
 }
 
+void CMTask::clear_mark_stats_cache(uint region_idx) {
+  _mark_stats_cache.reset(region_idx);
+}
+
+Pair<size_t, size_t> CMTask::flush_mark_stats_cache() {
+  return _mark_stats_cache.evict_all();
+}
+
 void CMTask::print_stats() {
   gclog_or_tty->print_cr("Marking Stats, task = %u, calls = %d",
                          _worker_id, _calls);
@@ -4079,7 +4102,11 @@ void CMTask::print_stats() {
                          _step_times_ms.sd());
   gclog_or_tty->print_cr("                    max = %1.2lfms, total = %1.2lfms",
                          _step_times_ms.maximum(), _step_times_ms.sum());
-
+  size_t const hits = _mark_stats_cache.hits();
+  size_t const misses = _mark_stats_cache.misses();
+  double ratio = (hits + misses) != 0 ? (double)hits / (hits + misses) * 100.0 : 0.0;
+  gclog_or_tty->print_cr("  Mark Stats Cache: hits " SIZE_FORMAT " misses " SIZE_FORMAT " ratio %.3f",
+                         hits, misses, ratio);
 #if _MARKING_STATS_
   gclog_or_tty->print_cr("  Clock Intervals (cum): num = %d, avg = %1.2lfms, sd = %1.2lfms",
                          _all_clock_intervals_ms.num(), _all_clock_intervals_ms.avg(),
@@ -4612,8 +4639,26 @@ void CMTask::do_marking_step(double time_target_ms,
 
       // We clear the local state of this task...
       clear_region_fields();
+      flush_mark_stats_cache();
 
       if (!is_serial) {
+        // If we're executing the concurrent phase of marking, reset the marking
+        // state; otherwise the marking state is reset after reference processing,
+        // during the remark pause.
+        // If we reset here as a result of an overflow during the remark we will
+        // see assertion failures from any subsequent set_concurrency_and_phase()
+        // calls.
+        if (_cm->concurrent() && _worker_id == 0) {
+          // Worker 0 is responsible for clearing the global data structures because
+          // of an overflow. During STW we should not clear the overflow flag (in
+          // G1ConcurrentMark::reset_marking_state()) since we rely on it being true when we exit
+          // method to abort the pause and restart concurrent marking.
+          _cm->reset_marking_state();
+          if (G1Log::fine()) {
+            gclog_or_tty->gclog_stamp(_cm->concurrent_gc_id());
+            gclog_or_tty->print_cr("[GC concurrent-mark-reset-for-overflow]");
+          }
+        }
         // ...and enter the second barrier.
         _cm->enter_second_sync_barrier(_worker_id);
       }
@@ -4647,7 +4692,9 @@ CMTask::CMTask(uint worker_id,
                size_t* marked_bytes,
                BitMap* card_bm,
                CMTaskQueue* task_queue,
-               CMTaskQueueSet* task_queues)
+               CMTaskQueueSet* task_queues,
+               G1RegionMarkStats* mark_stats,
+               uint max_regions)
   : _g1h(G1CollectedHeap::heap()),
     _worker_id(worker_id), _cm(cm),
     _objArray_processor(this),
@@ -4655,6 +4702,7 @@ CMTask::CMTask(uint worker_id,
     _nextMarkBitMap(NULL),
     _task_queue(task_queue),
     _task_queues(task_queues),
+    _mark_stats_cache(mark_stats, max_regions, RegionMarkStatsCacheSize),
     _cm_oop_closure(NULL),
     _marked_bytes_array(marked_bytes),
     _card_bm(card_bm) {
