@@ -227,7 +227,7 @@ void Coroutine::add_stack_frame(void* frames, int* depth, javaVFrame* jvf) {
   (*depth)++;
 }
 
-#if defined(LINUX) || defined(_ALLBSD_SOURCE)
+#if defined(LINUX) || defined(_ALLBSD_SOURCE) || defined(_WINDOWS)
 void coroutine_start(void* dummy, const void* coroutineObjAddr) {
 #ifndef AMD64
   fatal("Corotuine not supported on current platform");
@@ -244,10 +244,6 @@ void coroutine_start(void* dummy, const void* coroutineObjAddr) {
 #endif
   JavaCalls::call_continuation_start(coroutineObj, thread);
   ShouldNotReachHere();
-}
-#elif defined(_WINDOWS)
-void coroutine_start(void* dummy, const void* coroutineObjAddr) {
-    ShouldNotReachHere();
 }
 #endif
 
@@ -618,7 +614,6 @@ bool Coroutine::init_stack(JavaThread* thread, intptr_t real_stack_size) {
     }
   }
 
-  ThreadLocalStorage::add_coroutine_stack(thread, _stack_base, _stack_size);
   DEBUG_CORO_ONLY(tty->print("created coroutine stack at %08x with real size: %i\n", _stack_base, _stack_size));
 
   return true;
@@ -628,8 +623,6 @@ void Coroutine::free_stack() {
   //guarantee(!stack->is_thread_stack(), "cannot free thread stack");
   if(!is_thread_coroutine())
   { 
-      ThreadLocalStorage::remove_coroutine_stack(_thread, _stack_base, _stack_size);
-
       if (_reserved_space.size() > 0) {
         _virtual_space.release();
         _reserved_space.release();
