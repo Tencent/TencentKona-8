@@ -828,6 +828,7 @@ class HeapRegion: public G1OffsetTableContigSpace {
 class HeapRegionClosure : public StackObj {
   friend class HeapRegionManager;
   friend class G1CollectorPolicy;
+  friend class CollectionSetChooser;
 
   bool _complete;
   void incomplete() { _complete = false; }
