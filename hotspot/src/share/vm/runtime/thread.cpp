@@ -1695,14 +1695,15 @@ void JavaThread::run() {
 
   // Record real stack base and size.
   this->record_stack_base_and_size();
+
+  // Initialize thread local storage; set before calling MutexLocker
+  this->initialize_thread_local_storage();
+
 #if INCLUDE_KONA_FIBER
   if (UseKonaFiber) {
     this->initialize_coroutine_support();
   }
 #endif
-
-  // Initialize thread local storage; set before calling MutexLocker
-  this->initialize_thread_local_storage();
 
   this->create_stack_guard_pages();
 
