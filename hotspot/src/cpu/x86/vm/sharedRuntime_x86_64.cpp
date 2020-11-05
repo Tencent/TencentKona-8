@@ -4465,6 +4465,21 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
   __ movl(temp, Address(target_coroutine, Coroutine::stack_size_offset()));
   __ movl(Address(thread, JavaThread::stack_size_offset()), temp);
   __ movptr(rsp, Address(target_coroutine, Coroutine::last_sp_offset()));
+#if defined(_WINDOWS)
+    {
+      Register tib = rax;
+      // get the linear address of the TIB (thread info block)
+      // __ prefix(Assembler::GS_segment); this api is protected
+      __ emit_int8(Assembler::GS_segment);
+      __ movptr(tib, Address(noreg, 0x30));
+
+      // update the TIB stack base and top
+      __ movptr(temp, Address(target_coroutine, Coroutine::stack_base_offset()));
+      __ movptr(Address(tib, 0x8), temp);
+      __ subptr(temp, Address(target_coroutine, Coroutine::stack_size_offset()));
+      __ movptr(Address(tib, 0x10), temp);
+    }
+#endif
   __ pop(rbp);
 
   // jump and prepare arguments
