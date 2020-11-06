@@ -188,12 +188,15 @@ public class Continuation {
      */
     public final void run() {
         if (TRACE) System.out.println("\n++++++++++++++++++++++++++++++");
-        mount();
         if (done)
             throw new IllegalStateException("Continuation terminated");
         assert parent == null : "parent continuation is not null";
-            
+
         Thread t = currentCarrierThread();
+        if (t.getContinuation() != null) {
+            throw new InternalError("Continuation invoked in another Continuation");
+        }
+        mount();
         parent = t.getThreadContinuation();
         t.setContinuation(this);
         try {
