@@ -108,7 +108,14 @@ public class Continuation {
             }
         } finally {
             done = true;
-            switchToAndTerminate(parent, this);
+            Continuation target = parent;
+            if (parent == null) {
+                Thread t = currentCarrierThread();
+                target = t.getThreadContinuation();
+                unmount();
+                t.setContinuation(null);
+            }
+            switchToAndTerminate(target, this);
         }
         assert false : "should not reach here";
     }
@@ -194,6 +201,7 @@ public class Continuation {
 
         Thread t = currentCarrierThread();
         if (t.getContinuation() != null) {
+            System.err.println("cont invoked in another continuation" + t.getContinuation());
             throw new InternalError("Continuation invoked in another Continuation");
         }
         mount();
@@ -227,12 +235,12 @@ public class Continuation {
     
     // yield from current caller to target
     // if target is null, yield to thread coroutine
-    private final boolean yield0() {
+    private final boolean yield0(Continuation target) {
         if (cs > 0) {
             onPinned(Pinned.CRITICAL_SECTION);
             return false;
         }
-        int result = switchTo(parent, this);
+        int result = switchTo(target, this);
         if (result != 0) {
             onPinned0(result);
             if (TRACE) System.out.println("Continuation run after pin");
@@ -269,7 +277,59 @@ public class Continuation {
             parent.child = cur;
             cur = parent;
         }*/
-        return cont.yield0();
+        Continuation target = cont.parent;
+        if (target == null) {
+            Thread t = currentCarrierThread();
+            target = t.getThreadContinuation();
+            cont.unmount();
+            t.setContinuation(null);
+        }
+        boolean result = cont.yield0(target);
+        if (result == false && cont.parent == null) {
+            Thread t = currentCarrierThread();
+            cont.unmount();
+            t.setContinuation(cont);
+        }
+        return result;
+    }
+
+    /**
+     * TBD
+     *
+     * @param target The target Continuation to execute
+     * @return {@code true} for success; {@code false} for failure
+     * @throws IllegalStateException if current continuation is started by Run
+     *
+     * Yield from current continuation to target.
+     */
+    public static boolean yieldTo(Continuation target) {
+        Continuation current = currentCarrierThread().getContinuation();
+        Thread t = currentCarrierThread();
+        if (current == null) {
+            current = t.getThreadContinuation();
+        } else {
+            if (current.parent != null) {
+                throw new IllegalStateException("Invoke YieldTo in Continuation invoked from run");
+            }
+            current.unmount();
+        }
+        target.mount();
+        t.setContinuation(target);
+        if (target.data == 0) {
+            target.data = target.createContinuation(target, 0);
+        }
+        if (current.yield0(target) == false) {
+            // restore
+            target.unmount();
+            if (current != t.getThreadContinuation()) {
+                current.mount();
+                t.setContinuation(current);
+            } else {
+                t.setContinuation(null);
+            }
+            return false;
+        }
+        return true;
     }
  
     private void onPinned0(int reason) {
