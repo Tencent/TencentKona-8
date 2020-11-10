@@ -312,24 +312,13 @@ void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
   if (TraceCoroutine) {
     tty->print_cr("yield_verify from %p to %p", from, to);
   }
-  if (from->is_thread_coroutine()) {
-    // save snapshot
-    guarantee(terminate == false, "switch from kernel to continnuation");
-    JavaThread* thread = from->_thread;
-    JNIHandleBlock* jni_handle_block = thread->active_handles();
-    to->saved_active_handles = jni_handle_block;
-    to->saved_active_handle_count = jni_handle_block->get_number_of_live_handles();
-    to->saved_resource_area_hwm = thread->resource_area()->hwm();
-    to->saved_handle_area_hwm = thread->handle_area()->hwm();
-    to->saved_methodhandles_len = thread->metadata_handles()->length();
-  } else {
-    // switch to thread corotuine, compare status
+  // check before change, check is need when yield from none thread to others
+  if (!from->is_thread_coroutine()) {
+    // switch to other corotuine, compare status
     JavaThread* thread = from->_thread;
     JNIHandleBlock* jni_handle_block = thread->active_handles();
     guarantee(from->saved_active_handles == jni_handle_block, "must same handle");
     guarantee(from->saved_active_handle_count == jni_handle_block->get_number_of_live_handles(), "must same count");
-    from->saved_active_handles = NULL;
-    from->saved_active_handle_count = 0;
     if (terminate) {
       assert(thread->java_call_counter() == 1, "must be 1 when terminate");
     }
@@ -341,6 +330,18 @@ void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
       tty->print_cr("%p failed %p, %p", from, from->saved_resource_area_hwm, thread->resource_area()->hwm());
       guarantee(false, "resource area leak");
     }
+  }
+  // save context if yield to none thread coroutine
+  if (!to->is_thread_coroutine()) {
+    // save snapshot
+    guarantee(terminate == false, "switch from kernel to continnuation");
+    JavaThread* thread = from->_thread;
+    JNIHandleBlock* jni_handle_block = thread->active_handles();
+    to->saved_active_handles = jni_handle_block;
+    to->saved_active_handle_count = jni_handle_block->get_number_of_live_handles();
+    to->saved_resource_area_hwm = thread->resource_area()->hwm();
+    to->saved_handle_area_hwm = thread->handle_area()->hwm();
+    to->saved_methodhandles_len = thread->metadata_handles()->length();
   }
 }
 
