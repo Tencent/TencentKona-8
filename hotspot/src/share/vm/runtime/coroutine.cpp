@@ -659,9 +659,10 @@ void Coroutine::print_stack_on(outputStream* st, void* frames, int* depth)
 					java_lang_Throwable::print_stack_element(st, jvf->method(), jvf->bci());
 
 					// Print out lock information
-					if (JavaMonitorsInStackTrace) {
-						jvf->print_lock_info_on(st, count);
-					}
+					// We only print stack info of coroutines which status is _on_stack.
+					// If coroutine has lock, it can't yield from current thread,
+					// its status must be _current.
+					// So there is no lock info to print.
 				} else {
 					add_stack_frame(frames, depth, jvf);
 				}

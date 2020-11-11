@@ -4448,6 +4448,7 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
     __ movl(temp, Address(thread, JavaThread::java_call_counter_offset()));
     __ movl(Address(old_coroutine, Coroutine::java_call_counter_offset()), temp);
 #endif
+    __ movptr(Address(old_coroutine, in_bytes(Coroutine::thread_offset())), 0x0);
   }
   __ movl(Address(old_coroutine, Coroutine::state_offset()) , Coroutine::_onstack);
   __ movptr(Address(old_coroutine, Coroutine::last_sp_offset()), rsp);
