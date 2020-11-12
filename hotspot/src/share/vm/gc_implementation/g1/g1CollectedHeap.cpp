@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -177,7 +177,7 @@ void YoungList::push_region(HeapRegion *hr) {
   hr->set_next_young_region(_head);
   _head = hr;
 
-  _g1h->g1_policy()->set_region_eden(hr, (int) _length);
+  _g1h->g1_policy()->set_region_eden(hr);
   ++_length;
 }
 
@@ -317,19 +317,16 @@ YoungList::reset_auxilary_lists() {
   _g1h->g1_policy()->note_start_adding_survivor_regions();
   _g1h->g1_policy()->finished_recalculating_age_indexes(true /* is_survivors */);
 
-  int young_index_in_cset = 0;
   for (HeapRegion* curr = _survivor_head;
        curr != NULL;
        curr = curr->get_next_young_region()) {
-    _g1h->g1_policy()->set_region_survivor(curr, young_index_in_cset);
+    _g1h->g1_policy()->set_region_survivor(curr);
 
     // The region is a non-empty survivor so let's add it to
     // the incremental collection set for the next evacuation
     // pause.
     _g1h->g1_policy()->add_region_to_incremental_cset_rhs(curr);
-    young_index_in_cset += 1;
   }
-  assert((uint) young_index_in_cset == _survivor_length, "post-condition");
   _g1h->g1_policy()->note_stop_adding_survivor_regions();
 
   _head   = _survivor_head;

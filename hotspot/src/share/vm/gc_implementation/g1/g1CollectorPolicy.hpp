@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -258,9 +258,9 @@ private:
   void init_cset_region_lengths(uint eden_cset_region_length,
                                 uint survivor_cset_region_length);
 
-  uint eden_cset_region_length()     { return _eden_cset_region_length;     }
-  uint survivor_cset_region_length() { return _survivor_cset_region_length; }
-  uint old_cset_region_length()      { return _old_cset_region_length;      }
+  uint eden_cset_region_length()     const { return _eden_cset_region_length;     }
+  uint survivor_cset_region_length() const { return _survivor_cset_region_length; }
+  uint old_cset_region_length()      const { return _old_cset_region_length;      }
 
   uint _free_regions_at_end_of_collection;
 
@@ -303,16 +303,14 @@ private:
 public:
   // Accessors
 
-  void set_region_eden(HeapRegion* hr, int young_index_in_cset) {
+  void set_region_eden(HeapRegion* hr) {
     hr->set_eden();
     hr->install_surv_rate_group(_short_lived_surv_rate_group);
-    hr->set_young_index_in_cset(young_index_in_cset);
   }
 
-  void set_region_survivor(HeapRegion* hr, int young_index_in_cset) {
+  void set_region_survivor(HeapRegion* hr) {
     assert(hr->is_survivor(), "pre-condition");
     hr->install_surv_rate_group(_survivor_surv_rate_group);
-    hr->set_young_index_in_cset(young_index_in_cset);
   }
 
 #ifndef PRODUCT
@@ -424,9 +422,9 @@ public:
 
   void set_recorded_rs_lengths(size_t rs_lengths);
 
-  uint cset_region_length()       { return young_cset_region_length() +
+  uint cset_region_length()       const { return young_cset_region_length() +
                                            old_cset_region_length(); }
-  uint young_cset_region_length() { return eden_cset_region_length() +
+  uint young_cset_region_length() const { return eden_cset_region_length() +
                                            survivor_cset_region_length(); }
 
   double predict_survivor_regions_evac_time();
@@ -544,6 +542,8 @@ private:
   // See the comment for _inc_cset_recorded_rs_lengths_diffs.
   double _inc_cset_predicted_elapsed_time_ms_diffs;
 
+  uint _inc_cset_region_length;
+
   // Stash a pointer to the g1 heap.
   G1CollectedHeap* _g1;
 
@@ -637,6 +637,7 @@ private:
   // as a percentage of the current heap capacity.
   double reclaimable_bytes_perc(size_t reclaimable_bytes);
 
+  void verify_young_cset_indices() const NOT_DEBUG_RETURN;
 public:
 
   G1CollectorPolicy();
@@ -755,6 +756,7 @@ public:
   void clear_incremental_cset() {
     _inc_cset_head = NULL;
     _inc_cset_tail = NULL;
+    _inc_cset_region_length = 0;
   }
 
   // Stop adding regions to the incremental collection set
