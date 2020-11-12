@@ -157,7 +157,18 @@ public class ThreadLocal<T> {
      * @return the current thread's value of this thread-local
      */
     public T get() {
-        Thread t = Thread.currentThread();
+        return get(Thread.currentThread());
+    }
+
+    /**
+     * Returns the value in the current kernel thread's copy of this
+     * thread-local variable.
+     */
+    T getCarrierThreadLocal() {
+        return get(Thread.currentCarrierThread());
+    }
+
+    private T get(Thread t) {
         ThreadLocalMap map = getMap(t);
         if (map != null) {
             ThreadLocalMap.Entry e = map.getEntry(this);
@@ -197,7 +208,14 @@ public class ThreadLocal<T> {
      *        this thread-local.
      */
     public void set(T value) {
-        Thread t = Thread.currentThread();
+        set(Thread.currentThread(), value);
+    }
+
+    void setCarrierThreadLocal(T value) {
+        set(Thread.currentCarrierThread(), value);
+    }
+
+    private void set(Thread t, T value) {
         ThreadLocalMap map = getMap(t);
         if (map != null)
             map.set(this, value);
