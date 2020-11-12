@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -152,6 +152,7 @@ G1CollectorPolicy::G1CollectorPolicy() :
   _inc_cset_recorded_rs_lengths_diffs(0),
   _inc_cset_predicted_elapsed_time_ms(0.0),
   _inc_cset_predicted_elapsed_time_ms_diffs(0.0),
+  _inc_cset_region_length(0),
 
 #ifdef _MSC_VER // the use of 'this' below gets a warning, make it go away
 #pragma warning( disable:4355 ) // 'this' : used in base member initializer list
@@ -1362,6 +1363,10 @@ G1CollectorPolicy::init_cset_region_lengths(uint eden_cset_region_length,
                                             uint survivor_cset_region_length) {
   _eden_cset_region_length     = eden_cset_region_length;
   _survivor_cset_region_length = survivor_cset_region_length;
+
+  assert(young_cset_region_length() == _inc_cset_region_length,
+         err_msg("should match %u == %u", young_cset_region_length(), _inc_cset_region_length));
+
   _old_cset_region_length      = 0;
 }
 
@@ -1684,6 +1689,7 @@ void G1CollectorPolicy::start_incremental_cset_building() {
   _inc_cset_head = NULL;
   _inc_cset_tail = NULL;
   _inc_cset_bytes_used_before = 0;
+  _inc_cset_region_length = 0;
 
   _inc_cset_max_finger = 0;
   _inc_cset_recorded_rs_lengths = 0;
@@ -1784,8 +1790,10 @@ void G1CollectorPolicy::update_incremental_cset_info(HeapRegion* hr,
 
 void G1CollectorPolicy::add_region_to_incremental_cset_common(HeapRegion* hr) {
   assert(hr->is_young(), "invariant");
-  assert(hr->young_index_in_cset() > -1, "should have already been set");
   assert(_inc_cset_build_state == Active, "Precondition");
+
+  hr->set_young_index_in_cset(_inc_cset_region_length);
+  _inc_cset_region_length++;
 
   // We need to clear and set the cached recorded/cached collection set
   // information in the heap region here (before the region gets added
@@ -1996,6 +2004,8 @@ void G1CollectorPolicy::finalize_cset(double target_pause_time_ms, EvacuationInf
     hr = hr->get_next_young_region();
   }
 
+  verify_young_cset_indices();
+
   // Clear the fields that point to the survivor list - they are all young now.
   young_list->clear_survivors();
 
@@ -2158,6 +2168,30 @@ void G1CollectorPolicy::finalize_cset(double target_pause_time_ms, EvacuationInf
   phase_times()->record_non_young_cset_choice_time_ms((non_young_end_time_sec - non_young_start_time_sec) * 1000.0);
   evacuation_info.set_collectionset_regions(cset_region_length());
 }
+
+#ifdef ASSERT
+void G1CollectorPolicy::verify_young_cset_indices() const {
+  ResourceMark rm;
+
+  uint* heap_region_indices = NEW_RESOURCE_ARRAY(uint, young_cset_region_length());
+
+  for (uint i = 0; i < young_cset_region_length(); ++i) {
+    heap_region_indices[i] = (uint) -1;
+  }
+
+  for (HeapRegion* hr = _inc_cset_head; hr != NULL; hr = hr->next_in_collection_set()) {
+    const int idx = hr->young_index_in_cset();
+    assert(idx > -1, "must be set for all inc cset regions");
+    assert((uint) idx < young_cset_region_length(), "young cset index too large");
+
+    assert(heap_region_indices[idx] == (uint) -1,
+           err_msg("index %d used by multiple regions, first use by %u, second by %u",
+                   idx, heap_region_indices[idx], hr->hrm_index()));
+
+    heap_region_indices[idx] = hr->hrm_index();
+  }
+}
+#endif
 
 void TraceGen0TimeData::record_start_collection(double time_to_stop_the_world_ms) {
   if(TraceGen0Time) {
