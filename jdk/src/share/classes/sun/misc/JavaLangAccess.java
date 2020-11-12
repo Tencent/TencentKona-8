@@ -142,6 +142,16 @@ public interface JavaLangAccess {
     Thread currentCarrierThread();
 
     /**
+     * Returns the value of the current carrier thread's copy of a thread-local.
+     */
+    <T> T getCarrierThreadLocal(ThreadLocal<T> local);
+
+    /**
+     * Sets the value of the current carrier thread's copy of a thread-local.
+     */
+    <T> void setCarrierThreadLocal(ThreadLocal<T> local, T value);
+
+    /**
      * Parks the current virtual thread. If current thread is not virutal,
      * will throw InternalError.
      */

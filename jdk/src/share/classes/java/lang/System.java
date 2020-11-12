@@ -1275,6 +1275,15 @@ public final class System {
             public Thread currentCarrierThread() {
                 return Thread.currentCarrierThread();
             }
+
+            public <T> T getCarrierThreadLocal(ThreadLocal<T> local) {
+                return local.getCarrierThreadLocal();
+            }
+
+            public <T> void setCarrierThreadLocal(ThreadLocal<T> local, T value) {
+                local.setCarrierThreadLocal(value);
+            }
+
             public void parkVirtualThread() {
                 VirtualThread.park();
             }
