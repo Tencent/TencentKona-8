@@ -52,8 +52,66 @@ const size_t CONT_BITMAP_LEN = 10;
 const size_t CONT_CONTAINER_SIZE = 1 << CONT_BITMAP_LEN;
 const size_t CONT_MASK_SHIFT = 5;
 const size_t CONT_MASK = CONT_CONTAINER_SIZE - 1;
+const size_t CONT_PREMAPPED_STACK_NUM = 100;
+const size_t CONT_RESERVED_PHYSICAL_MEM_MAX = 100;
 static const int cont_pin_monitor = 3;
 static const int cont_pin_jni = 2;
+
+/* Mapping numbers of stacks and set its permission as PROT_READ | PROT_WRITE */
+class ContPreMappedStack : public CHeapObj<mtThread> {
+private:
+  ReservedSpace _reserved_space;
+  VirtualSpace _virtual_space;
+  ContPreMappedStack* _next;
+
+public:
+  uint allocated_num;
+  ContPreMappedStack(intptr_t size, ContPreMappedStack* next) : _reserved_space(size) { _next = next; allocated_num = 0; };
+  bool initialize_virtual_space(intptr_t real_stack_size);
+  address get_base_address() { return (address)_virtual_space.high(); };
+  ~ContPreMappedStack() { _reserved_space.release(); };
+};
+
+class ContReservedStack : AllStatic {
+private:
+  static Mutex* _lock;
+  /*
+   * free_array contains stacks which are initialized, we can reuse it directly.
+   * free_array is an array, the most recently used stack is at the bottom of
+   * this array.
+   */
+  static GrowableArray<address>* free_array;
+  /* 
+   * A list of pre mapped stack, each node contains stacks which number is CONT_PREMAPPED_STACK_NUM,
+   * current_pre_mapped_stack pointed to the node which is used currently, 
+   * we should alloc a new pre mapped node when current_pre_mapped_stack is full.
+   */
+  static ContPreMappedStack* current_pre_mapped_stack;
+  //static size_t free_array_uncommit_index;
+
+  static address get_stack_from_free_array();
+  static address get_stack_from_pre_mapped();
+  static bool add_pre_mapped_stack();
+
+  static inline address acquire_stack();
+  static inline bool pre_mapped_stack_is_full();
+
+public:
+  static uintx stack_size;
+
+  static void init();
+  /*
+   * 1. Try to get stack from free array.
+   * 2. If free array is not empty, get a stack from free array and return.
+   * 3. If free array is empty, try to get stack from pre-mapped memory.
+   * 4. If pre-mapped memory has no space to assign, add a new pre-mapped block.
+   * 5. Get pre-mapped memory.
+   * 6. Set the permisson of yellow page and red page as PROT_NONE.
+   */ 
+  static address get_stack();
+  /* Release stack and insert the stack into free array */
+  static void insert_stack(address node);
+};
 
 class ContBucket : public CHeapObj<mtThread> {
 private:
@@ -149,8 +207,6 @@ private:
   CoroutineState  _state;
   bool            _is_thread_coroutine;
 
-  ReservedSpace   _reserved_space;
-  VirtualSpace    _virtual_space;
   address         _stack_base;
   intptr_t        _stack_size;
   address         _last_sp;
@@ -175,7 +231,7 @@ private:
 #endif
 
   // objects of this type can only be created via static functions
-  Coroutine(intptr_t size);
+  Coroutine();
 
   void frames_do(FrameClosure* fc);
 
@@ -185,7 +241,7 @@ private:
   static JavaThread* _main_thread;
   static Method* _continuation_start;
 
-  bool init_stack(JavaThread* thread, intptr_t size);
+  bool init_stack(JavaThread* thread);
 
   void add_stack_frame(void* frames, int* depth, javaVFrame* jvf);
   void print_stack_on(outputStream* st, void* frames, int* depth);
