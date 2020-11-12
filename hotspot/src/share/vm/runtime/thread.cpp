@@ -3514,6 +3514,7 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   main_thread->initialize_thread_local_storage();
 #if INCLUDE_KONA_FIBER
   if (UseKonaFiber) {
+    ContReservedStack::init();
     ContContainer::init();
     Coroutine::set_main_thread(main_thread);
     main_thread->initialize_coroutine_support();
