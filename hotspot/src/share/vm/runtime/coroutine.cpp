@@ -46,6 +46,127 @@ JavaThread* Coroutine::_main_thread = NULL;
 Method* Coroutine::_continuation_start = NULL;
 ContBucket* ContContainer::_buckets= NULL;
 
+Mutex* ContReservedStack::_lock = NULL;
+GrowableArray<address>* ContReservedStack::free_array = NULL;
+ContPreMappedStack* ContReservedStack::current_pre_mapped_stack = NULL;
+uintx ContReservedStack::stack_size = 0;
+//size_t ContReservedStack::free_array_uncommit_index = 0;
+
+void ContReservedStack::init() {
+  _lock = new Mutex(Mutex::leaf, "InitializedStack", false);
+
+  free_array = new (ResourceObj::C_HEAP, mtInternal)GrowableArray<address>(CONT_RESERVED_PHYSICAL_MEM_MAX, true);
+  uint reserved_pages = StackShadowPages + StackRedPages + StackYellowPages;
+  stack_size = DefaultCoroutineStackSize + (reserved_pages * os::vm_page_size());
+}
+
+bool ContReservedStack::add_pre_mapped_stack() {
+  uintx alloc_real_stack_size = stack_size * CONT_PREMAPPED_STACK_NUM;
+  uintx reserved_size = align_size_up(stack_size * CONT_PREMAPPED_STACK_NUM, os::vm_allocation_granularity());
+
+  ContPreMappedStack* node = new ContPreMappedStack(reserved_size, current_pre_mapped_stack);
+  if (node == NULL) {
+    return false;
+  }
+
+  if (!node->initialize_virtual_space(alloc_real_stack_size)) {
+    delete node;
+    return false;
+  }
+
+  current_pre_mapped_stack = node;
+  return true;
+}
+
+void ContReservedStack::insert_stack(address node) {
+  MutexLockerEx ml(_lock, Mutex::_no_safepoint_check_flag);
+  free_array->append(node);
+  /*if (free_array->length() - free_array_uncommit_index > CONT_RESERVED_PHYSICAL_MEM_MAX) {
+    address target = free_array->at(free_array_uncommit_index);
+    if (!os::free_memory((char *)(target - ContReservedStack::stack_size), ContReservedStack::stack_size)) {
+      warning("Attempt to deallocate stack guard pages failed.");
+    }
+    free_array_uncommit_index++;
+  }*/
+}
+
+address ContReservedStack::get_stack_from_free_array() {
+  MutexLockerEx ml(_lock, Mutex::_no_safepoint_check_flag);
+  if (free_array->is_empty()) {
+    return NULL;
+  }
+
+  address stack_base = free_array->pop();
+  /*if ((size_t)free_array->length() <= free_array_uncommit_index) {
+    free_array_uncommit_index = free_array->length() - 1;
+  }*/
+  return stack_base;
+}
+
+bool ContReservedStack::pre_mapped_stack_is_full() {
+  if (current_pre_mapped_stack->allocated_num >= CONT_PREMAPPED_STACK_NUM) {
+    return true;
+  }
+
+  return false;
+}
+
+address ContReservedStack::acquire_stack() {
+  address result = current_pre_mapped_stack->get_base_address() - current_pre_mapped_stack->allocated_num * stack_size;
+  current_pre_mapped_stack->allocated_num++;
+
+  return result;
+}
+
+address ContReservedStack::get_stack_from_pre_mapped() {
+  address stack_base;
+  {
+    MutexLockerEx ml(_lock, Mutex::_no_safepoint_check_flag);
+    if ((current_pre_mapped_stack == NULL) || pre_mapped_stack_is_full()) {
+      if (!add_pre_mapped_stack()) {
+        return NULL;
+      }
+    }
+
+    stack_base = acquire_stack();
+  }
+
+  /* guard yellow page and red page of virtual space */
+  if (os::uses_stack_guard_pages()) {
+    address low_addr = stack_base - ContReservedStack::stack_size;
+    size_t len = (StackYellowPages + StackRedPages) * os::vm_page_size();
+
+    bool allocate = os::allocate_stack_guard_pages();
+
+    if (!os::guard_memory((char *) low_addr, len)) {
+      warning("Attempt to protect stack guard pages failed.");
+      if (os::uncommit_memory((char *) low_addr, len)) {
+        warning("Attempt to deallocate stack guard pages failed.");
+      }
+    }
+  }
+
+  return stack_base;
+}
+
+address ContReservedStack::get_stack() {
+  address stack_base = ContReservedStack::get_stack_from_free_array();
+  if (stack_base != NULL) {
+    return stack_base;
+  }
+
+  return ContReservedStack::get_stack_from_pre_mapped();
+}
+
+bool ContPreMappedStack::initialize_virtual_space(intptr_t real_stack_size) {
+  if (!_virtual_space.initialize(_reserved_space, real_stack_size)) {
+    _reserved_space.release();
+    return false;
+  }
+
+  return true;
+}
+
 ContBucket::ContBucket() : _lock(Mutex::leaf, "ContBucket", false) {
   _head = NULL;
   _count = 0;
@@ -293,7 +414,7 @@ void Coroutine::cont_metadata_do(void f(Metadata*)) {
   }
 }
 
-Coroutine::Coroutine(intptr_t size) : _reserved_space(size) {
+Coroutine::Coroutine() {
 	_has_javacall = false;
   _monitor_chunks = NULL;
 }
@@ -432,7 +553,7 @@ void Coroutine::remove_monitor_chunk(MonitorChunk* chunk) {
 }
 
 Coroutine* Coroutine::create_thread_coroutine(JavaThread* thread) {
-  Coroutine* coro = new Coroutine(0);
+  Coroutine* coro = new Coroutine();
   if (coro == NULL)
     return NULL;
   coro->_state = _current;
@@ -482,20 +603,14 @@ void Coroutine::init_coroutine(Coroutine* coro, JavaThread* thread) {
 }
 
 Coroutine* Coroutine::create_coroutine(JavaThread* thread, long stack_size, oop coroutineObj) {
-  if (stack_size <= 0) {
-    stack_size = DefaultCoroutineStackSize;
-  }
+  assert(stack_size <= 0, "Can not specify stack size by users");
 
-  uint reserved_pages = StackShadowPages + StackRedPages + StackYellowPages;
-  uintx real_stack_size = stack_size + (reserved_pages * os::vm_page_size());
-  uintx reserved_size = align_size_up(real_stack_size, os::vm_allocation_granularity());
-
-  Coroutine* coro = new Coroutine(reserved_size);
+  Coroutine* coro = new Coroutine();
   if (coro == NULL) {
     return NULL;
   }
 
-  if (!coro->init_stack(thread, real_stack_size)) {
+  if (!coro->init_stack(thread)) {
     return NULL;
   }
 
@@ -591,29 +706,10 @@ void Coroutine::init_thread_stack(JavaThread* thread) {
   _last_sp = NULL;
 }
 
-bool Coroutine::init_stack(JavaThread* thread, intptr_t real_stack_size) {
-  if (!_virtual_space.initialize(_reserved_space, real_stack_size)) {
-    _reserved_space.release();
-    return false;
-  }
-
-  _stack_base = (address)_virtual_space.high();
-  _stack_size = _virtual_space.committed_size();
+bool Coroutine::init_stack(JavaThread* thread) {
+  _stack_base = ContReservedStack::get_stack();
+  _stack_size = ContReservedStack::stack_size;
   _last_sp = NULL;
-
-  if (os::uses_stack_guard_pages()) {
-    address low_addr = _stack_base - _stack_size;
-    size_t len = (StackYellowPages + StackRedPages) * os::vm_page_size();
-
-    bool allocate = os::allocate_stack_guard_pages();
-
-    if (!os::guard_memory((char *) low_addr, len)) {
-      warning("Attempt to protect stack guard pages failed.");
-      if (os::uncommit_memory((char *) low_addr, len)) {
-        warning("Attempt to deallocate stack guard pages failed.");
-      }
-    }
-  }
 
   DEBUG_CORO_ONLY(tty->print("created coroutine stack at %08x with real size: %i\n", _stack_base, _stack_size));
 
@@ -624,10 +720,7 @@ void Coroutine::free_stack() {
   //guarantee(!stack->is_thread_stack(), "cannot free thread stack");
   if(!is_thread_coroutine())
   { 
-      if (_reserved_space.size() > 0) {
-        _virtual_space.release();
-        _reserved_space.release();
-      }
+      ContReservedStack::insert_stack(_stack_base);
   }
 }
 
