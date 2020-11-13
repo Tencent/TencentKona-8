@@ -639,6 +639,8 @@ void ParallelScavengeHeap::print_tracing_info() const {
   }
 }
 
+void ParallelScavengeHeap::run_task(AbstractGangTask* task) {
+}
 
 void ParallelScavengeHeap::verify(bool silent, VerifyOption option /* ignored */) {
   // Why do we need the total_collections()-filter below?

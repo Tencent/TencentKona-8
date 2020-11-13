@@ -1297,6 +1297,10 @@ public:
     object_iterate(cl);
   }
 
+  void object_iterate_parallel(ObjectClosure* cl, uint worker_id, uint num_workers, jint claim_value);
+
+  virtual ParallelObjectIterator* parallel_object_iterator(uint thread_num);
+
   // Iterate over all spaces in use in the heap, in ascending address order.
   virtual void space_iterate(SpaceClosure* cl);
 

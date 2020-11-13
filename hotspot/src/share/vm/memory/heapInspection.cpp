@@ -28,6 +28,7 @@
 #include "memory/genCollectedHeap.hpp"
 #include "memory/heapInspection.hpp"
 #include "memory/resourceArea.hpp"
+#include "runtime/atomic.hpp"
 #include "runtime/os.hpp"
 #include "utilities/globalDefinitions.hpp"
 #include "utilities/macros.hpp"
@@ -199,6 +200,42 @@ void KlassInfoTable::iterate(KlassInfoClosure* cic) {
 size_t KlassInfoTable::size_of_instances_in_words() const {
   return _size_of_instances_in_words;
 }
+
+// Return false if the entry could not be recorded on account
+// of running out of space required to create a new entry.
+bool KlassInfoTable::merge_entry(const KlassInfoEntry* cie) {
+  Klass*          k = cie->klass();
+  KlassInfoEntry* elt = lookup(k);
+  // elt may be NULL if it's a new klass for which we
+  // could not allocate space for a new entry in the hashtable.
+  if (elt != NULL) {
+    elt->set_count(elt->count() + cie->count());
+    elt->set_words(elt->words() + cie->words());
+    _size_of_instances_in_words += cie->words();
+    return true;
+  }
+  return false;
+}
+
+class KlassInfoTableMergeClosure : public KlassInfoClosure {
+private:
+  KlassInfoTable* _dest;
+  bool _success;
+public:
+  KlassInfoTableMergeClosure(KlassInfoTable* table) : _dest(table), _success(true) {}
+  void do_cinfo(KlassInfoEntry* cie) {
+    _success &= _dest->merge_entry(cie);
+  }
+  bool success() { return _success; }
+};
+
+// merge from table
+bool KlassInfoTable::merge(KlassInfoTable* table) {
+  KlassInfoTableMergeClosure closure(this);
+  table->iterate(&closure);
+  return closure.success();
+}
+
 
 int KlassInfoHisto::sort_helper(KlassInfoEntry** e1, KlassInfoEntry** e2) {
   return (*e1)->compare(*e1,*e2);
@@ -461,7 +498,7 @@ class HistoClosure : public KlassInfoClosure {
 class RecordInstanceClosure : public ObjectClosure {
  private:
   KlassInfoTable* _cit;
-  size_t _missed_count;
+  uintx _missed_count;
   BoolObjectClosure* _filter;
  public:
   RecordInstanceClosure(KlassInfoTable* cit, BoolObjectClosure* filter) :
@@ -475,7 +512,7 @@ class RecordInstanceClosure : public ObjectClosure {
     }
   }
 
-  size_t missed_count() { return _missed_count; }
+  uintx missed_count() { return _missed_count; }
 
  private:
   bool should_visit(oop obj) {
@@ -483,15 +520,63 @@ class RecordInstanceClosure : public ObjectClosure {
   }
 };
 
-size_t HeapInspection::populate_table(KlassInfoTable* cit, BoolObjectClosure *filter) {
+// Heap inspection for every worker.
+// When native OOM happens for KlassInfoTable, set _success to false.
+void ParHeapInspectTask::work(uint worker_id) {
+  uintx missed_count = 0;
+  bool merge_success = true;
+  if (Atomic::load(&_success) != SUCC_TRUE) {
+    // other worker has failed on parallel iteration.
+    return;
+  }
+
+  KlassInfoTable cit(false);
+  if (cit.allocation_failed()) {
+    // fail to allocate memory, stop parallel mode
+    Atomic::store(SUCC_FALSE, &_success);
+    return;
+  }
+  RecordInstanceClosure ric(&cit, _filter);
+  _poi->object_iterate(&ric, worker_id);
+  missed_count = ric.missed_count();
+  {
+    MutexLocker x(&_mutex);
+    merge_success = _shared_cit->merge(&cit);
+  }
+  if (merge_success) {
+    Atomic::add((jlong)missed_count, (jlong*)&_missed_count);
+  } else {
+    Atomic::store(SUCC_FALSE, &_success);
+  }
+}
+
+uintx HeapInspection::populate_table(KlassInfoTable* cit, BoolObjectClosure *filter, uint parallel_thread_num) {
+
+  FlexibleWorkGang * gang =  Universe::heap()->workers();
+  // Try parallel first.
+  if (parallel_thread_num > 1 && gang != NULL) {
+    WithUpdatedActiveWorkers update_and_restore(gang, parallel_thread_num);
+    ResourceMark rm;
+    ParallelObjectIterator* poi = Universe::heap()->parallel_object_iterator(parallel_thread_num);
+    if (poi != NULL) {
+      ParHeapInspectTask task(poi, cit, filter);
+      Universe::heap()->run_task(&task);
+      delete poi;
+      if (task.success()) {
+        return task.missed_count();
+      }
+    }
+  }
+
   ResourceMark rm;
+  // If no parallel iteration available, run serially.
 
   RecordInstanceClosure ric(cit, filter);
   Universe::heap()->object_iterate(&ric);
   return ric.missed_count();
 }
 
-void HeapInspection::heap_inspection(outputStream* st) {
+void HeapInspection::heap_inspection(outputStream* st, uint parallel_thread_num) {
   ResourceMark rm;
 
   if (_print_help) {
@@ -514,9 +599,9 @@ void HeapInspection::heap_inspection(outputStream* st) {
 
   KlassInfoTable cit(_print_class_stats);
   if (!cit.allocation_failed()) {
-    size_t missed_count = populate_table(&cit);
+    uintx missed_count = populate_table(&cit, NULL, parallel_thread_num);
     if (missed_count != 0) {
-      st->print_cr("WARNING: Ran out of C-heap; undercounted " SIZE_FORMAT
+      st->print_cr("WARNING: Ran out of C-heap; undercounted " UINTX_FORMAT
                    " total instances in data below",
                    missed_count);
     }

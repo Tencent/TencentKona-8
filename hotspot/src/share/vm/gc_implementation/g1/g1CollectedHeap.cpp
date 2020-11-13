@@ -62,6 +62,7 @@
 #include "memory/gcLocker.inline.hpp"
 #include "memory/generationSpec.hpp"
 #include "memory/iterator.hpp"
+#include "memory/heapInspection.hpp"
 #include "memory/referenceProcessor.hpp"
 #include "oops/oop.inline.hpp"
 #include "oops/oop.pcgc.inline.hpp"
@@ -2663,6 +2664,39 @@ public:
 void G1CollectedHeap::object_iterate(ObjectClosure* cl) {
   IterateObjectClosureRegionClosure blk(cl);
   heap_region_iterate(&blk);
+}
+
+class G1ParallelObjectIterator : public ParallelObjectIterator {
+private:
+  G1CollectedHeap*  _heap;
+  uint _num_workers;
+
+public:
+  G1ParallelObjectIterator(uint thread_num) :
+      _heap(G1CollectedHeap::heap()),
+      _num_workers(thread_num == 0 ? G1CollectedHeap::heap()->workers()->active_workers() : thread_num) {
+      assert(_heap->check_heap_region_claim_values(
+             HeapRegion::InitialClaimValue), "sanity check");
+      }
+
+  virtual void object_iterate(ObjectClosure* cl, uint worker_id) {
+    _heap->object_iterate_parallel(cl, worker_id, _num_workers, HeapRegion::ParInspectClaimValue);
+  }
+
+  ~G1ParallelObjectIterator() {
+    assert(_heap->check_heap_region_claim_values(
+            HeapRegion::ParInspectClaimValue), "sanity check");
+    _heap->reset_heap_region_claim_values();
+  }
+};
+
+ParallelObjectIterator* G1CollectedHeap::parallel_object_iterator(uint thread_num) {
+  return new G1ParallelObjectIterator(thread_num);
+}
+
+void G1CollectedHeap::object_iterate_parallel(ObjectClosure* cl, uint worker_id, uint num_workers, jint claim_value) {
+  IterateObjectClosureRegionClosure blk(cl);
+  heap_region_par_iterate_chunked(&blk, worker_id, num_workers, claim_value);
 }
 
 // Calls a SpaceClosure on a HeapRegion.
