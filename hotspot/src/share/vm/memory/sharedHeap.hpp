@@ -207,7 +207,7 @@ public:
   void change_strong_roots_parity();
 
  public:
-  FlexibleWorkGang* workers() const { return _workers; }
+  virtual FlexibleWorkGang* workers() const { return _workers; }
 
   // The functions below are helper functions that a subclass of
   // "SharedHeap" can use in the implementation of its virtual
@@ -232,6 +232,11 @@ public:
                              size_t bytes_before,
                              size_t bytes_after,
                              size_t capacity);
+
+   // Run given task. Possibly in parallel if the GC supports it.
+   virtual void run_task(AbstractGangTask* task) {
+     _workers->run_task(task);
+   };
 };
 
 #endif // SHARE_VM_MEMORY_SHAREDHEAP_HPP

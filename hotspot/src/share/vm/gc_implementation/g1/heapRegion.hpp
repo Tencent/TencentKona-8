@@ -347,7 +347,8 @@ class HeapRegion: public G1OffsetTableContigSpace {
     ParEvacFailureClaimValue   = 6,
     AggregateCountClaimValue   = 7,
     VerifyCountClaimValue      = 8,
-    ParMarkRootClaimValue      = 9
+    ParMarkRootClaimValue      = 9,
+    ParInspectClaimValue       = 10
   };
 
   // All allocated blocks are occupied by objects in a HeapRegion

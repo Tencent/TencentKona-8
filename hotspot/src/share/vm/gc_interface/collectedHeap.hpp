@@ -42,8 +42,10 @@
 // infrastructure common to all heaps.
 
 class AdaptiveSizePolicy;
+class AbstractGangTask;
 class BarrierSet;
 class CollectorPolicy;
+class FlexibleWorkGang;
 class GCHeapSummary;
 class GCTimer;
 class GCTracer;
@@ -76,6 +78,12 @@ class GCHeapLog : public EventLogBase<GCMessage> {
   void log_heap_after() {
     log_heap(false);
   }
+};
+
+class ParallelObjectIterator : public CHeapObj<mtGC> {
+ public:
+  virtual void object_iterate(ObjectClosure* cl, uint worker_id) = 0;
+  virtual ~ParallelObjectIterator() {}
 };
 
 //
@@ -558,6 +566,9 @@ class CollectedHeap : public CHeapObj<mtInternal> {
   // over live objects.
   virtual void safe_object_iterate(ObjectClosure* cl) = 0;
 
+  virtual ParallelObjectIterator* parallel_object_iterator(uint thread_num) {
+    return NULL;
+  }
   // NOTE! There is no requirement that a collector implement these
   // functions.
   //
@@ -690,6 +701,9 @@ class CollectedHeap : public CHeapObj<mtInternal> {
                                              jint len) {
     return false;
   }
+
+  virtual void run_task(AbstractGangTask* task) = 0;
+  virtual FlexibleWorkGang* workers() const = 0;
 
   /////////////// Unit tests ///////////////
 
