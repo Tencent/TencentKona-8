@@ -50,7 +50,7 @@ Mutex* ContReservedStack::_lock = NULL;
 GrowableArray<address>* ContReservedStack::free_array = NULL;
 ContPreMappedStack* ContReservedStack::current_pre_mapped_stack = NULL;
 uintx ContReservedStack::stack_size = 0;
-//size_t ContReservedStack::free_array_uncommit_index = 0;
+int ContReservedStack::free_array_uncommit_index = 0;
 
 void ContReservedStack::init() {
   _lock = new Mutex(Mutex::leaf, "InitializedStack", false);
@@ -81,13 +81,12 @@ bool ContReservedStack::add_pre_mapped_stack() {
 void ContReservedStack::insert_stack(address node) {
   MutexLockerEx ml(_lock, Mutex::_no_safepoint_check_flag);
   free_array->append(node);
-  /*if (free_array->length() - free_array_uncommit_index > CONT_RESERVED_PHYSICAL_MEM_MAX) {
+
+  if (free_array->length() - free_array_uncommit_index > CONT_RESERVED_PHYSICAL_MEM_MAX) {
     address target = free_array->at(free_array_uncommit_index);
-    if (!os::free_memory((char *)(target - ContReservedStack::stack_size), ContReservedStack::stack_size)) {
-      warning("Attempt to deallocate stack guard pages failed.");
-    }
+    os::free_heap_physical_memory((char *)(target - ContReservedStack::stack_size), ContReservedStack::stack_size);
     free_array_uncommit_index++;
-  }*/
+  }
 }
 
 address ContReservedStack::get_stack_from_free_array() {
@@ -97,9 +96,10 @@ address ContReservedStack::get_stack_from_free_array() {
   }
 
   address stack_base = free_array->pop();
-  /*if ((size_t)free_array->length() <= free_array_uncommit_index) {
-    free_array_uncommit_index = free_array->length() - 1;
-  }*/
+  if (free_array->length() <= free_array_uncommit_index) {
+    /* The node which is ahead of uncommit index has no physical memory */
+    free_array_uncommit_index = free_array->length();
+  }
   return stack_base;
 }
 
