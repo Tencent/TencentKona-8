@@ -52,8 +52,8 @@ const size_t CONT_BITMAP_LEN = 10;
 const size_t CONT_CONTAINER_SIZE = 1 << CONT_BITMAP_LEN;
 const size_t CONT_MASK_SHIFT = 5;
 const size_t CONT_MASK = CONT_CONTAINER_SIZE - 1;
-const size_t CONT_PREMAPPED_STACK_NUM = 100;
-const size_t CONT_RESERVED_PHYSICAL_MEM_MAX = 100;
+const int CONT_PREMAPPED_STACK_NUM = 100;
+const int CONT_RESERVED_PHYSICAL_MEM_MAX = 100;
 static const int cont_pin_monitor = 3;
 static const int cont_pin_jni = 2;
 
@@ -65,7 +65,7 @@ private:
   ContPreMappedStack* _next;
 
 public:
-  uint allocated_num;
+  int allocated_num;
   ContPreMappedStack(intptr_t size, ContPreMappedStack* next) : _reserved_space(size) { _next = next; allocated_num = 0; };
   bool initialize_virtual_space(intptr_t real_stack_size);
   address get_base_address() { return (address)_virtual_space.high(); };
@@ -87,7 +87,7 @@ private:
    * we should alloc a new pre mapped node when current_pre_mapped_stack is full.
    */
   static ContPreMappedStack* current_pre_mapped_stack;
-  //static size_t free_array_uncommit_index;
+  static int free_array_uncommit_index;
 
   static address get_stack_from_free_array();
   static address get_stack_from_pre_mapped();
