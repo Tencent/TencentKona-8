@@ -6435,7 +6435,7 @@ public:
       timer->record_time_secs(G1GCPhaseTimes::YoungFreeCSet, worker_id, young_time);
     }
     if (has_non_young_time) {
-      timer->record_time_secs(G1GCPhaseTimes::NonYoungFreeCSet, worker_id, young_time);
+      timer->record_time_secs(G1GCPhaseTimes::NonYoungFreeCSet, worker_id, non_young_time);
     }
   }
 };
