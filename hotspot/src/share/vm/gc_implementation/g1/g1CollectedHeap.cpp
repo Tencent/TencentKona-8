@@ -6397,9 +6397,7 @@ public:
 
     // Start parallel work.
     double young_time = 0.0;
-    bool has_young_time = false;
     double non_young_time = 0.0;
-    bool has_non_young_time = false;
 
     while (true) {
       size_t end = (size_t) Atomic::add_ptr((intptr_t) chunk_size(), (volatile intptr_t*) &_parallel_work_claim);
@@ -6422,21 +6420,15 @@ public:
         double time_taken = end_time - start_time;
         if (is_young) {
           young_time += time_taken;
-          has_young_time = true;
         } else {
           non_young_time += time_taken;
-          has_non_young_time = true;
         }
         start_time = end_time;
       }
     }
 
-    if (has_young_time) {
-      timer->record_time_secs(G1GCPhaseTimes::YoungFreeCSet, worker_id, young_time);
-    }
-    if (has_non_young_time) {
-      timer->record_time_secs(G1GCPhaseTimes::NonYoungFreeCSet, worker_id, non_young_time);
-    }
+    timer->record_time_secs(G1GCPhaseTimes::YoungFreeCSet, worker_id, young_time);
+    timer->record_time_secs(G1GCPhaseTimes::NonYoungFreeCSet, worker_id, non_young_time);
   }
 };
 
