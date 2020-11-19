@@ -558,6 +558,19 @@ class Thread implements Runnable {
         init(null, null, name, 0);
     }
 
+    /*
+     * If the thread is a parent class of virtual thread, the inheritableThreadLocals
+     * should not be initialized.
+     * This is not a public constructor.
+     */
+    Thread(String name, int characteristics) {
+        if ((characteristics & Thread.VIRTUAL) != 0) {
+            init(null, target, name, 0, null, false);
+        } else {
+            init(null, target, name, 0);
+        }
+    }
+
     /**
      * Allocates a new {@code Thread} object. This constructor has the same
      * effect as {@linkplain #Thread(ThreadGroup,Runnable,String) Thread}
