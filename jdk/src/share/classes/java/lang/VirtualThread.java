@@ -121,6 +121,28 @@ class VirtualThread extends Thread {
     private final boolean isThreadPoolExecutor;
 
     /**
+     * Initialize thread local of virtual thread according to characteristics.
+     */  
+    private void initializeThreadLocal(int characteristics) {
+        /* In case characteristics has NO_THREAD_LOCALS and threadLocals has been used */
+        assert this.threadLocals == null;
+
+        // thread locals
+        if ((characteristics & NO_THREAD_LOCALS) != 0) {
+            this.threadLocals = ThreadLocal.ThreadLocalMap.NOT_SUPPORTED;
+            this.inheritableThreadLocals = ThreadLocal.ThreadLocalMap.NOT_SUPPORTED;
+        } else if ((characteristics & INHERIT_THREAD_LOCALS) != 0) {
+            Thread parent = Thread.currentThread();
+            ThreadLocal.ThreadLocalMap parentMap = parent.inheritableThreadLocals;
+            if (parentMap != null
+                    && parentMap != ThreadLocal.ThreadLocalMap.NOT_SUPPORTED
+                    && parentMap.size() > 0) {
+                this.inheritableThreadLocals = ThreadLocal.createInheritedMap(parentMap);
+            }
+        }
+    }
+
+    /**
      * Creates a new {@code VirtualThread} to run the given task with the given scheduler.
      *
      * @param scheduler the scheduler
@@ -129,7 +151,8 @@ class VirtualThread extends Thread {
      * @param task the task to execute
      */
     VirtualThread(Executor scheduler, String name, int characteristics, Runnable task) {
-        super(name == null ? "<unnamed>" : name);
+        super(name == null ? "<unnamed>" : name, characteristics);
+        initializeThreadLocal(characteristics);
 
         Objects.requireNonNull(task);
         Runnable target = () -> {
