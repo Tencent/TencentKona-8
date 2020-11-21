@@ -2271,6 +2271,15 @@ class Thread implements Runnable {
     }
 
     /**
+     * Check if current thread has continuation running.
+     *
+     * @return  the currently executing carrier thread.
+     */
+    public boolean inContinuation() {
+        return cont != null;
+    }
+
+    /**
      * Invoke from Continuation run, get continuation represent carrier thread
      */
     Continuation getThreadContinuation() {
