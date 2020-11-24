@@ -180,4 +180,13 @@ public interface JavaLangAccess {
      * @return true if thread is virtual and parking, otherwise false
      */
     boolean isVirtualThreadParking(Thread thread);
+
+    /**
+     * Add pinned action of virtual thread when it try to yield and it is
+     * pinned. If thread is not virtual, will throw ClassCastException.
+     *
+     * @param VirtualThread to add pinned action.
+     * @param Continuation.PinnedAction is the added interface.
+     */
+    void setVirtualThreadPinnedAction(Thread thread, Continuation.PinnedAction pinnedAction);
 }
