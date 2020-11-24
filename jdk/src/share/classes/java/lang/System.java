@@ -1299,6 +1299,11 @@ public final class System {
             public boolean isVirtualThreadParking(Thread thread) {
                 return ((VirtualThread) thread).isParking();
             }
+
+            public void setVirtualThreadPinnedAction(Thread thread, Continuation.PinnedAction pinnedAction) {
+                ((VirtualThread) thread).setPinnedAction(pinnedAction);
+            }
+ 
         });
     }
 }
