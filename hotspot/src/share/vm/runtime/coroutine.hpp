@@ -210,6 +210,7 @@ private:
   address         _stack_base;
   intptr_t        _stack_size;
   address         _last_sp;
+  oop             _continuation;
 
   // for verify check
   JNIHandleBlock* saved_active_handles;
@@ -258,6 +259,7 @@ public:
   void print_on(outputStream* st) const;
   void print_stack_on(outputStream* st);
   void print_stack_on(void* frames, int* depth);
+  void print_VT_info(outputStream* st);
   static const char* get_coroutine_state_name(CoroutineState state);
   bool is_lock_owned(address adr) const;
 
@@ -276,6 +278,8 @@ public:
 
   JavaThread* thread() const        { return _thread; }
   void set_thread(JavaThread* x)    { _thread = x; }
+
+  void set_continuation(oop o)      { _continuation = o; }
 
   void set_saved_handle_area_hwm(char* wm) { saved_handle_area_hwm = wm; }
   char* get_saved_handle_area_hwm()        { return saved_handle_area_hwm; }

@@ -2960,7 +2960,13 @@ void JavaThread::print_on(outputStream *st, bool print_extended_info) const {
   // print guess for valid stack memory region (assume 4K pages); helps lock debugging
   st->print_cr("[" INTPTR_FORMAT "]", (intptr_t)last_Java_sp() & ~right_n_bits(12));
   if (thread_oop != NULL && JDK_Version::is_gte_jdk15x_version()) {
-    st->print_cr("   java.lang.Thread.State: %s", java_lang_Thread::thread_status_name(thread_oop));
+    st->print("   java.lang.Thread.State: %s", java_lang_Thread::thread_status_name(thread_oop));
+#if INCLUDE_KONA_FIBER
+    if (UseKonaFiber && _current_coroutine != NULL) {
+      _current_coroutine->print_VT_info(st);
+    }
+#endif
+    st->cr();
   }
 #ifndef PRODUCT
   print_thread_state_on(st);

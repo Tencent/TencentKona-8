@@ -610,9 +610,14 @@
                                                                                                                   \
   /* continuation support */                                                                                      \
   template(java_lang_Continuation,                     "java/lang/Continuation")                                  \
+  template(java_lang_VTContinuation,                   "java/lang/VirtualThread$VTContinuation")                  \
+  template(java_lang_VT,                               "java/lang/VirtualThread")                                 \
   template(cont_start_method_name,                     "start")                                                   \
   template(data_name,                                  "data")                                                    \
+  template(state_name,                                 "state")                                                   \
+  template(outer_instance_0,                           "this$0")                                                  \
   template(reflect_method_signature,                   "Ljava/lang/reflect/Method;")                              \
+  template(VT_signature,                               "Ljava/lang/VirtualThread;")                               \
                                                                                                                   \
   /* jfr signatures */                                                                                            \
   JFR_TEMPLATES(template)                                                                                         \
