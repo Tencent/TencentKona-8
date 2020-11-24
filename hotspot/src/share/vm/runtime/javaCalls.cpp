@@ -553,8 +553,9 @@ void JavaCalls::call_continuation_start(oop cont_obj, TRAPS) {
   {
     JavaCallWrapper link(method(), receiver, CHECK);
     {
-      coro->set_has_javacall(true);
       oop param = receiver();
+      coro->set_has_javacall(true);
+      coro->set_continuation(param);
       hm.~HandleMark();
       method.remove();
       StubRoutines::call_stub()(
