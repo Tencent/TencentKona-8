@@ -154,6 +154,35 @@ class VirtualThread extends Thread {
         }
     }
 
+    private class VTContinuation extends Continuation {
+        VTContinuation(ContinuationScope scope, Runnable target) {
+            super(scope, target);
+        }
+        @Override
+        protected void onPinned(Continuation.Pinned reason) {
+            if (TRACE_PINNING_MODE > 0) {
+                // switch to carrier thread as the printing may park
+                Thread carrier = Thread.currentCarrierThread();
+                VirtualThread vthread = carrier.getVirtualThread();
+                carrier.setVirtualThread(null);
+                try {
+                    PinnedThreadPrinter.printStackTrace();
+                } finally {
+                    carrier.setVirtualThread(vthread);
+                }
+            }
+
+            if (pinnedAction != null) {
+                pinnedAction.run(reason);
+            }
+
+            if (state() == PARKING) {
+                parkCarrierThread();
+            }
+            assert state() == RUNNING;
+        }
+    }
+
     /**
      * Creates a new {@code VirtualThread} to run the given task with the given scheduler.
      *
@@ -186,32 +215,7 @@ class VirtualThread extends Thread {
         this.scheduler = scheduler;
         this.vtTarget = task;
         this.isThreadPoolExecutor = (scheduler == null) ? false : (scheduler instanceof ThreadPoolExecutor);
-        this.cont = new Continuation(VTHREAD_SCOPE, target) {
-            @Override
-            protected void onPinned(Continuation.Pinned reason) {
-                if (TRACE_PINNING_MODE > 0) {
-                    // switch to carrier thread as the printing may park
-                    Thread carrier = Thread.currentCarrierThread();
-                    VirtualThread vthread = carrier.getVirtualThread();
-                    carrier.setVirtualThread(null);
-                    try {
-                        PinnedThreadPrinter.printStackTrace();
-                    } finally {
-                        carrier.setVirtualThread(vthread);
-                    }
-                }
-
-                if (pinnedAction != null) {
-                    pinnedAction.run(reason);
-                }
-
-                if (state() == PARKING) {
-                    parkCarrierThread();
-                }
-                assert state() == RUNNING;
-            }
-        };
-
+        this.cont = new VTContinuation(VTHREAD_SCOPE, target);
         this.runContinuation = /*(scheduler != null)
                 ? new Runner(this)
                 :*/ this::runContinuation;
