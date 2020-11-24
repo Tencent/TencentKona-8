@@ -120,6 +120,18 @@ class VirtualThread extends Thread {
     private Condition condition;           // created lazily while holding lock
     private final boolean isThreadPoolExecutor;
 
+   /**
+     * Add a user defined callback function when continuation try to yield
+     * while it is pinned.
+     *
+     * @param Continuation.PinnedAction the user defined interface.
+     */
+    public void setPinnedAction(Continuation.PinnedAction pinnedAction) {
+        this.pinnedAction = pinnedAction;
+    }
+
+    private Continuation.PinnedAction pinnedAction;
+
     /**
      * Initialize thread local of virtual thread according to characteristics.
      */  
@@ -187,6 +199,10 @@ class VirtualThread extends Thread {
                     } finally {
                         carrier.setVirtualThread(vthread);
                     }
+                }
+
+                if (pinnedAction != null) {
+                    pinnedAction.run(reason);
                 }
 
                 if (state() == PARKING) {

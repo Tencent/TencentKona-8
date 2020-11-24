@@ -68,4 +68,12 @@ public final class VirtualThreads {
     public static void unpark(Thread thread) {
         JLA.unparkVirtualThread(thread);
     }
+
+    /**
+     * Add a callback function to virtual thread when continuation try to yield
+     * while it is pinned.
+     */
+    public static void setPinnedAction(Thread thread, Continuation.PinnedAction pinnedAction) {
+       JLA.setVirtualThreadPinnedAction(thread, pinnedAction);
+    }
 }

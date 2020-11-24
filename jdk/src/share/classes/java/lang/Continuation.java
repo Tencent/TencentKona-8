@@ -71,6 +71,14 @@ public class Continuation {
     }
 
     /**
+     * A user defined interface. If Continuation try to yield and it is pinned,
+     * the function of run() will be executed before park carrier thread.
+     */
+    public interface PinnedAction {
+        public void run(Pinned reason);
+    }
+
+    /**
      * While the native JVM code is aware that every continuation has a scope, it is, for the most part,
      * oblivious to the continuation hierarchy. The only time this hierarchy is traversed in native code
      * is when a hierarchy of continuations is mounted on the native stack.
