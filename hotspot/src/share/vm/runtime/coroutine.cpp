@@ -387,13 +387,12 @@ void Coroutine::TerminateCoroutine(Coroutine* coro) {
   }
 }
 
-void Coroutine::TerminateCoroutineObj(jobject coroutine)
-{
-  
+void Coroutine::TerminateCoroutineObj(jobject coroutine) {
   oop old_oop = JNIHandles::resolve(coroutine);
   Coroutine* coro = (Coroutine*)java_lang_Continuation::data(old_oop);
   assert(coro != NULL, "NULL old coroutine in switchToAndTerminate");
   java_lang_Continuation::set_data(old_oop, 0);
+  coro->_continuation = NULL;
   TerminateCoroutine(coro);
 }
 
@@ -417,6 +416,7 @@ void Coroutine::cont_metadata_do(void f(Metadata*)) {
 Coroutine::Coroutine() {
 	_has_javacall = false;
   _monitor_chunks = NULL;
+  _continuation = NULL;
 }
 
 Coroutine::~Coroutine() {
@@ -503,25 +503,28 @@ void Coroutine::print_on(outputStream* st) const
 	st->print_cr("   java.lang.Thread.State: %s", get_coroutine_state_name(this->state()));
 }
 
-void Coroutine::print_stack_on(void* frames, int* depth)
-{
-  if (!has_javacall() || state() != Coroutine::_onstack) return;
+void Coroutine::print_stack_on(void* frames, int* depth) {
+  if (!has_javacall() || state() != Coroutine::_onstack) {
+    return;
+  }
   print_stack_on(NULL, frames, depth);
 }
 
-void Coroutine::print_stack_on(outputStream* st)
-{
-    if (!has_javacall()) return;
-    if (state() == Coroutine::_onstack) {
-        st->cr();
-        st->print("   Coroutine: %p", this);
-        if (is_thread_coroutine()) {
-            st->print_cr("  [thread coroutine]");
-        } else {
-            st->cr();
-        }
-        print_stack_on(st, NULL, NULL);
+void Coroutine::print_stack_on(outputStream* st) {
+  if (!has_javacall()) {
+    return;
+  }
+  if (state() == Coroutine::_onstack) {
+    st->cr();
+    st->print("   Coroutine: %p", this);
+    if (is_thread_coroutine()) {
+      st->print_cr("  [thread coroutine]");
+    } else {
+      print_VT_info(st);
+      st->cr();
     }
+    print_stack_on(st, NULL, NULL);
+  }
 }
 
 bool Coroutine::is_lock_owned(address adr) const {
@@ -645,10 +648,10 @@ public:
 };
 
 void Coroutine::oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) {
-	if(state() != Coroutine::_onstack)
-	{
-		return;
-	}
+  f->do_oop(&_continuation);
+  if(state() != Coroutine::_onstack) {
+    return;
+  }
   oops_do_Closure fc(f, cld_f, cf);
   frames_do(&fc);
 }
@@ -724,51 +727,97 @@ void Coroutine::free_stack() {
   }
 }
 
-void Coroutine::print_stack_on(outputStream* st, void* frames, int* depth)
-{
-	if (_last_sp == NULL) return;
-    address pc = ((address*)_last_sp)[1];
-    if (pc != (address)coroutine_start) {
-        intptr_t * fp = ((intptr_t**)_last_sp)[0];
-		intptr_t* sp = ((intptr_t*)_last_sp) + 2;
+static const char* VirtualThreadStateNames[] = {
+  "NEW",
+  "STARTED",
+  "RUNNABLE",
+  "RUNNING",
+  "PARKING",
+  "PARKED",
+  "PINNED"
+};
 
-		RegisterMap _reg_map(_thread, true);
-		_reg_map.set_location(rbp->as_VMReg(), (address)_last_sp);
-		_reg_map.set_include_argument_oops(false);
-		frame f(sp, fp, pc);
-		vframe* start_vf = NULL;
-		for (vframe* vf = vframe::new_vframe(&f, &_reg_map, _thread); vf; vf = vf->sender()) {
-			if (vf->is_java_frame())
-			{
-				start_vf = javaVFrame::cast(vf);
-				break;
-			}
-		}
-		int count = 0;
-		for (vframe* f = start_vf; f; f = f->sender()) {
-			if (f->is_java_frame()) {
-				javaVFrame* jvf = javaVFrame::cast(f);
-				if (st != NULL) {
-					java_lang_Throwable::print_stack_element(st, jvf->method(), jvf->bci());
-
-					// Print out lock information
-					// We only print stack info of coroutines which status is _on_stack.
-					// If coroutine has lock, it can't yield from current thread,
-					// its status must be _current.
-					// So there is no lock info to print.
-				} else {
-					add_stack_frame(frames, depth, jvf);
-				}
-			}
-			else {
-				// Ignore non-Java frames
-			}
-			// Bail-out case for too deep stacks
-			count++;
-			if (MaxJavaStackTraceDepth == count) return;
-		}
-	}
+static const char* virtual_thread_get_state_name(int state) {
+  if (state >= 0 && state < (int)(sizeof(VirtualThreadStateNames) / sizeof(const char*))) {
+    return VirtualThreadStateNames[state];
+  } else if (state == 99) {
+    return "TERMINATED";
+  } else {
+    return "ERROR STATE";
+  }
 }
+// dump VirtualThread info if possible
+// 1. check if continuation is java/lang/VirtualThread$VTContinuation
+// 2. Get VT from continuation
+// 3. Print VT name and state
+void Coroutine::print_VT_info(outputStream* st) {
+  if (_continuation == NULL) {
+    guarantee(is_thread_coroutine(), "null continuation oop when print");
+    return;
+  }
+  Klass* k = _continuation->klass();
+  if (k != SystemDictionary::VTcontinuation_klass()) {
+    return;
+  }
+  oop vt = java_lang_VTContinuation::VT(_continuation);
+  guarantee(vt != NULL, "on stack VT is null");
+  oop vt_name = java_lang_Thread::name(vt);
+  int state = java_lang_VT::state(vt);
+  if (vt_name == NULL) {
+    st->print("\tVirtualThread => name: null, state %s",
+      virtual_thread_get_state_name(state));
+  } else {
+    ResourceMark rm;
+    st->print("\tVirtualThread => name: %s, state %s",
+      java_lang_String::as_utf8_string(vt_name),
+      virtual_thread_get_state_name(state));
+  }
+}
+
+void Coroutine::print_stack_on(outputStream* st, void* frames, int* depth) {
+  if (_last_sp == NULL) return;
+  address pc = ((address*)_last_sp)[1];
+  if (pc != (address)coroutine_start) {
+    intptr_t * fp = ((intptr_t**)_last_sp)[0];
+    intptr_t* sp = ((intptr_t*)_last_sp) + 2;
+
+    RegisterMap _reg_map(_thread, true);
+    _reg_map.set_location(rbp->as_VMReg(), (address)_last_sp);
+    _reg_map.set_include_argument_oops(false);
+    frame f(sp, fp, pc);
+    vframe* start_vf = NULL;
+    for (vframe* vf = vframe::new_vframe(&f, &_reg_map, _thread); vf; vf = vf->sender()) {
+      if (vf->is_java_frame()) {
+        start_vf = javaVFrame::cast(vf);
+        break;
+      }
+    }
+    int count = 0;
+    for (vframe* f = start_vf; f; f = f->sender()) {
+      if (f->is_java_frame()) {
+        javaVFrame* jvf = javaVFrame::cast(f);
+        if (st != NULL) {
+          java_lang_Throwable::print_stack_element(st, jvf->method(), jvf->bci());
+
+          // Print out lock information
+          // We only print stack info of coroutines which status is _on_stack.
+          // If coroutine has lock, it can't yield from current thread,
+          // its status must be _current.
+          // So there is no lock info to print.
+        } else {
+          add_stack_frame(frames, depth, jvf);
+        }
+      }
+      else {
+        // Ignore non-Java frames
+      }
+      // Bail-out case for too deep stacks
+      count++;
+      if (MaxJavaStackTraceDepth == count) return;
+    }
+  }
+}
+
 void Coroutine::on_stack_frames_do(FrameClosure* fc, bool isThreadCoroutine) {
   assert(_last_sp != NULL, "CoroutineStack with NULL last_sp");
 

@@ -198,6 +198,8 @@ class SymbolPropertyTable;
                                                                                                                          \
   /* Stack manipulation classes */                                                                                       \
   do_klass(continuation_klass,                          java_lang_Continuation,                    Opt                 ) \
+  do_klass(VTcontinuation_klass,                        java_lang_VTContinuation,                  Opt                 ) \
+  do_klass(VT_klass,                                    java_lang_VT,                              Opt                 ) \
   /*end*/
 
 
