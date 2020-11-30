@@ -1313,6 +1313,7 @@ class ConcurrentMarkSweepGeneration: public CardGeneration {
   virtual void oop_iterate(ExtendedOopClosure* cl);
   virtual void safe_object_iterate(ObjectClosure* cl);
   virtual void object_iterate(ObjectClosure* cl);
+  virtual void object_iterate_atomic(ObjectClosure* cl, uint worker_id, uint num_workers);
 
   // Need to declare the full complement of closures, whether we'll
   // override them or not, or get message from the compiler:
@@ -1370,6 +1371,11 @@ class ConcurrentMarkSweepGeneration: public CardGeneration {
 
   CollectionTypes debug_collection_type() { return _debug_collection_type; }
   void rotate_debug_collection_type();
+
+  // Parallel iteration support.
+  void reset_par_iter_top() {
+    cmsSpace()->reset_par_iter_top();
+  }
 };
 
 class ASConcurrentMarkSweepGeneration : public ConcurrentMarkSweepGeneration {

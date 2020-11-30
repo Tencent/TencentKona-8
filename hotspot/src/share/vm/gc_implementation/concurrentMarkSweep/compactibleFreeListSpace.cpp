@@ -91,6 +91,7 @@ CompactibleFreeListSpace::CompactibleFreeListSpace(BlockOffsetSharedArray* bs,
                     CMSRescanMultiple),
   _marking_task_size(CardTableModRefBS::card_size_in_words * BitsPerWord *
                     CMSConcMarkMultiple),
+  _par_iter_block_size(1024 * 1024 * HeapWordSize),
   _collector(NULL)
 {
   assert(sizeof(FreeChunk) / BytesPerWord <= MinChunkSize,
@@ -164,6 +165,7 @@ CompactibleFreeListSpace::CompactibleFreeListSpace(BlockOffsetSharedArray* bs,
   }
 
   _used_stable = 0;
+  _par_iter_top = bottom();
 }
 
 // Like CompactibleSpace forward() but always calls cross_threshold() to
@@ -837,6 +839,41 @@ void CompactibleFreeListSpace::object_iterate(ObjectClosure* blk) {
     if (block_is_obj(cur)) {
       blk->do_object(oop(cur));
     }
+  }
+}
+
+// Apply the given closure to each object in the space
+void CompactibleFreeListSpace::object_iterate_atomic(ObjectClosure* blk,
+                                                     uint worker_id,
+                                                     uint num_workers) {
+  NOT_PRODUCT(verify_objects_initialized());
+  HeapWord *cur;
+  HeapWord *start;
+  HeapWord *limit;
+  size_t curSize;
+  start = bottom() + worker_id * _par_iter_block_size;
+
+  while(true) {
+    limit = MIN2(start + _par_iter_block_size, end());
+    HeapWord* bstart = block_start(start);
+    if (bstart > end()) break;
+    if (bstart < start) {
+      bstart += block_size(bstart);
+    }
+    assert(bstart >= start, "Sanity Check");
+    if (bstart < limit) {
+      cur = bstart;
+      while (cur < limit) {
+        curSize = block_size(cur);
+        if (block_is_obj(cur)) {
+         blk->do_object(oop(cur));
+        }
+        cur += curSize;
+      }
+    }
+    // Find next block
+    start += num_workers * _par_iter_block_size;
+    if (start >= end()) break;
   }
 }
 

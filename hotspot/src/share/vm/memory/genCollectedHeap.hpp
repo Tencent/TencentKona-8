@@ -30,7 +30,9 @@
 #include "memory/generation.hpp"
 #include "memory/sharedHeap.hpp"
 
+class GenCollectedHeapBlockClaimer;
 class SubTasksDone;
+class ParalllelObjectIterator;
 
 // A "GenCollectedHeap" is a SharedHeap that uses generational
 // collection.  It is represented with a sequence of Generation's.
@@ -212,8 +214,12 @@ public:
   // Iteration functions.
   void oop_iterate(ExtendedOopClosure* cl);
   void object_iterate(ObjectClosure* cl);
+  void object_iterate_parallel(ObjectClosure* cl,
+                               GenCollectedHeapBlockClaimer* claimer,
+                               uint worker_id, uint num_workers);
   void safe_object_iterate(ObjectClosure* cl);
   Space* space_containing(const void* addr) const;
+  ParallelObjectIterator* parallel_object_iterator(uint thread_num);
 
   // A CollectedHeap is divided into a dense sequence of "blocks"; that is,
   // each address in the (reserved) heap is a member of exactly

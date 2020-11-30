@@ -993,6 +993,102 @@ void GenCollectedHeap::safe_object_iterate(ObjectClosure* cl) {
   }
 }
 
+// The GenCollectedHeapBlockClaimer is used during parallel iteration over the heap,
+// allowing workers to claim heap areas ("blocks"), gaining exclusive rights to these.
+// The eden and survivor spaces are treated as single blocks as it is hard to divide
+// these spaces.
+// The old space is divided into fixed-size blocks.
+class GenCollectedHeapBlockClaimer : public StackObj {
+  size_t _claimed_index;
+public:
+  static const size_t EdenIndex = 0;
+  static const size_t SurvivorIndex = 1;
+  static const size_t OldGenIndex = 2;
+  static const size_t NumNonOldGenClaims = 2;
+  static const size_t NumGenClaims = 3;
+
+  GenCollectedHeapBlockClaimer() : _claimed_index(EdenIndex) { }
+  // Claim the block and get the block index.
+  size_t claim_and_get_block() {
+    size_t block_index;
+    block_index = Atomic::add(1u, (jlong*)&_claimed_index);
+    return block_index < NumGenClaims ? block_index : OldGenIndex;
+  }
+};
+
+class GenCollectedHeapParallelObjectIterator : public ParallelObjectIterator {
+private:
+  uint                  _num_workers;
+  GenCollectedHeap*     _heap;
+  ConcurrentMarkSweepGeneration*    _cms_gen;
+  GenCollectedHeapBlockClaimer      _claimer;
+public:
+  GenCollectedHeapParallelObjectIterator(uint num_workers) :
+      _num_workers(num_workers),
+      _heap(GenCollectedHeap::heap()),
+      _cms_gen(NULL),
+      _claimer() {
+      
+    Generation* old_gen = GenCollectedHeap::heap()->get_gen(1);
+    guarantee(old_gen->kind() == Generation::ConcurrentMarkSweep || 
+              old_gen->kind() == Generation::ASConcurrentMarkSweep,
+              "Old generation must be ConcurrentMarkSweep for parallel heap inspection");
+
+    _cms_gen = (ConcurrentMarkSweepGeneration*)old_gen;
+    _cms_gen->freelistLock()->lock_without_safepoint_check();
+    _cms_gen->reset_par_iter_top();
+  }
+
+  virtual void object_iterate(ObjectClosure* cl, uint worker_id) {
+    _heap->object_iterate_parallel(cl, &_claimer, worker_id, _num_workers);
+  }
+
+  ~GenCollectedHeapParallelObjectIterator() {
+    _cms_gen->reset_par_iter_top();
+    _cms_gen->freelistLock()->unlock();
+  }
+};
+
+void GenCollectedHeap::object_iterate_parallel(ObjectClosure* cl,
+                                               GenCollectedHeapBlockClaimer* claimer,
+                                               uint worker_id, uint num_workers) {
+  size_t block_index = claimer->claim_and_get_block();
+  guarantee(_n_gens == 2, "Wrong number of generations");
+  guarantee(_gens[0]->kind() == Generation::ParNew ||
+            _gens[0]->kind() == Generation::ASParNew,
+            "Wrong young generation for parallel heap inspection");
+  guarantee(_gens[1]->kind() == Generation::ConcurrentMarkSweep ||
+            _gens[1]->kind() == Generation::ASConcurrentMarkSweep,
+            "Wrong old generation for parallel heap inspection");
+  DefNewGeneration* yGen = (DefNewGeneration*)_gens[0];
+  ConcurrentMarkSweepGeneration* oGen = (ConcurrentMarkSweepGeneration*)_gens[1];
+
+  if (block_index == GenCollectedHeapBlockClaimer::EdenIndex) {
+    yGen->eden()->object_iterate(cl);
+    block_index = claimer->claim_and_get_block();
+  }
+  if (block_index == GenCollectedHeapBlockClaimer::SurvivorIndex) {
+    yGen->from()->object_iterate(cl);
+    guarantee(yGen->to()->used() == 0, "to space must be empty when iterating survivor space");
+    block_index = claimer->claim_and_get_block();
+  }
+  // Process old generation.
+  oGen->object_iterate_atomic(cl, worker_id, num_workers);
+}
+
+ParallelObjectIterator* GenCollectedHeap::parallel_object_iterator(uint thread_num) {
+  guarantee(_n_gens == 2, "Wrong number of generations");
+  Generation* youngGen = _gens[0];
+  Generation* oldGen = _gens[1];
+  // Only do parallel object iterate for ParNew + CMS
+  if ((youngGen->kind() == Generation::ParNew || youngGen->kind() == Generation::ASParNew)
+      && (oldGen->kind() == Generation::ConcurrentMarkSweep || oldGen->kind() == Generation::ASConcurrentMarkSweep)) {
+    return new GenCollectedHeapParallelObjectIterator(thread_num);
+  } else {
+    return NULL;
+  }
+}
+
 Space* GenCollectedHeap::space_containing(const void* addr) const {
   for (int i = 0; i < _n_gens; i++) {
     Space* res = _gens[i]->space_containing(addr);

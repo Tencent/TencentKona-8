@@ -82,6 +82,8 @@ class CompactibleFreeListSpace: public CompactibleSpace {
   // par_seq_tasks which also lives in Space. XXX
   const size_t _rescan_task_size;
   const size_t _marking_task_size;
+  // parallel iteration block size
+  const size_t _par_iter_block_size;
 
   // Yet another sequential tasks done structure. This supports
   // CMS GC, where we have threads dynamically
@@ -151,6 +153,8 @@ class CompactibleFreeListSpace: public CompactibleSpace {
   // Stable value of used().
   size_t _used_stable;
 
+  // Support for parallel iteration.
+  HeapWord* _par_iter_top;
   // Support for compacting cms
   HeapWord* cross_threshold(HeapWord* start, HeapWord* end);
   HeapWord* forward(oop q, size_t size, CompactPoint* cp, HeapWord* compact_top);
@@ -402,9 +406,10 @@ class CompactibleFreeListSpace: public CompactibleSpace {
   // terminate the iteration and return the address of the start of the
   // subregion that isn't done.  Return of "NULL" indicates that the
   // interation completed.
- HeapWord* object_iterate_careful_m(MemRegion mr,
+  HeapWord* object_iterate_careful_m(MemRegion mr,
                                     ObjectClosureCareful* cl);
-
+  // Iterate space atomic.
+  void object_iterate_atomic(ObjectClosure* cl, uint worker_id, uint num_workers);
   // Override: provides a DCTO_CL specific to this kind of space.
   DirtyCardToOopClosure* new_dcto_cl(ExtendedOopClosure* cl,
                                      CardTableModRefBS::PrecisionStyle precision,
@@ -643,6 +648,10 @@ class CompactibleFreeListSpace: public CompactibleSpace {
   void split(size_t from, size_t to1);
 
   double flsFrag() const;
+
+  void reset_par_iter_top() {
+    _par_iter_top = bottom();
+  }
 };
 
 // A parallel-GC-thread-local allocation buffer for allocation into a
