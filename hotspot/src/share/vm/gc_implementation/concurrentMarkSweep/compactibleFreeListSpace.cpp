@@ -90,6 +90,7 @@ CompactibleFreeListSpace::CompactibleFreeListSpace(BlockOffsetSharedArray* bs,
                     CMSRescanMultiple),
   _marking_task_size(CardTableModRefBS::card_size_in_words * BitsPerWord *
                     CMSConcMarkMultiple),
+  _par_iter_block_size(1024 * 1024), // HeapWord
   _collector(NULL)
 {
   assert(sizeof(FreeChunk) / BytesPerWord <= MinChunkSize,
@@ -836,6 +837,40 @@ void CompactibleFreeListSpace::object_iterate(ObjectClosure* blk) {
     if (block_is_obj(cur)) {
       blk->do_object(oop(cur));
     }
+  }
+}
+
+// Apply the given closure to each object in the space
+void CompactibleFreeListSpace::object_iterate_atomic(ObjectClosure* blk,
+                                                     uint worker_id,
+                                                     uint num_workers) {
+  NOT_PRODUCT(verify_objects_initialized());
+  HeapWord *cur;
+  HeapWord *start;
+  HeapWord *limit;
+  size_t curSize;
+  start = bottom() + worker_id * _par_iter_block_size;
+  assert(start <= end(), "object iterate address out of range");
+  while(true) {
+    limit = MIN2(start + _par_iter_block_size, end());
+    HeapWord* bstart = block_start_careful(start);
+    if (bstart > end()) break;
+    while (bstart < start) {
+      bstart += block_size(bstart);
+    }
+    if (bstart < limit) {
+      cur = bstart;
+      while (cur < limit) {
+        curSize = block_size(cur);
+        if (block_is_obj(cur)) {
+          blk->do_object(oop(cur));
+        }
+        cur += curSize;
+      }
+    }
+    // Find next block
+    start += num_workers * _par_iter_block_size;
+    if (start >= end()) break;
   }
 }
 
