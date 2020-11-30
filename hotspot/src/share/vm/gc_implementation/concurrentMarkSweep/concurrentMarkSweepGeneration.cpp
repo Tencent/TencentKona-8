@@ -207,7 +207,6 @@ ConcurrentMarkSweepGeneration::ConcurrentMarkSweepGeneration(
 {
   HeapWord* bottom = (HeapWord*) _virtual_space.low();
   HeapWord* end    = (HeapWord*) _virtual_space.high();
-
   _direct_allocated_words = 0;
   NOT_PRODUCT(
     _numObjectsPromoted = 0;
@@ -3228,6 +3227,13 @@ ConcurrentMarkSweepGeneration::safe_object_iterate(ObjectClosure* cl) {
     MutexLockerEx x(freelistLock(), Mutex::_no_safepoint_check_flag);
     Generation::safe_object_iterate(cl);
   }
+}
+
+void
+ConcurrentMarkSweepGeneration::object_iterate_atomic(ObjectClosure* cl,
+                                                     uint worker_id,
+                                                     uint num_workers) {
+  cmsSpace()->object_iterate_atomic(cl, worker_id, num_workers);
 }
 
 void
