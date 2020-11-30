@@ -39,6 +39,7 @@
 class AdjoiningGenerations;
 class GCHeapSummary;
 class GCTaskManager;
+class HeapBlockClaimer;
 class PSAdaptiveSizePolicy;
 class PSHeapSummary;
 
@@ -208,7 +209,9 @@ class ParallelScavengeHeap : public CollectedHeap {
   void oop_iterate(ExtendedOopClosure* cl);
   void object_iterate(ObjectClosure* cl);
   void safe_object_iterate(ObjectClosure* cl) { object_iterate(cl); }
-
+  void object_iterate_parallel(ObjectClosure* cl, HeapBlockClaimer* claimer);
+  virtual ParallelObjectIterator* parallel_object_iterator(uint thread_num);
+ 
   HeapWord* block_start(const void* addr) const;
   size_t block_size(const HeapWord* addr) const;
   bool block_is_obj(const HeapWord* addr) const;
@@ -222,10 +225,6 @@ class ParallelScavengeHeap : public CollectedHeap {
   virtual void print_gc_threads_on(outputStream* st) const;
   virtual void gc_threads_do(ThreadClosure* tc) const;
   virtual void print_tracing_info() const;
-  // Runs the given AbstractGangTask with the current active workers.
-  virtual void run_task(AbstractGangTask* task);
-
-  FlexibleWorkGang* workers() const { return NULL; }
 
   void verify(bool silent, VerifyOption option /* ignored */);
 

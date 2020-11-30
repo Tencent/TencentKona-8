@@ -42,10 +42,8 @@
 // infrastructure common to all heaps.
 
 class AdaptiveSizePolicy;
-class AbstractGangTask;
 class BarrierSet;
 class CollectorPolicy;
-class FlexibleWorkGang;
 class GCHeapSummary;
 class GCTimer;
 class GCTracer;
@@ -701,9 +699,6 @@ class CollectedHeap : public CHeapObj<mtInternal> {
                                              jint len) {
     return false;
   }
-
-  virtual void run_task(AbstractGangTask* task) = 0;
-  virtual FlexibleWorkGang* workers() const = 0;
 
   /////////////// Unit tests ///////////////
 

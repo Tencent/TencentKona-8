@@ -548,6 +548,70 @@ void ParallelScavengeHeap::object_iterate(ObjectClosure* cl) {
   old_gen()->object_iterate(cl);
 }
 
+// The HeapBlockClaimer is used during parallel iteration over the heap,
+// allowing workers to claim heap areas ("blocks"), gaining exclusive rights to these.
+// The eden and survivor spaces are treated as single blocks as it is hard to divide
+// these spaces.
+// The old space is divided into fixed-size blocks.
+class HeapBlockClaimer : public StackObj {
+  size_t _claimed_index;
+
+public:
+  static const size_t InvalidIndex = SIZE_MAX;
+  static const size_t EdenIndex = 0;
+  static const size_t SurvivorIndex = 1;
+  static const size_t NumNonOldGenClaims = 2;
+
+  HeapBlockClaimer() : _claimed_index(EdenIndex) { }
+  // Claim the block and get the block index.
+  size_t claim_and_get_block() {
+    size_t block_index;
+    block_index = Atomic::add(1u, (jlong*)&_claimed_index);
+
+    PSOldGen* old_gen = ParallelScavengeHeap::heap()->old_gen();
+    size_t num_claims = old_gen->num_iterable_blocks() + NumNonOldGenClaims;
+
+    return block_index < num_claims ? block_index : InvalidIndex;
+  }
+};
+
+void ParallelScavengeHeap::object_iterate_parallel(ObjectClosure* cl,
+                                                   HeapBlockClaimer* claimer) {
+  size_t block_index = claimer->claim_and_get_block();
+  // Iterate until all blocks are claimed
+  if (block_index == HeapBlockClaimer::EdenIndex) {
+    young_gen()->eden_space()->object_iterate(cl);
+    block_index = claimer->claim_and_get_block();
+  }
+  if (block_index == HeapBlockClaimer::SurvivorIndex) {
+    young_gen()->from_space()->object_iterate(cl);
+    young_gen()->to_space()->object_iterate(cl);
+    block_index = claimer->claim_and_get_block();
+  }
+  while (block_index != HeapBlockClaimer::InvalidIndex) {
+    old_gen()->object_iterate_block(cl, block_index - HeapBlockClaimer::NumNonOldGenClaims);
+    block_index = claimer->claim_and_get_block();
+  }
+}
+
+class PSScavengeParallelObjectIterator : public ParallelObjectIterator {
+private:
+  ParallelScavengeHeap*  _heap;
+  HeapBlockClaimer      _claimer;
+
+public:
+  PSScavengeParallelObjectIterator() :
+      _heap(ParallelScavengeHeap::heap()),
+      _claimer() {}
+
+  virtual void object_iterate(ObjectClosure* cl, uint worker_id) {
+    _heap->object_iterate_parallel(cl, &_claimer);
+  }
+};
+
+ParallelObjectIterator* ParallelScavengeHeap::parallel_object_iterator(uint thread_num) {
+  return new PSScavengeParallelObjectIterator();
+}
 
 HeapWord* ParallelScavengeHeap::block_start(const void* addr) const {
   if (young_gen()->is_in_reserved(addr)) {
@@ -637,9 +701,6 @@ void ParallelScavengeHeap::print_tracing_info() const {
     double time = UseParallelOldGC ? PSParallelCompact::accumulated_time()->seconds() : PSMarkSweep::accumulated_time()->seconds();
     tty->print_cr("[Accumulated GC generation 1 time %3.7f secs]", time);
   }
-}
-
-void ParallelScavengeHeap::run_task(AbstractGangTask* task) {
 }
 
 void ParallelScavengeHeap::verify(bool silent, VerifyOption option /* ignored */) {
