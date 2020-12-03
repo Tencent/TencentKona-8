@@ -2064,51 +2064,23 @@ JavaThread* JavaThread::active() {
 }
 
 bool JavaThread::is_lock_owned(address adr) const {
-#if INCLUDE_KONA_FIBER
-  if (_current_coroutine == NULL || _current_coroutine->is_thread_coroutine()) {
-#endif
-    bool res = Thread::is_lock_owned(adr);
-#if INCLUDE_KONA_FIBER
-    assert(_current_coroutine == NULL || res == _current_coroutine->is_lock_owned(adr),
-      "thread coroutine has different with thread");
-#endif
-    if (res) {
-      return true;
-    }
-#if INCLUDE_KONA_FIBER
-    assert(_current_coroutine == NULL || _current_coroutine->monitor_chunks() == NULL,
-      "thread coroutine should not have monitor block");
-#endif
-    for (MonitorChunk* chunk = monitor_chunks(); chunk != NULL; chunk = chunk->next()) {
-      if (chunk->contains(adr)) return true;
-    }
-#if INCLUDE_KONA_FIBER
-  } else if (_current_coroutine->is_lock_owned(adr)) {
+  bool res = Thread::is_lock_owned(adr);
+  if (res) {
     return true;
   }
-#endif
+  for (MonitorChunk* chunk = monitor_chunks(); chunk != NULL; chunk = chunk->next()) {
+    if (chunk->contains(adr)) return true;
+  }
   return false;
 }
 
 
 void JavaThread::add_monitor_chunk(MonitorChunk* chunk) {
-#if INCLUDE_KONA_FIBER
-  if (_current_coroutine != NULL && !_current_coroutine->is_thread_coroutine()) {
-    _current_coroutine->add_monitor_chunk(chunk);
-    return;
-  }
-#endif
   chunk->set_next(monitor_chunks());
   set_monitor_chunks(chunk);
 }
 
 void JavaThread::remove_monitor_chunk(MonitorChunk* chunk) {
-#if INCLUDE_KONA_FIBER
-  if (_current_coroutine != NULL  && !_current_coroutine->is_thread_coroutine()) {
-    _current_coroutine->remove_monitor_chunk(chunk);
-    return;
-  }
-#endif
   guarantee(monitor_chunks() != NULL, "must be non empty");
   if (monitor_chunks() == chunk) {
     set_monitor_chunks(chunk->next());
