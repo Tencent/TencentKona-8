@@ -416,9 +416,20 @@ void Coroutine::cont_metadata_do(void f(Metadata*)) {
 Coroutine::Coroutine() {
 	_has_javacall = false;
   _continuation = NULL;
+
+  if (VerifyCoroutineStateOnYield) {
+    _verify_state = new CoroutineVerify();
+  } else {
+    _verify_state = NULL;
+  }
 }
 
 Coroutine::~Coroutine() {
+  if (VerifyCoroutineStateOnYield) {
+    assert(_verify_state != NULL, "VerifyCoroutineStateOnYield is on and _verify_state is NULL");
+    delete _verify_state; 
+  }
+
   free_stack();
 }
 
@@ -433,18 +444,18 @@ void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
     // switch to other corotuine, compare status
     JavaThread* thread = from->_thread;
     JNIHandleBlock* jni_handle_block = thread->active_handles();
-    guarantee(from->saved_active_handles == jni_handle_block, "must same handle");
-    guarantee(from->saved_active_handle_count == jni_handle_block->get_number_of_live_handles(), "must same count");
+    guarantee(from->_verify_state->saved_active_handles == jni_handle_block, "must same handle");
+    guarantee(from->_verify_state->saved_active_handle_count == jni_handle_block->get_number_of_live_handles(), "must same count");
     guarantee(thread->monitor_chunks() == NULL, "not empty _monitor_chunks");
     if (terminate) {
       assert(thread->java_call_counter() == 1, "must be 1 when terminate");
     }
-    if (from->saved_handle_area_hwm != thread->handle_area()->hwm()) {
-      tty->print_cr("%p failed %p, %p", from, from->saved_handle_area_hwm, thread->handle_area()->hwm());
+    if (from->_verify_state->saved_handle_area_hwm != thread->handle_area()->hwm()) {
+      tty->print_cr("%p failed %p, %p", from, from->_verify_state->saved_handle_area_hwm, thread->handle_area()->hwm());
       guarantee(false, "handle area leak");
     }
-    if (from->saved_resource_area_hwm != thread->resource_area()->hwm()) {
-      tty->print_cr("%p failed %p, %p", from, from->saved_resource_area_hwm, thread->resource_area()->hwm());
+    if (from->_verify_state->saved_resource_area_hwm != thread->resource_area()->hwm()) {
+      tty->print_cr("%p failed %p, %p", from, from->_verify_state->saved_resource_area_hwm, thread->resource_area()->hwm());
       guarantee(false, "resource area leak");
     }
   }
@@ -454,11 +465,10 @@ void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
     guarantee(terminate == false, "switch from kernel to continnuation");
     JavaThread* thread = from->_thread;
     JNIHandleBlock* jni_handle_block = thread->active_handles();
-    to->saved_active_handles = jni_handle_block;
-    to->saved_active_handle_count = jni_handle_block->get_number_of_live_handles();
-    to->saved_resource_area_hwm = thread->resource_area()->hwm();
-    to->saved_handle_area_hwm = thread->handle_area()->hwm();
-    to->saved_methodhandles_len = thread->metadata_handles()->length();
+    to->_verify_state->saved_active_handles = jni_handle_block;
+    to->_verify_state->saved_active_handle_count = jni_handle_block->get_number_of_live_handles();
+    to->_verify_state->saved_resource_area_hwm = thread->resource_area()->hwm();
+    to->_verify_state->saved_handle_area_hwm = thread->handle_area()->hwm();
   }
 }
 

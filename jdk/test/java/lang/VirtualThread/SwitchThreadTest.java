@@ -22,7 +22,7 @@
 
 /*
  * @test
- * @run testng SwitchThreadTest
+ * @run testng/othervm -XX:+UnlockDiagnosticVMOptions -XX:+VerifyCoroutineStateOnYield SwitchThreadTest
  * @summary Basic test for continuation, test create/run/yield/resume/stop
  */
 
