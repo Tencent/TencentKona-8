@@ -219,8 +219,6 @@ private:
   char* saved_resource_area_hwm;
   int saved_methodhandles_len;
 
-  // mutable
-  MonitorChunk*   _monitor_chunks;  // if deoptimizing happens in corutine it should record own monitor chunks
   JavaThread*     _thread;
 
 #ifdef ASSERT
@@ -261,7 +259,6 @@ public:
   void print_stack_on(void* frames, int* depth);
   void print_VT_info(outputStream* st);
   static const char* get_coroutine_state_name(CoroutineState state);
-  bool is_lock_owned(address adr) const;
 
   bool has_javacall() const { return _has_javacall; }
   void set_has_javacall(bool hjc) { _has_javacall = hjc; }
@@ -283,11 +280,6 @@ public:
 
   void set_saved_handle_area_hwm(char* wm) { saved_handle_area_hwm = wm; }
   char* get_saved_handle_area_hwm()        { return saved_handle_area_hwm; }
-
-  void set_monitor_chunks(MonitorChunk* monitor_chunks) { _monitor_chunks = monitor_chunks; }
-  MonitorChunk* monitor_chunks() const           { return _monitor_chunks; }
-  void add_monitor_chunk(MonitorChunk* chunk);
-  void remove_monitor_chunk(MonitorChunk* chunk);
 
 #ifdef ASSERT
   int java_call_counter() const           { return _java_call_counter; }

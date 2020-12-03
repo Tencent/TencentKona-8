@@ -415,15 +415,10 @@ void Coroutine::cont_metadata_do(void f(Metadata*)) {
 
 Coroutine::Coroutine() {
 	_has_javacall = false;
-  _monitor_chunks = NULL;
   _continuation = NULL;
 }
 
 Coroutine::~Coroutine() {
-  if(!is_thread_coroutine()) {
-    assert(_monitor_chunks == NULL, "not empty _monitor_chunks");
-  }
-
   free_stack();
 }
 
@@ -440,6 +435,7 @@ void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
     JNIHandleBlock* jni_handle_block = thread->active_handles();
     guarantee(from->saved_active_handles == jni_handle_block, "must same handle");
     guarantee(from->saved_active_handle_count == jni_handle_block->get_number_of_live_handles(), "must same count");
+    guarantee(thread->monitor_chunks() == NULL, "not empty _monitor_chunks");
     if (terminate) {
       assert(thread->java_call_counter() == 1, "must be 1 when terminate");
     }
@@ -527,34 +523,6 @@ void Coroutine::print_stack_on(outputStream* st) {
   }
 }
 
-bool Coroutine::is_lock_owned(address adr) const {
-  if (on_local_stack(adr)) {
-    return true;
-  }
-  for (MonitorChunk* chunk = monitor_chunks(); chunk != NULL; chunk = chunk->next()) {
-    if (chunk->contains(adr)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-void Coroutine::add_monitor_chunk(MonitorChunk* chunk) {
-  chunk->set_next(monitor_chunks());
-  set_monitor_chunks(chunk);
-}
-
-void Coroutine::remove_monitor_chunk(MonitorChunk* chunk) {
-  guarantee(monitor_chunks() != NULL, "must be non empty");
-  if (monitor_chunks() == chunk) {
-    set_monitor_chunks(chunk->next());
-  } else {
-    MonitorChunk* prev = monitor_chunks();
-    while (prev->next() != chunk) prev = prev->next();
-    prev->set_next(chunk->next()); // will crash if not found
-  }
-}
-
 Coroutine* Coroutine::create_thread_coroutine(JavaThread* thread) {
   Coroutine* coro = new Coroutine();
   if (coro == NULL)
@@ -576,7 +544,6 @@ Coroutine* Coroutine::create_thread_coroutine(JavaThread* thread) {
 
 void Coroutine::reset_coroutine(Coroutine* coro) {
   coro->_has_javacall = false;
-  assert(coro->_monitor_chunks == NULL, "monitor_chunks must be NULL");
 }
 
 void Coroutine::init_coroutine(Coroutine* coro, JavaThread* thread) {
