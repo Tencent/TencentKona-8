@@ -194,6 +194,15 @@ public:
   virtual void frames_do(frame* fr, RegisterMap* map) = 0;
 };
 
+class CoroutineVerify: public CHeapObj<mtThread> {
+public:
+  // for verify check
+  JNIHandleBlock* saved_active_handles;
+  size_t saved_active_handle_count;
+  char* saved_handle_area_hwm;
+  char* saved_resource_area_hwm;
+};
+
 class Coroutine: public CHeapObj<mtThread>, public DoublyLinkedList<Coroutine> {
 public:
   enum CoroutineState {
@@ -212,14 +221,8 @@ private:
   address         _last_sp;
   oop             _continuation;
 
-  // for verify check
-  JNIHandleBlock* saved_active_handles;
-  size_t saved_active_handle_count;
-  char* saved_handle_area_hwm;
-  char* saved_resource_area_hwm;
-  int saved_methodhandles_len;
-
   JavaThread*     _thread;
+  CoroutineVerify* _verify_state;
 
 #ifdef ASSERT
   int             _java_call_counter;
@@ -277,9 +280,6 @@ public:
   void set_thread(JavaThread* x)    { _thread = x; }
 
   void set_continuation(oop o)      { _continuation = o; }
-
-  void set_saved_handle_area_hwm(char* wm) { saved_handle_area_hwm = wm; }
-  char* get_saved_handle_area_hwm()        { return saved_handle_area_hwm; }
 
 #ifdef ASSERT
   int java_call_counter() const           { return _java_call_counter; }
