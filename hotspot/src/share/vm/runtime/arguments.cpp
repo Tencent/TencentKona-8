@@ -1403,6 +1403,11 @@ void Arguments::set_cms_and_parnew_gc_flags() {
     tty->print_cr("ConcGCThreads: %u", (uint) ConcGCThreads);
   }
 
+  // By default do not let the target stack size to be more than 1/4 of the entries
+  if (FLAG_IS_DEFAULT(GCDrainStackTargetSize)) {
+    FLAG_SET_ERGO(uintx, GCDrainStackTargetSize, MIN2(GCDrainStackTargetSize, (uintx)TASKQUEUE_SIZE / 4));
+  }
+
   if (CMSParallelFullGC && ParallelGCThreads <= 1) {
     // Disable CMSParallelFullGC if there is only one parallel
     // GC thread.

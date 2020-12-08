@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,8 @@ G1ParScanThreadState::G1ParScanThreadState(G1CollectedHeap* g1h, uint queue_num)
     _queue_num(queue_num),
     _tenuring_threshold(g1h->g1_policy()->tenuring_threshold()),
     _age_table(false),
+    _stack_trim_upper_threshold(GCDrainStackTargetSize * 2 + 1),
+    _stack_trim_lower_threshold(GCDrainStackTargetSize),
     _scanner(g1h)
 {
   _scanner.set_par_scan_thread_state(this);
@@ -117,16 +119,8 @@ bool G1ParScanThreadState::verify_task(StarTask ref) const {
 void G1ParScanThreadState::trim_queue() {
   StarTask ref;
   do {
-    // Drain the overflow stack first, so other threads can steal.
-    while (_refs->pop_overflow(ref)) {
-      if (!_refs->try_push_to_taskqueue(ref)) {
-        dispatch_reference(ref);
-      }
-    }
-
-    while (_refs->pop_local(ref)) {
-      dispatch_reference(ref);
-    }
+    // Fully drain the queue.
+    trim_queue_to_threshold(0);
   } while (!_refs->is_empty());
 }
 

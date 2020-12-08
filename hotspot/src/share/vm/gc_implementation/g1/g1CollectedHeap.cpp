@@ -4589,6 +4589,8 @@ void G1ParCopyClosure<barrier, do_mark_object>::do_oop_work(T* p) {
       mark_object(obj);
     }
   }
+
+  _par_scan_state->trim_queue_partially();
 }
 
 class G1ParEvacuateFollowersClosure : public VoidClosure {
