@@ -425,7 +425,7 @@ Coroutine::Coroutine() {
 }
 
 Coroutine::~Coroutine() {
-  if (VerifyCoroutineStateOnYield) {
+  if (!is_thread_coroutine() && VerifyCoroutineStateOnYield) {
     assert(_verify_state != NULL, "VerifyCoroutineStateOnYield is on and _verify_state is NULL");
     delete _verify_state; 
   }
