@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@
 #include "gc_implementation/g1/g1GCPhaseTimes.hpp"
 #include "gc_implementation/g1/g1RemSet.inline.hpp"
 #include "gc_implementation/g1/g1RootProcessor.hpp"
+#include "gc_implementation/shared/weakProcessor.hpp"
 #include "memory/allocation.inline.hpp"
 #include "runtime/fprofiler.hpp"
 #include "runtime/mutex.hpp"
@@ -234,7 +235,7 @@ void G1RootProcessor::process_all_roots(OopClosure* oops,
    }
   process_code_cache_roots(blobs, NULL, 0);
 
-  _process_strong_tasks.all_tasks_completed();
+  _process_strong_tasks.all_tasks_completed(_g1h->n_par_threads());
 }
 
 void G1RootProcessor::process_all_roots(OopClosure* oops,
@@ -357,6 +358,16 @@ void G1RootProcessor::scan_remembered_sets(G1ParPushHeapRSClosure* scan_rs,
   G1CodeBlobClosure scavenge_cs_nmethods(scan_non_heap_weak_roots);
 
   _g1h->g1_rem_set()->oops_into_collection_set_do(scan_rs, &scavenge_cs_nmethods, worker_i);
+}
+
+void G1RootProcessor::process_full_gc_weak_roots(OopClosure* oops) {
+  if (!_process_strong_tasks.is_task_claimed(G1RP_PS_refProcessor_oops_do)) {
+    _g1h->ref_processor_stw()->weak_oops_do(oops);
+  }
+
+  if (!_process_strong_tasks.is_task_claimed(G1RP_PS_weakProcessor_oops_do)) {
+    WeakProcessor::oops_do(oops);
+  }
 }
 
 void G1RootProcessor::set_num_workers(int active_workers) {

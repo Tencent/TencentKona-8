@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@
 #if INCLUDE_ALL_GCS
 #include "gc_implementation/g1/g1CollectedHeap.inline.hpp"
 #include "gc_implementation/g1/g1OopClosures.inline.hpp"
+#include "gc_implementation/g1/g1FullGCOopClosures.inline.hpp"
 #include "gc_implementation/g1/g1RemSet.inline.hpp"
 #include "gc_implementation/g1/heapRegionManager.inline.hpp"
 #include "gc_implementation/parNew/parOopClosures.inline.hpp"
@@ -46,6 +47,53 @@
 #endif // INCLUDE_ALL_GCS
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
+
+#define InstanceRefKlass_SPECIALIZED_PARALLEL_G1_FULL_GC_OOP_ITERATE(T, nv_suffix)\
+  T* disc_addr = (T*)java_lang_ref_Reference::discovered_addr(obj);             \
+  T* referent_addr = (T*)java_lang_ref_Reference::referent_addr(obj);           \
+  T heap_oop = oopDesc::load_heap_oop(referent_addr);                           \
+  ReferenceProcessor* rp = closure->_ref_processor;                             \
+  if (!oopDesc::is_null(heap_oop)) {                                            \
+    oop referent = oopDesc::decode_heap_oop_not_null(heap_oop);                 \
+    if (!referent->is_gc_marked() && (rp != NULL) &&                            \
+        rp->discover_reference(obj, reference_type())) {                        \
+      InstanceKlass::oop_oop_iterate##nv_suffix(obj, closure);                  \
+      return size;                                                              \
+    } else {                                                                    \
+      /* treat referent as normal oop */                                        \
+      closure->do_oop##nv_suffix(referent_addr);                                \
+    }                                                                           \
+  }                                                                             \
+  T* next_addr = (T*)java_lang_ref_Reference::next_addr(obj);                   \
+  if (ReferenceProcessor::pending_list_uses_discovered_field()) {               \
+    T next_oop  = oopDesc::load_heap_oop(next_addr);                            \
+    /* Treat discovered as normal oop, if ref is not "active" (next non-NULL) */\
+    if (!oopDesc::is_null(next_oop)) {                                          \
+        /* i.e. ref is not "active" */                                          \
+      debug_only(                                                               \
+        if(TraceReferenceGC && PrintGCDetails) {                                \
+          gclog_or_tty->print_cr("   Process discovered as normal "             \
+                                 INTPTR_FORMAT, disc_addr);                     \
+        }                                                                       \
+      )                                                                         \
+      closure->do_oop##nv_suffix(disc_addr);                                    \
+    }                                                                           \
+  } else {                                                                      \
+    /* In the case of older JDKs which do not use the discovered field for  */  \
+    /* the pending list, an inactive ref (next != NULL) must always have a  */  \
+    /* NULL discovered field. */                                                \
+    debug_only(                                                                 \
+      T next_oop = oopDesc::load_heap_oop(next_addr);                           \
+      T disc_oop = oopDesc::load_heap_oop(disc_addr);                           \
+      assert(oopDesc::is_null(next_oop) || oopDesc::is_null(disc_oop),          \
+           err_msg("Found an inactive reference " PTR_FORMAT " with a non-NULL" \
+                   "discovered field", (oopDesc*)obj));                         \
+    )                                                                           \
+  }                                                                             \
+  /* treat next as normal oop */                                                \
+  closure->do_oop##nv_suffix(next_addr);                                        \
+  InstanceKlass::oop_oop_iterate##nv_suffix(obj, closure);                      \
+  return size;                                                                  \
 
 template <class T>
 void specialized_oop_follow_contents(InstanceRefKlass* ref, oop obj) {
@@ -232,6 +280,14 @@ template <class T> void specialized_oop_adjust_pointers(InstanceRefKlass *ref, o
                                 referent_addr, next_addr, discovered_addr);)
 }
 
+#define InstanceRefKlass_SPECIALIZED_PARALLEL_G1_FULLGC_OOP_ITERATE(T, nv_suffix) \
+  T* referent_addr = (T*)java_lang_ref_Reference::referent_addr(obj);             \
+  closure->do_oop##nv_suffix(referent_addr);                                      \
+  T* next_addr = (T*)java_lang_ref_Reference::next_addr(obj);                     \
+  closure->do_oop##nv_suffix(next_addr);                                          \
+  T* discovered_addr = (T*)java_lang_ref_Reference::discovered_addr(obj);         \
+  closure->do_oop##nv_suffix(discovered_addr);
+
 int InstanceRefKlass::oop_adjust_pointers(oop obj) {
   int size = size_helper();
   InstanceKlass::oop_adjust_pointers(obj);
@@ -298,7 +354,6 @@ int InstanceRefKlass::oop_adjust_pointers(oop obj) {
   }                                                                             \
   return size;                                                                  \
 
-
 template <class T> bool contains(T *t) { return true; }
 
 // Macro to define InstanceRefKlass::oop_oop_iterate for virtual/nonvirtual for
@@ -312,6 +367,28 @@ oop_oop_iterate##nv_suffix(oop obj, OopClosureType* closure) {                  
   SpecializationStats::record_iterate_call##nv_suffix(SpecializationStats::irk);\
                                                                                 \
   int size = InstanceKlass::oop_oop_iterate##nv_suffix(obj, closure);           \
+                                                                                \
+  switch (closure->parallel_fullgc_phase()) {                                   \
+    case ExtendedOopClosure::PARALLEL_FULLGC_NONE:                              \
+      break;                                                                    \
+    case ExtendedOopClosure::PARALLEL_FULLGC_MARK:                              \
+      if (UseCompressedOops) {                                                  \
+        InstanceRefKlass_SPECIALIZED_PARALLEL_G1_FULL_GC_OOP_ITERATE(narrowOop, \
+                                                                      nv_suffix)\
+      } else {                                                                  \
+        InstanceRefKlass_SPECIALIZED_PARALLEL_G1_FULL_GC_OOP_ITERATE(           \
+                                                                 oop, nv_suffix)\
+      }                                                                         \
+    case ExtendedOopClosure::PARALLEL_FULLGC_ADJUST:                            \
+      if (UseCompressedOops) {                                                  \
+        InstanceRefKlass_SPECIALIZED_PARALLEL_G1_FULLGC_OOP_ITERATE(narrowOop,  \
+                                                                     nv_suffix);\
+      } else {                                                                  \
+        InstanceRefKlass_SPECIALIZED_PARALLEL_G1_FULLGC_OOP_ITERATE(oop,        \
+                                                                     nv_suffix);\
+      }                                                                         \
+      return size;                                                              \
+  }                                                                             \
                                                                                 \
   if (UseCompressedOops) {                                                      \
     InstanceRefKlass_SPECIALIZED_OOP_ITERATE(narrowOop, nv_suffix, contains);   \

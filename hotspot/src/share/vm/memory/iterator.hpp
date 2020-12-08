@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,12 +63,27 @@ class OopClosure : public Closure {
   virtual void do_oop_v(narrowOop* o) { do_oop(o); }
 };
 
+class DoNullClosure : public OopClosure {
+ public:
+  virtual void do_oop(oop* p)       {}
+  virtual void do_oop(narrowOop* p) {}
+};
+extern DoNullClosure do_null_cl;
+
 // ExtendedOopClosure adds extra code to be run during oop iterations.
 // This is needed by the GC and is extracted to a separate type to not
 // pollute the OopClosure interface.
 class ExtendedOopClosure : public OopClosure {
  public:
   ReferenceProcessor* _ref_processor;
+  // Iteration of InstanceRefKlasses when Full GC differ depending on the closure
+  // the below enum describes the different alternatives.
+  enum ParallelFullGCPhase {
+    PARALLEL_FULLGC_NONE, //no in full gc phase
+    PARALLEL_FULLGC_MARK, // phase1
+    PARALLEL_FULLGC_ADJUST //phase3
+  };
+
   ExtendedOopClosure(ReferenceProcessor* rp) : _ref_processor(rp) { }
   ExtendedOopClosure() : OopClosure(), _ref_processor(NULL) { }
 
@@ -106,6 +121,7 @@ class ExtendedOopClosure : public OopClosure {
   // location without an intervening "major reset" (like the end of a GC).
   virtual bool idempotent() { return false; }
   virtual bool apply_to_weak_ref_discovered_field() { return false; }
+  virtual ParallelFullGCPhase parallel_fullgc_phase() {return PARALLEL_FULLGC_NONE;}
 };
 
 // Wrapper closure only used to implement oop_iterate_no_header().
@@ -253,6 +269,13 @@ class ObjectClosureCareful : public ObjectClosure {
 class BlkClosure : public StackObj {
  public:
   virtual size_t do_blk(HeapWord* addr) = 0;
+};
+
+//For g1  parallel fullgc only
+class FullGCPhaseClosure : public StackObj {
+  public:
+  // Called for each space
+  virtual size_t apply(oop object) = 0;
 };
 
 // A version of BlkClosure that is expected to be robust

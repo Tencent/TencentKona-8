@@ -41,6 +41,7 @@
 #include "gc_implementation/shared/gcHeapSummary.hpp"
 #include "gc_implementation/shared/hSpaceCounters.hpp"
 #include "gc_implementation/shared/parGCAllocBuffer.hpp"
+#include "gc_implementation/g1/g1HotCardCache.hpp"
 #include "memory/barrierSet.hpp"
 #include "memory/memRegion.hpp"
 #include "memory/sharedHeap.hpp"
@@ -63,6 +64,7 @@ class ObjectClosure;
 class SpaceClosure;
 class CompactibleSpaceClosure;
 class Space;
+class G1HotCardCache;
 class G1CollectorPolicy;
 class GenRemSet;
 class G1RemSet;
@@ -154,6 +156,31 @@ public:
   bool          check_list_well_formed();
   bool          check_list_empty(bool check_sample = true);
   void          print();
+};
+
+class G1VerifyOopClosure: public ExtendedOopClosure {
+private:
+  G1CollectedHeap* _g1h;
+  bool             _failures;
+  oop              _containing_obj;
+  VerifyOption     _verify_option;
+
+public:
+  int _cc;
+  G1VerifyOopClosure(VerifyOption option);
+
+  void set_containing_obj(oop obj) {
+    _containing_obj = obj;
+  }
+
+  bool failures() { return _failures; }
+  void print_object(outputStream* out, oop obj);
+
+  template <class T> void do_oop_work(T* p);
+
+  void do_oop(oop* p)       { do_oop_work(p); }
+  void do_oop(narrowOop* p) { do_oop_work(p); }
+  virtual bool apply_to_weak_ref_discovered_field() { return false; }
 };
 
 // The G1 STW is alive closure.
@@ -610,6 +637,10 @@ protected:
   // Callback from VM_G1CollectFull operation.
   // Perform a full collection.
   virtual void do_full_collection(bool clear_all_soft_refs);
+
+  //do parallel fullgc collection
+  bool do_parallel_full_collection(bool explicit_gc,
+                                   bool clear_all_soft_refs);
 
   // Resize the heap if necessary after a full collection.  If this is
   // after a collect-for allocation, "word_size" is the allocation size,
@@ -1105,6 +1136,26 @@ public:
     return _hrm.available() == 0;
   }
 
+  HeapRegionManager* hrm() {
+    return &_hrm;
+  }
+
+ uint survivor_regions_count() const {
+    return  young_list()->survivor_length();
+  }
+
+  uint eden_regions_count() const {
+    return young_list()->length() - young_list()->survivor_length();
+  }
+
+  uint young_regions_count() const {
+    return young_list()->length();
+  }
+
+  uint old_regions_count() const { return _old_set.length(); }
+
+  uint humongous_regions_count() const { return _humongous_set.length(); }
+
   // The current number of regions in the heap.
   uint num_regions() const { return _hrm.length(); }
 
@@ -1302,6 +1353,9 @@ public:
 
   // Iterate over all spaces in use in the heap, in ascending address order.
   virtual void space_iterate(SpaceClosure* cl);
+  
+  //used to reset hr hot_card, only called by parallel fullgc currently
+  void reset_hot_card_counts(HeapRegion* hr);
 
   // Iterate over heap regions, in address order, terminating the
   // iteration early if the "doHeapRegion" method returns "true".
@@ -1333,6 +1387,13 @@ public:
                                        uint worker_id,
                                        uint num_workers,
                                        jint claim_value) const;
+
+  void heap_region_par_iterate_from_worker_offset(HeapRegionClosure* cl,
+                                                  HeapRegionClaimer *hrclaimer,
+                                                  uint worker_id) const;
+
+  void heap_region_par_iterate_from_start(HeapRegionClosure* cl,
+                                          HeapRegionClaimer* hrclaimer) const;
 
   // It resets all the region claim values to the default.
   void reset_heap_region_claim_values();
@@ -1628,6 +1689,11 @@ public:
 
   bool is_obj_dead_cond(const oop obj,
                         const VerifyOption vo) const;
+
+  bool is_obj_dead_full(const oop obj,
+                        const HeapRegion* hr) const;
+
+  bool is_obj_dead_full(const oop obj) const;
 
   G1HeapSummary create_g1_heap_summary();
 

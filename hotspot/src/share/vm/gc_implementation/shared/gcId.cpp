@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,14 @@
 #include "precompiled.hpp"
 #include "gc_implementation/shared/gcId.hpp"
 #include "runtime/safepoint.hpp"
+#include "runtime/thread.inline.hpp"
 
 uint GCId::_next_id = 0;
+
+NamedThread* currentNamedthread() {
+  assert(Thread::current()->is_Named_thread(), "This thread must be NamedThread");
+  return (NamedThread*)Thread::current();
+}
 
 const GCId GCId::create() {
   return GCId(_next_id++);
@@ -37,6 +43,21 @@ const GCId GCId::peek() {
 const GCId GCId::undefined() {
   return GCId(UNDEFINED);
 }
+const uint GCId::undefined_id() {
+  return UNDEFINED;
+}
 bool GCId::is_undefined() const {
   return _id == UNDEFINED;
+}
+
+GCIdMark::GCIdMark() : _previous_gc_id(currentNamedthread()->gc_id()) {
+  currentNamedthread()->set_gc_id(GCId::create().id());
+}
+
+GCIdMark::GCIdMark(uint gc_id) : _previous_gc_id(currentNamedthread()->gc_id()) {
+  currentNamedthread()->set_gc_id(gc_id);
+}
+
+GCIdMark::~GCIdMark() {
+  currentNamedthread()->set_gc_id(_previous_gc_id);
 }

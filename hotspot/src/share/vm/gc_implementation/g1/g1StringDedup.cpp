@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,6 +71,13 @@ void G1StringDedup::enqueue_from_mark(oop java_string) {
   }
 }
 
+void G1StringDedup::enqueue_from_mark(oop java_string, uint worker_id) {
+  assert(is_enabled(), "String deduplication not enabled");
+  if (is_candidate_from_mark(java_string)) {
+    G1StringDedupQueue::push(worker_id, java_string);
+  }
+}
+
 bool G1StringDedup::is_candidate_from_evacuation(bool from_young, bool to_young, oop obj) {
   if (from_young && java_lang_String::is_instance(obj)) {
     if (to_young && obj->age() == StringDeduplicationAgeThreshold) {
@@ -115,6 +122,11 @@ void G1StringDedup::unlink(BoolObjectClosure* is_alive) {
   unlink_or_oops_do(is_alive, NULL, false /* allow_resize_and_rehash */);
 }
 
+void G1StringDedup::parallel_unlink(G1StringDedupUnlinkOrOopsDoClosure* unlink, uint worker_id) {
+  assert(is_enabled(), "String deduplication not enabled");
+  G1StringDedupQueue::unlink_or_oops_do(unlink);
+  G1StringDedupTable::unlink_or_oops_do(unlink, worker_id);
+}
 //
 // Task for parallel unlink_or_oops_do() operation on the deduplication queue
 // and table.

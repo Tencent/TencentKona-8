@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -485,6 +485,19 @@ void SubTasksDone::all_tasks_completed() {
   if (observed+1 == (jint)_n_threads) clear();
 }
 
+void SubTasksDone::all_tasks_completed(uint n_threads) {
+  uint observed = _threads_completed;
+  uint old;
+  do {
+    old = observed;
+    observed = Atomic::cmpxchg(old+1, &_threads_completed, old);
+  } while (observed != old);
+  // If this was the last thread checking in, clear the tasks.
+  uint adjusted_thread_count = (n_threads == 0 ? 1 : n_threads);
+  if (observed + 1 == adjusted_thread_count) {
+    clear();
+  }
+}
 
 SubTasksDone::~SubTasksDone() {
   if (_tasks != NULL) FREE_C_HEAP_ARRAY(jint, _tasks, mtInternal);

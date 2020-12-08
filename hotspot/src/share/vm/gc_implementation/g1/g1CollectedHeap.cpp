@@ -58,6 +58,7 @@
 #include "gc_implementation/shared/gcTrace.hpp"
 #include "gc_implementation/shared/gcTraceTime.hpp"
 #include "gc_implementation/shared/isGCActiveMark.hpp"
+#include "gc_implementation/g1/g1FullCollector.hpp"
 #include "memory/allocation.hpp"
 #include "memory/gcLocker.inline.hpp"
 #include "memory/generationSpec.hpp"
@@ -147,6 +148,72 @@ class ClearLoggedCardTableEntryClosure: public CardTableEntryClosure {
     }
   }
 };
+
+G1VerifyOopClosure::G1VerifyOopClosure(VerifyOption option) :
+   _g1h(G1CollectedHeap::heap()),
+   _containing_obj(NULL),
+   _verify_option(option),
+   _cc(0),
+   _failures(false) {
+}
+
+void G1VerifyOopClosure::print_object(outputStream* out, oop obj) {
+#ifdef PRODUCT
+  Klass* k = obj->klass();
+  const char* class_name = InstanceKlass::cast(k)->external_name();
+  out->print_cr("class name %s", class_name);
+#else // PRODUCT
+  obj->print_on(out);
+#endif // PRODUCT
+}
+
+template <class T>
+void G1VerifyOopClosure::do_oop_work(T* p) {
+  T heap_oop = oopDesc::load_heap_oop(p);
+  
+  if (!oopDesc::is_null(heap_oop)) {
+    _cc++;
+    oop obj = oopDesc::decode_heap_oop_not_null(heap_oop);
+    bool failed = false;
+    if (!_g1h->is_in_closed_subset(obj) || _g1h->is_obj_dead_cond(obj, _verify_option)) {
+      MutexLockerEx x(ParGCRareEvent_lock,
+          Mutex::_no_safepoint_check_flag);
+      outputStream* yy = gclog_or_tty;
+      if (!_failures) {
+        yy->cr();
+        yy->print_cr("----------");
+      }
+      if (!_g1h->is_in_closed_subset(obj)) {
+        HeapRegion* from = _g1h->heap_region_containing((HeapWord*)p);
+        yy->print_cr("Field " PTR_FORMAT
+            " of live obj " PTR_FORMAT " in region "
+            "[" PTR_FORMAT ", " PTR_FORMAT ")",
+            p2i(p), p2i(_containing_obj),
+            p2i(from->bottom()), p2i(from->end()));
+        print_object(yy, _containing_obj);
+        yy->print_cr("points to obj " PTR_FORMAT " not in the heap",
+            p2i(obj));
+      } else {
+        HeapRegion* from = _g1h->heap_region_containing((HeapWord*)p);
+        HeapRegion* to   = _g1h->heap_region_containing((HeapWord*)obj);
+        yy->print_cr("Field " PTR_FORMAT
+            " of live obj " PTR_FORMAT " in region "
+            "[" PTR_FORMAT ", " PTR_FORMAT ")",
+            p2i(p), p2i(_containing_obj),
+            p2i(from->bottom()), p2i(from->end()));
+        print_object(yy, _containing_obj);
+        yy->print_cr("points to dead obj " PTR_FORMAT " in region "
+            "[" PTR_FORMAT ", " PTR_FORMAT ")",
+            p2i(obj), p2i(to->bottom()), p2i(to->end()));
+        print_object(yy, obj);
+      }
+      yy->print_cr("----------");
+      yy->flush();
+      _failures = true;
+      failed = true;
+    }
+  }
+}
 
 class RedirtyLoggedCardTableEntryClosure : public CardTableEntryClosure {
  private:
@@ -1356,7 +1423,7 @@ bool G1CollectedHeap::do_collection(bool explicit_gc,
       // how reference processing currently works in G1.
 
       // Temporarily make discovery by the STW ref processor single threaded (non-MT).
-      ReferenceProcessorMTDiscoveryMutator stw_rp_disc_ser(ref_processor_stw(), false);
+      ReferenceProcessorMTDiscoveryMutator stw_rp_disc_ser(ref_processor_stw(), G1ParallelFullGC);
 
       // Temporarily clear the STW ref processor's _is_alive_non_header field.
       ReferenceProcessorIsAliveMutator stw_rp_is_alive_null(ref_processor_stw(), NULL);
@@ -1367,7 +1434,11 @@ bool G1CollectedHeap::do_collection(bool explicit_gc,
       // Do collection work
       {
         HandleMark hm;  // Discard invalid handles created during gc
-        G1MarkSweep::invoke_at_safepoint(ref_processor_stw(), do_clear_all_soft_refs);
+        if (G1ParallelFullGC) {
+          do_parallel_full_collection(explicit_gc, do_clear_all_soft_refs);
+        }else {
+          G1MarkSweep::invoke_at_safepoint(ref_processor_stw(), do_clear_all_soft_refs);
+        }
       }
 
       assert(num_free_regions() == 0, "we should not have added any free regions");
@@ -1545,6 +1616,35 @@ bool G1CollectedHeap::do_collection(bool explicit_gc,
     gc_tracer->report_gc_end(gc_timer->gc_end(), gc_timer->time_partitions());
   }
 
+  return true;
+}
+
+void G1CollectedHeap::reset_hot_card_counts(HeapRegion* hr) {
+  G1HotCardCache* hot_card_cache = _cg1r->hot_card_cache();
+  if (hot_card_cache->use_cache()) {
+     hot_card_cache->reset_card_counts(hr);
+   }
+}
+
+bool G1CollectedHeap::do_parallel_full_collection(bool explicit_gc,
+                                                  bool clear_all_soft_refs) {
+  assert_at_safepoint(true /* should_be_vm_thread */);
+
+  if (GC_locker::check_active_before_gc()) {
+    // Full GC was not completed.
+    return false;
+  }
+
+  const bool do_clear_all_soft_refs = clear_all_soft_refs ||
+      collector_policy()->should_clear_all_soft_refs();
+
+  G1FullCollector collector(this, NULL, explicit_gc, do_clear_all_soft_refs);
+
+  collector.prepare_collection();
+  collector.collect();
+  collector.complete_collection();
+
+  // Full collection was successfully completed.
   return true;
 }
 
@@ -1800,7 +1900,6 @@ void G1CollectedHeap::free_heap_physical_memory_after_fullgc() {
   int diff = max_young_region_num - current_young_region_num;
   //how many regions will be used for old gen in the _free_list freed by FullGC
   int old_heap_region_num = num_free_regions - diff;
-  gclog_or_tty->print_cr("free_heap_physical_memory_after_fullgc---max_young_region_num == %d--num_free_regions == %d--current_young_region_num == %d", max_young_region_num, num_free_regions, current_young_region_num);
   if (old_heap_region_num <= 0) {
     return;
   }
@@ -3257,7 +3356,7 @@ void G1CollectedHeap::verify(bool silent, VerifyOption vo) {
            "Expected to be executed serially by the VM thread at this point");
 
     if (!silent) { gclog_or_tty->print("Roots "); }
-    VerifyRootsClosure rootsCl(vo);
+    G1VerifyOopClosure rootsCl(vo);
     VerifyKlassClosure klassCl(this, &rootsCl);
     CLDToKlassAndOopClosure cldCl(&klassCl, &rootsCl, false);
 
@@ -3276,7 +3375,9 @@ void G1CollectedHeap::verify(bool silent, VerifyOption vo) {
 
     bool failures = rootsCl.failures() || codeRootsCl.failures();
 
-    if (vo != VerifyOption_G1UseMarkWord) {
+    if (vo != VerifyOption_G1UseMarkWord && // fullgc
+        vo != VerifyOption_G1UseFullMarking) //parallel fullgc
+    {
       // If we're verifying during a full GC then the region sets
       // will have been torn down at the start of the GC. Therefore
       // verifying the region sets will fail. So we only verify
@@ -3398,6 +3499,7 @@ bool G1CollectedHeap::is_obj_dead_cond(const oop obj,
   case VerifyOption_G1UsePrevMarking: return is_obj_dead(obj, hr);
   case VerifyOption_G1UseNextMarking: return is_obj_ill(obj, hr);
   case VerifyOption_G1UseMarkWord:    return !obj->is_gc_marked();
+  case VerifyOption_G1UseFullMarking: return is_obj_dead_full(obj, hr);
   default:                            ShouldNotReachHere();
   }
   return false; // keep some compilers happy
@@ -3409,6 +3511,7 @@ bool G1CollectedHeap::is_obj_dead_cond(const oop obj,
   case VerifyOption_G1UsePrevMarking: return is_obj_dead(obj);
   case VerifyOption_G1UseNextMarking: return is_obj_ill(obj);
   case VerifyOption_G1UseMarkWord:    return !obj->is_gc_marked();
+  case VerifyOption_G1UseFullMarking: return is_obj_dead_full(obj);
   default:                            ShouldNotReachHere();
   }
   return false; // keep some compilers happy
@@ -5908,6 +6011,18 @@ void G1CollectedHeap::free_humongous_region(HeapRegion* hr,
     free_region(curr_hr, free_list, skip_remset);
     i += 1;
   }
+}
+
+//new addded method
+void G1CollectedHeap::heap_region_par_iterate_from_worker_offset(HeapRegionClosure* cl,
+                                                                 HeapRegionClaimer *hrclaimer,
+                                                                 uint worker_id) const {
+  _hrm.par_fullgc_iterate(cl, hrclaimer, hrclaimer->offset_for_worker(worker_id));
+}
+
+void G1CollectedHeap::heap_region_par_iterate_from_start(HeapRegionClosure* cl,
+                                                         HeapRegionClaimer *hrclaimer) const {
+  _hrm.par_iterate(cl, hrclaimer, 0);
 }
 
 void G1CollectedHeap::remove_from_old_sets(const HeapRegionSetCount& old_regions_removed,

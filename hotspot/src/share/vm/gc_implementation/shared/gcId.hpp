@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,16 @@ class GCId VALUE_OBJ_CLASS_SPEC {
   static const GCId create();
   static const GCId peek();
   static const GCId undefined();
+  static const uint undefined_id();
 };
 
+class GCIdMark : public StackObj {
+private:
+  const uint _previous_gc_id;
+
+public:
+  GCIdMark();
+  GCIdMark(uint gc_id);
+  ~GCIdMark();
+};
 #endif // SHARE_VM_GC_IMPLEMENTATION_SHARED_GCID_HPP

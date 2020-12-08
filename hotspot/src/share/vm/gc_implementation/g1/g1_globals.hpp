@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -155,6 +155,9 @@
   product(bool, G1UseAdaptiveConcRefinement, true,                          \
           "Select green, yellow and red zones adaptively to meet the "      \
           "the pause requirements.")                                        \
+                                                                            \
+  product(bool, G1ParallelFullGC, true,                                     \
+          "Use parallel full GC under G1.")                                 \
                                                                             \
   product(uintx, G1ConcRSLogCacheSize, 10,                                  \
           "Log base 2 of the length of conc RS hot-card cache.")            \
