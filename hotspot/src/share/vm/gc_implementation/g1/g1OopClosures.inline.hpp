@@ -86,6 +86,8 @@ inline void G1ParPushHeapRSClosure::do_oop_nv(T* p) {
       assert(!_g1->obj_in_cs(obj), "checking");
     }
   }
+
+  _par_scan_state->trim_queue_partially();
 }
 
 template <class T>

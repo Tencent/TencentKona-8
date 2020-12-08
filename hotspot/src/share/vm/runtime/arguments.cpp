@@ -1402,6 +1402,11 @@ void Arguments::set_cms_and_parnew_gc_flags() {
       (unsigned int) (MarkStackSize / K), (uint) (MarkStackSizeMax / K));
     tty->print_cr("ConcGCThreads: %u", (uint) ConcGCThreads);
   }
+
+  // By default do not let the target stack size to be more than 1/4 of the entries
+  if (FLAG_IS_DEFAULT(GCDrainStackTargetSize)) {
+    FLAG_SET_ERGO(uintx, GCDrainStackTargetSize, MIN2(GCDrainStackTargetSize, (uintx)TASKQUEUE_SIZE / 4));
+  }
 }
 #endif // INCLUDE_ALL_GCS
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -140,6 +140,38 @@ void G1ParScanThreadState::steal_and_trim_queue(RefToScanQueueSet *task_queues) 
     // we drain the queues as necessary.
     trim_queue();
   }
+}
+
+inline bool G1ParScanThreadState::needs_partial_trimming() const {
+  return !_refs->overflow_empty() || _refs->size() > _stack_trim_upper_threshold;
+}
+
+inline bool G1ParScanThreadState::is_partially_trimmed() const {
+  return _refs->overflow_empty() && _refs->size() <= _stack_trim_lower_threshold;
+}
+
+inline void G1ParScanThreadState::trim_queue_to_threshold(uint threshold) {
+  StarTask ref;
+  // Drain the overflow stack first, so other threads can potentially steal.
+  while (_refs->pop_overflow(ref)) {
+    if (!_refs->try_push_to_taskqueue(ref)) {
+      dispatch_reference(ref);
+    }
+  }
+
+  while (_refs->pop_local(ref, threshold)) {
+    dispatch_reference(ref);
+  }
+}
+
+inline void G1ParScanThreadState::trim_queue_partially() {
+  if (!needs_partial_trimming()) {
+    return;
+  }
+
+  do {
+    trim_queue_to_threshold(_stack_trim_lower_threshold);
+  } while (!is_partially_trimmed());
 }
 
 #endif /* SHARE_VM_GC_IMPLEMENTATION_G1_G1PARSCANTHREADSTATE_INLINE_HPP */
