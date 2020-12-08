@@ -328,6 +328,12 @@ class HeapRegion: public G1OffsetTableContigSpace {
 
   static size_t max_region_size();
 
+  // Auxiliary functions for scan_and_forward support.
+  // See comments for CompactibleSpace for more information.
+  inline HeapWord* scan_limit() const {
+    return top();
+  }
+
   // It sets up the heap region size (GrainBytes / GrainWords), as
   // well as other related fields that are based on the heap region
   // size (LogOfHRGrainBytes / LogOfHRGrainWords /
@@ -369,6 +375,9 @@ class HeapRegion: public G1OffsetTableContigSpace {
   size_t live_bytes() {
     return (top() - prev_top_at_mark_start()) * HeapWordSize + marked_bytes();
   }
+
+  // Update heap region to be consistent after compaction.
+  void complete_compaction();
 
   // The number of bytes counted in the next marking.
   size_t next_marked_bytes() { return _next_marked_bytes; }
@@ -560,6 +569,14 @@ class HeapRegion: public G1OffsetTableContigSpace {
   // a concurrent phase.
   void par_clear();
 
+  //used by parallel fullgc only
+  void reset_hr();
+
+  // Scans through the region using the bitmap to determine what
+  // objects to call size_t ApplyToMarkedClosure::apply(oop) for.
+  template<typename ApplyToMarkedClosure>
+  inline void apply_to_marked_objects(CMBitMap* bitmap, ApplyToMarkedClosure* closure);
+
   // Get the start of the unmarked area in this region.
   HeapWord* prev_top_at_mark_start() const { return _prev_top_at_mark_start; }
   HeapWord* next_top_at_mark_start() const { return _next_top_at_mark_start; }
@@ -601,8 +618,8 @@ class HeapRegion: public G1OffsetTableContigSpace {
   bool is_marked() { return _prev_top_at_mark_start != bottom(); }
 
   void reset_during_compaction() {
-    assert(isHumongous() && startsHumongous(),
-           "should only be called for starts humongous regions");
+    assert(isHumongous(),
+           "should only be called for humongous regions");
 
     zero_marked_bytes();
     init_top_at_mark_start();

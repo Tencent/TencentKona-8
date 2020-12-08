@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@
 #include "memory/universe.inline.hpp"
 #include "oops/instanceKlass.hpp"
 #include "oops/objArrayOop.hpp"
+#include "gc_implementation/shared/gcId.hpp"
 #include "oops/oop.inline.hpp"
 #include "oops/symbol.hpp"
 #include "prims/jvm_misc.hpp"
@@ -1229,6 +1230,7 @@ NamedThread::NamedThread() : Thread() {
   _name = NULL;
   _processed_thread = NULL;
 
+  _gc_id = GCId::undefined_id();
   reset_pms_data();
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -94,7 +94,8 @@ enum VerifyOption {
       // G1
       VerifyOption_G1UsePrevMarking = VerifyOption_Default,
       VerifyOption_G1UseNextMarking = VerifyOption_G1UsePrevMarking + 1,
-      VerifyOption_G1UseMarkWord    = VerifyOption_G1UseNextMarking + 1
+      VerifyOption_G1UseMarkWord    = VerifyOption_G1UseNextMarking + 1,
+      VerifyOption_G1UseFullMarking = VerifyOption_G1UseMarkWord + 1
 };
 
 class Universe: AllStatic {

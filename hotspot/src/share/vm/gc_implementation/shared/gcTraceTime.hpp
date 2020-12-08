@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,15 @@ class GCTraceTime {
  public:
   GCTraceTime(const char* title, bool doit, bool print_cr, GCTimer* timer, GCId gc_id);
   ~GCTraceTime();
+};
+class GCTraceCPUTime : public StackObj {
+  bool _active;                 // true if times will be measured and printed
+  double _starting_user_time;   // user time at start of measurement
+  double _starting_system_time; // system time at start of measurement
+  double _starting_real_time;   // real time at start of measurement
+ public:
+  GCTraceCPUTime();
+  ~GCTraceCPUTime();
 };
 
 #endif // SHARE_VM_GC_IMPLEMENTATION_SHARED_GCTRACETIME_HPP

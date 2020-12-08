@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -272,6 +272,11 @@ class CMSTracer : public OldGCTracer {
 class G1OldTracer : public OldGCTracer {
  public:
   G1OldTracer() : OldGCTracer(G1Old) {}
+};
+
+class G1FullGCTracer : public OldGCTracer {
+ public:
+  G1FullGCTracer() : OldGCTracer(G1Full) {}
 };
 
 #endif // SHARE_VM_GC_IMPLEMENTATION_SHARED_GCTRACE_HPP

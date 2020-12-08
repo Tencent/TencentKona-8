@@ -1,0 +1,108 @@
+/*
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ *
+ */
+
+#ifndef SHARE_VM_GC_IMPLEMENTATION_G1_G1FULLCOLLECTOR_HPP
+#define SHARE_VM_GC_IMPLEMENTATION_G1_G1FULLCOLLECTOR_HPP
+
+#include "gc_implementation/g1/g1FullGCCompactionPoint.hpp"
+#include "gc_implementation/g1/g1FullGCMarker.hpp"
+#include "gc_implementation/g1/g1FullGCOopClosures.hpp"
+#include "gc_implementation/g1/g1FullGCScope.hpp"
+#include "gc_implementation/g1/preservedMarks.hpp"
+#include "gc_implementation/g1/g1Log.hpp"
+#include "memory/referenceProcessor.hpp"
+#include "utilities/taskqueue.hpp"
+#include "memory/allocation.hpp"
+
+class AbstractGangTask;
+class CMBitMap;
+class G1FullGCMarker;
+class G1FullGCScope;
+class G1FullGCCompactionPoint;
+class GCMemoryManager;
+class ReferenceProcessor;
+
+// Subject-to-discovery closure for reference processing during Full GC. During
+// Full GC the whole heap is subject to discovery.
+class G1FullGCSubjectToDiscoveryClosure: public BoolObjectClosure {
+public:
+  bool do_object_b(oop p) {
+    assert(p != NULL, "must be");
+    return true;
+  }
+};
+
+// The G1FullCollector holds data associated with the current Full GC.
+class G1FullCollector : StackObj {
+  G1CollectedHeap*          _heap;
+  G1FullGCScope             _scope;
+  uint                      _num_workers;
+  G1FullGCMarker**          _markers;
+  G1FullGCCompactionPoint** _compaction_points;
+  OopQueueSet               _oop_queue_set;
+  ObjArrayTaskQueueSet      _array_queue_set;
+  PreservedMarksSet         _preserved_marks_set;
+  G1FullGCCompactionPoint   _serial_compaction_point;
+  G1IsAliveClosure          _is_alive;
+  ReferenceProcessorIsAliveMutator _is_alive_mutator;
+
+  static uint calc_active_workers();
+
+  G1FullGCSubjectToDiscoveryClosure _always_subject_to_discovery;
+  ReferenceProcessorSubjectToDiscoveryMutator _is_subject_mutator;
+
+public:
+  G1FullCollector(G1CollectedHeap* heap, GCMemoryManager* memory_manager, bool explicit_gc, bool clear_soft_refs);
+  ~G1FullCollector();
+
+  void prepare_collection();
+  void collect();
+  void complete_collection();
+
+  G1FullGCScope*           scope() { return &_scope; }
+  uint                     workers() { return _num_workers; }
+  G1FullGCMarker*          marker(uint id) { return _markers[id]; }
+  G1FullGCCompactionPoint* compaction_point(uint id) { return _compaction_points[id]; }
+  OopQueueSet*             oop_queue_set() { return &_oop_queue_set; }
+  ObjArrayTaskQueueSet*    array_queue_set() { return &_array_queue_set; }
+  PreservedMarksSet*       preserved_mark_set() { return &_preserved_marks_set; }
+  G1FullGCCompactionPoint* serial_compaction_point() { return &_serial_compaction_point; }
+  CMBitMap*              mark_bitmap();
+  ReferenceProcessor*      reference_processor();
+  G1IsAliveClosure*        is_alive_closure() {return &_is_alive;}
+
+private:
+  void phase1_mark_live_objects();
+  void phase2_prepare_compaction();
+  void phase3_adjust_pointers();
+  void phase4_do_compaction();
+
+  void restore_marks();
+  void verify_after_marking();
+
+  void run_task(AbstractGangTask* task);
+};
+
+
+#endif // SHARE_VM_GC_IMPLEMENTATION_G1_G1FULLCOLLECTOR_HPP

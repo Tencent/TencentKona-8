@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -707,6 +707,7 @@ class NamedThread: public Thread {
   char* _name;
   // log JavaThread being processed by oops_do
   JavaThread* _processed_thread;
+  uint _gc_id; // The current GC id when a thread takes part in GC
 
  public:
   NamedThread();
@@ -746,6 +747,8 @@ class NamedThread: public Thread {
     _pms_revisit_klass_stack = NULL;
     _pms_revisit_mdo_stack = NULL;
   }
+  void set_gc_id(uint gc_id) { _gc_id = gc_id; }
+  uint gc_id() { return _gc_id; }
 };
 
 // Worker threads are named and have an id of an assigned work.

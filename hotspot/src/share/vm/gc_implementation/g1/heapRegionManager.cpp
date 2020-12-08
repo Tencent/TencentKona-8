@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -353,6 +353,41 @@ void HeapRegionManager::par_iterate(HeapRegionClosure* blk, uint worker_id, uint
   }
 }
 
+void HeapRegionManager::par_iterate(HeapRegionClosure* blk,
+                                    HeapRegionClaimer* hrclaimer,
+                                    const uint start_index) const {
+  // Every worker will actually look at all regions, skipping over regions that
+  // are currently not committed. 
+  // This also (potentially) iterates over regions newly allocated during GC. This
+  // is no problem except for some extra work.
+  const uint n_regions = hrclaimer->n_regions();
+  for (uint count = 0; count < n_regions; count++) {
+    const uint index = (start_index + count) % n_regions;
+    assert(index < n_regions, "sanity");
+    // Skip over unavailable regions
+    if (!is_available(index)) {
+      continue;
+    }
+    HeapRegion* r = _regions.get_by_index(index);
+    // We'll ignore regions already claimed.
+    // However, if the iteration is specified as concurrent, the values for
+    // is_starts_humongous and is_continues_humongous can not be trusted,
+    // and we should just blindly iterate over regions regardless of their
+    // humongous status.
+    if (hrclaimer->is_region_claimed(index)) {
+      continue;
+    }
+    // OK, try to claim it
+    if (!hrclaimer->claim_region(index)) {
+      continue;
+    }
+    bool res = blk->doHeapRegion(r);
+    if (res) {
+      return;
+    }
+  } 
+} 
+
 uint HeapRegionManager::shrink_by(uint num_regions_to_remove) {
   assert(length() > 0, "the region sequence should not be empty");
   assert(length() <= _allocated_heapregions_length, "invariant");
@@ -455,6 +490,71 @@ void HeapRegionManager::verify() {
 
   guarantee(num_committed == _num_committed, err_msg("Found %u committed regions, but should be %u", num_committed, _num_committed));
   _free_list.verify();
+}
+
+HeapRegionClaimer::HeapRegionClaimer(uint n_workers) :
+    _n_workers(n_workers), _n_regions(G1CollectedHeap::heap()->hrm()->allocated_heapregions_length()), _claims(NULL) {
+  assert(n_workers > 0, "Need at least one worker.");
+  uint* new_claims = NEW_C_HEAP_ARRAY(uint, _n_regions, mtGC);
+  memset(new_claims, Unclaimed, sizeof(*_claims) * _n_regions);
+  _claims = new_claims;
+}
+
+HeapRegionClaimer::~HeapRegionClaimer() {
+  if (_claims != NULL) {
+    FREE_C_HEAP_ARRAY(uint, _claims, mtGC);
+  }
+}
+
+uint HeapRegionClaimer::offset_for_worker(uint worker_id) const {
+  assert(worker_id < _n_workers, "Invalid worker_id.");
+  return _n_regions * worker_id / _n_workers;
+}
+
+bool HeapRegionClaimer::is_region_claimed(uint region_index) const {
+  assert(region_index < _n_regions, "Invalid index.");
+  return _claims[region_index] == Claimed;
+}
+
+bool HeapRegionClaimer::claim_region(uint region_index) {
+  assert(region_index < _n_regions, "Invalid index.");
+  uint old_val = Atomic::cmpxchg(Claimed, &_claims[region_index], Unclaimed);
+  return old_val == Unclaimed;
+}
+
+void HeapRegionManager::par_fullgc_iterate(HeapRegionClosure* blk,
+                                           HeapRegionClaimer* hrclaimer,
+                                           const uint start_index) const {
+  // Every worker will actually look at all regions, skipping over regions that
+  // are currently not committed.
+  // This also (potentially) iterates over regions newly allocated during GC. This
+  // is no problem except for some extra work.
+  const uint n_regions = hrclaimer->n_regions();
+  for (uint count = 0; count < n_regions; count++) {
+    const uint index = (start_index + count) % n_regions;
+    assert(index < n_regions, "sanity");
+    // Skip over unavailable regions
+    if (!is_available(index)) {
+      continue;
+    }
+    HeapRegion* r = _regions.get_by_index(index);
+    // We'll ignore regions already claimed.
+    // However, if the iteration is specified as concurrent, the values for
+    // is_starts_humongous and is_continues_humongous can not be trusted,
+    // and we should just blindly iterate over regions regardless of their
+    // humongous status.
+    if (hrclaimer->is_region_claimed(index)) {
+      continue;
+    }
+    // OK, try to claim it
+    if (!hrclaimer->claim_region(index)) {
+      continue;
+    }
+    bool res = blk->doHeapRegion(r);
+    if (res) {
+      return;
+    }
+  }
 }
 
 #ifndef PRODUCT

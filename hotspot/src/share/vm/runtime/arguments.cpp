@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1731,6 +1731,12 @@ void Arguments::set_g1_gc_flags() {
     tty->print_cr("MarkStackSize: %uk  MarkStackSizeMax: %uk",
       (unsigned int) (MarkStackSize / K), (uint) (MarkStackSizeMax / K));
     tty->print_cr("ConcGCThreads: %u", (uint) ConcGCThreads);
+  }
+
+  if (G1ParallelFullGC && 
+        (ParallelGCThreads <= 1 || UseDynamicNumberOfGCThreads)) {
+    // Disable G1ParallelFullGC
+    G1ParallelFullGC = false;
   }
 }
 

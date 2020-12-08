@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -234,7 +234,6 @@ void G1PageBasedVirtualSpace::uncommit_internal(size_t start_page, size_t end_pa
   //should madvise the physical memory only after uncommit operation succeed
   if (res && FreeHeapPhysicalMemory) {
     os::free_heap_physical_memory(start_addr, pointer_delta(bounded_end_addr(end_page), start_addr, sizeof(char)));
-    gclog_or_tty->print_cr("shink---%d", ++counter);
   }
 }
 

@@ -91,6 +91,25 @@ G1OffsetTableContigSpace::block_start_const(const void* p) const {
   return _offsets.block_start_const(p);
 }
 
+inline void HeapRegion::complete_compaction() {
+  // Reset space and bot after compaction is complete if needed.
+  reset_after_compaction();
+
+  /* We do this clear, below, since it has overloaded meanings for some
+   space subtypes.  For example, OffsetTableContigSpace's that were
+   compacted into will have had their offset table thresholds updated
+   continuously, but those that weren't need to have their thresholds
+   re-initialized.  Also mangles unused area for debugging.*/
+  if (used() == 0) {                                               
+    clear(SpaceDecorator::Mangle);
+  } else {
+    // Clear unused heap memory in debug builds.
+    if (ZapUnusedHeapArea) {
+      mangle_unused_area();
+    }
+  }
+}
+
 inline bool
 HeapRegion::block_is_obj(const HeapWord* p) const {
   G1CollectedHeap* g1h = G1CollectedHeap::heap();
@@ -175,6 +194,27 @@ inline void HeapRegion::note_start_of_copying(bool during_initial_mark) {
       assert(top() >= _next_top_at_mark_start, "invariant");
     }
   }
+}
+
+template<typename ApplyToMarkedClosure>
+inline void HeapRegion::apply_to_marked_objects(CMBitMap* bitmap, ApplyToMarkedClosure* closure) {
+  HeapWord* limit = scan_limit();
+  HeapWord* next_addr = bottom();
+
+  while (next_addr < limit) {
+    Prefetch::write(next_addr, PrefetchScanIntervalInBytes);
+    // This explicit is_marked check is a way to avoid
+    // some extra work done by get_next_marked_addr for
+    // the case where next_addr is marked.
+    if (bitmap->isMarked(next_addr)) {
+      oop current = oop(next_addr);
+      next_addr += closure->apply(current);
+    } else {
+      next_addr = bitmap->getNextMarkedWordAddress(next_addr, limit);
+    }
+  }
+
+  assert(next_addr == limit, "Should stop the scan at the limit.");
 }
 
 inline void HeapRegion::note_end_of_copying(bool during_initial_mark) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,6 +65,7 @@ class G1RootProcessor : public StackObj {
     G1RP_PS_CodeCache_oops_do,
     G1RP_PS_filter_satb_buffers,
     G1RP_PS_refProcessor_oops_do,
+    G1RP_PS_weakProcessor_oops_do,
     // Leave this one last.
     G1RP_PS_NumElements
   };
@@ -134,6 +135,10 @@ public:
   void process_all_roots_no_string_table(OopClosure* oops,
                                          CLDClosure* clds,
                                          CodeBlobClosure* blobs);
+
+  // Apply closure to weak roots in the system. Used during the adjust phase
+  // for the Full GC.
+  void process_full_gc_weak_roots(OopClosure* oops);
 
   // Inform the root processor about the number of worker threads
   void set_num_workers(int active_workers);

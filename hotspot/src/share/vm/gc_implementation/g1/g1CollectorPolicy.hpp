@@ -882,6 +882,7 @@ public:
 
   static const uint REGIONS_UNLIMITED = (uint) -1;
 
+  uint max_survivor_regions () const { return _max_survivor_regions;}
   uint max_regions(InCSetState dest) {
     switch (dest.value()) {
       case InCSetState::Young:

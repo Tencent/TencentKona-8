@@ -56,6 +56,10 @@ class G1RootRegionScanClosure;
 // Specialized oop closures from g1RemSet.cpp
 class G1UpdateRSOrPushRefOopClosure;
 
+//Specialized oop closures for g1 parallel fullgc 
+class G1MarkAndPushClosure;
+class G1AdjustClosure;
+
 #ifdef FURTHER_SPECIALIZED_OOP_OOP_ITERATE_CLOSURES
 #error "FURTHER_SPECIALIZED_OOP_OOP_ITERATE_CLOSURES already defined."
 #endif
@@ -63,6 +67,8 @@ class G1UpdateRSOrPushRefOopClosure;
 #define FURTHER_SPECIALIZED_OOP_OOP_ITERATE_CLOSURES(f) \
       f(G1ParScanClosure,_nv)                           \
       f(G1ParPushHeapRSClosure,_nv)                     \
+      f(G1AdjustClosure,_nv)                            \
+      f(G1MarkAndPushClosure,_nv)                       \
       f(G1CMOopClosure,_nv)                             \
       f(G1RootRegionScanClosure,_nv)                    \
       f(G1UpdateRSOrPushRefOopClosure,_nv)

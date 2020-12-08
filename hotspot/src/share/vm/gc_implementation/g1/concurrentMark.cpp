@@ -205,6 +205,13 @@ void CMBitMap::clearRange(MemRegion mr) {
                    heapWordToOffset(mr.end()), false);
 }
 
+void CMBitMap::clearRange(HeapRegion* region) {
+  if (!region->is_empty()) {
+    MemRegion mr(region->bottom(), region->top());
+    clearRange(mr);
+  }
+}
+
 MemRegion CMBitMap::getAndClearMarkedRegion(HeapWord* addr,
                                             HeapWord* end_addr) {
   HeapWord* start = getNextMarkedWordAddress(addr);

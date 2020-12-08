@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -250,6 +250,10 @@ template<class E> class GrowableArray : public GenericGrowableArray {
     return _data[_len-1];
   }
 
+  E last() const {
+    return top();
+  }
+
   GrowableArrayIterator<E> begin() const {
     return GrowableArrayIterator<E>(this, 0);
   }
@@ -482,6 +486,7 @@ template<class E> class GrowableArrayIterator : public StackObj {
   }
 
  public:
+  GrowableArrayIterator() : _array(NULL), _position(0) { }
   GrowableArrayIterator<E>& operator++()  { ++_position; return *this; }
   E operator*()                           { return _array->at(_position); }
 
