@@ -4498,8 +4498,8 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
     __ ret(0);
     if (terminate == false) {
       __ bind(pinSlowPath);
-      __ movl(rax, cont_pin_monitor);
-      __ movl(r9, cont_pin_jni);
+      __ movl(rax, CONT_PIN_MONITOR);
+      __ movl(r9, CONT_PIN_JNI);
       __ testl(temp, temp); // check lower 32 bits for moinitor pin
       __ cmovl(Assembler::zero, rax, r9);
       __ ret(0);
