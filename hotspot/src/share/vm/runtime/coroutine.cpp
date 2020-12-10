@@ -28,13 +28,6 @@
 #ifdef TARGET_ARCH_x86
 # include "vmreg_x86.inline.hpp"
 #endif
-#ifdef TARGET_ARCH_sparc
-# include "vmreg_sparc.inline.hpp"
-#endif
-#ifdef TARGET_ARCH_zero
-# include "vmreg_zero.inline.hpp"
-#endif
-
 #include "services/threadService.hpp"
 #if INCLUDE_ALL_GCS
 #include "gc_implementation/concurrentMarkSweep/concurrentMarkSweepThread.hpp"
@@ -140,7 +133,7 @@ address ContReservedStack::get_stack_from_pre_mapped() {
 
     if (!os::guard_memory((char *) low_addr, len)) {
       warning("Attempt to protect stack guard pages failed.");
-      if (os::uncommit_memory((char *) low_addr, len)) {
+      if (!os::uncommit_memory((char *) low_addr, len)) {
         warning("Attempt to deallocate stack guard pages failed.");
       }
     }
@@ -328,6 +321,7 @@ void ContContainer::verify() {
     MutexLockerEx ml(bucket->lock(), Mutex::_no_safepoint_check_flag);
     Coroutine* head = bucket->head();
     if (head == NULL) {
+      guarantee(bucket->count() == 0, "mismatch count");
       continue;
     }
 
@@ -414,22 +408,17 @@ void Coroutine::cont_metadata_do(void f(Metadata*)) {
 }
 
 Coroutine::Coroutine() {
-	_has_javacall = false;
+  _has_javacall = false;
   _continuation = NULL;
-
-  if (VerifyCoroutineStateOnYield) {
-    _verify_state = new CoroutineVerify();
-  } else {
-    _verify_state = NULL;
-  }
 }
 
 Coroutine::~Coroutine() {
-  if (!is_thread_coroutine() && VerifyCoroutineStateOnYield) {
-    assert(_verify_state != NULL, "VerifyCoroutineStateOnYield is on and _verify_state is NULL");
+  if (_verify_state != NULL) {
     delete _verify_state; 
+  } else {
+    assert(VerifyCoroutineStateOnYield == false || _is_thread_coroutine,
+      "VerifyCoroutineStateOnYield is on and _verify_state is NULL");
   }
-
   free_stack();
 }
 
@@ -472,43 +461,6 @@ void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
   }
 }
 
-const char* Coroutine::get_coroutine_state_name(CoroutineState state)
-{
-	switch (state)
-	{
-	case Coroutine::_onstack:
-		return "onstack";
-		break;
-	case Coroutine::_current:
-		return "current";
-		break;
-	case Coroutine::_dead:
-		return "dead";
-		break;
-	case Coroutine::_dummy:
-		return "dummy";
-		break;
-	default:
-		return "default";
-		break;
-	}
-}
-void Coroutine::print_on(outputStream* st) const
-{
-	st->print("#" INT64_FORMAT " ", (long int)(this));
-	if (is_thread_coroutine()) {
-		st->print(" is_thread_coroutine");
-	}
-
-	if (!has_javacall())
-	{
-		st->print(" no_java_call");
-	}
-	// print guess for valid stack memory region (assume 4K pages); helps lock debugging
-	st->print_cr("[" INTPTR_FORMAT "]", (intptr_t)_last_sp & ~right_n_bits(12));
-	st->print_cr("   java.lang.Thread.State: %s", get_coroutine_state_name(this->state()));
-}
-
 void Coroutine::print_stack_on(void* frames, int* depth) {
   if (!has_javacall() || state() != Coroutine::_onstack) {
     return;
@@ -535,9 +487,8 @@ void Coroutine::print_stack_on(outputStream* st) {
 
 Coroutine* Coroutine::create_thread_coroutine(JavaThread* thread) {
   Coroutine* coro = new Coroutine();
-  if (coro == NULL)
-    return NULL;
   coro->_state = _current;
+  coro->_verify_state = NULL;
   coro->_is_thread_coroutine = true;
   coro->_thread = thread;
   coro->init_thread_stack(thread);
@@ -586,10 +537,11 @@ Coroutine* Coroutine::create_coroutine(JavaThread* thread, long stack_size, oop 
   assert(stack_size <= 0, "Can not specify stack size by users");
 
   Coroutine* coro = new Coroutine();
-  if (coro == NULL) {
-    return NULL;
+  if (VerifyCoroutineStateOnYield) {
+    coro->_verify_state = new CoroutineVerify();
+  } else {
+    coro->_verify_state = NULL;
   }
-
   if (!coro->init_stack(thread)) {
     return NULL;
   }
@@ -599,23 +551,14 @@ Coroutine* Coroutine::create_coroutine(JavaThread* thread, long stack_size, oop 
 }
 
 void Coroutine::frames_do(FrameClosure* fc) {
-  switch (_state) {
-    case Coroutine::_current:
-      // the contents of this coroutine have already been visited
-      break;
-    case Coroutine::_onstack:
-      on_stack_frames_do(fc, _is_thread_coroutine);
-      break;
-    case Coroutine::_dead:
-      // coroutine is dead, ignore
-      break;
+  if (_state == Coroutine::_onstack) {
+    on_stack_frames_do(fc, _is_thread_coroutine);
   }
 }
 
 class oops_do_Closure: public FrameClosure {
 private:
   OopClosure* _f;
- // CLDClosure* _cld_f;
   CodeBlobClosure* _cf;
   CLDClosure* _cld_f;
 
@@ -692,15 +635,12 @@ bool Coroutine::init_stack(JavaThread* thread) {
   _last_sp = NULL;
 
   DEBUG_CORO_ONLY(tty->print("created coroutine stack at %08x with real size: %i\n", _stack_base, _stack_size));
-
   return true;
 }
 
 void Coroutine::free_stack() {
-  //guarantee(!stack->is_thread_stack(), "cannot free thread stack");
-  if(!is_thread_coroutine())
-  { 
-      ContReservedStack::insert_stack(_stack_base);
+  if(!is_thread_coroutine()) {
+    ContReservedStack::insert_stack(_stack_base);
   }
 }
 
@@ -823,10 +763,10 @@ void Coroutine::on_stack_frames_do(FrameClosure* fc, bool isThreadCoroutine) {
 JVM_ENTRY(jint, CONT_isPinned0(JNIEnv* env, jclass klass, long data)) {
   JavaThread* thread = JavaThread::thread_from_jni_environment(env);
   if (thread->locksAcquired != 0) {
-    return cont_pin_monitor;
+    return CONT_PIN_MONITOR;
   }
   if (thread->contJniFrames != 0) {
-    return cont_pin_jni;
+    return CONT_PIN_JNI;
   }
   return 0;
 }
@@ -854,15 +794,13 @@ JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jobject cont
   // This will be solved later with global coroutine cache
   Coroutine* coro = NULL;
   if (stackSize == 0) {
-    {
-      if (thread->coroutine_cache_size() > 0) {
-        coro = thread->coroutine_cache();
-        coro->remove_from_list(thread->coroutine_cache());
-        thread->coroutine_cache_size()--;
-        Coroutine::reset_coroutine(coro);
-        Coroutine::init_coroutine(coro, thread);
-        DEBUG_CORO_ONLY(tty->print("reused coroutine stack at %08x\n", _stack_base));
-      }
+    if (thread->coroutine_cache_size() > 0) {
+      coro = thread->coroutine_cache();
+      coro->remove_from_list(thread->coroutine_cache());
+      thread->coroutine_cache_size()--;
+      Coroutine::reset_coroutine(coro);
+      Coroutine::init_coroutine(coro, thread);
+      DEBUG_CORO_ONLY(tty->print("reused coroutine stack at %08x\n", _stack_base));
     }
   }
   if (coro == NULL) {
