@@ -33,11 +33,6 @@
 #include "runtime/javaFrameAnchor.hpp"
 #include "runtime/monitorChunk.hpp"
 
-// number of heap words that prepareSwitch will add as a safety measure to the CoroutineData size
-#define COROUTINE_DATA_OVERSIZE (64)
-
-//#define DEBUG_COROUTINES
-
 #ifdef DEBUG_COROUTINES
 #define DEBUG_CORO_ONLY(x) x
 #define DEBUG_CORO_PRINT(x) tty->print(x)
@@ -48,14 +43,16 @@
 
 class Coroutine;
 
-const size_t CONT_BITMAP_LEN = 10;
-const size_t CONT_CONTAINER_SIZE = 1 << CONT_BITMAP_LEN;
-const size_t CONT_MASK_SHIFT = 5;
-const size_t CONT_MASK = CONT_CONTAINER_SIZE - 1;
-const int CONT_PREMAPPED_STACK_NUM = 100;
+const size_t CONT_BITMAP_LEN             = 10;
+const size_t CONT_CONTAINER_SIZE         = 1 << CONT_BITMAP_LEN;
+const size_t CONT_MASK_SHIFT             = 5;
+const size_t CONT_MASK                   = CONT_CONTAINER_SIZE - 1;
+const int CONT_PREMAPPED_STACK_NUM       = 100;
 const int CONT_RESERVED_PHYSICAL_MEM_MAX = 100;
-static const int cont_pin_monitor = 3;
-static const int cont_pin_jni = 2;
+
+// same with PIN value in Continuation.java
+const int CONT_PIN_JNI                   = 2;
+const int CONT_PIN_MONITOR               = 3;
 
 /* Mapping numbers of stacks and set its permission as PROT_READ | PROT_WRITE */
 class ContPreMappedStack : public CHeapObj<mtThread> {
@@ -66,10 +63,18 @@ private:
 
 public:
   int allocated_num;
-  ContPreMappedStack(intptr_t size, ContPreMappedStack* next) : _reserved_space(size) { _next = next; allocated_num = 0; };
+  ContPreMappedStack(intptr_t size, ContPreMappedStack* next) : _reserved_space(size) {
+    _next = next;
+    allocated_num = 0;
+  };
+  ~ContPreMappedStack() {
+    _reserved_space.release();
+  };
   bool initialize_virtual_space(intptr_t real_stack_size);
-  address get_base_address() { return (address)_virtual_space.high(); };
-  ~ContPreMappedStack() { _reserved_space.release(); };
+  // stack is from high address to low address on X86
+  address get_base_address() {
+    return (address)_virtual_space.high();
+  };
 };
 
 class ContReservedStack : AllStatic {
@@ -127,7 +132,7 @@ private:
 public:
   Mutex* lock() { return &_lock; }
   Coroutine* head() const { return _head; }
-  int count() const { return _count; }
+  int count() const { return _count; } // Is this count useful?
   void insert(Coroutine* cont);
   void remove(Coroutine* cont);
   ContBucket();
@@ -149,7 +154,7 @@ public:
   void print_stack_on(outputStream* st);
 };
 
-class ContContainer {
+class ContContainer : AllStatic {
 private:
   static ContBucket* _buckets;
   static size_t hash_code(Coroutine* cont);
@@ -215,6 +220,8 @@ public:
 private:
   CoroutineState  _state;
   bool            _is_thread_coroutine;
+  //for javacall stack reclaim
+  bool             _has_javacall;
 
   address         _stack_base;
   intptr_t        _stack_size;
@@ -228,17 +235,10 @@ private:
   int             _java_call_counter;
 #endif
 
-#ifdef _LP64
-  intptr_t        _storage[2];
-#endif
-
   // objects of this type can only be created via static functions
   Coroutine();
 
   void frames_do(FrameClosure* fc);
-
-  //for javacall stack reclaim
-  bool             _has_javacall;
 
   static JavaThread* _main_thread;
   static Method* _continuation_start;
@@ -257,11 +257,9 @@ public:
   static void set_main_thread(JavaThread* t) { _main_thread = t; }
   static Method* cont_start_method() { return _continuation_start; }
 
-  void print_on(outputStream* st) const;
   void print_stack_on(outputStream* st);
   void print_stack_on(void* frames, int* depth);
   void print_VT_info(outputStream* st);
-  static const char* get_coroutine_state_name(CoroutineState state);
 
   bool has_javacall() const { return _has_javacall; }
   void set_has_javacall(bool hjc) { _has_javacall = hjc; }
@@ -304,10 +302,6 @@ public:
   void init_thread_stack(JavaThread* thread);
   void free_stack();
   void on_stack_frames_do(FrameClosure* fc, bool isThreadCoroutine);
-  bool on_local_stack(address adr) const {
-    /* QQQ this has knowledge of direction, ought to be a stack method */
-    return (_stack_base >= adr && adr >= (_stack_base - _stack_size));
-  }
   void set_last_sp(address x)               { _last_sp = x; }
 
   static ByteSize stack_base_offset()         { return byte_offset_of(Coroutine, _stack_base); }
@@ -316,10 +310,6 @@ public:
 
 #ifdef ASSERT
   static ByteSize java_call_counter_offset()  { return byte_offset_of(Coroutine, _java_call_counter); }
-#endif
-
-#ifdef _LP64
-  static ByteSize storage_offset()            { return byte_offset_of(Coroutine, _storage); }
 #endif
 
 #if defined(_WINDOWS)
@@ -332,7 +322,7 @@ public:
 
 /*
  * Continuation can only yield from Java frame, if there is some call from
- * runtime/native to Java code, these frame might use native monitor/thread/pointer
+ * runtime/native to Java code, these frames might use native monitor/thread/pointer
  * address and resources(handle/metadata handle/JNI...)
  *
  * This mark is used when call java from native frame, when yield happen and there
