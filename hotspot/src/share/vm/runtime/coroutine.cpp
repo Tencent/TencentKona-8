@@ -833,9 +833,8 @@ JVM_END
 JVM_ENTRY(jobjectArray, CONT_dumpStackTrace(JNIEnv *env, jclass klass, jobject cont))
   oop contOop = JNIHandles::resolve(cont);
   Coroutine* coro = (Coroutine*)java_lang_Continuation::data(contOop);
-  assert(coro != NULL, "target coroutine is NULL in CoroutineSupport_dumpVirtualThreads");
-
   VirtualThreadStackTrace* res = new VirtualThreadStackTrace(coro);
+  // if coro is NULL, array is empty
   res->dump_stack();
 
   Handle stacktraces = res->allocate_fill_stack_trace_element_array(thread);
