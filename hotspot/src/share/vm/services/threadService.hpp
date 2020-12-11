@@ -281,12 +281,12 @@ class ThreadStackTrace : public CHeapObj<mtInternal> {
 
 #if INCLUDE_KONA_FIBER
 class VirtualThreadStackTrace : public ThreadStackTrace {
-  private:
-    Coroutine* _coro;
+ private:
+  Coroutine* _coro;
 
-  public:
-    VirtualThreadStackTrace(Coroutine* coro);
-    void dump_stack();
+ public:
+  VirtualThreadStackTrace(Coroutine* coro);
+  void dump_stack();
 };
 #endif
 
