@@ -68,7 +68,9 @@ VirtualThreadStackTrace::VirtualThreadStackTrace(Coroutine* coro) : ThreadStackT
 }
 
 void VirtualThreadStackTrace::dump_stack() {
-  _coro->print_stack_on(_frames, &_depth);
+  if (_coro != NULL) {
+    _coro->print_stack_on(_frames, &_depth);
+  }
 }
 #endif
 
