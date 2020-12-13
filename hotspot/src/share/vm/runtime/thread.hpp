@@ -1006,8 +1006,7 @@ class JavaThread: public Thread {
   Coroutine*        _current_coroutine;
 
  public:
-
-  Coroutine* current_coroutine()                 { return _current_coroutine;}
+  Coroutine* current_coroutine() const           { return _current_coroutine;}
   Coroutine*& coroutine_cache()                  { return _coroutine_cache; }
   uintx& coroutine_cache_size()                  { return _coroutine_cache_size; }
   
@@ -1449,7 +1448,7 @@ class JavaThread: public Thread {
 #if INCLUDE_KONA_FIBER
   static ByteSize current_coro_offset()          { return byte_offset_of(JavaThread,_current_coroutine    ); }
 #ifdef ASSERT
-  static ByteSize java_call_counter_offset()     { return byte_offset_of(JavaThread, _java_call_counter); }
+  static ByteSize java_call_counter_offset()     { return byte_offset_of(JavaThread, _java_call_counter   ); }
 #endif
 #endif
 
@@ -1543,7 +1542,7 @@ class JavaThread: public Thread {
   void print_on(outputStream* st, bool print_extended_info) const;
   void print_on(outputStream* st) const { print_on(st, false); }
 #if INCLUDE_KONA_FIBER
-  void print_coroutine_on(outputStream* st,bool printstack) const;
+  void print_coroutine_on(outputStream* st, bool printstack) const;
 #endif
   void print() const { print_on(tty); }
   void print_value();
