@@ -56,6 +56,9 @@
 #include "runtime/vm_operations.hpp"
 #include "services/memoryService.hpp"
 #include "utilities/stack.inline.hpp"
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+#endif
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
