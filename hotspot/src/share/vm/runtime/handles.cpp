@@ -124,6 +124,7 @@ void HandleMark::initialize(Thread* thread) {
   thread->set_last_handle_mark(this);
 }
 
+
 HandleMark::~HandleMark() {
   HandleArea* area = _area;   // help compilers with poor alias analysis
   assert(area == _thread->handle_area(), "sanity check");

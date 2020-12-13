@@ -27,9 +27,6 @@
 
 #include "runtime/handles.hpp"
 #include "runtime/thread.inline.hpp"
-#if INCLUDE_KONA_FIBER
-#include "runtime/coroutine.hpp"
-#endif
 
 // these inline functions are in a separate file to break an include cycle
 // between Thread and Handle

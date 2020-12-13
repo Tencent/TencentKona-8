@@ -96,6 +96,9 @@
 #endif // INCLUDE_ALL_GCS
 
 #include <errno.h>
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+#endif
 
 #ifndef USDT2
 HS_DTRACE_PROBE_DECL1(hotspot, thread__sleep__begin, long long);

@@ -5397,6 +5397,7 @@ static jint attach_current_thread(JavaVM *vm, void **penv, void *_args, bool dae
   thread->set_thread_state(_thread_in_vm);
   // Must do this before initialize_thread_local_storage
   thread->record_stack_base_and_size();
+
   thread->initialize_thread_local_storage();
 
   if (!os::create_attached_thread(thread)) {

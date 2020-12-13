@@ -52,6 +52,9 @@
 #include "runtime/prefetch.inline.hpp"
 #include "services/memTracker.hpp"
 
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+#endif
 // Concurrent marking bit map wrapper
 
 CMBitMapRO::CMBitMapRO(int shifter) :
