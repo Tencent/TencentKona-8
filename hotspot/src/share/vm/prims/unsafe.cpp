@@ -1358,6 +1358,7 @@ UNSAFE_ENTRY(void, Unsafe_PrefetchWrite(JNIEnv* env, jclass ignored, jobject obj
   Prefetch::write(addr, (intx)offset);
 UNSAFE_END
 
+
 /// JVM_RegisterUnsafeMethods
 
 #define ADR "J"

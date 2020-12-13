@@ -41,6 +41,9 @@
 #include "runtime/vmThread.hpp"
 #include "services/management.hpp"
 #include "utilities/taskqueue.hpp"
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+#endif
 
 //
 // ScavengeRootsTask
