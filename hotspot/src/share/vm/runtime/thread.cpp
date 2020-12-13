@@ -1455,6 +1455,7 @@ void WatcherThread::print_on(outputStream* st) const {
 
 void JavaThread::initialize() {
   // Initialize fields
+
   // Set the claimed par_id to UINT_MAX (ie not claiming any par_ids)
   set_claimed_par_id(UINT_MAX);
 
@@ -1635,15 +1636,18 @@ JavaThread::JavaThread(ThreadFunction entry_point, size_t stack_sz) :
 
 JavaThread::~JavaThread() {
 #if INCLUDE_KONA_FIBER
-  if (current_coroutine() != NULL) {
-    guarantee(current_coroutine()->is_thread_coroutine(), "must thread coroutine");
+  if (_current_coroutine != NULL) {
+    guarantee(_current_coroutine->is_thread_coroutine(), "must thread coroutine");
     while (coroutine_cache() != NULL) {
       Coroutine* coro_cache = coroutine_cache();
       coro_cache->remove_from_list(coroutine_cache());
+      _coroutine_cache_size--;
       delete coro_cache;
     }
+    guarantee(_coroutine_cache_size == 0, "not zero after delete all cache continuations.");
     ContContainer::remove(current_coroutine());
-    delete current_coroutine();
+    delete _current_coroutine;
+    _current_coroutine = NULL;
   }
 #endif
 
@@ -2064,13 +2068,12 @@ JavaThread* JavaThread::active() {
 }
 
 bool JavaThread::is_lock_owned(address adr) const {
-  bool res = Thread::is_lock_owned(adr);
-  if (res) {
-    return true;
-  }
+  if (Thread::is_lock_owned(adr)) return true;
+
   for (MonitorChunk* chunk = monitor_chunks(); chunk != NULL; chunk = chunk->next()) {
     if (chunk->contains(adr)) return true;
   }
+
   return false;
 }
 
@@ -2664,6 +2667,7 @@ void JavaThread::frames_do(void f(frame*, const RegisterMap* map)) {
     f(fr, fst.register_map());
   }
 }
+
 
 #ifndef PRODUCT
 // Deoptimization
@@ -4315,7 +4319,6 @@ void Threads::possibly_parallel_oops_do(OopClosure* f, CLDClosure* cld_f, CodeBl
   }
 #if INCLUDE_KONA_FIBER
   if (UseKonaFiber) {
-    assert(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
     guarantee(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
 
     for (size_t i = 0; i < CONT_CONTAINER_SIZE; i++) {
@@ -4359,11 +4362,6 @@ void Threads::nmethods_do(CodeBlobClosure* cf) {
 }
 
 void Threads::metadata_do(void f(Metadata*)) {
-#if INCLUDE_KONA_FIBER
-  if (UseKonaFiber) {
-    Coroutine::cont_metadata_do(f);
-  }
-#endif
   ALL_JAVA_THREADS(p) {
     p->metadata_do(f);
   }
@@ -4502,6 +4500,7 @@ void Threads::print_on(outputStream* st, bool print_stacks,
     }
 #if INCLUDE_KONA_FIBER
     if (UseKonaFiber) {
+      // TODO: if print_stacks is false, only need print coroutine and VT info
       p->print_coroutine_on(st, print_stacks);
     }
 #endif
