@@ -61,6 +61,9 @@
 #if INCLUDE_JFR
 #include "jfr/jfr.hpp"
 #endif // INCLUDE_JFR
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+#endif
 
 #include <math.h>
 

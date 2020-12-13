@@ -56,6 +56,9 @@
 #if INCLUDE_JFR
 #include "jfr/jfr.hpp"
 #endif // INCLUDE_JFR
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+#endif
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 

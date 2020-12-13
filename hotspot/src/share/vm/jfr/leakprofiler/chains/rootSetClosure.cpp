@@ -40,6 +40,9 @@
 #include "services/management.hpp"
 #include "utilities/align.hpp"
 
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+#endif
 template <typename Delegate>
 RootSetClosure<Delegate>::RootSetClosure(Delegate* delegate) : _delegate(delegate) {}
 

@@ -43,6 +43,7 @@
 #if INCLUDE_KONA_FIBER
 #include "runtime/coroutine.hpp"
 #endif
+
 // -----------------------------------------------------
 // Implementation of JavaCallWrapper
 
@@ -84,7 +85,7 @@ JavaCallWrapper::JavaCallWrapper(methodHandle callee_method, Handle receiver, Ja
 #endif // CHECK_UNHANDLED_OOPS
 
   _thread       = (JavaThread *)thread;
-  _handles      = _thread->active_handles();    // save previous handle block & Java frame linkage;
+  _handles      = _thread->active_handles();    // save previous handle block & Java frame linkage
 
   // For the profiler, the last_Java_frame information in thread must always be in
   // legal state. We have no last Java frame if last_Java_sp == NULL so
