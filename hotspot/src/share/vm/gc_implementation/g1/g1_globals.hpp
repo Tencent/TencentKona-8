@@ -156,7 +156,7 @@
           "Select green, yellow and red zones adaptively to meet the "      \
           "the pause requirements.")                                        \
                                                                             \
-  product(bool, G1ParallelFullGC, true,                                     \
+  product(bool, G1ParallelFullGC, false,                                    \
           "Use parallel full GC under G1.")                                 \
                                                                             \
   product(uintx, G1ConcRSLogCacheSize, 10,                                  \
