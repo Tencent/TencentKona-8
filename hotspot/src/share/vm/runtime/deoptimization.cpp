@@ -178,9 +178,6 @@ Deoptimization::UnrollBlock* Deoptimization::fetch_unroll_info_helper(JavaThread
   // via vanilla deopt or uncommon trap we MUST NOT stop at a safepoint once
   // the vframeArray is created.
   //
-#if INCLUDE_KONA_FIBER
-  HandleMark hm;
-#endif
 
   // Allocate our special deoptimization ResourceMark
   DeoptResourceMark* dmark = new DeoptResourceMark(thread);
@@ -1801,6 +1798,18 @@ Deoptimization::UnrollBlock* Deoptimization::uncommon_trap(JavaThread* thread, j
     // This enters VM and may safepoint
     uncommon_trap_inner(thread, trap_request);
   }
+#if INCLUDE_KONA_FIBER
+  // In deoptimize blob, JRT_BLOCK_ENTRY Deoptimization::fetch_unroll_info has
+  // HandleMarkCleaner, all Handles is cleared before exit fetch_unroll_info.
+  // This method is not wrapped with HandleMarkCleaner, Handles will live out
+  // of this method and cause Handle leak and kona fiber will verification fail.
+  // Add a HandleMark here, When exit fetch_unroll_info_helper, all handle object
+  // is coverted to raw ptr. In unpack_frames, getting oop is performed with
+  // StackValue.get_int(T_OBJECT).
+  // In none-fiber mode, HandleMark will be cleaned when reset handlemark later
+  // in many palces.
+  HandleMark hm;
+#endif
   return fetch_unroll_info_helper(thread);
 }
 
