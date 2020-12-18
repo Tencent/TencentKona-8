@@ -44,6 +44,31 @@ typedef GenericTaskQueueSet<ObjArrayTaskQueue, mtGC> ObjArrayTaskQueueSet;
 
 class CMBitMap;
 
+class G1VerifyOopClosure: public ExtendedOopClosure {
+private:
+  G1CollectedHeap* _g1h;
+  bool             _failures;
+  oop              _containing_obj;
+  VerifyOption     _verify_option;
+
+public:
+  int _cc;
+  G1VerifyOopClosure(VerifyOption option);
+
+  void set_containing_obj(oop obj) {
+    _containing_obj = obj;
+  }
+
+  bool failures() { return _failures; }
+  void print_object(outputStream* out, oop obj);
+
+  template <class T> void do_oop_work(T* p);
+
+  virtual void do_oop(oop* p)       { do_oop_work(p); }
+  virtual void do_oop(narrowOop* p) { do_oop_work(p); }
+  virtual bool apply_to_weak_ref_discovered_field() { return false; }
+};
+
 class G1FullGCMarker : public CHeapObj<mtGC> {
 private:
   uint               _worker_id;
