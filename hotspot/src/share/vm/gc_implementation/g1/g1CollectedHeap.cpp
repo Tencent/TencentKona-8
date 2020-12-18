@@ -149,72 +149,6 @@ class ClearLoggedCardTableEntryClosure: public CardTableEntryClosure {
   }
 };
 
-G1VerifyOopClosure::G1VerifyOopClosure(VerifyOption option) :
-   _g1h(G1CollectedHeap::heap()),
-   _containing_obj(NULL),
-   _verify_option(option),
-   _cc(0),
-   _failures(false) {
-}
-
-void G1VerifyOopClosure::print_object(outputStream* out, oop obj) {
-#ifdef PRODUCT
-  Klass* k = obj->klass();
-  const char* class_name = InstanceKlass::cast(k)->external_name();
-  out->print_cr("class name %s", class_name);
-#else // PRODUCT
-  obj->print_on(out);
-#endif // PRODUCT
-}
-
-template <class T>
-void G1VerifyOopClosure::do_oop_work(T* p) {
-  T heap_oop = oopDesc::load_heap_oop(p);
-  
-  if (!oopDesc::is_null(heap_oop)) {
-    _cc++;
-    oop obj = oopDesc::decode_heap_oop_not_null(heap_oop);
-    bool failed = false;
-    if (!_g1h->is_in_closed_subset(obj) || _g1h->is_obj_dead_cond(obj, _verify_option)) {
-      MutexLockerEx x(ParGCRareEvent_lock,
-          Mutex::_no_safepoint_check_flag);
-      outputStream* yy = gclog_or_tty;
-      if (!_failures) {
-        yy->cr();
-        yy->print_cr("----------");
-      }
-      if (!_g1h->is_in_closed_subset(obj)) {
-        HeapRegion* from = _g1h->heap_region_containing((HeapWord*)p);
-        yy->print_cr("Field " PTR_FORMAT
-            " of live obj " PTR_FORMAT " in region "
-            "[" PTR_FORMAT ", " PTR_FORMAT ")",
-            p2i(p), p2i(_containing_obj),
-            p2i(from->bottom()), p2i(from->end()));
-        print_object(yy, _containing_obj);
-        yy->print_cr("points to obj " PTR_FORMAT " not in the heap",
-            p2i(obj));
-      } else {
-        HeapRegion* from = _g1h->heap_region_containing((HeapWord*)p);
-        HeapRegion* to   = _g1h->heap_region_containing((HeapWord*)obj);
-        yy->print_cr("Field " PTR_FORMAT
-            " of live obj " PTR_FORMAT " in region "
-            "[" PTR_FORMAT ", " PTR_FORMAT ")",
-            p2i(p), p2i(_containing_obj),
-            p2i(from->bottom()), p2i(from->end()));
-        print_object(yy, _containing_obj);
-        yy->print_cr("points to dead obj " PTR_FORMAT " in region "
-            "[" PTR_FORMAT ", " PTR_FORMAT ")",
-            p2i(obj), p2i(to->bottom()), p2i(to->end()));
-        print_object(yy, obj);
-      }
-      yy->print_cr("----------");
-      yy->flush();
-      _failures = true;
-      failed = true;
-    }
-  }
-}
-
 class RedirtyLoggedCardTableEntryClosure : public CardTableEntryClosure {
  private:
   size_t _num_processed;
@@ -3356,7 +3290,7 @@ void G1CollectedHeap::verify(bool silent, VerifyOption vo) {
            "Expected to be executed serially by the VM thread at this point");
 
     if (!silent) { gclog_or_tty->print("Roots "); }
-    G1VerifyOopClosure rootsCl(vo);
+    VerifyRootsClosure rootsCl(vo);
     VerifyKlassClosure klassCl(this, &rootsCl);
     CLDToKlassAndOopClosure cldCl(&klassCl, &rootsCl, false);
 
