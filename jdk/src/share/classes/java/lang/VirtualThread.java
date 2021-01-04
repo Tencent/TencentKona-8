@@ -490,22 +490,10 @@ class VirtualThread extends Thread {
      * @throws IllegalCallerException if not called from a virtual thread
      */
     static void parkNanos(long nanos) {
-        Thread carrier = Thread.currentCarrierThread();
-        VirtualThread vthread = carrier.getVirtualThread();
-        if (vthread == null)
+        Thread thread = Thread.currentThread();
+        if (!thread.isVirtual())
             throw new InternalError("not a virtual thread");
-        if (nanos > 0) {
-            Future<?> unparker = UNPARKER.schedule(vthread::unpark, nanos, NANOSECONDS);
-            try {
-                vthread.tryPark();
-            } finally {
-                unparker.cancel(false);
-            }
-        } else {
-            // consume permit when not parking
-            vthread.tryYield();
-            vthread.setParkPermit(PARK_PERMIT_FALSE);
-        }
+        ((VirtualThread) thread).tryPark(nanos);
     }
 
     /**
@@ -532,6 +520,62 @@ class VirtualThread extends Thread {
         /*if (yielded && notifyJvmtiEvents) {
             notifyMount(Thread.currentCarrierThread(), this);
         }*/
+    }
+
+    private void tryPark(long nanos) {
+        // continue if parking permit available or interrupted
+        if (getAndSetParkPermit(PARK_PERMIT_FALSE) == PARK_PERMIT_TRUE || interrupted) {
+            return;
+        }
+
+        if (nanos > 0) {
+            Future<?> unparker = scheduleUnpark(nanos);
+            try {
+                setState(PARKING);
+                Continuation.yield(VTHREAD_SCOPE);
+            } finally {
+                if (state() != RUNNING) {
+                    setState(RUNNING);
+                }
+                cancel(unparker);
+            }
+        } else {
+            // consume permit when not parking
+            tryYield();
+            setParkPermit(PARK_PERMIT_FALSE);
+        }
+    }
+
+    /**
+     * Schedules this thread to be unparked after the given delay.
+     */
+    private Future<?> scheduleUnpark(long nanos) {
+        //assert Thread.currentThread() == this;
+        Thread carrier = this.carrierThread;
+        // need to switch to carrier thread to avoid nested parking
+        carrier.setVirtualThread(null);
+        try {
+            return UNPARKER.schedule(this::unpark, nanos, NANOSECONDS);
+        } finally {
+            carrier.setVirtualThread(this);
+        }
+    }
+
+    /**
+     * Cancels a task if it has not completed.
+     */
+    private void cancel(Future<?> future) {
+        //assert Thread.currentThread() == this;
+        if (!future.isDone()) {
+            Thread carrier = this.carrierThread;
+            // need to switch to carrier thread to avoid nested parking
+            carrier.setVirtualThread(null);
+            try {
+                future.cancel(false);
+            } finally {
+                carrier.setVirtualThread(this);
+            }
+        }
     }
 
     /**
