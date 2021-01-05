@@ -34,6 +34,7 @@
 #include "utilities/macros.hpp"
 #if INCLUDE_ALL_GCS
 #include "gc_implementation/parallelScavenge/parallelScavengeHeap.hpp"
+#include "gc_implementation/parallelScavenge/gcTaskManager.hpp"
 #endif // INCLUDE_ALL_GCS
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
@@ -550,20 +551,60 @@ void ParHeapInspectTask::work(uint worker_id) {
   }
 }
 
-uintx HeapInspection::populate_table(KlassInfoTable* cit, BoolObjectClosure *filter, uint parallel_thread_num) {
+class PSSParHeapInspectTask : public GCTask {
+ private:
+  ParHeapInspectTask* _ph_task;
+ public:
+  PSSParHeapInspectTask(ParHeapInspectTask* task) : _ph_task(task) {}
 
-  FlexibleWorkGang * gang =  Universe::heap()->workers();
-  // Try parallel first.
-  if (parallel_thread_num > 1 && gang != NULL) {
-    WithUpdatedActiveWorkers update_and_restore(gang, parallel_thread_num);
-    ResourceMark rm;
-    ParallelObjectIterator* poi = Universe::heap()->parallel_object_iterator(parallel_thread_num);
-    if (poi != NULL) {
-      ParHeapInspectTask task(poi, cit, filter);
-      Universe::heap()->run_task(&task);
-      delete poi;
-      if (task.success()) {
-        return task.missed_count();
+  char* name() { return (char *)"parallel-pss-heap-inspect-task"; }
+
+  virtual void do_it(GCTaskManager* manager, uint which) {
+    assert(_ph_task != NULL, "Sanity Check");
+    _ph_task->work(which);
+  }
+};
+
+uintx HeapInspection::populate_table(KlassInfoTable* cit, BoolObjectClosure *filter, uint parallel_thread_num) {
+  CollectedHeap* heap = Universe::heap();
+  if (parallel_thread_num > 1) {
+    if (heap->kind() == CollectedHeap::ParallelScavengeHeap) {
+      // ParallelScavengeHeap does not have FlexibleWorkGang support.
+      ParallelScavengeHeap* ph = (ParallelScavengeHeap*)heap;
+      GCTaskManager* manager = ParallelScavengeHeap::gc_task_manager();
+      GCTaskManagerWithUpdatedActiveWorkers update_and_restore(manager, parallel_thread_num);
+      ResourceMark rm;
+      ParallelObjectIterator* poi = ph->parallel_object_iterator(parallel_thread_num);
+      if (poi != NULL) {
+        ParHeapInspectTask task(poi, cit, filter);
+        GCTaskQueue* q = GCTaskQueue::create();
+        uint num_workers = manager->active_workers();
+        for (uint worker = 0; worker < num_workers; worker++) {
+          q->enqueue(new PSSParHeapInspectTask(&task));
+        }
+        manager->execute_and_wait(q);
+
+        delete poi;
+        if (task.success()) {
+          return task.missed_count();
+        }
+      }
+    } else {
+      SharedHeap* sh = (SharedHeap*)heap;
+      FlexibleWorkGang * gang = sh->workers();
+      // Try parallel first.
+      if (gang != NULL) {
+        WithUpdatedActiveWorkers update_and_restore(gang, parallel_thread_num);
+        ResourceMark rm;
+        ParallelObjectIterator* poi = sh->parallel_object_iterator(parallel_thread_num);
+        if (poi != NULL) {
+          ParHeapInspectTask task(poi, cit, filter);
+          sh->run_task(&task);
+          delete poi;
+          if (task.success()) {
+            return task.missed_count();
+          }
+        }
       }
     }
   }
