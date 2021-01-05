@@ -56,8 +56,6 @@ class PSOldGen : public CHeapObj<mtGC> {
   const size_t _init_gen_size;
   const size_t _min_gen_size;
   const size_t _max_gen_size;
-  // Block size for parallel iteration
-  static const size_t IterateBlockSize = 1024 * 1024;
 
   // Used when initializing the _name field.
   static inline const char* select_name();
@@ -171,13 +169,6 @@ class PSOldGen : public CHeapObj<mtGC> {
   // Iteration.
   void oop_iterate_no_header(OopClosure* cl) { object_space()->oop_iterate_no_header(cl); }
   void object_iterate(ObjectClosure* cl) { object_space()->object_iterate(cl); }
-  // Number of blocks to be iterated over in the used part of old gen.
-  size_t num_iterable_blocks() const;
-  // Iterate the objects starting in block block_index within [bottom, top) of the
-  // old gen. The object just reaching into this block is not iterated over.
-  // A block is an evenly sized non-overlapping part of the old gen of
-  // IterateBlockSize bytes.
-  void object_iterate_block(ObjectClosure* cl, size_t block_index);
 
   // Debugging - do not use for time critical operations
   virtual void print() const;

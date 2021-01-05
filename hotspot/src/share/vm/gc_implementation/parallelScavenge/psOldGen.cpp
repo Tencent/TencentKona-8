@@ -513,30 +513,3 @@ void PSOldGen::record_spaces_top() {
   object_space()->set_top_for_allocations();
 }
 #endif
-
-size_t PSOldGen::num_iterable_blocks() const {
-  return (object_space()->used_in_bytes() + IterateBlockSize - 1) / IterateBlockSize;
-}
-
-void PSOldGen::object_iterate_block(ObjectClosure* cl, size_t block_index) {
-  size_t block_word_size = IterateBlockSize / HeapWordSize;
-
-  MutableSpace *space = object_space();
-
-  HeapWord* begin = space->bottom() + block_index * block_word_size;
-  HeapWord* end = MIN2(space->top(), begin + block_word_size);
-
-  if (!start_array()->object_starts_in_range(begin, end)) {
-    return;
-  }
-
-  // Get object starting at or reaching into this block.
-  HeapWord* start = start_array()->object_start(begin);
-  if (start < begin) {
-    start += oop(start)->size();
-  }
-  // Iterate all objects until the end.
-  for (HeapWord* p = start; p < end; p += oop(p)->size()) {
-    cl->do_object(oop(p));
-  }
-}
