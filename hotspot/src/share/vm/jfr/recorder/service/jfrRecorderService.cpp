@@ -389,10 +389,8 @@ void JfrRecorderService::write() {
 }
 
 typedef ServiceFunctor<JfrStringPool, &JfrStringPool::write> WriteStringPool;
-typedef ServiceFunctor<JfrStringPool, &JfrStringPool::write_at_safepoint> WriteStringPoolSafepoint;
 typedef WriteCheckpointEvent<WriteStackTraceRepository> WriteStackTraceCheckpoint;
 typedef WriteCheckpointEvent<WriteStringPool> WriteStringPoolCheckpoint;
-typedef WriteCheckpointEvent<WriteStringPoolSafepoint> WriteStringPoolCheckpointSafepoint;
 
 static void write_stacktrace_checkpoint(JfrStackTraceRepository& stack_trace_repo, JfrChunkWriter& chunkwriter, bool clear) {
   WriteStackTraceRepository write_stacktrace_repo(stack_trace_repo, chunkwriter, clear);
@@ -408,12 +406,6 @@ static void write_object_sample_stacktrace(ObjectSampler* sampler, JfrStackTrace
 static void write_stringpool_checkpoint(JfrStringPool& string_pool, JfrChunkWriter& chunkwriter) {
   WriteStringPool write_string_pool(string_pool);
   WriteStringPoolCheckpoint write_string_pool_checkpoint(chunkwriter, TYPE_STRING, write_string_pool);
-  write_string_pool_checkpoint.process();
-}
-
-static void write_stringpool_checkpoint_safepoint(JfrStringPool& string_pool, JfrChunkWriter& chunkwriter) {
-  WriteStringPoolSafepoint write_string_pool(string_pool);
-  WriteStringPoolCheckpointSafepoint write_string_pool_checkpoint(chunkwriter, TYPE_STRING, write_string_pool);
   write_string_pool_checkpoint.process();
 }
 
@@ -468,7 +460,7 @@ void JfrRecorderService::safepoint_write() {
   assert(SafepointSynchronize::is_at_safepoint(), "invariant");
   MutexLockerEx stream_lock(JfrStream_lock, Mutex::_no_safepoint_check_flag);
   write_stacktrace_checkpoint(_stack_trace_repository, _chunkwriter, true);
-  write_stringpool_checkpoint_safepoint(_string_pool, _chunkwriter);
+  write_stringpool_checkpoint(_string_pool, _chunkwriter);
   _checkpoint_manager.write_safepoint_types();
   _storage.write_at_safepoint();
   _checkpoint_manager.shift_epoch();
