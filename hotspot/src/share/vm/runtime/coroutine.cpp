@@ -631,6 +631,9 @@ void Coroutine::init_thread_stack(JavaThread* thread) {
 
 bool Coroutine::init_stack(JavaThread* thread) {
   _stack_base = ContReservedStack::get_stack();
+  if (_stack_base == NULL) {
+    return false;
+  }
   _stack_size = ContReservedStack::stack_size;
   _last_sp = NULL;
 
