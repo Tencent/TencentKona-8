@@ -3302,7 +3302,7 @@ public class ForkJoinPool extends AbstractExecutorService {
         throws InterruptedException {
         ForkJoinPool p;
         ForkJoinWorkerThread wt;
-        Thread t = Thread.currentCarrierThread();
+        Thread t = Thread.currentThread();
         if ((t instanceof ForkJoinWorkerThread) &&
             (p = (wt = (ForkJoinWorkerThread)t).pool) != null) {
             WorkQueue w = wt.workQueue;
