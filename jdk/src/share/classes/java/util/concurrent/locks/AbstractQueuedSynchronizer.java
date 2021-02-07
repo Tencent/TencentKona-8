@@ -35,6 +35,7 @@
 
 package java.util.concurrent.locks;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ForkJoinPool;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -510,6 +511,28 @@ public abstract class AbstractQueuedSynchronizer
         Node(Thread thread, int waitStatus) { // Used by Condition
             this.waitStatus = waitStatus;
             this.thread = thread;
+        }
+    }
+
+    private final class BlockerNode implements ForkJoinPool.ManagedBlocker {
+        Node n;
+
+        BlockerNode(Node node) {
+            n = node;
+        }
+
+        /**
+         * Allows Conditions to be used in ForkJoinPools without
+         * risking fixed pool exhaustion. This is usable only for
+         * untimed Condition waits, not timed versions.
+         */
+        public final boolean isReleasable() {
+            return isOnSyncQueue(n);
+        }
+
+        public final boolean block() {
+            while (!isReleasable()) LockSupport.park();
+            return true;
         }
     }
 
@@ -2036,7 +2059,13 @@ public abstract class AbstractQueuedSynchronizer
             int savedState = fullyRelease(node);
             int interruptMode = 0;
             while (!isOnSyncQueue(node)) {
-                LockSupport.park(this);
+                Thread t = Thread.currentThread();
+                if (t.inContinuation() && !t.isVirtual()) {
+                    BlockerNode bn = new BlockerNode(node);
+                    ForkJoinPool.managedBlock(bn);
+                } else {
+                    LockSupport.park(this);
+                }
                 if ((interruptMode = checkInterruptWhileWaiting(node)) != 0)
                     break;
             }
