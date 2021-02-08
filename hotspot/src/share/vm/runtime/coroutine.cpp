@@ -568,7 +568,9 @@ public:
 };
 
 void Coroutine::oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) {
-  f->do_oop(&_continuation);
+  if (is_thread_coroutine() == false) {
+    f->do_oop(&_continuation);
+  }
   if(state() != Coroutine::_onstack) {
     return;
   }
