@@ -68,7 +68,8 @@ jdk_skip = \
   java/text/Format/MessageFormat/LargeMessageFormat.java \
   java/text/Format/NumberFormat/NumberRegression.java \
   java/text/Format/NumberFormat/NumberTest.java \
-  sun/text/IntHashtable/Bug4170614Test.sh
+  sun/text/IntHashtable/Bug4170614Test.sh \
+  com/sun/jdi/SimulResumerTest.java
  
 ###############################################################################
 #
