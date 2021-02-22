@@ -4038,7 +4038,8 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
 #if INCLUDE_CDS
     if (DumpLoadedClassList != NULL && cfs->source() != NULL && classlist_file->is_open()) {
       // Only dump the classes that can be stored into CDS archive
-      if (SystemDictionaryShared::is_sharing_possible(loader_data)) {
+      if (SystemDictionaryShared::is_sharing_possible(loader_data) &&
+          (!UseAppCDS || _host_klass.is_null())) {
         if (name != NULL) {
           ResourceMark rm(THREAD);
           classlist_file->print_cr("%s", name->as_C_string());

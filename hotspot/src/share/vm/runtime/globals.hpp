@@ -4037,6 +4037,9 @@ class CommandLineFlags {
   product(ccstr, ExtraSharedClassListFile, NULL,                            \
           "Extra classlist for building the CDS archive file")              \
                                                                             \
+  product(bool, UseAppCDS, false,                                           \
+          "Enable Application Class Data Sharing (AppCDS)")                 \
+                                                                            \
   experimental(uintx, ArrayAllocatorMallocLimit,                            \
           SOLARIS_ONLY(64*K) NOT_SOLARIS(max_uintx),                        \
           "Allocation less than this value will be allocated "              \
