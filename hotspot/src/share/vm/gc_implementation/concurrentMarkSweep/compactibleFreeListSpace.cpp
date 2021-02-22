@@ -1003,17 +1003,12 @@ size_t CompactibleFreeListSpace::block_size(const HeapWord* p) const {
       // and the klass read.
       OrderAccess::loadload();
 
-      // must read from what 'p' points to in each loop.
-      Klass* k = ((volatile oopDesc*)p)->klass_or_null();
+      // Ensure klass read before size.
+      Klass* k = oop(p)->klass_or_null_acquire();
       if (k != NULL) {
         assert(k->is_klass(), "Should really be klass oop.");
         oop o = (oop)p;
         assert(o->is_oop(true /* ignore mark word */), "Should be an oop.");
-
-        // Bugfix for systems with weak memory model (PPC64/IA64).
-        // The object o may be an array. Acquire to make sure that the array
-        // size (third word) is consistent.
-        OrderAccess::acquire();
 
         size_t res = o->size_given_klass(k);
         res = adjustObjectSize(res);
@@ -1062,20 +1057,12 @@ const {
       // and the klass read.
       OrderAccess::loadload();
 
-      // must read from what 'p' points to in each loop.
-      Klass* k = ((volatile oopDesc*)p)->klass_or_null();
-      // We trust the size of any object that has a non-NULL
-      // klass and (for those in the perm gen) is parsable
-      // -- irrespective of its conc_safe-ty.
+      // Ensure klass read before size.
+      Klass* k = oop(p)->klass_or_null_acquire();
       if (k != NULL) {
         assert(k->is_klass(), "Should really be klass oop.");
         oop o = (oop)p;
         assert(o->is_oop(), "Should be an oop");
-
-        // Bugfix for systems with weak memory model (PPC64/IA64).
-        // The object o may be an array. Acquire to make sure that the array
-        // size (third word) is consistent.
-        OrderAccess::acquire();
 
         size_t res = o->size_given_klass(k);
         res = adjustObjectSize(res);
@@ -1129,7 +1116,7 @@ bool CompactibleFreeListSpace::block_is_obj(const HeapWord* p) const {
   // and the klass read.
   OrderAccess::loadload();
 
-  Klass* k = oop(p)->klass_or_null();
+  Klass* k = oop(p)->klass_or_null_acquire();
   if (k != NULL) {
     // Ignore mark word because it may have been used to
     // chain together promoted objects (the last one

@@ -368,9 +368,6 @@ class CollectedHeap : public CHeapObj<mtInternal> {
 
   void update_minor_gc_frequency_histogram();
 
-  inline static void post_allocation_install_obj_klass(KlassHandle klass,
-                                                       oop obj);
-
   // Raw memory allocation facilities
   // The obj and array allocate methods are covers for these methods.
   // mem_allocate() should never be

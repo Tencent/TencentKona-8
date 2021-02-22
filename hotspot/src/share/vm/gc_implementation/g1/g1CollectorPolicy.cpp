@@ -1143,11 +1143,11 @@ void G1CollectorPolicy::record_collection_pause_end(double pause_time_ms, Evacua
     _rs_length_diff_seq->add((double) rs_length_diff);
 
     size_t freed_bytes = _heap_used_bytes_before_gc - cur_used_bytes;
-    size_t copied_bytes = _collection_set_bytes_used_before - freed_bytes;
-    double cost_per_byte_ms = 0.0;
 
-    if (copied_bytes > 0) {
-      cost_per_byte_ms = phase_times()->average_time_ms(G1GCPhaseTimes::ObjCopy) / (double) copied_bytes;
+    if (_collection_set_bytes_used_before > freed_bytes) {
+      size_t copied_bytes = _collection_set_bytes_used_before - freed_bytes;
+      double average_copy_time = phase_times()->average_time_ms(G1GCPhaseTimes::ObjCopy);
+      double cost_per_byte_ms = average_copy_time / (double) copied_bytes;
       if (_in_marking_window) {
         _cost_per_byte_ms_during_cm_seq->add(cost_per_byte_ms);
       } else {

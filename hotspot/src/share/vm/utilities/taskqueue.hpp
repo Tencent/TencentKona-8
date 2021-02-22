@@ -27,6 +27,7 @@
 
 #include "memory/allocation.hpp"
 #include "memory/allocation.inline.hpp"
+#include "memory/padded.hpp"
 #include "runtime/mutex.hpp"
 #include "runtime/orderAccess.inline.hpp"
 #include "utilities/globalDefinitions.hpp"
@@ -108,9 +109,6 @@ protected:
   // Internal type for indexing the queue; also used for the tag.
   typedef NOT_LP64(uint16_t) LP64_ONLY(uint32_t) idx_t;
 
-  // The first free element after the last one pushed (mod N).
-  volatile uint _bottom;
-
   enum { MOD_N_MASK = N - 1 };
 
   class Age {
@@ -150,6 +148,10 @@ protected:
     };
   };
 
+  // The first free element after the last one pushed (mod N).
+  volatile uint _bottom;
+  // Add paddings to reduce false-sharing cache contention between _bottom and _age
+  DEFINE_PAD_MINUS_SIZE(0, DEFAULT_CACHE_LINE_SIZE, sizeof(uint));
   volatile Age _age;
 
   // These both operate mod N.
