@@ -175,6 +175,16 @@ bool SystemDictionary::is_ext_class_loader(Handle class_loader) {
   return (class_loader->klass()->name() == vmSymbols::sun_misc_Launcher_ExtClassLoader());
 }
 
+/**
+ * Returns true if the passed class loader is the application class loader.
+ */
+bool SystemDictionary::is_app_class_loader(Handle class_loader) {
+  if (class_loader.is_null()) {
+    return false;
+  }
+  return (class_loader->klass()->name() == vmSymbols::sun_misc_Launcher_AppClassLoader());
+}
+
 // ----------------------------------------------------------------------------
 // Resolving of classes
 
