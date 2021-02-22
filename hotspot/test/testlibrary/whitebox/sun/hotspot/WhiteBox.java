@@ -169,6 +169,9 @@ public class WhiteBox {
   public native boolean NMTIsDetailSupported();
   public native boolean NMTChangeTrackingLevel();
   public native int NMTGetHashSize();
+  public native long NMTNewArena(long initSize);
+  public native void NMTFreeArena(long arena);
+  public native void NMTArenaMalloc(long arena, long size);
 
   // Compiler
   public native int     matchesMethod(Executable method, String pattern);
