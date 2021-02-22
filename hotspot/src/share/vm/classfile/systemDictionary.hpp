@@ -648,6 +648,7 @@ public:
                                                Handle class_loader,
                                                TRAPS);
   static bool is_ext_class_loader(Handle class_loader);
+  static bool is_app_class_loader(Handle class_loader);
 
 protected:
   static Klass* find_shared_class(Symbol* class_name);

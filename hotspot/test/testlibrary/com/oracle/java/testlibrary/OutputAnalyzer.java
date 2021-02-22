@@ -165,6 +165,21 @@ public final class OutputAnalyzer {
   }
 
   /**
+   * Verify the exit value of the process
+   * backport from jdk11u
+   * @param notExpectedExitValue Unexpected exit value from process
+   * @throws RuntimeException If the exit value from the process did match the expected value
+   */
+  public OutputAnalyzer shouldNotHaveExitValue(int notExpectedExitValue) {
+    if (getExitValue() == notExpectedExitValue) {
+        reportDiagnosticSummary();
+        throw new RuntimeException("Unexpected to get exit value of ["
+                + notExpectedExitValue + "]\n");
+    }
+    return this;
+  }
+
+  /**
    * Verify that the stdout and stderr contents of output buffer does not contain the string
    *
    * @param expectedString String that the buffer should not contain
