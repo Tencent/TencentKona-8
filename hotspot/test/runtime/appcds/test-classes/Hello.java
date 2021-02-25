@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,31 +22,8 @@
  *
  */
 
-// This class represents options used for
-// during creation of the archive and/or running JVM with archive
-
-import com.oracle.java.testlibrary.cds.CDSOptions;
-
-public class AppCDSOptions extends CDSOptions {
-    public String appJar;
-
-    // Application classes to be archived
-    public String[] appClasses;
-
-    public AppCDSOptions setAppJar(String appJar) {
-        this.appJar = appJar;
-        return this;
-    }
-
-    public AppCDSOptions setAppClasses(String[] appClasses) {
-        this.appClasses = appClasses;
-        return this;
-    }
-
-    public AppCDSOptions() {
-	super();
-        this.prefix.add("-XX:+UseAppCDS");
-        this.prefix.add("-XX:+UnlockDiagnosticVMOptions");
-    }
-
+public class Hello {
+  public static void main(String args[]) {
+    System.out.println("Hello World");
+  }
 }

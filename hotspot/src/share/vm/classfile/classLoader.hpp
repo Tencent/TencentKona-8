@@ -153,6 +153,11 @@ class ClassLoader: AllStatic {
   enum SomeConstants {
     package_hash_table_size = 31  // Number of buckets
   };
+  enum ClassLoaderType {
+    BOOT_LOADER = 1,      /* boot loader */
+    EXT_LOADER  = 2, /* ExtClassLoader */
+    APP_LOADER  = 3       /* AppClassLoader */
+  };
  protected:
   friend class LazyClassPathEntry;
 
@@ -203,6 +208,13 @@ class ClassLoader: AllStatic {
 
   // Info used by CDS
   CDS_ONLY(static SharedPathsMiscInfo * _shared_paths_misc_info;)
+  
+  CDS_ONLY(static ClassPathEntry* _app_classpath_entries;)
+  CDS_ONLY(static ClassPathEntry* _last_app_classpath_entry;)
+  CDS_ONLY(static void setup_app_search_path(const char* class_path);)
+  static void add_to_app_classpath_entries(const char* path,
+                                           ClassPathEntry* entry,
+                                           bool check_for_duplicates); 
 
   // Hash function
   static unsigned int hash(const char *s, int n);
@@ -228,9 +240,11 @@ class ClassLoader: AllStatic {
   // to avoid confusing the zip library
   static bool get_canonical_path(const char* orig, char* out, int len);
  public:
+  CDS_ONLY(static ClassPathEntry* app_classpath_entries() {return _app_classpath_entries;})
   static int crc32(int crc, const char* buf, int len);
   static bool update_class_path_entry_list(const char *path,
                                            bool check_for_duplicates,
+                                           bool is_boot_append = true,
                                            bool throw_exception=true);
   static void print_bootclasspath();
 
@@ -334,6 +348,10 @@ class ClassLoader: AllStatic {
   }
 
 #if INCLUDE_CDS
+  // Helper function used by CDS code to get the number of app classpath
+  // entries during shared classpath setup time.
+  static int num_app_classpath_entries();
+
   // Sharing dump and restore
   static void copy_package_info_buckets(char** top, char* end);
   static void copy_package_info_table(char** top, char* end);

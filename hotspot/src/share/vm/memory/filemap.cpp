@@ -24,6 +24,7 @@
 
 #include "precompiled.hpp"
 #include "classfile/classLoader.hpp"
+#include "classfile/classLoaderExt.hpp"
 #include "classfile/sharedClassUtil.hpp"
 #include "classfile/symbolTable.hpp"
 #include "classfile/systemDictionaryShared.hpp"
@@ -144,6 +145,8 @@ FileMapInfo::FileMapInfo() {
   _file_open = false;
   _header = SharedClassUtil::allocate_file_map_header();
   _header->_version = _invalid_version;
+  _header->_has_ext_or_app_classes = false;
+  _header->_use_appcds = UseAppCDS;
 }
 
 FileMapInfo::~FileMapInfo() {
@@ -174,22 +177,123 @@ void FileMapInfo::FileMapHeader::populate(FileMapInfo* mapinfo, size_t alignment
 
   // JVM version string ... changes on each build.
   get_header_version(_jvm_ident);
+
+  _app_class_paths_start_index = ClassLoaderExt::app_class_paths_start_index();
+  _has_ext_or_app_classes = ClassLoaderExt::has_ext_or_app_classes();
 }
+
+void SharedClassPathEntry::init(ClassPathEntry *cpe, const char* name) {
+  assert(DumpSharedSpaces, "dump time only");
+  _timestamp = 0;
+  _filesize  = 0;
+
+  if (cpe->is_jar_file()) {
+    struct stat st;
+    if (os::stat(name, &st) != 0) {
+      // The file/dir must exist, or it would not have been added
+      // into ClassLoader::classpath_entry().
+      //
+      // If we can't access a jar file in the boot path, then we can't
+      // make assumptions about where classes get loaded from.
+      FileMapInfo::fail_stop("Unable to open jar file %s.", name);
+    }
+    _type = jar_entry;
+    EXCEPTION_MARK; // The following call should never throw, but would exit VM on error.
+    SharedClassUtil::update_shared_classpath(cpe, this, st.st_mtime, st.st_size, THREAD);
+  } else {
+    _filesize  = -1;
+    if (!UseAppCDS && !os::dir_is_empty(name)) {
+      ClassLoader::exit_with_path_failure("Cannot have non-empty directory in archived classpaths", name);
+    }
+    _type = dir_entry;
+  }
+}
+
+bool SharedClassPathEntry::validate() {
+  assert(UseSharedSpaces, "runtime only");
+
+  struct stat st;
+  const char* name;
+
+  name = this->name();
+
+  bool ok = true;
+  if (os::stat(name, &st) != 0) {
+    FileMapInfo::fail_continue("Required classpath entry does not exist: %s", name);
+    ok = false;
+  } else if (is_dir()) {
+    ok = true;
+  } else if ((has_timestamp() && _timestamp != st.st_mtime) ||
+             _filesize != st.st_size) {
+    ok = false;
+    if (PrintSharedArchiveAndExit) {
+      FileMapInfo::fail_continue(_timestamp != st.st_mtime ?
+                                 "Timestamp mismatch" :
+                                 "File size mismatch");
+    } else {
+      FileMapInfo::fail_continue("A jar file is not the one used while building"
+                                 " the shared archive file: %s", name);
+    }
+  }
+  return ok;
+}
+
+class ManifestStream: public ResourceObj {
+  private:
+  u1*   _buffer_start; // Buffer bottom
+  u1*   _buffer_end;   // Buffer top (one past last element)
+  u1*   _current;      // Current buffer position
+
+ public:
+  // Constructor
+  ManifestStream(u1* buffer, int length) : _buffer_start(buffer),
+                                           _current(buffer) {
+    _buffer_end = buffer + length;
+  }
+
+  // The return value indicates if the JAR is signed or not
+  bool check_is_signed() {
+    u1* attr = _current;
+    bool isSigned = false;
+    while (_current < _buffer_end) {
+      if (*_current == '\n') {
+        *_current = '\0';
+        u1* value = (u1*)strchr((char*)attr, ':');
+        if (value != NULL) {
+          assert(*(value+1) == ' ', "Unrecognized format" );
+          if (strstr((char*)attr, "-Digest") != NULL) {
+            isSigned = true;
+            break;
+          }
+        }
+        *_current = '\n'; // restore
+        attr = _current + 1;
+      }
+      _current ++;
+    }
+    return isSigned;
+  }
+};
 
 void FileMapInfo::allocate_classpath_entry_table() {
   int bytes = 0;
   int count = 0;
+  int manifest_byte = 0;
   char* strptr = NULL;
   char* strptr_max = NULL;
+  char* manifestptr = NULL;
+  char* manifestptr_max = NULL;
+  ManifestEntry* manifest_array = NULL;
   Thread* THREAD = Thread::current();
 
   ClassLoaderData* loader_data = ClassLoaderData::the_null_class_loader_data();
   size_t entry_size = SharedClassUtil::shared_class_path_entry_size();
 
   for (int pass=0; pass<2; pass++) {
+    int cur_entry = 0;
     ClassPathEntry *cpe = ClassLoader::classpath_entry(0);
 
-    for (int cur_entry = 0 ; cpe != NULL; cpe = cpe->next(), cur_entry++) {
+    for (cur_entry = 0; cpe != NULL; cpe = cpe->next(), cur_entry++) {
       const char *name = cpe->name();
       int name_bytes = (int)(strlen(name) + 1);
 
@@ -202,25 +306,7 @@ void FileMapInfo::allocate_classpath_entry_table() {
         }
       } else {
         SharedClassPathEntry* ent = shared_classpath(cur_entry);
-        if (cpe->is_jar_file()) {
-          struct stat st;
-          if (os::stat(name, &st) != 0) {
-            // The file/dir must exist, or it would not have been added
-            // into ClassLoader::classpath_entry().
-            //
-            // If we can't access a jar file in the boot path, then we can't
-            // make assumptions about where classes get loaded from.
-            FileMapInfo::fail_stop("Unable to open jar file %s.", name);
-          }
-
-          EXCEPTION_MARK; // The following call should never throw, but would exit VM on error.
-          SharedClassUtil::update_shared_classpath(cpe, ent, st.st_mtime, st.st_size, THREAD);
-        } else {
-          ent->_filesize  = -1;
-          if (!os::dir_is_empty(name)) {
-            ClassLoader::exit_with_path_failure("Cannot have non-empty directory in archived classpaths", name);
-          }
-        }
+        ent->init(cpe, name);
         ent->_name = strptr;
         if (strptr + name_bytes <= strptr_max) {
           strncpy(strptr, name, (size_t)name_bytes); // name_bytes includes trailing 0.
@@ -231,25 +317,111 @@ void FileMapInfo::allocate_classpath_entry_table() {
       }
     }
 
+    if (UseAppCDS) {
+      ClassPathEntry *acpe = ClassLoader::app_classpath_entries();
+      if (pass == 0) {
+        int num_app_classpath_entries = ClassLoader::num_app_classpath_entries();
+        manifest_array = NEW_C_HEAP_ARRAY(ManifestEntry, num_app_classpath_entries, mtInternal);
+      }
+      for (int cur_app_entry = 0; acpe != NULL; acpe = acpe->next(), cur_entry++, cur_app_entry++) {
+        const char *name = acpe->name();
+        int name_bytes = (int)(strlen(name) + 1);
+
+        if (pass == 0) {
+          count ++;
+          bytes += (int)entry_size;
+          bytes += name_bytes;
+          EXCEPTION_MARK;
+          manifest_byte += populate_manifest_buffer(acpe, manifest_array, cur_app_entry, THREAD);
+          if (TraceClassPaths || (TraceClassLoading && Verbose)) {
+            tty->print_cr("[Add app shared path (%s) %s]", (acpe->is_jar_file() ? "jar" : "dir"), name);
+          }
+        } else {
+          SharedClassPathEntry* ent = shared_classpath(cur_entry);
+          ent->init(acpe, name);
+          ent->_name = strptr;
+          if (strptr + name_bytes <= strptr_max) {
+            strncpy(strptr, name, (size_t)name_bytes); // name_bytes includes trailing 0.
+            strptr += name_bytes;
+          } else {
+            assert(0, "miscalculated buffer size");
+          }
+          if (manifest_array[cur_app_entry]._has_manifest) {
+            int mani_bytes = manifest_array[cur_app_entry]._size;
+            ent->_manifest = manifestptr;
+            if (manifestptr + mani_bytes <= manifestptr_max) {
+              strncpy(manifestptr, manifest_array[cur_app_entry]._manifest, (size_t)mani_bytes); // mani_bytes includes trailing 0.
+              free(manifest_array[cur_app_entry]._manifest);
+              manifestptr += mani_bytes;
+            } else {
+              assert(0, "miscalculated buffer size");
+            }
+          } else {
+            ent->_manifest = NULL;
+            if (manifest_array[cur_app_entry]._is_signed) {
+              ent->set_is_signed();
+            }
+          }
+        }
+      }
+    }
+
     if (pass == 0) {
+      int all_bytes = 0;
+      all_bytes = bytes + manifest_byte;
       EXCEPTION_MARK; // The following call should never throw, but would exit VM on error.
-      Array<u8>* arr = MetadataFactory::new_array<u8>(loader_data, (bytes + 7)/8, THREAD);
+      Array<u8>* arr = MetadataFactory::new_array<u8>(loader_data, (all_bytes + 7)/8, THREAD);
       strptr = (char*)(arr->data());
       strptr_max = strptr + bytes;
       SharedClassPathEntry* table = (SharedClassPathEntry*)strptr;
       strptr += entry_size * count;
+      manifestptr = strptr_max;
+      manifestptr_max = strptr_max + manifest_byte;
 
       _classpath_entry_table_size = count;
       _classpath_entry_table = table;
       _classpath_entry_size = entry_size;
+    } else {
+      FREE_C_HEAP_ARRAY(ManifestEntry, manifest_array, mtInternal); 
     }
   }
+}
+
+int FileMapInfo::populate_manifest_buffer(ClassPathEntry *cpe, ManifestEntry* manifests, int current, TRAPS) {
+  ClassLoaderData* loader_data = ClassLoaderData::the_null_class_loader_data();
+  ResourceMark rm(THREAD);
+  jint manifest_size = 0;
+  manifests[current]._has_manifest = false;
+  manifests[current]._is_signed = false;
+  manifests[current]._manifest = NULL;
+  manifests[current]._size = 0;
+
+  if (cpe->is_jar_file()) {
+    char* manifest = ClassLoaderExt::read_manifest(cpe, &manifest_size, CHECK_AND_CLEAR_0);
+    if (manifest != NULL) {
+      ManifestStream* stream = new ManifestStream((u1*)manifest,
+                                                  manifest_size);
+      if (stream->check_is_signed()) {
+        manifests[current]._is_signed = true;
+      } else {
+        // Copy the manifest into the shared archive
+        manifest = ClassLoaderExt::read_raw_manifest(cpe, &manifest_size, CHECK_AND_CLEAR_0);
+        manifest_size += 1;
+        manifests[current]._manifest = (char *)malloc(manifest_size);
+        strncpy(manifests[current]._manifest, manifest, manifest_size);
+        manifests[current]._size = manifest_size;
+        manifests[current]._has_manifest = true;
+      }
+    }
+  }
+  return manifests[current]._size;
 }
 
 bool FileMapInfo::validate_classpath_entry_table() {
   _validating_classpath_entry_table = true;
 
   int count = _header->_classpath_entry_table_size;
+  int start_app_index = _header->_app_class_paths_start_index;
 
   _classpath_entry_table = _header->_classpath_entry_table;
   _classpath_entry_size = _header->_classpath_entry_size;
@@ -259,16 +431,26 @@ bool FileMapInfo::validate_classpath_entry_table() {
     struct stat st;
     const char* org_name = ent->_name;
     bool ok = true;
+    bool app_check = false;
     char name[JVM_MAXPATHLEN];
 
-    if (!os::correct_cds_path(org_name, name, JVM_MAXPATHLEN)) {
+    if (UseAppCDS && i >= start_app_index) {
+      app_check = true;
+    } else if (!os::correct_cds_path(org_name, name, JVM_MAXPATHLEN)) {
       fail_continue("[Classpath is invalid", org_name);
       return false;
     }
-    if (TraceClassPaths || (TraceClassLoading && Verbose)) {
-      tty->print_cr("[Checking shared classpath entry: %s]", name);
+    // For -Xbootclasspath:a, the org_name doesn't contain jre
+    if (!app_check && name[0] == '\0') {
+      strncpy(name, org_name, strlen(org_name) + 1);
     }
-    if (os::stat(name, &st) != 0) {
+    if (TraceClassPaths || (TraceClassLoading && Verbose)) {
+      tty->print_cr("[Checking shared classpath entry: %s]", UseAppCDS ? org_name : name);
+    }
+
+    if (app_check) {
+      ok = ent->validate();
+    } else if (os::stat(name, &st) != 0) {
       fail_continue("Required classpath entry does not exist: %s", name);
       ok = false;
     } else if (ent->is_dir()) {
@@ -700,7 +882,10 @@ bool FileMapInfo::FileMapHeader::validate() {
                   _obj_alignment, ObjectAlignmentInBytes);
     return false;
   }
-
+  if (UseAppCDS) {
+    // if the archive file is generated without AppCDS, UseAppCDS should be false
+    UseAppCDS = _use_appcds;
+  }
   return true;
 }
 
@@ -763,5 +948,35 @@ void FileMapInfo::stop_sharing_and_unmap(const char* msg) {
     }
   } else if (DumpSharedSpaces) {
     fail_stop(msg, NULL);
+  }
+}
+
+void FileMapInfo::check_nonempty_dir_in_shared_path_table() {
+  assert(DumpSharedSpaces, "dump time only");
+
+  if (!UseAppCDS || RelaxCheckForAppCDS) {
+    return;
+  }
+  bool has_nonempty_dir = false;
+
+  int last = _classpath_entry_table_size - 1;
+  if (last > ClassLoaderExt::max_used_path_index()) {
+     // no need to check any path beyond max_used_path_index
+     last = ClassLoaderExt::max_used_path_index();
+  }
+
+  for (int i = 0; i <= last; i++) {
+    SharedClassPathEntry *e = shared_classpath(i);
+    if (e->is_dir()) {
+      const char* path = e->name();
+      if (!os::dir_is_empty(path)) {
+        tty->print_cr("Error: non-empty directory '%s'", path);
+        has_nonempty_dir = true;
+      }
+    }
+  }
+
+  if (has_nonempty_dir) {
+    ClassLoader::exit_with_path_failure("Cannot have non-empty directory in paths", NULL);
   }
 }

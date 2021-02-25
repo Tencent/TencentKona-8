@@ -238,8 +238,14 @@ class InstanceKlass: public Klass {
     _misc_is_contended             = 1 << 4, // marked with contended annotation
     _misc_has_default_methods      = 1 << 5, // class/superclass/implemented interfaces has default methods
     _misc_declares_default_methods = 1 << 6, // directly declares default methods (any access)
-    _misc_has_been_redefined       = 1 << 7  // class has been redefined
+    _misc_has_been_redefined       = 1 << 7, // class has been redefined
+    _misc_is_shared_boot_class     = 1 << 12, // defining class loader is boot class loader
+    _misc_is_shared_ext_class      = 1 << 13, // defining class loader is ext class loader
+    _misc_is_shared_app_class      = 1 << 14, // defining class loader is app class loader
   };
+  u2 loader_type_bits() {
+    return _misc_is_shared_boot_class|_misc_is_shared_ext_class|_misc_is_shared_app_class;
+  }
   u2              _misc_flags;
   u2              _minor_version;        // minor version number of class file
   u2              _major_version;        // major version number of class file
@@ -323,6 +329,18 @@ class InstanceKlass: public Klass {
   friend class SystemDictionary;
 
  public:
+  bool is_shared_boot_class() const {
+    return (_misc_flags & _misc_is_shared_boot_class) != 0;
+  }
+  bool is_shared_ext_class() const {
+    return (_misc_flags & _misc_is_shared_ext_class) != 0;
+  }
+  bool is_shared_app_class() const {
+    return (_misc_flags & _misc_is_shared_app_class) != 0;
+  }
+
+  void set_class_loader_type(s2 loader_type);
+
   bool has_nonstatic_fields() const        {
     return (_misc_flags & _misc_has_nonstatic_fields) != 0;
   }
