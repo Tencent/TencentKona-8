@@ -158,9 +158,8 @@ public class JMap {
                          System.err.println("Fail: invalid option: '" + subopt + "'");
                          usage(1);
                      }
-                     histo(pid, live, parallel);
                 }
-
+                histo(pid, live, parallel);
             } else if (option.startsWith(DUMP_OPTION_PREFIX)) {
                 dump(pid, option);
             } else {
