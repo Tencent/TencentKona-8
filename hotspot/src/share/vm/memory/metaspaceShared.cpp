@@ -452,6 +452,9 @@ public:
 
 void VM_PopulateDumpSharedSpace::doit() {
   Thread* THREAD = VMThread::vm_thread();
+
+  FileMapInfo::check_nonempty_dir_in_shared_path_table();
+
   NOT_PRODUCT(SystemDictionary::verify();)
   // The following guarantee is meant to ensure that no loader constraints
   // exist yet, since the constraints table is not shared.  This becomes

@@ -131,7 +131,6 @@ public class TestCommon extends CDSTestUtils {
         }
 
         cmd.add("-Xshare:dump");
-//        cmd.add("-Xlog:cds,cds+hashtables"); comment out because it will be run by jdk1.8
         cmd.add("-XX:ExtraSharedClassListFile=" + classList.getPath());
 
         if (opts.archiveName == null)
@@ -193,13 +192,6 @@ public class TestCommon extends CDSTestUtils {
         return runWithArchive(opts);
     }
 
-    public static Result runWithModules(String prefix[], String upgrademodulepath, String modulepath,
-                                            String mid, String... testClassArgs) throws Exception {
-        AppCDSOptions opts = makeModuleOptions(prefix, upgrademodulepath, modulepath,
-                                               mid, testClassArgs);
-        return new Result(opts, runWithArchive(opts));
-    }
-
     public static OutputAnalyzer execAuto(String... suffix) throws Exception {
         AppCDSOptions opts = (new AppCDSOptions());
         opts.addSuffix(suffix).setXShareMode("auto");
@@ -211,31 +203,6 @@ public class TestCommon extends CDSTestUtils {
         opts.addSuffix(suffix).setXShareMode("off");
         return runWithArchive(opts);
     }
-
-
-    private static AppCDSOptions makeModuleOptions(String prefix[], String upgrademodulepath, String modulepath,
-                                            String mid, String testClassArgs[]) {
-        AppCDSOptions opts = (new AppCDSOptions());
-
-        opts.addPrefix(prefix);
-        if (upgrademodulepath == null) {
-            opts.addSuffix("-p", modulepath, "-m", mid);
-        } else {
-            opts.addSuffix("--upgrade-module-path", upgrademodulepath,
-                           "-p", modulepath, "-m", mid);
-        }
-        opts.addSuffix(testClassArgs);
-        return opts;
-    }
-
-    public static OutputAnalyzer execModule(String prefix[], String upgrademodulepath, String modulepath,
-                                            String mid, String... testClassArgs)
-        throws Exception {
-        AppCDSOptions opts = makeModuleOptions(prefix, upgrademodulepath, modulepath,
-                                               mid, testClassArgs);
-        return runWithArchive(opts);
-    }
-
 
     // A common operation: dump, then check results
     public static OutputAnalyzer testDump(String appJar, String appClasses[],
