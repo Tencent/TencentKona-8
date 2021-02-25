@@ -41,13 +41,48 @@ static const int JVM_IDENT_MAX = 256;
 
 class Metaspace;
 
+struct ManifestEntry {
+  int  _size;
+  bool _is_signed;
+  bool _has_manifest;
+  char* _manifest;
+};
+
 class SharedClassPathEntry VALUE_OBJ_CLASS_SPEC {
+  enum {
+    jar_entry,
+    signed_jar_entry,
+    dir_entry,
+    unknown_entry
+  };
 public:
   const char *_name;
+  u1     _type;
   time_t _timestamp;          // jar timestamp,  0 if is directory
   long   _filesize;           // jar file size, -1 if is directory
+  char*  _manifest;
   bool is_dir() {
     return _filesize == -1;
+  }
+  void init(ClassPathEntry *cpe, const char* name);
+  bool validate();
+  // The _timestamp only gets set for jar files.
+  bool has_timestamp() {
+    return _timestamp != 0;
+  }
+  bool is_jar()            { return _type == jar_entry; }
+  bool is_signed()         { return _type == signed_jar_entry; }
+  void set_is_signed()     {
+    _type = signed_jar_entry;
+  }
+  time_t timestamp() const { return _timestamp; }
+  long   filesize()  const { return _filesize; }
+  const char* name() const { return _name; }
+  const char* manifest() const {
+    return _manifest;
+  }
+  int manifest_size() const {
+    return (_manifest == NULL) ? 0 : strlen(_manifest);
   }
 };
 
@@ -91,6 +126,8 @@ public:
     int    _version;                  // (from enum, above.)
     size_t _alignment;                // how shared archive should be aligned
     int    _obj_alignment;            // value of ObjectAlignmentInBytes
+    bool   _has_ext_or_app_classes;   // Archive contains app classes
+    bool   _use_appcds;               // dump shared archive with AppCDS
 
     struct space_info {
       int    _crc;           // crc checksum of the current space
@@ -134,6 +171,13 @@ public:
     int _classpath_entry_table_size;
     size_t _classpath_entry_size;
     SharedClassPathEntry* _classpath_entry_table;
+      
+    jshort _app_class_paths_start_index;  // Index of first app classpath entry
+
+    void set_has_ext_or_app_classes(bool v) {
+      _has_ext_or_app_classes = v;
+    }
+    bool has_ext_or_app_classes() { return _has_ext_or_app_classes; }
 
     virtual bool validate();
     virtual void populate(FileMapInfo* info, size_t alignment);
@@ -212,8 +256,12 @@ public:
   // Stop CDS sharing and unmap CDS regions.
   static void stop_sharing_and_unmap(const char* msg);
 
+  static void check_nonempty_dir_in_shared_path_table();
+
   static void allocate_classpath_entry_table();
   bool validate_classpath_entry_table();
+  static void update_shared_classpath(ClassPathEntry *cpe, SharedClassPathEntry* ent, TRAPS);
+  static int populate_manifest_buffer(ClassPathEntry *cpe, ManifestEntry* manifests, int current, TRAPS);
 
   static SharedClassPathEntry* shared_classpath(int index) {
     char* p = (char*)_classpath_entry_table;

@@ -4035,6 +4035,9 @@ class CommandLineFlags {
   product(bool, UseAppCDS, false,                                           \
           "Enable Application Class Data Sharing (AppCDS)")                 \
                                                                             \
+  product(bool, RelaxCheckForAppCDS, false,                                 \
+          "Relax the check for AppCDS")                                     \
+                                                                            \
   experimental(uintx, ArrayAllocatorMallocLimit,                            \
           SOLARIS_ONLY(64*K) NOT_SOLARIS(max_uintx),                        \
           "Allocation less than this value will be allocated "              \

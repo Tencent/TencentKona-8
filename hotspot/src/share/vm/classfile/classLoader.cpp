@@ -141,6 +141,8 @@ int             ClassLoader::_num_entries         = 0;
 PackageHashtable* ClassLoader::_package_hash_table = NULL;
 
 #if INCLUDE_CDS
+ClassPathEntry* ClassLoader::_app_classpath_entries = NULL;
+ClassPathEntry* ClassLoader::_last_app_classpath_entry = NULL;
 SharedPathsMiscInfo* ClassLoader::_shared_paths_misc_info = NULL;
 #endif
 // helper routines
@@ -632,6 +634,36 @@ void ClassLoader::check_shared_classpath(const char *path) {
     }
   }
 }
+
+void ClassLoader::setup_app_search_path(const char *class_path) {
+
+  assert(DumpSharedSpaces, "Sanity");
+
+  Thread* THREAD = Thread::current();
+  int len = (int)strlen(class_path);
+  int end = 0;
+  bool saved = LazyBootClassLoader;
+  LazyBootClassLoader = false;
+
+  // Iterate over class path entries
+  for (int start = 0; start < len; start = end) {
+    while (class_path[end] && class_path[end] != os::path_separator()[0]) {
+      end++;
+    }
+    EXCEPTION_MARK;
+    ResourceMark rm(THREAD);
+    char* path = NEW_RESOURCE_ARRAY(char, end - start + 1);
+    strncpy(path, &class_path[start], end - start);
+    path[end - start] = '\0';
+   
+    update_class_path_entry_list(path, false, false);
+
+    while (class_path[end] == os::path_separator()[0]) {
+      end++;
+    }
+  }
+  LazyBootClassLoader = saved;
+}
 #endif
 
 void ClassLoader::setup_bootstrap_search_path() {
@@ -689,7 +721,7 @@ void ClassLoader::setup_search_path(const char *class_path, bool canonicalize) {
         path = canonical_path;
       }
     }
-    update_class_path_entry_list(path, /*check_for_duplicates=*/canonicalize);
+    update_class_path_entry_list(path, /*check_for_duplicates=*/canonicalize, true);
 #if INCLUDE_CDS
     if (DumpSharedSpaces) {
       check_shared_classpath(path);
@@ -814,9 +846,43 @@ void ClassLoader::add_to_list(ClassPathEntry *new_entry) {
   _num_entries ++;
 }
 
+// Record the path entries specified in -cp during dump time. The recorded
+// information will be used at runtime for loading the archived app classes.
+void ClassLoader::add_to_app_classpath_entries(const char* path,
+                                               ClassPathEntry* entry,
+                                               bool check_for_duplicates) {
+#if INCLUDE_CDS
+  assert(entry != NULL, "ClassPathEntry should not be NULL");
+  ClassPathEntry* e = _app_classpath_entries;
+  if (check_for_duplicates) {
+    while (e != NULL) {
+      if (strcmp(e->name(), entry->name()) == 0) {
+        // entry already exists
+        return;
+      }
+      e = e->next();
+    }
+  }
+
+  // The entry does not exist, add to the list
+  if (_app_classpath_entries == NULL) {
+    assert(_last_app_classpath_entry == NULL, "Sanity");
+    _app_classpath_entries = _last_app_classpath_entry = entry;
+  } else {
+    _last_app_classpath_entry->set_next(entry);
+    _last_app_classpath_entry = entry;
+  }
+
+  if (entry->is_jar_file()) {
+    ClassLoaderExt::process_jar_manifest(entry, check_for_duplicates);
+  }
+#endif
+}
+
 // Returns true IFF the file/dir exists and the entry was successfully created.
 bool ClassLoader::update_class_path_entry_list(const char *path,
                                                bool check_for_duplicates,
+                                               bool is_boot_append,
                                                bool throw_exception) {
   struct stat st;
   if (os::stat(path, &st) == 0) {
@@ -831,8 +897,12 @@ bool ClassLoader::update_class_path_entry_list(const char *path,
     // doesn't reorder the bootclasspath which would break java.lang.Package
     // (see PackageInfo).
     // Add new entry to linked list
-    if (!check_for_duplicates || !contains_entry(new_entry)) {
-      ClassLoaderExt::add_class_path_entry(path, check_for_duplicates, new_entry);
+    if (is_boot_append) {
+      if (!check_for_duplicates || !contains_entry(new_entry)) {
+        ClassLoaderExt::add_class_path_entry(path, check_for_duplicates, new_entry);
+      }
+    } else {
+      add_to_app_classpath_entries(path, new_entry, check_for_duplicates);
     }
     return true;
   } else {
@@ -1318,6 +1388,19 @@ void ClassLoader::initialize() {
 }
 
 #if INCLUDE_CDS
+// Helper function used by CDS code to get the number of app classpath
+// entries during shared classpath setup time.
+int ClassLoader::num_app_classpath_entries() {
+  assert(DumpSharedSpaces, "Should only be called at CDS dump time");
+  int num_entries = 0;
+  ClassPathEntry* e= ClassLoader::_app_classpath_entries;
+  while (e != NULL) {
+    num_entries ++;
+    e = e->next();
+  }
+  return num_entries;
+}
+
 void ClassLoader::initialize_shared_path() {
   if (DumpSharedSpaces) {
     ClassLoaderExt::setup_search_paths();
