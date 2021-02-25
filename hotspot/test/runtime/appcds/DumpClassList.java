@@ -27,7 +27,7 @@
  * @summary DumpLoadedClassList should exclude generated classes, classes in bootclasspath/a
  * @library /testlibrary
  * @compile test-classes/ArrayListTest.java
- * @run main DumpClassList
+ * @run main/othervm DumpClassList
  */
 
 import com.oracle.java.testlibrary.InMemoryJavaCompiler;
