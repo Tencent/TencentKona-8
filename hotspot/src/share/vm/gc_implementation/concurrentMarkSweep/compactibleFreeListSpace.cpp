@@ -854,7 +854,6 @@ void CompactibleFreeListSpace::object_iterate_atomic(ObjectClosure* blk,
   assert(start <= end(), "object iterate address out of range");
   while(true) {
     limit = MIN2(start + _par_iter_block_size, end());
-    MemRegion span = MemRegion(start, limit);
     HeapWord* bstart = block_start_careful(start);
     if (bstart > end()) break;
     while (bstart < start) {
