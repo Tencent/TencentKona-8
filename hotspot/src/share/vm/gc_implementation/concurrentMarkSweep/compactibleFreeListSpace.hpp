@@ -153,8 +153,6 @@ class CompactibleFreeListSpace: public CompactibleSpace {
   // Stable value of used().
   size_t _used_stable;
 
-  // Support for parallel iteration.
-  HeapWord* _par_iter_top;
   // Support for compacting cms
   HeapWord* cross_threshold(HeapWord* start, HeapWord* end);
   HeapWord* forward(oop q, size_t size, CompactPoint* cp, HeapWord* compact_top);
@@ -648,10 +646,6 @@ class CompactibleFreeListSpace: public CompactibleSpace {
   void split(size_t from, size_t to1);
 
   double flsFrag() const;
-
-  void reset_par_iter_top() {
-    _par_iter_top = bottom();
-  }
 };
 
 // A parallel-GC-thread-local allocation buffer for allocation into a

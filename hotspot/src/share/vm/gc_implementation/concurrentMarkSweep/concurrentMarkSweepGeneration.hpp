@@ -1371,11 +1371,6 @@ class ConcurrentMarkSweepGeneration: public CardGeneration {
 
   CollectionTypes debug_collection_type() { return _debug_collection_type; }
   void rotate_debug_collection_type();
-
-  // Parallel iteration support.
-  void reset_par_iter_top() {
-    cmsSpace()->reset_par_iter_top();
-  }
 };
 
 class ASConcurrentMarkSweepGeneration : public ConcurrentMarkSweepGeneration {

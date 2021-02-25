@@ -1036,7 +1036,6 @@ public:
 
     _cms_gen = (ConcurrentMarkSweepGeneration*)old_gen;
     _cms_gen->freelistLock()->lock_without_safepoint_check();
-    _cms_gen->reset_par_iter_top();
   }
 
   virtual void object_iterate(ObjectClosure* cl, uint worker_id) {
@@ -1044,7 +1043,6 @@ public:
   }
 
   ~GenCollectedHeapParallelObjectIterator() {
-    _cms_gen->reset_par_iter_top();
     _cms_gen->freelistLock()->unlock();
   }
 };
@@ -1069,7 +1067,7 @@ void GenCollectedHeap::object_iterate_parallel(ObjectClosure* cl,
   }
   if (block_index == GenCollectedHeapBlockClaimer::SurvivorIndex) {
     yGen->from()->object_iterate(cl);
-    guarantee(yGen->to()->used() == 0, "to space must be empty when iterating survivor space");
+    yGen->to()->object_iterate(cl);
     block_index = claimer->claim_and_get_block();
   }
   // Process old generation.
