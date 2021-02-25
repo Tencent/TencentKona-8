@@ -62,7 +62,8 @@ public:
   static void initialize(TRAPS) {}
 
   inline static bool is_shared_boot_class(Klass* klass) {
-    return (klass->_shared_class_path_index >= 0);
+    InstanceKlass* ik = (InstanceKlass*)klass;
+    return ik->is_shared_boot_class();
   }
 };
 
