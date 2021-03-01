@@ -210,8 +210,10 @@ void ClassLoaderExt::record_result(const s2 classpath_index,
     classloader_type = ClassLoader::APP_LOADER;
     ClassLoaderExt::set_has_app_classes();
   } else if (SystemDictionary::is_ext_class_loader(loader)) {
-    classloader_type = ClassLoader::EXT_LOADER;
-    ClassLoaderExt::set_has_ext_classes();
+    tty->print_cr("Extension class loader isn't supported by AppCDS with class %s. CDS dump aborted.", result->name()->as_C_string());
+    vm_exit(1);
+    //classloader_type = ClassLoader::EXT_LOADER;
+    //ClassLoaderExt::set_has_ext_classes();
   }
   if (classpath_index > ClassLoaderExt::max_used_path_index()) {
     ClassLoaderExt::set_max_used_path_index(classpath_index);

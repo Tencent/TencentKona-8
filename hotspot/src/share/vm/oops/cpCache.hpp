@@ -390,6 +390,8 @@ class ConstantPoolCacheEntry VALUE_OBJ_CLASS_SPEC {
     // When shifting flags as a 32-bit int, make sure we don't need an extra mask for tos_state:
     assert((((u4)-1 >> tos_state_shift) & ~tos_state_mask) == 0, "no need for tos_state mask");
   }
+
+  void reinitialize(bool f2_used);
 };
 
 
@@ -434,7 +436,11 @@ class ConstantPoolCache: public MetaspaceObj {
   bool is_constantPoolCache() const { return true; }
 
   int length() const                             { return _length; }
+
+  // CDS support
+  void remove_unshareable_info();
  private:
+  void walk_entries_for_initialization();
   void set_length(int length)                    { _length = length; }
 
   static int header_size()                       { return sizeof(ConstantPoolCache) / HeapWordSize; }
