@@ -97,6 +97,13 @@ static void collect_classes(Klass* k) {
     // Add in the array classes too
     InstanceKlass* ik = InstanceKlass::cast(k);
     ik->array_klasses_do(collect_classes);
+  } else if (UseAppCDS && k->oop_is_array()) {
+    // Add in the array classes too
+    ArrayKlass* ak = ArrayKlass::cast(k);
+    Klass* h = ak->higher_dimension();
+    if (h != NULL) {
+      h->array_klasses_do(collect_classes);
+    }
   }
 }
 
@@ -701,7 +708,7 @@ void MetaspaceShared::link_and_cleanup_shared_classes(TRAPS) {
       SystemDictionary::classes_do(check_one_shared_class);
     } while (_check_classes_made_progress);
 
-    if (IgnoreUnverifiableClassesDuringDump) {
+    if (IgnoreUnverifiableClassesDuringDump || UseAppCDS) {
       // This is useful when running JCK or SQE tests. You should not
       // enable this when running real apps.
       SystemDictionary::remove_classes_in_error_state();
@@ -830,8 +837,21 @@ int MetaspaceShared::preload_and_dump(const char * class_list_path,
       // Got a class name - load it.
       TempNewSymbol class_name_symbol = SymbolTable::new_permanent_symbol(class_name, THREAD);
       guarantee(!HAS_PENDING_EXCEPTION, "Exception creating a symbol.");
-      Klass* klass = SystemDictionary::resolve_or_null(class_name_symbol,
-                                                         THREAD);
+
+      Klass* klass = NULL;
+      if (UseAppCDS) {
+        if (FieldType::is_array(class_name_symbol)) {
+          // array classes are not supported in class list.
+          continue;
+        }
+        klass = SystemDictionary::resolve_or_null(class_name_symbol,
+                                                  SystemDictionary::java_system_loader(),
+                                                  Handle(),
+                                                  THREAD);
+      } else {
+        klass = SystemDictionary::resolve_or_null(class_name_symbol,
+                                                  THREAD);
+      }
       CLEAR_PENDING_EXCEPTION;
       if (klass != NULL) {
         if (PrintSharedSpaces && Verbose && WizardMode) {
@@ -851,8 +871,8 @@ int MetaspaceShared::preload_and_dump(const char * class_list_path,
         guarantee(!HAS_PENDING_EXCEPTION, "exception in link_class");
 
         class_count++;
-      } else {
-        //tty->print_cr("Preload failed: %s", class_name);
+      } else if (UseAppCDS) {
+        tty->print_cr("Preload failed: %s", class_name);
       }
     }
     fclose(file);
@@ -871,7 +891,7 @@ bool MetaspaceShared::try_link_class(InstanceKlass* ik, TRAPS) {
   assert(DumpSharedSpaces, "should only be called during dumping");
   if (ik->init_state() < InstanceKlass::linked) {
     bool saved = BytecodeVerificationLocal;
-    if (!SharedClassUtil::is_shared_boot_class(ik)) {
+    if (ik->loader_type() == 0 && ik->class_loader() == NULL) {
       // The verification decision is based on BytecodeVerificationRemote
       // for non-system classes. Since we are using the NULL classloader
       // to load non-system classes during dumping, we need to temporarily

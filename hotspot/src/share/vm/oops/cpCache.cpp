@@ -24,6 +24,7 @@
 
 #include "precompiled.hpp"
 #include "gc_implementation/shared/markSweep.inline.hpp"
+#include "interpreter/bytecodeStream.hpp"
 #include "interpreter/interpreter.hpp"
 #include "interpreter/rewriter.hpp"
 #include "memory/universe.inline.hpp"
@@ -49,6 +50,15 @@ void ConstantPoolCacheEntry::initialize_entry(int index) {
   _f1 = NULL;
   _f2 = _flags = 0;
   assert(constant_pool_index() == index, "");
+}
+
+void ConstantPoolCacheEntry::reinitialize(bool f2_used) {
+  _indices &= cp_index_mask;
+  _f1 = NULL;
+  _flags = 0;
+  if (!f2_used) {
+    _f2 = 0;
+  }
 }
 
 int ConstantPoolCacheEntry::make_flags(TosState state,
@@ -672,4 +682,53 @@ void ConstantPoolCache::verify_on(outputStream* st) {
   guarantee(is_constantPoolCache(), "obj must be constant pool cache");
   // print constant pool cache entries
   for (int i = 0; i < length(); i++) entry_at(i)->verify(st);
+}
+
+void ConstantPoolCache::remove_unshareable_info() {
+  walk_entries_for_initialization();
+}
+
+void ConstantPoolCache::walk_entries_for_initialization() {
+  assert(DumpSharedSpaces, "sanity");
+  // When dumping the archive, we want to clean up the ConstantPoolCache
+  // to remove any effect of linking due to the execution of Java code --
+  // each ConstantPoolCacheEntry will have the same contents as if
+  // ConstantPoolCache::initialize has just returned:
+  //
+  // - We keep the ConstantPoolCache::constant_pool_index() bits for all entries.
+  // - We keep the "f2" field for entries used by invokedynamic and invokehandle
+  // - All other bits in the entries are cleared to zero.
+  ResourceMark rm;
+
+  InstanceKlass* ik = constant_pool()->pool_holder();
+  bool* f2_used = NEW_RESOURCE_ARRAY(bool, length());
+  memset(f2_used, 0, sizeof(bool) * length());
+
+  // Find all the slots that we need to preserve f2
+  for (int i = 0; i < ik->methods()->length(); i++) {
+    Method* m = ik->methods()->at(i);
+    RawBytecodeStream bcs(m);
+    while (!bcs.is_last_bytecode()) {
+      Bytecodes::Code opcode = bcs.raw_next();
+      switch (opcode) {
+      case Bytecodes::_invokedynamic: {
+          int index = Bytes::get_native_u4(bcs.bcp() + 1);
+          int cp_cache_index = constant_pool()->invokedynamic_cp_cache_index(index);
+          f2_used[cp_cache_index] = 1;
+        }
+        break;
+      case Bytecodes::_invokehandle: {
+          int cp_cache_index = Bytes::get_native_u2(bcs.bcp() + 1);
+          f2_used[cp_cache_index] = 1;
+        }
+        break;
+      default:
+        break;
+      }
+    }
+  }
+
+  for (int i=0; i<length(); i++) {
+    entry_at(i)->reinitialize(f2_used[i]);
+  }
 }

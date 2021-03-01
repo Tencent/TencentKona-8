@@ -2458,6 +2458,24 @@ void InstanceKlass::remove_unshareable_info() {
 
   // do array classes also.
   array_klasses_do(remove_unshareable_in_class);
+
+  if (!UseAppCDS) {
+    return;
+  }
+  // These are not allocated from metaspace, but they should should all be empty
+  // during dump time, so we don't need to worry about them in InstanceKlass::iterate().
+  guarantee(_source_debug_extension == NULL, "must be");
+  guarantee(_osr_nmethods_head == NULL, "must be");
+
+#if INCLUDE_JVMTI
+  guarantee(_breakpoints == NULL, "must be");
+  guarantee(_previous_versions == NULL, "must be");
+#endif
+
+  _init_thread = NULL;
+  _methods_jmethod_ids = NULL;
+  _jni_ids = NULL;
+  _oop_map_cache = NULL;
 }
 
 static void restore_unshareable_in_class(Klass* k, TRAPS) {
@@ -2490,7 +2508,15 @@ void InstanceKlass::restore_unshareable_info(ClassLoaderData* loader_data, Handl
   // restore constant pool resolved references
   ik->constants()->restore_unshareable_info(CHECK);
 
-  ik->array_klasses_do(restore_unshareable_in_class, CHECK);
+  if (UseAppCDS) {
+    if (ik->array_klasses() != NULL) {
+      // Array classes have null protection domain.
+      // --> see ArrayKlass::complete_create_array_klass()
+      ik->array_klasses()->restore_unshareable_info(ClassLoaderData::the_null_class_loader_data(), Handle(), CHECK);
+    }
+  } else {
+    ik->array_klasses_do(restore_unshareable_in_class, CHECK);
+  }
 }
 
 // returns true IFF is_in_error_state() has been changed as a result of this call.

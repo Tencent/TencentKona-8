@@ -1278,7 +1278,7 @@ instanceKlassHandle ClassLoader::load_classfile(Symbol* h_name, TRAPS) {
 
     h = context.record_result(classpath_index, e, result, THREAD);
   } else {
-    if (DumpSharedSpaces) {
+    if (DumpSharedSpaces && !UseAppCDS) {
       tty->print_cr("Preload Warning: Cannot find %s", class_name);
     }
   }
@@ -1407,6 +1407,92 @@ void ClassLoader::initialize_shared_path() {
     _shared_paths_misc_info->write_jint(0); // see comments in SharedPathsMiscInfo::check()
   }
 }
+
+char* ClassLoader::skip_uri_protocol(char* source) {
+  if (strncmp(source, "file:", 5) == 0) {
+    // file: protocol path could start with file:/ or file:///
+    // locate the char after all the forward slashes
+    int offset = 5;
+    while (*(source + offset) == '/') {
+        offset++;
+    }
+    source += offset;
+  // for non-windows platforms, move back one char as the path begins with a '/'
+#ifndef _WINDOWS
+    source -= 1;
+#endif
+  } else if (strncmp(source, "jrt:/", 5) == 0) {
+    source += 5;
+  }
+  return source;
+}
+
+// Record the shared classpath index and loader type for classes loaded
+// by the builtin loaders at dump time.
+void ClassLoader::record_result(InstanceKlass* ik, const ClassFileStream* stream, TRAPS) {
+  assert(DumpSharedSpaces, "sanity");
+  assert(stream != NULL, "sanity");
+
+  if (ik->is_anonymous()) {
+    // We do not archive anonymous classes.
+    return;
+  }
+
+  oop loader = ik->class_loader();
+  char* src = (char*)stream->source();
+  if (src == NULL) {
+    return;
+  }
+
+  ResourceMark rm(THREAD);
+  int classpath_index = -1;
+
+  if (FileMapInfo::get_number_of_share_classpaths() > 0) {
+    char* canonical_path_table_entry = NEW_RESOURCE_ARRAY_IN_THREAD(THREAD, char, JVM_MAXPATHLEN);
+
+    // save the path from the file: protocol or the module name from the jrt: protocol
+    // if no protocol prefix is found, path is the same as stream->source()
+    char* path = skip_uri_protocol(src);
+    char* canonical_class_src_path = NEW_RESOURCE_ARRAY_IN_THREAD(THREAD, char, JVM_MAXPATHLEN);
+    if (!get_canonical_path(path, canonical_class_src_path, JVM_MAXPATHLEN)) {
+      tty->print_cr("Bad pathname %s. CDS dump aborted.", path);
+      vm_exit(1);
+    }
+    for (int i = ClassLoaderExt::app_class_paths_start_index(); i < FileMapInfo::get_number_of_share_classpaths(); i++) {
+      SharedClassPathEntry* ent = FileMapInfo::shared_classpath(i);
+      
+      if (!get_canonical_path(ent->name(), canonical_path_table_entry, JVM_MAXPATHLEN)) {
+        tty->print_cr("Bad pathname %s. CDS dump aborted.", ent->name());
+        vm_exit(1);
+      }
+      // If the path (from the class stream source) is the same as the shared
+      // class, then we have a match.
+      if (strcmp(canonical_path_table_entry, canonical_class_src_path) == 0) {
+        // Ensure the index is within the -cp range before assigning
+        // to the classpath_index.
+        if (SystemDictionary::is_app_class_loader(loader)) {
+          classpath_index = i;
+          break;
+        } else {
+          tty->print_cr("Use non app class loader to load class from %s. CDS dump aborted.", ent->name());
+          vm_exit(1);
+        }
+      }
+    }
+
+    // No path entry found for this class. Must be a shared class loaded by the
+    // user defined classloader.
+    if (classpath_index < 0) {
+      assert(ik->shared_classpath_index() < 0, "Sanity");
+      return;
+    }
+  } else {
+    assert(0, "Sanity");
+  }
+
+  ClassLoaderExt::record_result(classpath_index, ik, THREAD);
+}
+
 #endif
 
 jlong ClassLoader::classloader_time_ms() {
