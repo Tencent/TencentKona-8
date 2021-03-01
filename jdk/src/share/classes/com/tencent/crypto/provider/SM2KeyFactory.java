@@ -40,7 +40,7 @@ public class SM2KeyFactory extends KeyFactorySpi {
             return keySpec.cast( new SM2PrivateKeySpec(keyString));
         } else if (key instanceof SM2PublicKey) {
             String keyString = ((SM2PublicKey) key).getKeyString();
-            return keySpec.cast( new SM2PrivateKeySpec(keyString));
+            return keySpec.cast( new SM2PublicKeySpec(keyString));
         } else {
             throw new InvalidKeySpecException("Invalid Key, must be SM2PrivateKey or SM2PublicKey");
         }

@@ -77,7 +77,7 @@ public class TestSM2 {
         if (Arrays.equals(b, dec) == false) {
             System.out.println("in:  " + toString(b));
             System.out.println("dec: " + toString(dec));
-            throw new Exception("Failure");
+            throw new RuntimeException("Failure");
         }
     }
 
