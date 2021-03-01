@@ -362,6 +362,8 @@ class ClassLoader: AllStatic {
   static void* get_shared_paths_misc_info();
   static bool  check_shared_paths_misc_info(void* info, int size);
   static void  exit_with_path_failure(const char* error, const char* message);
+  static char* skip_uri_protocol(char* source);
+  static void  record_result(InstanceKlass* ik, const ClassFileStream* stream, TRAPS);
 #endif
 
   static void  trace_class_path(outputStream* out, const char* msg, const char* name = NULL);
