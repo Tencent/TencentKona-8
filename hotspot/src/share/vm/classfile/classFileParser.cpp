@@ -3916,7 +3916,7 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
   u2 minor_version = cfs->get_u2_fast();
   u2 major_version = cfs->get_u2_fast();
 
-  if (DumpSharedSpaces && major_version < JAVA_1_5_VERSION) {
+  if (DumpSharedSpaces && major_version < JAVA_1_5_VERSION && !UseAppCDS) {
     ResourceMark rm;
     warning("Pre JDK 1.5 class not supported by CDS: %u.%u %s",
             major_version,  minor_version, name->as_C_string());

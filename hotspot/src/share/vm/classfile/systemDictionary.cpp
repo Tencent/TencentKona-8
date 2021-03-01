@@ -1198,7 +1198,11 @@ Klass* SystemDictionary::resolve_from_stream(Symbol* class_name,
       k = instanceKlassHandle(ik);
     }
 #endif
-
+#if INCLUDE_CDS
+    if (UseAppCDS && DumpSharedSpaces) {
+      ClassLoader::record_result(k(), st, THREAD);
+    }
+#endif
     // Add class just loaded
     // If a class loader supports parallel classloading handle parallel define requests
     // find_or_define_instance_class may return a different InstanceKlass

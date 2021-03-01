@@ -42,8 +42,7 @@ public:
   static bool is_sharing_possible(ClassLoaderData* loader_data) {
     oop class_loader = loader_data->class_loader();
     return (class_loader == NULL) || (UseAppCDS &&
-           (SystemDictionary::is_app_class_loader(class_loader) ||
-            SystemDictionary::is_ext_class_loader(class_loader)));
+           SystemDictionary::is_app_class_loader(class_loader));
   }
 
   static size_t dictionary_entry_size() {

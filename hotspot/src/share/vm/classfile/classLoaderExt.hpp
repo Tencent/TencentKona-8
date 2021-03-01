@@ -98,7 +98,6 @@ public:
 #if INCLUDE_CDS
 private:
   static char* read_manifest(ClassPathEntry* entry, jint *manifest_size, bool clean_text, TRAPS);
-  static ClassPathEntry* find_classpath_entry_from_cache(const char* path, TRAPS);
 
 public:
   static char* read_manifest(ClassPathEntry* entry, jint *manifest_size, TRAPS) {

@@ -329,6 +329,10 @@ class InstanceKlass: public Klass {
   friend class SystemDictionary;
 
  public:
+  u2 loader_type() {
+    return _misc_flags & loader_type_bits();
+  }
+
   bool is_shared_boot_class() const {
     return (_misc_flags & _misc_is_shared_boot_class) != 0;
   }
