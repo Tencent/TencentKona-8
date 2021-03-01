@@ -96,7 +96,6 @@ public class DirClasspathTest {
         output = TestCommon.dump(longDir.getPath(), appClassList);
         TestCommon.checkDump(output);
 
-	/*
         /////////////////////////////////////////////////////////////////
         // Loading an app class from a directory
         /////////////////////////////////////////////////////////////////
@@ -109,11 +108,13 @@ public class DirClasspathTest {
         // Long path to non-empty dir in -cp: should report error if a class is loaded from it
         File srcClass = new File(classDir.toFile(), "Hello.class");
         File destClass = new File(longDir, "Hello.class");
-        Files.copy(srcClass.toPath(), destClass.toPath());
+        try {
+            Files.copy(srcClass.toPath(), destClass.toPath());
+        } catch (Exception e) {
+        }
         output = TestCommon.dump(longDir.getPath(), appClassList2);
     	output.shouldNotHaveExitValue(0);
         output.shouldContain("Cannot have non-empty directory in paths");
-        */  
     }
 }
 

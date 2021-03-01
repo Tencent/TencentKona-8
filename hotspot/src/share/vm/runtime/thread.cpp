@@ -3380,6 +3380,14 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
     os::pause();
   }
 
+  if (UseAppCDS && DumpSharedSpaces) {
+    // when dumping shared spaces for AppCDS we must disable bytecode
+    // rewriting as it initializes internal (cached) meta-data that
+    // would be stored in the archive but cannot be carried over to
+    // the next execution
+    RewriteBytecodes = false;
+  }
+
 #ifndef USDT2
   HS_DTRACE_PROBE(hotspot, vm__init__begin);
 #else /* USDT2 */
@@ -3507,7 +3515,7 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   // At this point, the Universe is initialized, but we have not executed
   // any byte code.  Now is a good time (the only time) to dump out the
   // internal state of the JVM for sharing.
-  if (DumpSharedSpaces) {
+  if (!UseAppCDS && DumpSharedSpaces) {
     MetaspaceShared::preload_and_dump(CHECK_0);
     ShouldNotReachHere();
   }
@@ -3615,6 +3623,11 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   SystemDictionary::compute_java_system_loader(THREAD);
   if (HAS_PENDING_EXCEPTION) {
     vm_exit_during_initialization(Handle(THREAD, PENDING_EXCEPTION));
+  }
+
+  if (UseAppCDS && DumpSharedSpaces) {
+    MetaspaceShared::preload_and_dump(CHECK_0);
+    ShouldNotReachHere();
   }
 
 #if INCLUDE_ALL_GCS

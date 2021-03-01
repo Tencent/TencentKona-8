@@ -187,6 +187,29 @@ void ConstantPool::remove_unshareable_info() {
     resolved_references() != NULL ? resolved_references()->length() : 0);
   set_resolved_references(NULL);
   set_lock(NULL);
+
+  if (!UseAppCDS) {
+    return;
+  }
+
+  for (int index = 1; index < length(); index++) { // Index 0 is unused
+    assert(!tag_at(index).is_unresolved_klass_in_error(), "This must not happen during dump time");
+    if (tag_at(index).is_klass()) {
+      // This class was resolved as a side effect of executing Java code
+      // during dump time. We need to restore it back to an UnresolvedClass,
+      // so that the proper class loading and initialization can happen
+      // at runtime.
+      CPSlot slot = slot_at(index);
+      assert(slot.get_klass()->is_klass(), "Sanity check");
+      Symbol* name =  slot.get_klass()->name();
+      Klass* resolvedKlass = resolved_klass_at(index);
+      unresolved_klass_at_put(index, name);
+    }
+  }
+
+  if (cache() != NULL) {
+    cache()->remove_unshareable_info();
+  }
 }
 
 int ConstantPool::cp_to_object_index(int cp_index) {

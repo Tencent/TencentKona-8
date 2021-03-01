@@ -195,12 +195,21 @@ void ArrayKlass::remove_unshareable_info() {
   Klass::remove_unshareable_info();
   // Clear the java mirror
   set_component_mirror(NULL);
+
+  if (UseAppCDS && _higher_dimension != NULL) {
+    ArrayKlass *ak = ArrayKlass::cast(higher_dimension());
+    ak->remove_unshareable_info();
+  }
 }
 
 void ArrayKlass::restore_unshareable_info(ClassLoaderData* loader_data, Handle protection_domain, TRAPS) {
   assert(loader_data == ClassLoaderData::the_null_class_loader_data(), "array classes belong to null loader");
   Klass::restore_unshareable_info(loader_data, protection_domain, CHECK);
   // Klass recreates the component mirror also
+  if (UseAppCDS && _higher_dimension != NULL) {
+    ArrayKlass *ak = ArrayKlass::cast(higher_dimension());
+    ak->restore_unshareable_info(loader_data, protection_domain, CHECK);
+  }
 }
 
 // Printing
