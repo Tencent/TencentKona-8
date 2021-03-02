@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,3 +81,35 @@ GCTraceTime::~GCTraceTime() {
     gclog_or_tty->flush();
   }
 }
+
+GCTraceCPUTime::GCTraceCPUTime() :
+  _active(false),
+  _starting_user_time(0.0),
+  _starting_system_time(0.0),
+  _starting_real_time(0.0)
+{
+  if (_active) {
+    bool valid = os::getTimesSecs(&_starting_real_time,
+                               &_starting_user_time,
+                               &_starting_system_time);
+    if (!valid) {
+      _active = false;
+    }
+  }
+}
+
+GCTraceCPUTime::~GCTraceCPUTime() {
+  if (_active) {
+    double real_time, user_time, system_time;
+    bool valid = os::getTimesSecs(&real_time, &user_time, &system_time);
+    if (valid) {
+      gclog_or_tty->print_cr("User=%3.2fs Sys=%3.2fs Real=%3.2fs",
+                        user_time - _starting_user_time,
+                        system_time - _starting_system_time,
+                        real_time - _starting_real_time);
+    } else {
+      gclog_or_tty->print_cr("TraceCPUTime: os::getTimesSecs() returned invalid result");
+    }
+  }
+}
+

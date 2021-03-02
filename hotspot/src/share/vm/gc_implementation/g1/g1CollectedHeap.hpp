@@ -1,5 +1,5 @@
   /*
- * Copyright (c) 2001, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@
 #include "gc_implementation/shared/gcHeapSummary.hpp"
 #include "gc_implementation/shared/hSpaceCounters.hpp"
 #include "gc_implementation/shared/parGCAllocBuffer.hpp"
+#include "gc_implementation/g1/g1HotCardCache.hpp"
 #include "memory/barrierSet.hpp"
 #include "memory/memRegion.hpp"
 #include "memory/sharedHeap.hpp"
@@ -63,6 +64,7 @@ class ObjectClosure;
 class SpaceClosure;
 class CompactibleSpaceClosure;
 class Space;
+class G1HotCardCache;
 class G1CollectorPolicy;
 class GenRemSet;
 class G1RemSet;
@@ -611,6 +613,10 @@ protected:
   // Perform a full collection.
   virtual void do_full_collection(bool clear_all_soft_refs);
 
+  //do parallel fullgc collection
+  bool do_parallel_full_collection(bool explicit_gc,
+                                   bool clear_all_soft_refs);
+
   // Resize the heap if necessary after a full collection.  If this is
   // after a collect-for allocation, "word_size" is the allocation size,
   // and will be considered part of the used portion of the heap.
@@ -704,6 +710,10 @@ public:
     _in_cset_fast_test.clear();
   }
 
+  void clear_cset_fast_test(const HeapRegion* hr) {
+    _in_cset_fast_test.clear(hr);
+  }
+
   // This is called at the start of either a concurrent cycle or a Full
   // GC to update the number of old marking cycles started.
   void increment_old_marking_cycles_started();
@@ -740,13 +750,15 @@ public:
   // adding it to the free list that's passed as a parameter (this is
   // usually a local list which will be appended to the master free
   // list later). The used bytes of freed regions are accumulated in
-  // pre_used. If par is true, the region's RSet will not be freed
-  // up. The assumption is that this will be done later.
+  // pre_used. If skip_remset is true, the region's RSet will not be freed
+  // up. If skip_hot_card_cache is true, the region's hot card cache will not
+  // be freed up. The assumption is that this will be done later.
   // The locked parameter indicates if the caller has already taken
   // care of proper synchronization. This may allow some optimizations.
   void free_region(HeapRegion* hr,
                    FreeRegionList* free_list,
-                   bool par,
+                   bool skip_remset,
+                   bool skip_hot_card_cache = false,
                    bool locked = false);
 
   // Frees a humongous region by collapsing it into individual regions
@@ -754,11 +766,11 @@ public:
   // will be added to the free list that's passed as a parameter (this
   // is usually a local list which will be appended to the master free
   // list later). The used bytes of freed regions are accumulated in
-  // pre_used. If par is true, the region's RSet will not be freed
+  // pre_used. If skip_remset is true, the region's RSet will not be freed
   // up. The assumption is that this will be done later.
   void free_humongous_region(HeapRegion* hr,
                              FreeRegionList* free_list,
-                             bool par);
+                             bool skip_remset);
 protected:
 
   // Shrink the garbage-first heap by at most the given size (in bytes!).
@@ -826,13 +838,13 @@ protected:
   // set in the event of an evacuation failure.
   DirtyCardQueueSet _into_cset_dirty_card_queue_set;
 
-  // After a collection pause, make the regions in the CS into free
+  // After a collection pause, convert the regions in the collection set into free
   // regions.
-  void free_collection_set(HeapRegion* cs_head, EvacuationInfo& evacuation_info);
+  void free_collection_set(EvacuationInfo& evacuation_info);
 
   // Abandon the current collection set without recording policy
   // statistics or updating free lists.
-  void abandon_collection_set(HeapRegion* cs_head);
+  void abandon_collection_set();
 
   // The concurrent marker (and the thread it runs in.)
   ConcurrentMark* _cm;
@@ -993,16 +1005,6 @@ protected:
   // discovery.
   G1CMIsAliveClosure _is_alive_closure_cm;
 
-  // Cache used by G1CollectedHeap::start_cset_region_for_worker().
-  HeapRegion** _worker_cset_start_region;
-
-  // Time stamp to validate the regions recorded in the cache
-  // used by G1CollectedHeap::start_cset_region_for_worker().
-  // The heap region entry for a given worker is valid iff
-  // the associated time stamp value matches the current value
-  // of G1CollectedHeap::_gc_time_stamp.
-  uint* _worker_cset_start_region_time_stamp;
-
   volatile bool _free_regions_coming;
 
 public:
@@ -1109,6 +1111,26 @@ public:
     return _hrm.available() == 0;
   }
 
+  HeapRegionManager* hrm() {
+    return &_hrm;
+  }
+
+ uint survivor_regions_count() const {
+    return  young_list()->survivor_length();
+  }
+
+  uint eden_regions_count() const {
+    return young_list()->length() - young_list()->survivor_length();
+  }
+
+  uint young_regions_count() const {
+    return young_list()->length();
+  }
+
+  uint old_regions_count() const { return _old_set.length(); }
+
+  uint humongous_regions_count() const { return _humongous_set.length(); }
+
   // The current number of regions in the heap.
   uint num_regions() const { return _hrm.length(); }
 
@@ -1199,6 +1221,7 @@ public:
     }
   }
 
+  inline void old_set_add(HeapRegion* hr);
   inline void old_set_remove(HeapRegion* hr);
 
   size_t non_young_capacity_bytes() {
@@ -1247,6 +1270,8 @@ public:
   // Return "TRUE" iff the given object address is within the collection
   // set. Slow implementation.
   inline bool obj_in_cs(oop obj);
+
+  inline bool is_in_cset(const HeapRegion* hr);
 
   inline bool is_in_cset(oop obj);
 
@@ -1297,8 +1322,15 @@ public:
     object_iterate(cl);
   }
 
+  void object_iterate_parallel(ObjectClosure* cl, uint worker_id, uint num_workers, jint claim_value);
+
+  virtual ParallelObjectIterator* parallel_object_iterator(uint thread_num);
+
   // Iterate over all spaces in use in the heap, in ascending address order.
   virtual void space_iterate(SpaceClosure* cl);
+  
+  //used to reset hr hot_card, only called by parallel fullgc currently
+  void reset_hot_card_counts(HeapRegion* hr);
 
   // Iterate over heap regions, in address order, terminating the
   // iteration early if the "doHeapRegion" method returns "true".
@@ -1331,6 +1363,13 @@ public:
                                        uint num_workers,
                                        jint claim_value) const;
 
+  void heap_region_par_iterate_from_worker_offset(HeapRegionClosure* cl,
+                                                  HeapRegionClaimer *hrclaimer,
+                                                  uint worker_id) const;
+
+  void heap_region_par_iterate_from_start(HeapRegionClosure* cl,
+                                          HeapRegionClaimer* hrclaimer) const;
+
   // It resets all the region claim values to the default.
   void reset_heap_region_claim_values();
 
@@ -1346,19 +1385,14 @@ public:
   bool check_cset_heap_region_claim_values(jint claim_value);
 #endif // ASSERT
 
-  // Clear the cached cset start regions and (more importantly)
-  // the time stamps. Called when we reset the GC time stamp.
-  void clear_cset_start_regions();
-
-  // Given the id of a worker, obtain or calculate a suitable
-  // starting region for iterating over the current collection set.
-  HeapRegion* start_cset_region_for_worker(uint worker_i);
-
   // Iterate over the regions (if any) in the current collection set.
   void collection_set_iterate(HeapRegionClosure* blk);
 
-  // As above but starting from region r
-  void collection_set_iterate_from(HeapRegion* r, HeapRegionClosure *blk);
+  // Iterate over the regions (if any) in the current collection set. Starts the
+  // iteration over the entire collection set so that the start regions of a given
+  // worker id over the set active_workers are evenly spread across the set of
+  // collection set regions.
+    void collection_set_iterate_from(HeapRegionClosure *cl, uint worker_id);
 
   HeapRegion* next_compaction_region(const HeapRegion* from) const;
 
@@ -1630,6 +1664,11 @@ public:
 
   bool is_obj_dead_cond(const oop obj,
                         const VerifyOption vo) const;
+
+  bool is_obj_dead_full(const oop obj,
+                        const HeapRegion* hr) const;
+
+  bool is_obj_dead_full(const oop obj) const;
 
   G1HeapSummary create_g1_heap_summary();
 

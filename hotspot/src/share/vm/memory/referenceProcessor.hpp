@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -220,6 +220,10 @@ class ReferenceProcessor : public CHeapObj<mtGC> {
   // The SoftReference master timestamp clock
   static jlong _soft_ref_timestamp_clock;
 
+  BoolObjectClosure* _is_subject_to_discovery; // determines whether a given oop is subject
+                                               // to this ReferenceProcessor's discovery
+                                               // (and further processing).
+
   MemRegion   _span;                    // (right-open) interval of heap
                                         // subject to wkref discovery
 
@@ -435,6 +439,9 @@ class ReferenceProcessor : public CHeapObj<mtGC> {
     _is_alive_non_header = is_alive_non_header;
   }
 
+  BoolObjectClosure* is_subject_to_discovery_closure() const { return _is_subject_to_discovery; }
+  void set_is_subject_to_discovery_closure(BoolObjectClosure* cl) { _is_subject_to_discovery = cl; }
+
   // get and set span
   MemRegion span()                   { return _span; }
   void      set_span(MemRegion span) { _span = span; }
@@ -584,6 +591,24 @@ class ReferenceProcessorIsAliveMutator: StackObj {
 
   ~ReferenceProcessorIsAliveMutator() {
     _rp->set_is_alive_non_header(_saved_cl);
+  }
+};
+
+// A utility class to temporarily mutate the subject discovery closure of the
+// given ReferenceProcessor in the scope that contains it.
+class ReferenceProcessorSubjectToDiscoveryMutator : StackObj {
+  ReferenceProcessor* _rp;
+  BoolObjectClosure* _saved_cl;
+
+public:
+  ReferenceProcessorSubjectToDiscoveryMutator(ReferenceProcessor* rp, BoolObjectClosure* cl):
+    _rp(rp) {
+    _saved_cl = _rp->is_subject_to_discovery_closure();
+    _rp->set_is_subject_to_discovery_closure(cl);
+  }
+
+  ~ReferenceProcessorSubjectToDiscoveryMutator() {
+    _rp->set_is_subject_to_discovery_closure(_saved_cl);
   }
 };
 

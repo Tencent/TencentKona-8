@@ -608,5 +608,36 @@ ifeq ($(ENABLE_JFR), true)
 endif
 
 ##########################################################################################
+# This .dylib file is from closed source project TencentSM, please refer to git internally
+# Testing of this .dylib file works together with Cipher test of SM algorithsm
+ifeq ($(OPENJDK_TARGET_OS), macosx)
+ifeq ($(OPENJDK_TARGET_CPU), x86_64)
+  LIB_TENCENTSM_SRC := $(JDK_TOPDIR)/src/share/lib/security/macosx/x86_64/libTencentSM.dylib
+  LIB_TENCENTSM_DST := $(JDK_OUTPUTDIR)/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libTencentSM.dylib
+
+  $(LIB_TENCENTSM_DST): $(LIB_TENCENTSM_SRC)
+	$(call install-file)
+
+  COPY_FILES += $(LIB_TENCENTSM_DST)
+endif
+endif
+
+##########################################################################################
+# This .so file is from closed source project TencentSM, please refer to git internally
+# Testing of this .so file works together with Cipher test of SM algorithsm
+ifeq ($(OPENJDK_TARGET_OS), linux)
+ifeq ($(OPENJDK_TARGET_CPU), x86_64)
+  LIB_TENCENTSM_SRC := $(JDK_TOPDIR)/src/share/lib/security/linux/x86_64/libTencentSM.so
+  LIB_TENCENTSM_DST := $(JDK_OUTPUTDIR)/lib$(OPENJDK_TARGET_CPU_LIBDIR)/libTencentSM.so
+
+  $(LIB_TENCENTSM_DST): $(LIB_TENCENTSM_SRC)
+	$(call install-file)
+
+  COPY_FILES += $(LIB_TENCENTSM_DST)
+endif
+endif
+
+##########################################################################################
 
 -include $(CUSTOM_MAKE_DIR)/CopyFiles.gmk
+

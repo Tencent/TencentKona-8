@@ -78,6 +78,12 @@ class GCHeapLog : public EventLogBase<GCMessage> {
   }
 };
 
+class ParallelObjectIterator : public CHeapObj<mtGC> {
+ public:
+  virtual void object_iterate(ObjectClosure* cl, uint worker_id) = 0;
+  virtual ~ParallelObjectIterator() {}
+};
+
 //
 // CollectedHeap
 //   SharedHeap
@@ -555,6 +561,9 @@ class CollectedHeap : public CHeapObj<mtInternal> {
   // over live objects.
   virtual void safe_object_iterate(ObjectClosure* cl) = 0;
 
+  virtual ParallelObjectIterator* parallel_object_iterator(uint thread_num) {
+    return NULL;
+  }
   // NOTE! There is no requirement that a collector implement these
   // functions.
   //

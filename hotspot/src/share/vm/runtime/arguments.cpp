@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1402,6 +1402,11 @@ void Arguments::set_cms_and_parnew_gc_flags() {
       (unsigned int) (MarkStackSize / K), (uint) (MarkStackSizeMax / K));
     tty->print_cr("ConcGCThreads: %u", (uint) ConcGCThreads);
   }
+
+  // By default do not let the target stack size to be more than 1/4 of the entries
+  if (FLAG_IS_DEFAULT(GCDrainStackTargetSize)) {
+    FLAG_SET_ERGO(uintx, GCDrainStackTargetSize, MIN2(GCDrainStackTargetSize, (uintx)TASKQUEUE_SIZE / 4));
+  }
 }
 #endif // INCLUDE_ALL_GCS
 
@@ -1725,6 +1730,12 @@ void Arguments::set_g1_gc_flags() {
     tty->print_cr("MarkStackSize: %uk  MarkStackSizeMax: %uk",
       (unsigned int) (MarkStackSize / K), (uint) (MarkStackSizeMax / K));
     tty->print_cr("ConcGCThreads: %u", (uint) ConcGCThreads);
+  }
+
+  if (G1ParallelFullGC && 
+        (ParallelGCThreads <= 1 || UseDynamicNumberOfGCThreads)) {
+    // Disable G1ParallelFullGC
+    G1ParallelFullGC = false;
   }
 }
 
@@ -3576,6 +3587,7 @@ static bool check_endorsed_and_ext_dirs() {
       "sunpkcs11.jar",
       "ucrypto.jar",
       "zipfs.jar",
+      "tencentsm_provider.jar",
       NULL
   };
 

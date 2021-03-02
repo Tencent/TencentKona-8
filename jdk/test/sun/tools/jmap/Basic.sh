@@ -44,12 +44,24 @@ set +e
 
 failed=0
 
-# -histo[:live] option
+# -histo[:live][parallel=] option
 ${JMAP} -J-XX:+UsePerfData -histo $appJavaPid
 if [ $? != 0 ]; then failed=1; fi
 
 ${JMAP} -J-XX:+UsePerfData -histo:live $appJavaPid
 if [ $? != 0 ]; then failed=1; fi
+
+${JMAP} -J-XX:+UsePerfData -histo:live,parallel=1 $appJavaPid > ./result.txt
+if [ $? != 0 ]; then failed=1; fi
+line_num=`cat ./result.txt | grep "#instances" | wc | awk -F " " '{print $1}'`
+if [ "${line_num}" != "1" ]; then failed=1; fi
+rm ./result.txt >/dev/null 2>&1
+
+${JMAP} -J-XX:+UsePerfData -histo:live,parallel=2 $appJavaPid > ./result.txt
+if [ $? != 0 ]; then failed=1; fi
+line_num=`cat ./result.txt | grep "#instances" | wc | awk -F " " '{print $1}'`
+if [ "${line_num}" != "1" ]; then failed=1; fi
+rm ./result.txt >/dev/null 2>&1
 
 # -dump option
 DUMPFILE="java_pid${appJavaPid}.hprof"

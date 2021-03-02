@@ -363,6 +363,7 @@ class GCTaskManager : public CHeapObj<mtGC> {
  friend class RefProcTaskExecutor;
  friend class GCTaskThread;
  friend class IdleGCTask;
+ friend class GCTaskManagerWithUpdatedActiveWorkers;
 private:
   // Instance state.
   NotifyDoneClosure*        _ndc;               // Notify on completion.
@@ -780,6 +781,23 @@ private:
   }
   static GrowableArray<Monitor*>* freelist() {
     return _freelist;
+  }
+};
+
+class GCTaskManagerWithUpdatedActiveWorkers : public StackObj {
+private:
+  GCTaskManager*    _manager;
+  const uint        _old_active_workers;
+
+public:
+  GCTaskManagerWithUpdatedActiveWorkers(GCTaskManager* manager, uint requested_num_workers) :
+      _manager(manager),
+      _old_active_workers(manager->active_workers()) {
+    _manager->set_active_workers(requested_num_workers);
+  }
+
+  ~GCTaskManagerWithUpdatedActiveWorkers() {
+    _manager->set_active_workers(_old_active_workers);
   }
 };
 

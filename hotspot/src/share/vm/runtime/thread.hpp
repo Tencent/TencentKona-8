@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -700,6 +700,7 @@ class NamedThread: public Thread {
   char* _name;
   // log JavaThread being processed by oops_do
   JavaThread* _processed_thread;
+  uint _gc_id; // The current GC id when a thread takes part in GC
 
  public:
   NamedThread();
@@ -710,6 +711,37 @@ class NamedThread: public Thread {
   virtual char* name() const { return _name == NULL ? (char*)"Unknown Thread" : _name; }
   JavaThread *processed_thread() { return _processed_thread; }
   void set_processed_thread(JavaThread *thread) { _processed_thread = thread; }
+
+  // Support for parallel Mark Sweep
+  // Should be OopTaskQueue* but use void* to break the dependency cycle
+  void*                           _pms_task_queue;
+  void*                           _pms_objarray_task_queue;
+  // Should be Stack<markOop>* but use void* to break the dependency cycle
+  void*                           _pms_preserved_mark_stack;
+  // Should be Stack<oop>* but use void* to break the dependency cycle
+  void*                           _pms_preserved_oop_stack;
+  size_t                          _pms_preserved_count;
+  size_t                          _pms_preserved_count_max;
+  // Should be PreservedMark* but use void* to break the dependency cycle
+  void*                           _pms_preserved_marks;
+  // Should be Stack<Klass*>* but use void* to break the dependency cycle
+  void*                           _pms_revisit_klass_stack;
+  // Should be Stack<DataLayout*>* but use void* to break the dependency cycle
+  void*                           _pms_revisit_mdo_stack;
+
+  void reset_pms_data() {
+    _pms_task_queue = NULL;
+    _pms_objarray_task_queue = NULL;
+    _pms_preserved_mark_stack = NULL;
+    _pms_preserved_oop_stack = NULL;
+    _pms_preserved_count = 0;
+    _pms_preserved_count_max = 0;
+    _pms_preserved_marks = NULL;
+    _pms_revisit_klass_stack = NULL;
+    _pms_revisit_mdo_stack = NULL;
+  }
+  void set_gc_id(uint gc_id) { _gc_id = gc_id; }
+  uint gc_id() { return _gc_id; }
 };
 
 // Worker threads are named and have an id of an assigned work.

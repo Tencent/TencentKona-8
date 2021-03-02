@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@
 class G1CollectedHeap;
 class CMBitMap;
 class CMTask;
+class HeapRegion;
 typedef GenericTaskQueue<oop, mtGC>            CMTaskQueue;
 typedef GenericTaskQueueSet<CMTaskQueue, mtGC> CMTaskQueueSet;
 
@@ -81,6 +82,8 @@ class CMBitMapRO VALUE_OBJ_CLASS_SPEC {
            "outside underlying space?");
     return _bm.at(heapWordToOffset(addr));
   }
+
+  bool isMarked(oop obj) const { return isMarked((HeapWord*)obj);}
 
   // iteration
   inline bool iterate(BitMapClosure* cl, MemRegion mr);
@@ -148,11 +151,14 @@ class CMBitMap : public CMBitMapRO {
   // Write marks.
   inline void mark(HeapWord* addr);
   inline void clear(HeapWord* addr);
+  inline void clear(oop addr);
   inline bool parMark(HeapWord* addr);
+  inline bool parMark(oop addr);
   inline bool parClear(HeapWord* addr);
 
   void markRange(MemRegion mr);
   void clearRange(MemRegion mr);
+  void clearRange(HeapRegion* mr);
 
   // Starting at the bit corresponding to "addr" (inclusive), find the next
   // "1" bit, if any.  This bit starts some run of consecutive "1"'s; find
@@ -944,6 +950,8 @@ private:
     // the regular clock call is called once the number of visited
     // references reaches this limit
     refs_reached_period           = 1024,
+    // initial value for the hash seed, used in the work stealing code
+    init_hash_seed                = 17,
     // how many entries will be transferred between global stack and
     // local queues
     global_stack_transfer_size    = 16

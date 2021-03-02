@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2002, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -313,6 +313,11 @@ class FlexibleWorkGang: public WorkGang {
 
  protected:
   uint _active_workers;
+ private:
+  // Changed by WithUpdatedActiveWorkers, for temporary disable
+  // assertion for number of active workers. Only used for parallel
+  // heap inspection support.
+  bool _skip_worker_number_assertion;
  public:
   // Constructor and destructor.
   // Initialize active_workers to a minimum value.  Setting it to
@@ -322,23 +327,58 @@ class FlexibleWorkGang: public WorkGang {
                    bool are_GC_task_threads,
                    bool  are_ConcurrentGC_threads) :
     WorkGang(name, workers, are_GC_task_threads, are_ConcurrentGC_threads),
-    _active_workers(UseDynamicNumberOfGCThreads ? 1U : ParallelGCThreads) {}
+    _active_workers(UseDynamicNumberOfGCThreads ? 1U : ParallelGCThreads),
+    _skip_worker_number_assertion(false) {}
   // Accessors for fields
   virtual uint active_workers() const { return _active_workers; }
-  void set_active_workers(uint v) {
+  uint set_active_workers(uint v) {
     assert(v <= _total_workers,
            "Trying to set more workers active than there are");
     _active_workers = MIN2(v, _total_workers);
     assert(v != 0, "Trying to set active workers to 0");
     _active_workers = MAX2(1U, _active_workers);
-    assert(UseDynamicNumberOfGCThreads || _active_workers == _total_workers,
-           "Unless dynamic should use total workers");
+    // with WithUpdatedActiveWorkers suport, it is possible to set _active_workers <= _total_workers
+    assert(UseDynamicNumberOfGCThreads || _skip_worker_number_assertion || _active_workers == _total_workers,
+           "Unless dynamic, acitve workers should less or equal to total workers");
+    return _active_workers;
   }
   virtual void run_task(AbstractGangTask* task);
   virtual bool needs_more_workers() const {
     return _started_workers < _active_workers;
   }
+
+  void enable_worker_number_assertion() {
+   _skip_worker_number_assertion = false;
+  }
+
+  void disable_worker_number_assertion() {
+   _skip_worker_number_assertion = true;
+  }
 };
+
+// Temporarily try to set the number of active workers.
+// It's not guaranteed that it succeeds, and users need to
+// query the number of active workers.
+class WithUpdatedActiveWorkers : public StackObj {
+private:
+  FlexibleWorkGang* const _gang;
+  const uint              _old_active_workers;
+
+public:
+  WithUpdatedActiveWorkers(FlexibleWorkGang* gang, uint requested_num_workers) :
+      _gang(gang),
+      _old_active_workers(gang->active_workers()) {
+    uint capped_num_workers = MIN2(requested_num_workers, gang->total_workers());
+    _gang->disable_worker_number_assertion();
+    gang->set_active_workers(capped_num_workers);
+  }
+
+  ~WithUpdatedActiveWorkers() {
+    _gang->enable_worker_number_assertion();
+    _gang->set_active_workers(_old_active_workers);
+  }
+};
+
 
 // Work gangs in garbage collectors: 2009-06-10
 //
@@ -439,6 +479,9 @@ public:
   // must execute this.  (When the last thread does so, the task array is
   // cleared.)
   void all_tasks_completed();
+
+  // n_threads - Number of threads executing the sub-tasks.
+  void all_tasks_completed(uint n_threads);
 
   // Destructor.
   ~SubTasksDone();

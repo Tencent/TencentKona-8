@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,13 +50,20 @@ public:
   virtual void do_oop(narrowOop* p) { do_oop_work(p); }
   virtual void do_oop(      oop* p) { do_oop_work(p); }
   template <class T> void do_oop_work(T* p) {
-    assert(_from->is_in_reserved(p), "paranoia");
-    if (!_from->is_in_reserved(oopDesc::load_decode_heap_oop(p)) &&
-        !_from->is_survivor()) {
-      size_t card_index = _ct_bs->index_for(p);
-      if (_ct_bs->mark_card_deferred(card_index)) {
-        _dcq->enqueue((jbyte*)_ct_bs->byte_for_index(card_index));
-      }
+    assert(_g1->heap_region_containing(p)->is_in_reserved(p), "paranoia");
+    assert(!_g1->heap_region_containing(p)->is_survivor(), "Unexpected evac failure in survivor region");
+
+    T const o = oopDesc::load_heap_oop(p);
+    if (oopDesc::is_null(o)) {
+      return;
+    }
+
+    if (HeapRegion::is_in_same_region(p, oopDesc::decode_heap_oop(o))) {
+      return;
+    }
+    size_t card_index = _ct_bs->index_for(p);
+    if (_ct_bs->mark_card_deferred(card_index)) {
+      _dcq->enqueue((jbyte*)_ct_bs->byte_for_index(card_index));
     }
   }
 };
@@ -242,8 +249,7 @@ public:
   void work(uint worker_id) {
     RemoveSelfForwardPtrHRClosure rsfp_cl(_g1h, worker_id);
 
-    HeapRegion* hr = _g1h->start_cset_region_for_worker(worker_id);
-    _g1h->collection_set_iterate_from(hr, &rsfp_cl);
+    _g1h->collection_set_iterate_from(&rsfp_cl, worker_id);
   }
 };
 

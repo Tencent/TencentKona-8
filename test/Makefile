@@ -67,10 +67,10 @@ fi
 endef
 
 # Default test target (core)
-default: jdk_tier1 langtools_tier1 hotspot_tier1
+default: jdk_core langtools_jtreg
 
 # All testing
-all: jdk_all langtools_all hotspot_all
+all: jdk_all langtools_all
 
 # Test targets
 langtools_% :

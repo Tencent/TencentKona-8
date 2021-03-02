@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -139,13 +139,13 @@ G1CollectorPolicy::G1CollectorPolicy() :
   _survivor_cset_region_length(0),
   _old_cset_region_length(0),
 
-  _collection_set(NULL),
+  _collection_set_regions(NULL),
+  _collection_set_cur_length(0),
+  _collection_set_max_length(0),
   _collection_set_bytes_used_before(0),
 
   // Incremental CSet attributes
   _inc_cset_build_state(Inactive),
-  _inc_cset_head(NULL),
-  _inc_cset_tail(NULL),
   _inc_cset_bytes_used_before(0),
   _inc_cset_max_finger(NULL),
   _inc_cset_recorded_rs_lengths(0),
@@ -320,6 +320,13 @@ G1CollectorPolicy::G1CollectorPolicy() :
   _collectionSetChooser = new CollectionSetChooser();
 }
 
+G1CollectorPolicy::~G1CollectorPolicy() {
+  if (_collection_set_regions != NULL) {
+    FREE_C_HEAP_ARRAY(uint, _collection_set_regions, mtGC);
+  }
+  delete _collectionSetChooser;
+}
+
 void G1CollectorPolicy::initialize_alignments() {
   _space_alignment = HeapRegion::GrainBytes;
   size_t card_table_alignment = GenRemSet::max_alignment_constraint(GenRemSet::CardTable);
@@ -466,6 +473,12 @@ void G1CollectorPolicy::init() {
 // Create the jstat counters for the policy.
 void G1CollectorPolicy::initialize_gc_policy_counters() {
   _gc_policy_counters = new GCPolicyCounters("GarbageFirst", 1, 3);
+}
+
+void G1CollectorPolicy::initialize_cset(uint max_region_length) {
+  guarantee(_collection_set_regions == NULL, "Must only initialize once.");
+  _collection_set_max_length = max_region_length;
+  _collection_set_regions = NEW_C_HEAP_ARRAY(uint, max_region_length, mtGC);
 }
 
 bool G1CollectorPolicy::predict_will_fit(uint young_length,
@@ -1150,7 +1163,7 @@ void G1CollectorPolicy::record_collection_pause_end(double pause_time_ms, Evacua
     if (young_cset_region_length() > 0) {
       young_other_time_ms =
         phase_times()->young_cset_choice_time_ms() +
-        phase_times()->young_free_cset_time_ms();
+        phase_times()->average_time_ms(G1GCPhaseTimes::YoungFreeCSet);
       _young_other_cost_per_region_ms_seq->add(young_other_time_ms /
                                           (double) young_cset_region_length());
     }
@@ -1158,14 +1171,14 @@ void G1CollectorPolicy::record_collection_pause_end(double pause_time_ms, Evacua
     if (old_cset_region_length() > 0) {
       non_young_other_time_ms =
         phase_times()->non_young_cset_choice_time_ms() +
-        phase_times()->non_young_free_cset_time_ms();
+        phase_times()->average_time_ms(G1GCPhaseTimes::NonYoungFreeCSet);
 
       _non_young_other_cost_per_region_ms_seq->add(non_young_other_time_ms /
                                             (double) old_cset_region_length());
     }
 
     double constant_other_time_ms = all_other_time_ms -
-      (young_other_time_ms + non_young_other_time_ms);
+      phase_times()->total_free_cset_time_ms();
     _constant_other_time_ms_seq->add(constant_other_time_ms);
 
     double survival_ratio = 0.0;
@@ -1360,8 +1373,13 @@ G1CollectorPolicy::predict_region_elapsed_time_ms(HeapRegion* hr,
 void
 G1CollectorPolicy::init_cset_region_lengths(uint eden_cset_region_length,
                                             uint survivor_cset_region_length) {
+  assert_at_safepoint(true);
   _eden_cset_region_length     = eden_cset_region_length;
   _survivor_cset_region_length = survivor_cset_region_length;
+
+  assert(young_cset_region_length() == _collection_set_cur_length,
+         err_msg("should match %u == %u", young_cset_region_length(), _collection_set_cur_length));
+
   _old_cset_region_length      = 0;
 }
 
@@ -1663,13 +1681,16 @@ G1CollectorPolicy::record_concurrent_mark_cleanup_end(int no_of_gc_threads) {
 
 // Add the heap region at the head of the non-incremental collection set
 void G1CollectorPolicy::add_old_region_to_cset(HeapRegion* hr) {
+  assert_at_safepoint(true);
+
   assert(_inc_cset_build_state == Active, "Precondition");
   assert(hr->is_old(), "the region should be old");
 
   assert(!hr->in_collection_set(), "should not already be in the CSet");
-  hr->set_in_collection_set(true);
-  hr->set_next_in_collection_set(_collection_set);
-  _collection_set = hr;
+
+  _collection_set_regions[_collection_set_cur_length++] = hr->hrm_index();
+  assert(_collection_set_cur_length <= _collection_set_max_length, "Collection set now larger than maximum size.");
+
   _collection_set_bytes_used_before += hr->used();
   _g1->register_old_region_with_in_cset_fast_test(hr);
   size_t rs_length = hr->rem_set()->occupied();
@@ -1679,13 +1700,12 @@ void G1CollectorPolicy::add_old_region_to_cset(HeapRegion* hr) {
 
 // Initialize the per-collection-set information
 void G1CollectorPolicy::start_incremental_cset_building() {
+  assert(_collection_set_cur_length == 0, "Collection set must be empty before starting a new collection set.");
   assert(_inc_cset_build_state == Inactive, "Precondition");
 
-  _inc_cset_head = NULL;
-  _inc_cset_tail = NULL;
   _inc_cset_bytes_used_before = 0;
 
-  _inc_cset_max_finger = 0;
+  _inc_cset_max_finger = NULL;
   _inc_cset_recorded_rs_lengths = 0;
   _inc_cset_recorded_rs_lengths_diffs = 0;
   _inc_cset_predicted_elapsed_time_ms = 0.0;
@@ -1724,6 +1744,38 @@ void G1CollectorPolicy::finalize_incremental_cset_building() {
 
   _inc_cset_recorded_rs_lengths_diffs = 0;
   _inc_cset_predicted_elapsed_time_ms_diffs = 0.0;
+}
+
+void G1CollectorPolicy::clear_collection_set() {
+  assert_at_safepoint(true);
+  _collection_set_cur_length = 0;
+}
+
+void G1CollectorPolicy::iterate_cset(HeapRegionClosure* cl) const {
+  iterate_cset_from(cl, 0, 1);
+}
+
+void G1CollectorPolicy::iterate_cset_from(HeapRegionClosure* cl, uint worker_id, uint total_workers) const {
+  size_t len = _collection_set_cur_length;
+  OrderAccess::loadload();
+  if (len == 0) {
+    return;
+  }
+  size_t start_pos = (worker_id * len) / total_workers;
+  size_t cur_pos = start_pos;
+
+  do {
+    HeapRegion* r = G1CollectedHeap::heap()->region_at(_collection_set_regions[cur_pos]);
+    bool result = cl->doHeapRegion(r);
+    if (result) {
+      cl->incomplete();
+      return;
+    }
+    cur_pos++;
+    if (cur_pos == len) {
+      cur_pos = 0;
+    }
+  } while (cur_pos != start_pos);
 }
 
 void G1CollectorPolicy::add_to_incremental_cset_info(HeapRegion* hr, size_t rs_length) {
@@ -1782,10 +1834,21 @@ void G1CollectorPolicy::update_incremental_cset_info(HeapRegion* hr,
   hr->set_predicted_elapsed_time_ms(new_region_elapsed_time_ms);
 }
 
-void G1CollectorPolicy::add_region_to_incremental_cset_common(HeapRegion* hr) {
+void G1CollectorPolicy::add_young_region_common(HeapRegion* hr) {
   assert(hr->is_young(), "invariant");
-  assert(hr->young_index_in_cset() > -1, "should have already been set");
   assert(_inc_cset_build_state == Active, "Precondition");
+
+  size_t collection_set_length = _collection_set_cur_length;
+  assert(collection_set_length <= INT_MAX,
+         err_msg("Collection set is too large with %d entries", (int)collection_set_length));
+  hr->set_young_index_in_cset((int)collection_set_length);
+
+  _collection_set_regions[collection_set_length] = hr->hrm_index();
+  // Concurrent readers must observe the store of the value in the array before an
+  // update to the length field.
+  OrderAccess::storestore();
+  _collection_set_cur_length++;
+  assert(_collection_set_cur_length <= _collection_set_max_length, "Collection set larger than maximum allowed.");
 
   // We need to clear and set the cached recorded/cached collection set
   // information in the heap region here (before the region gets added
@@ -1801,62 +1864,41 @@ void G1CollectorPolicy::add_region_to_incremental_cset_common(HeapRegion* hr) {
   _inc_cset_max_finger = MAX2(_inc_cset_max_finger, hr_end);
 
   assert(!hr->in_collection_set(), "invariant");
-  hr->set_in_collection_set(true);
-  assert( hr->next_in_collection_set() == NULL, "invariant");
 
   _g1->register_young_region_with_in_cset_fast_test(hr);
 }
 
-// Add the region at the RHS of the incremental cset
-void G1CollectorPolicy::add_region_to_incremental_cset_rhs(HeapRegion* hr) {
-  // We should only ever be appending survivors at the end of a pause
-  assert(hr->is_survivor(), "Logic");
-
-  // Do the 'common' stuff
-  add_region_to_incremental_cset_common(hr);
-
-  // Now add the region at the right hand side
-  if (_inc_cset_tail == NULL) {
-    assert(_inc_cset_head == NULL, "invariant");
-    _inc_cset_head = hr;
-  } else {
-    _inc_cset_tail->set_next_in_collection_set(hr);
-  }
-  _inc_cset_tail = hr;
+void G1CollectorPolicy::add_survivor_region(HeapRegion* hr) {
+  assert(hr->is_survivor(), err_msg("Must only add survivor regions, but is %s", hr->get_type_str()));
+  add_young_region_common(hr);
 }
 
-// Add the region to the LHS of the incremental cset
-void G1CollectorPolicy::add_region_to_incremental_cset_lhs(HeapRegion* hr) {
-  // Survivors should be added to the RHS at the end of a pause
-  assert(hr->is_eden(), "Logic");
-
-  // Do the 'common' stuff
-  add_region_to_incremental_cset_common(hr);
-
-  // Add the region at the left hand side
-  hr->set_next_in_collection_set(_inc_cset_head);
-  if (_inc_cset_head == NULL) {
-    assert(_inc_cset_tail == NULL, "Invariant");
-    _inc_cset_tail = hr;
-  }
-  _inc_cset_head = hr;
+void G1CollectorPolicy::add_eden_region(HeapRegion* hr) {
+  assert(hr->is_eden(), err_msg("Must only add eden regions, but is %s", hr->get_type_str()));
+  add_young_region_common(hr);
 }
 
 #ifndef PRODUCT
-void G1CollectorPolicy::print_collection_set(HeapRegion* list_head, outputStream* st) {
-  assert(list_head == inc_cset_head() || list_head == collection_set(), "must be");
+class G1PrintCollectionSetClosure : public HeapRegionClosure {
+  outputStream* _st;
+public:
+  G1PrintCollectionSetClosure(outputStream* st) : HeapRegionClosure(), _st(st) { }
 
-  st->print_cr("\nCollection_set:");
-  HeapRegion* csr = list_head;
-  while (csr != NULL) {
-    HeapRegion* next = csr->next_in_collection_set();
-    assert(csr->in_collection_set(), "bad CS");
-    st->print_cr("  " HR_FORMAT ", P: " PTR_FORMAT "N: " PTR_FORMAT ", age: %4d",
-                 HR_FORMAT_PARAMS(csr),
-                 csr->prev_top_at_mark_start(), csr->next_top_at_mark_start(),
-                 csr->age_in_surv_rate_group_cond());
-    csr = next;
+  virtual bool doHeapRegion(HeapRegion* r) {
+    assert(r->in_collection_set(), err_msg("Region %u should be in collection set", r->hrm_index()));
+    _st->print_cr("  " HR_FORMAT ", P: " PTR_FORMAT ", N: " PTR_FORMAT ", age: %4d",
+                  HR_FORMAT_PARAMS(r),
+                  r->prev_top_at_mark_start(), r->next_top_at_mark_start(),
+                  r->age_in_surv_rate_group_cond());
+    return false;
   }
+};
+
+void G1CollectorPolicy::print_collection_set(outputStream* st) {
+  st->print_cr("\nCollection_set:");
+
+  G1PrintCollectionSetClosure cl(st);
+  iterate_cset(&cl);
 }
 #endif // !PRODUCT
 
@@ -1955,7 +1997,6 @@ void G1CollectorPolicy::finalize_cset(double target_pause_time_ms, EvacuationInf
   guarantee(target_pause_time_ms > 0.0,
             err_msg("target_pause_time_ms = %1.6lf should be positive",
                     target_pause_time_ms));
-  guarantee(_collection_set == NULL, "Precondition");
 
   double base_time_ms = predict_base_elapsed_time_ms(_pending_cards);
   double predicted_pause_time_ms = base_time_ms;
@@ -1996,10 +2037,11 @@ void G1CollectorPolicy::finalize_cset(double target_pause_time_ms, EvacuationInf
     hr = hr->get_next_young_region();
   }
 
+  verify_young_cset_indices();
+
   // Clear the fields that point to the survivor list - they are all young now.
   young_list->clear_survivors();
 
-  _collection_set = _inc_cset_head;
   _collection_set_bytes_used_before = _inc_cset_bytes_used_before;
   time_remaining_ms = MAX2(time_remaining_ms - _inc_cset_predicted_elapsed_time_ms, 0.0);
   predicted_pause_time_ms += _inc_cset_predicted_elapsed_time_ms;
@@ -2158,6 +2200,48 @@ void G1CollectorPolicy::finalize_cset(double target_pause_time_ms, EvacuationInf
   phase_times()->record_non_young_cset_choice_time_ms((non_young_end_time_sec - non_young_start_time_sec) * 1000.0);
   evacuation_info.set_collectionset_regions(cset_region_length());
 }
+
+#ifdef ASSERT
+class G1VerifyYoungCSetIndicesClosure : public HeapRegionClosure {
+private:
+  size_t _young_length;
+  int* _heap_region_indices;
+public:
+  G1VerifyYoungCSetIndicesClosure(size_t young_length) : HeapRegionClosure(), _young_length(young_length) {
+    _heap_region_indices = NEW_C_HEAP_ARRAY(int, young_length, mtGC);
+    for (size_t i = 0; i < young_length; i++) {
+      _heap_region_indices[i] = -1;
+    }
+  }
+  ~G1VerifyYoungCSetIndicesClosure() {
+    FREE_C_HEAP_ARRAY(int, _heap_region_indices, mtGC);
+  }
+
+  virtual bool doHeapRegion(HeapRegion* r) {
+    const int idx = r->young_index_in_cset();
+
+    assert(idx > -1,
+           err_msg("Young index must be set for all regions in the incremental collection set but is not for region %u.",
+                   r->hrm_index()));
+    assert((size_t)idx < _young_length, err_msg("Young cset index too large for region %u", r->hrm_index()));
+
+    assert(_heap_region_indices[idx] == -1,
+           err_msg("Index %d used by multiple regions, first use by region %u, second by region %u",
+           idx, _heap_region_indices[idx], r->hrm_index()));
+
+    _heap_region_indices[idx] = r->hrm_index();
+
+    return false;
+  }
+};
+
+void G1CollectorPolicy::verify_young_cset_indices() const {
+  assert_at_safepoint(true);
+
+  G1VerifyYoungCSetIndicesClosure cl(_collection_set_cur_length);
+  iterate_cset(&cl);
+}
+#endif
 
 void TraceGen0TimeData::record_start_collection(double time_to_stop_the_world_ms) {
   if(TraceGen0Time) {

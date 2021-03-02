@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,11 +28,13 @@
 #include "gc_implementation/g1/g1BiasedArray.hpp"
 #include "gc_implementation/g1/g1RegionToSpaceMapper.hpp"
 #include "gc_implementation/g1/heapRegionSet.hpp"
+#include "gc_implementation/g1/heapRegionManager.hpp"
 #include "services/memoryUsage.hpp"
 
 class HeapRegion;
 class HeapRegionClosure;
 class FreeRegionList;
+class HeapRegionClaimer;
 
 class G1HeapRegionTable : public G1BiasedMappedArray<HeapRegion*> {
  protected:
@@ -199,6 +201,10 @@ public:
   // Return the number of regions that have been committed in the heap.
   uint length() const { return _num_committed; }
 
+  uint allocated_heapregions_length () {
+     return _allocated_heapregions_length;
+  }
+
   // Return the maximum number of regions in the heap.
   uint max_length() const { return (uint)_regions.length(); }
 
@@ -230,7 +236,11 @@ public:
   // terminating the iteration early if doHeapRegion() returns true.
   void iterate(HeapRegionClosure* blk) const;
 
+  void par_fullgc_iterate(HeapRegionClosure* blk, HeapRegionClaimer* hrclaimer, const uint start_index) const;
+
   void par_iterate(HeapRegionClosure* blk, uint worker_id, uint no_of_par_workers, jint claim_value) const;
+
+  void par_iterate(HeapRegionClosure* blk, HeapRegionClaimer* hrclaimer, const uint start_index) const;
 
   // Uncommit up to num_regions_to_remove regions that are completely free.
   // Return the actual number of uncommitted regions.
@@ -240,6 +250,34 @@ public:
 
   // Do some sanity checking.
   void verify_optional() PRODUCT_RETURN;
+};
+
+// The HeapRegionClaimer is used during parallel iteration over heap regions,
+// allowing workers to claim heap regions, gaining exclusive rights to these regions.
+class HeapRegionClaimer : public StackObj {
+  uint           _n_workers;
+  uint           _n_regions;
+  volatile uint* _claims;
+
+  static const uint Unclaimed = 0;
+  static const uint Claimed   = 1;
+
+ public:
+  HeapRegionClaimer(uint n_workers);
+  ~HeapRegionClaimer();
+
+  inline uint n_regions() const {
+    return _n_regions;
+  }
+
+  // Return a start offset given a worker id.
+  uint offset_for_worker(uint worker_id) const;
+
+  // Check if region has been claimed with this HRClaimer.
+  bool is_region_claimed(uint region_index) const;
+
+  // Claim the given region, returns true if successfully claimed.
+  bool claim_region(uint region_index);
 };
 
 #endif // SHARE_VM_GC_IMPLEMENTATION_G1_HEAPREGIONMANAGER_HPP

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -258,9 +258,9 @@ private:
   void init_cset_region_lengths(uint eden_cset_region_length,
                                 uint survivor_cset_region_length);
 
-  uint eden_cset_region_length()     { return _eden_cset_region_length;     }
-  uint survivor_cset_region_length() { return _survivor_cset_region_length; }
-  uint old_cset_region_length()      { return _old_cset_region_length;      }
+  uint eden_cset_region_length()     const { return _eden_cset_region_length;     }
+  uint survivor_cset_region_length() const { return _survivor_cset_region_length; }
+  uint old_cset_region_length()      const { return _old_cset_region_length;      }
 
   uint _free_regions_at_end_of_collection;
 
@@ -303,16 +303,14 @@ private:
 public:
   // Accessors
 
-  void set_region_eden(HeapRegion* hr, int young_index_in_cset) {
+  void set_region_eden(HeapRegion* hr) {
     hr->set_eden();
     hr->install_surv_rate_group(_short_lived_surv_rate_group);
-    hr->set_young_index_in_cset(young_index_in_cset);
   }
 
-  void set_region_survivor(HeapRegion* hr, int young_index_in_cset) {
+  void set_region_survivor(HeapRegion* hr) {
     assert(hr->is_survivor(), "pre-condition");
     hr->install_surv_rate_group(_survivor_surv_rate_group);
-    hr->set_young_index_in_cset(young_index_in_cset);
   }
 
 #ifndef PRODUCT
@@ -424,9 +422,9 @@ public:
 
   void set_recorded_rs_lengths(size_t rs_lengths);
 
-  uint cset_region_length()       { return young_cset_region_length() +
+  uint cset_region_length()       const { return young_cset_region_length() +
                                            old_cset_region_length(); }
-  uint young_cset_region_length() { return eden_cset_region_length() +
+  uint young_cset_region_length() const { return eden_cset_region_length() +
                                            survivor_cset_region_length(); }
 
   double predict_survivor_regions_evac_time();
@@ -482,10 +480,15 @@ private:
   // Add a new GC of the given duration and end time to the record.
   void update_recent_gc_times(double end_time_sec, double elapsed_ms);
 
-  // The head of the list (via "next_in_collection_set()") representing the
-  // current collection set. Set from the incrementally built collection
-  // set at the start of the pause.
-  HeapRegion* _collection_set;
+  // The actual collection set as a set of region indices.
+  // All entries in _collection_set_regions below _collection_set_cur_length are
+  // assumed to be valid entries.
+  // We assume that at any time there is at most only one writer and (one or more)
+  // concurrent readers. This means we are good with using storestore and loadload
+  // barriers on the writer and reader respectively only.
+  uint* _collection_set_regions;
+  volatile size_t _collection_set_cur_length;
+  size_t _collection_set_max_length;
 
   // The number of bytes in the collection set before the pause. Set from
   // the incrementally built collection set at the start of an evacuation
@@ -506,12 +509,6 @@ private:
   };
 
   CSetBuildType _inc_cset_build_state;
-
-  // The head of the incrementally built collection set.
-  HeapRegion* _inc_cset_head;
-
-  // The tail of the incrementally built collection set.
-  HeapRegion* _inc_cset_tail;
 
   // The number of bytes in the incrementally built collection set.
   // Used to set _collection_set_bytes_used_before at the start of
@@ -637,9 +634,12 @@ private:
   // as a percentage of the current heap capacity.
   double reclaimable_bytes_perc(size_t reclaimable_bytes);
 
+  void verify_young_cset_indices() const NOT_DEBUG_RETURN;
 public:
 
   G1CollectorPolicy();
+
+  virtual ~G1CollectorPolicy();
 
   virtual G1CollectorPolicy* as_g1_policy() { return this; }
 
@@ -661,6 +661,9 @@ public:
 
   // Create jstat counters for the policy.
   virtual void initialize_gc_policy_counters();
+
+  // Initializes the collection set giving the maximum possible length of the collection set.
+  void initialize_cset(uint max_region_length);
 
   virtual HeapWord* mem_allocate_work(size_t size,
                                       bool is_tlab,
@@ -728,22 +731,13 @@ public:
   // the collection set are available via access methods.
   void finalize_cset(double target_pause_time_ms, EvacuationInfo& evacuation_info);
 
-  // The head of the list (via "next_in_collection_set()") representing the
-  // current collection set.
-  HeapRegion* collection_set() { return _collection_set; }
-
-  void clear_collection_set() { _collection_set = NULL; }
+  // Reset the contents of the collection set.
+  void clear_collection_set();
 
   // Add old region "hr" to the CSet.
   void add_old_region_to_cset(HeapRegion* hr);
 
   // Incremental CSet Support
-
-  // The head of the incrementally built collection set.
-  HeapRegion* inc_cset_head() { return _inc_cset_head; }
-
-  // The tail of the incrementally built collection set.
-  HeapRegion* inc_set_tail() { return _inc_cset_tail; }
 
   // Initialize incremental collection set info.
   void start_incremental_cset_building();
@@ -752,10 +746,15 @@ public:
   // before we can use them.
   void finalize_incremental_cset_building();
 
-  void clear_incremental_cset() {
-    _inc_cset_head = NULL;
-    _inc_cset_tail = NULL;
-  }
+  // Iterate over the collection set, applying the given HeapRegionClosure on all of them.
+  // If may_be_aborted is true, iteration may be aborted using the return value of the
+  // called closure method.
+  void iterate_cset(HeapRegionClosure* cl) const;
+
+  // Iterate over the collection set, applying the given HeapRegionClosure on all of them,
+  // trying to optimally spread out starting position of total_workers workers given the
+  // caller's worker_id.
+  void iterate_cset_from(HeapRegionClosure* cl, uint worker_id, uint total_workers) const;
 
   // Stop adding regions to the incremental collection set
   void stop_incremental_cset_building() { _inc_cset_build_state = Inactive; }
@@ -769,19 +768,19 @@ public:
   void update_incremental_cset_info(HeapRegion* hr, size_t new_rs_length);
 
 private:
-  // Update the incremental cset information when adding a region
+  // Update the incremental collection set information when adding a region.
   // (should not be called directly).
-  void add_region_to_incremental_cset_common(HeapRegion* hr);
+  void add_young_region_common(HeapRegion* hr);
 
 public:
-  // Add hr to the LHS of the incremental collection set.
-  void add_region_to_incremental_cset_lhs(HeapRegion* hr);
+  // Add eden region to the collection set.
+  void add_eden_region(HeapRegion* hr);
 
-  // Add hr to the RHS of the incremental collection set.
-  void add_region_to_incremental_cset_rhs(HeapRegion* hr);
+  // Add survivor region to the collection set.
+  void add_survivor_region(HeapRegion* hr);
 
 #ifndef PRODUCT
-  void print_collection_set(HeapRegion* list_head, outputStream* st);
+  void print_collection_set(outputStream* st);
 #endif // !PRODUCT
 
   bool initiate_conc_mark_if_possible()       { return _initiate_conc_mark_if_possible;  }
@@ -883,6 +882,7 @@ public:
 
   static const uint REGIONS_UNLIMITED = (uint) -1;
 
+  uint max_survivor_regions () const { return _max_survivor_regions;}
   uint max_regions(InCSetState dest) {
     switch (dest.value()) {
       case InCSetState::Young:

@@ -255,9 +255,9 @@ DEFAULT_TESTDIRS = .
 TESTDIRS = $(DEFAULT_TESTDIRS)
 
 # Root of all test results
-TEST_OUTPUT_DIR = $(TEST_ROOT)/../build
+TEST_OUTPUT_DIR = $(TEST_ROOT)/../build/$(PLATFORM)-$(ARCH)/test/langtools
 ifdef ALT_OUTPUTDIR
-  ABS_OUTPUTDIR := $(shell cd $(ALT_OUTPUTDIR) && pwd $(CYGPATH))/$(PLATFORM)-$(ARCH)
+  ABS_OUTPUTDIR := $(shell cd $(ALT_OUTPUTDIR) && pwd $(CYGPATH))
 else
   ABS_OUTPUTDIR := $(shell mkdir -p $(TEST_OUTPUT_DIR); cd $(TEST_OUTPUT_DIR) && pwd $(CYGPATH))
 endif
@@ -266,6 +266,23 @@ ABS_TEST_OUTPUT_DIR := $(ABS_OUTPUTDIR)/testoutput/$(UNIQUE_DIR)
 JTREG_OUTPUT_DIR = $(ABS_OUTPUTDIR)/jtreg
 JCK_COMPILER_OUTPUT_DIR = $(ABS_OUTPUTDIR)/jck-compiler
 JCK_RUNTIME_OUTPUT_DIR = $(ABS_OUTPUTDIR)/jck-runtime-Xcompile
+
+# Problematic tests to be excluded
+PROBLEM_LISTS=$(call MixedDirs,$(wildcard ProblemList.txt closed/ProblemList.txt))
+
+# # Create exclude list for this platform and arch
+ifdef NO_EXCLUDES
+  JTREG_EXCLUSIONS =
+else
+  ifeq ($(JTREG_EXCLUSIONS),)
+	JTREG_EXCLUSIONS = $(PROBLEM_LISTS:%=-exclude:%)
+  endif
+endif
+
+# convert list of directories to dos paths
+define MixedDirs
+  $(foreach i,$1,$(shell $(GETMIXEDPATH) "${i}"))
+endef
 
 # Default make rule -- warning, may take a while
 all: $(JPRT_CLEAN) jtreg-tests jck-compiler-tests jck-runtime-tests $(JPRT_ARCHIVE_BUNDLE) all-summary
@@ -546,23 +563,6 @@ BUNDLE_UP_AND_EXIT = \
   $(ZIP_UP_RESULTS) ; \
   $(TESTEXIT) \
 )
-
-# Problematic tests to be excluded
-PROBLEM_LISTS=$(call MixedDirs,$(wildcard ProblemList.txt closed/ProblemList.txt))
-
-# # Create exclude list for this platform and arch
-ifdef NO_EXCLUDES
-  JTREG_EXCLUSIONS =
-else
-  ifeq ($(JTREG_EXCLUSIONS),)
-	JTREG_EXCLUSIONS = $(PROBLEM_LISTS:%=-exclude:%)
-  endif
-endif
-
-# convert list of directories to dos paths
-define MixedDirs
-  $(foreach i,$1,$(shell $(GETMIXEDPATH) "${i}"))
-endef
 
 prep-tier1:
 	@$(MKDIR) -p $(ABS_TEST_OUTPUT_DIR)

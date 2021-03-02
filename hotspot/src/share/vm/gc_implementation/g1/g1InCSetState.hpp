@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 #define SHARE_VM_GC_IMPLEMENTATION_G1_G1INCSETSTATE_HPP
 
 #include "gc_implementation/g1/g1BiasedArray.hpp"
+#include "gc_implementation/g1/heapRegion.hpp"
 #include "memory/allocation.hpp"
 
 // Per-region state during garbage collection.
@@ -125,8 +126,10 @@ class G1InCSetStateFastTestBiasedMappedArray : public G1BiasedMappedArray<InCSet
 
   bool is_in_cset_or_humongous(HeapWord* addr) const { return at(addr).is_in_cset_or_humongous(); }
   bool is_in_cset(HeapWord* addr) const { return at(addr).is_in_cset(); }
+  bool is_in_cset(const HeapRegion* hr) const { return get_by_index(hr->hrm_index()).is_in_cset(); }
   InCSetState at(HeapWord* addr) const { return get_by_address(addr); }
   void clear() { G1BiasedMappedArray<InCSetState>::clear(); }
+  void clear(const HeapRegion* hr) { return set_by_index(hr->hrm_index(), InCSetState::NotInCSet); }
 };
 
 #endif // SHARE_VM_GC_IMPLEMENTATION_G1_G1INCSETSTATE_HPP

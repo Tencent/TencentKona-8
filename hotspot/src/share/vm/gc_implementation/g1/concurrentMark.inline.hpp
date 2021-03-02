@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -211,9 +211,16 @@ inline void CMBitMap::clear(HeapWord* addr) {
   _bm.clear_bit(heapWordToOffset(addr));
 }
 
+inline void CMBitMap::clear(oop obj) {
+   return clear((HeapWord*)obj);
+}
+
 inline bool CMBitMap::parMark(HeapWord* addr) {
   check_mark(addr);
   return _bm.par_set_bit(heapWordToOffset(addr));
+}
+inline bool CMBitMap::parMark(oop obj) {
+   return parMark((HeapWord*)obj);
 }
 
 inline bool CMBitMap::parClear(HeapWord* addr) {

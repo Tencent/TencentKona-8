@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -203,6 +203,13 @@ void CMBitMap::clearRange(MemRegion mr) {
   // convert address range into offset range
   _bm.at_put_range(heapWordToOffset(mr.start()),
                    heapWordToOffset(mr.end()), false);
+}
+
+void CMBitMap::clearRange(HeapRegion* region) {
+  if (!region->is_empty()) {
+    MemRegion mr(region->bottom(), region->top());
+    clearRange(mr);
+  }
 }
 
 MemRegion CMBitMap::getAndClearMarkedRegion(HeapWord* addr,
@@ -1880,10 +1887,10 @@ public:
       if (hr->isHumongous()) {
         assert(hr->startsHumongous(), "we should only see starts humongous");
         _humongous_regions_removed.increment(1u, hr->capacity());
-        _g1->free_humongous_region(hr, _local_cleanup_list, true);
+        _g1->free_humongous_region(hr, _local_cleanup_list, true /* skip_remset */);
       } else {
         _old_regions_removed.increment(1u, hr->capacity());
-        _g1->free_region(hr, _local_cleanup_list, true);
+        _g1->free_region(hr, _local_cleanup_list, true /* skip_remset */);
       }
     } else {
       hr->rem_set()->do_cleanup_work(_hrrs_cleanup_task);

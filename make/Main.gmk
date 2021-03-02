@@ -35,6 +35,7 @@ include $(SRC_ROOT)/make/common/MakeBase.gmk
 -include $(CUSTOM_MAKE_DIR)/Main.gmk
 
 ### Clean up from previous run
+
 # Remove any build.log from a previous run, if they exist
 ifneq (,$(BUILD_LOG))
   ifneq (,$(BUILD_LOG_PREVIOUS))
@@ -58,9 +59,6 @@ $(eval $(call ResetAllTimers))
 # Setup number of jobs to use. -jN is unfortunately not available for us to parse from the command line,
 # hence this workaround.
 MAKE_ARGS:=$(MAKE_ARGS) -j$(JOBS)
-
-# Add support for default test
-TEST?="default"
 
 ### Main targets
 
@@ -163,6 +161,12 @@ docs-only: start-make
 	@($(CD) $(SRC_ROOT)/make && $(BUILD_LOG_WRAPPER) $(MAKE) $(MAKE_ARGS) -f Javadoc.gmk docs)
 	@$(call TargetExit)
 
+docs-zip: docs docs-zip-only
+docs-zip-only: start-make
+	@$(call TargetEnter)
+	@($(CD) $(SRC_ROOT)/make && $(BUILD_LOG_WRAPPER) $(MAKE) $(MAKE_ARGS) -f Javadoc.gmk docs-zip)
+	@$(call TargetExit)
+
 sign-jars: jdk sign-jars-only
 sign-jars-only: start-make
 	@$(call TargetEnter)
@@ -237,6 +241,8 @@ clean-bootcycle-build:
 clean-docs:
 	$(call CleanComponent,docs)
 	$(call CleanComponent,docstemp)
+clean-docs-zip:
+	$(call CleanComponent,bundles/jdk-*-docs.zip)
 clean-test:
 	$(call CleanComponent,testoutput)
 	
@@ -248,10 +254,10 @@ reconfigure:
         endif
 	@( cd $(OUTPUT_ROOT) && $(BASH) $(TOPDIR)/configure $(CONFIGURE_COMMAND_LINE) )
 
-.PHONY: langtools corba jaxp jaxws hotspot jdk nashorn images overlay-images install test docs
-.PHONY: langtools-only corba-only jaxp-only jaxws-only hotspot-only jdk-only nashorn-only images-only overlay-images-only install-only test-only docs-only
+.PHONY: langtools corba jaxp jaxws hotspot jdk nashorn images overlay-images install test docs docs-zip
+.PHONY: langtools-only corba-only jaxp-only jaxws-only hotspot-only jdk-only nashorn-only images-only overlay-images-only install-only test-only docs-only docs-zip-only
 .PHONY: default all clean dist-clean bootcycle-images start-make
-.PHONY: clean-langtools clean-corba clean-jaxp clean-jaxws clean-hotspot clean-jdk clean-nashorn clean-images clean-docs clean-test clean-overlay-images clean-bootcycle-build
+.PHONY: clean-langtools clean-corba clean-jaxp clean-jaxws clean-hotspot clean-jdk clean-nashorn clean-images clean-docs clean-docs-zip clean-test clean-overlay-images clean-bootcycle-build
 .PHONY: profiles profiles-only
 
 include $(root_dir)/make/Jprt.gmk

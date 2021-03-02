@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@
 #include "gc_implementation/g1/g1RemSet.hpp"
 #include "gc_implementation/shared/ageTable.hpp"
 #include "memory/allocation.hpp"
+#include "utilities/ticks.hpp"
 #include "oops/oop.hpp"
 
 class HeapRegion;
@@ -58,6 +59,12 @@ class G1ParScanThreadState : public CHeapObj<mtGC> {
   size_t            _undo_waste;
 
   uint _queue_num;
+
+  // Upper and lower threshold to start and end work queue draining.
+  uint const _stack_trim_upper_threshold;
+  uint const _stack_trim_lower_threshold;
+
+  Tickspan _trim_ticks;
 
   // Map from young-age-index (0 == not young, 1 is youngest) to
   // surviving words. base is what we get back from the malloc call
@@ -132,6 +139,11 @@ class G1ParScanThreadState : public CHeapObj<mtGC> {
     return ((uintptr_t)ref & G1_PARTIAL_ARRAY_MASK) == G1_PARTIAL_ARRAY_MASK;
   }
 
+  inline bool needs_partial_trimming() const;
+  inline bool is_partially_trimmed() const;
+
+  inline void trim_queue_to_threshold(uint threshold);
+
   // We never encode partial array oops as narrowOop*, so return false immediately.
   // This allows the compiler to create optimized code when popping references from
   // the work queue.
@@ -182,6 +194,8 @@ class G1ParScanThreadState : public CHeapObj<mtGC> {
   oop copy_to_survivor_space(InCSetState const state, oop const obj, markOop const old_mark);
 
   void trim_queue();
+
+  void trim_queue_partially();
 
   inline void steal_and_trim_queue(RefToScanQueueSet *task_queues);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,10 +53,6 @@ HeapRegionDCTOC::HeapRegionDCTOC(G1CollectedHeap* g1,
                                  CardTableModRefBS::PrecisionStyle precision) :
   DirtyCardToOopClosure(hr, cl, precision, NULL),
   _hr(hr), _rs_scan(cl), _g1(g1) { }
-
-FilterOutOfRegionClosure::FilterOutOfRegionClosure(HeapRegion* r,
-                                                   OopClosure* oc) :
-  _r_bottom(r->bottom()), _r_end(r->end()), _oc(oc) { }
 
 void HeapRegionDCTOC::walk_mem_region(MemRegion mr,
                                       HeapWord* bottom,
@@ -157,13 +153,11 @@ void HeapRegion::reset_after_compaction() {
   init_top_at_mark_start();
 }
 
-void HeapRegion::hr_clear(bool par, bool clear_space, bool locked) {
+void HeapRegion::hr_clear(bool keep_remset, bool clear_space, bool locked) {
   assert(_humongous_start_region == NULL,
          "we should have already filtered out humongous regions");
   assert(_end == _orig_end,
          "we should have already filtered out humongous regions");
-
-  _in_collection_set = false;
 
   set_allocation_context(AllocationContext::system());
   set_young_index_in_cset(-1);
@@ -171,13 +165,11 @@ void HeapRegion::hr_clear(bool par, bool clear_space, bool locked) {
   set_free();
   reset_pre_dummy_top();
 
-  if (!par) {
-    // If this is parallel, this will be done later.
-    HeapRegionRemSet* hrrs = rem_set();
+  if (!keep_remset) {
     if (locked) {
-      hrrs->clear_locked();
+      rem_set()->clear_locked();
     } else {
-      hrrs->clear();
+      rem_set()->clear();
     }
     _claimed = InitialClaimValue;
   }
@@ -186,6 +178,14 @@ void HeapRegion::hr_clear(bool par, bool clear_space, bool locked) {
   _offsets.resize(HeapRegion::GrainWords);
   init_top_at_mark_start();
   if (clear_space) clear(SpaceDecorator::Mangle);
+}
+
+void HeapRegion::reset_hr() {
+  HeapRegionRemSet* hrrs = rem_set();
+  hrrs->clear();
+  CardTableModRefBS* ct_bs =
+                   (CardTableModRefBS*)G1CollectedHeap::heap()->barrier_set();
+  ct_bs->clear(MemRegion(bottom(), end()));
 }
 
 void HeapRegion::par_clear() {
@@ -301,8 +301,7 @@ HeapRegion::HeapRegion(uint hrm_index,
     _hrm_index(hrm_index),
     _allocation_context(AllocationContext::system()),
     _humongous_start_region(NULL),
-    _in_collection_set(false),
-    _next_in_special_set(NULL), _orig_end(NULL),
+    _orig_end(NULL),
     _claimed(InitialClaimValue), _evacuation_failed(false),
     _prev_marked_bytes(0), _next_marked_bytes(0), _gc_efficiency(0.0),
     _next_young_region(NULL),
@@ -411,7 +410,7 @@ HeapRegion::object_iterate_mem_careful(MemRegion mr,
 // special handling for concurrent processing encountering an
 // in-progress allocation.
 static bool do_oops_on_card_in_humongous(MemRegion mr,
-                                         FilterOutOfRegionClosure* cl,
+                                         G1UpdateRSOrPushRefOopClosure* cl,
                                          HeapRegion* hr,
                                          G1CollectedHeap* g1h) {
   assert(hr->isHumongous(), "precondition");
@@ -451,7 +450,7 @@ static bool do_oops_on_card_in_humongous(MemRegion mr,
 }
 
 bool HeapRegion::oops_on_card_seq_iterate_careful(MemRegion mr,
-                                                  FilterOutOfRegionClosure* cl) {
+                                                  G1UpdateRSOrPushRefOopClosure* cl) {
   assert(MemRegion(bottom(), end()).contains(mr), "Card region not in heap region");
   G1CollectedHeap* g1h = G1CollectedHeap::heap();
 
@@ -842,6 +841,21 @@ public:
       }
     }
   }
+};
+
+// Closure that applies the given two closures in sequence.
+class G1Mux2Closure : public OopClosure {
+  OopClosure* _c1;
+  OopClosure* _c2;
+public:
+  G1Mux2Closure(OopClosure *c1, OopClosure *c2) { _c1 = c1; _c2 = c2; }
+  template <class T> inline void do_oop_work(T* p) {
+    // Apply first closure; then apply the second.
+    _c1->do_oop(p);
+    _c2->do_oop(p);
+  }
+  virtual inline void do_oop(oop* p) { do_oop_work(p); }
+  virtual inline void do_oop(narrowOop* p) { do_oop_work(p); }
 };
 
 // This really ought to be commoned up into OffsetTableContigSpace somehow.

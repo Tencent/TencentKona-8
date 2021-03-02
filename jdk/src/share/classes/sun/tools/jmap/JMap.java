@@ -46,6 +46,7 @@ public class JMap {
     // Options handled by the attach mechanism
     private static String HISTO_OPTION = "-histo";
     private static String LIVE_HISTO_OPTION = "-histo:live";
+    private static String HISTO_OPTIONS = "-histo:";
     private static String DUMP_OPTION_PREFIX = "-dump:";
 
     // These options imply the use of a SA tool
@@ -138,6 +139,27 @@ public class JMap {
                 histo(pid, false);
             } else if (option.equals(LIVE_HISTO_OPTION)) {
                 histo(pid, true);
+            } else if (option.startsWith(HISTO_OPTIONS)) {
+                String options = option.substring(HISTO_OPTIONS.length());
+                String subopts[] = options.split(",");
+                boolean live = false;
+                String parallel = null;
+                for (int i = 0; i < subopts.length; i++) {
+                    String subopt = subopts[i];
+                     if (subopt.equals("live")) {
+                         live = true;
+                     } else if (subopt.startsWith("parallel=")) {
+                         parallel = subopt.substring("parallel=".length());
+                         if (parallel == null) {
+                             System.err.println("Fail: no number provided in option: '" + subopt + "'");
+                             usage(1);
+                         }
+                     } else {
+                         System.err.println("Fail: invalid option: '" + subopt + "'");
+                         usage(1);
+                     }
+                }
+                histo(pid, live, parallel);
             } else if (option.startsWith(DUMP_OPTION_PREFIX)) {
                 dump(pid, option);
             } else {
@@ -224,7 +246,12 @@ public class JMap {
             heapHisto(live ? LIVE_OBJECTS_OPTION : ALL_OBJECTS_OPTION);
         drain(vm, in);
     }
-
+    private static void histo(String pid, boolean live, String parallel) throws IOException {
+        VirtualMachine vm = attach(pid);
+        InputStream in = ((HotSpotVirtualMachine)vm).
+            heapHisto(live ? LIVE_OBJECTS_OPTION : ALL_OBJECTS_OPTION, parallel);
+        drain(vm, in);
+    }
     private static void dump(String pid, String options) throws IOException {
         // parse the options to get the dump filename
         String filename = parseDumpOptions(options);
@@ -358,8 +385,11 @@ public class JMap {
             System.err.println("where <option> is one of:");
             System.err.println("    <none>               to print same info as Solaris pmap");
             System.err.println("    -heap                to print java heap summary");
-            System.err.println("    -histo[:live]        to print histogram of java object heap; if the \"live\"");
-            System.err.println("                         suboption is specified, only count live objects");
+            System.err.println("    -histo[:[<options>]] to print histogram of java object heap");
+            System.err.println("                         options:");
+            System.err.println("                         live           only count live objects");
+            System.err.println("                         parallel=<N>   work with N parallel threads");
+            System.err.println("                         parallel=0     predefined number of threads will be used");
             System.err.println("    -clstats             to print class loader statistics");
             System.err.println("    -finalizerinfo       to print information on objects awaiting finalization");
             System.err.println("    -dump:<dump-options> to dump java heap in hprof binary format");
