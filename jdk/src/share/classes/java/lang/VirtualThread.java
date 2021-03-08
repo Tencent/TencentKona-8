@@ -119,6 +119,7 @@ class VirtualThread extends Thread {
     private volatile ReentrantLock lock;   // created lazily
     private Condition condition;           // created lazily while holding lock
     private final boolean isThreadPoolExecutor;
+    private final boolean schedulerHookParkCarrier;
 
    /**
      * Add a user defined callback function when continuation try to yield
@@ -215,6 +216,7 @@ class VirtualThread extends Thread {
         this.scheduler = scheduler;
         this.vtTarget = task;
         this.isThreadPoolExecutor = (scheduler == null) ? false : (scheduler instanceof ThreadPoolExecutor);
+        this.schedulerHookParkCarrier = (scheduler == null) ? false : (scheduler instanceof VTParkCarrierAction);
         this.cont = new VTContinuation(VTHREAD_SCOPE, target);
         this.runContinuation = /*(scheduler != null)
                 ? new Runner(this)
@@ -433,13 +435,20 @@ class VirtualThread extends Thread {
 
             if (parkPermit == PARK_PERMIT_FALSE) {
                 // wait to be unparked or interrupted
+                if (schedulerHookParkCarrier) {
+                    ((VTParkCarrierAction)scheduler).beforePark();
+                }
                 getCondition().await();
             }
         } catch (InterruptedException e) {
             awaitInterrupted = true;
         } finally {
             lock.unlock();
-
+            // after unlock avoid deadlock if other thread is trying
+            // unpark current VT
+            if (schedulerHookParkCarrier) {
+                ((VTParkCarrierAction)scheduler).afterPark();
+            }
             // continue running on the carrier thread
             assert state == PINNED;
             setState(RUNNING);
