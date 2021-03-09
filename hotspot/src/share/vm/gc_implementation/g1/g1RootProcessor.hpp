@@ -28,6 +28,7 @@
 #include "memory/allocation.hpp"
 #include "memory/sharedHeap.hpp"
 #include "runtime/mutex.hpp"
+#include "gc_implementation/g1/g1ParScanThreadState.hpp"
 
 class CLDClosure;
 class CodeBlobClosure;
@@ -110,7 +111,8 @@ public:
                       CLDClosure* scan_strong_clds,
                       CLDClosure* scan_weak_clds,
                       bool trace_metadata,
-                      uint worker_i);
+                      uint worker_i,
+                      G1ParScanThreadState* pss);
 
   // Apply oops, clds and blobs to all strongly reachable roots in the system
   void process_strong_roots(OopClosure* oops,

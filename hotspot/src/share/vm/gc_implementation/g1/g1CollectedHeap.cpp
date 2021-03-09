@@ -4595,6 +4595,7 @@ class G1KlassScanClosure : public KlassClosure {
       klass->oops_do(_closure);
 
       _closure->set_scanned_klass(NULL);
+      _closure->par_scan_state()->trim_queue_partially();
     }
     _count++;
   }
@@ -4732,7 +4733,8 @@ public:
                                       strong_cld_cl,
                                       weak_cld_cl,
                                       trace_metadata,
-                                      worker_id);
+                                      worker_id,
+                                      pss);
 
       G1ParPushHeapRSClosure push_heap_rs_cl(_g1h, pss);
       _root_processor->scan_remembered_sets(&push_heap_rs_cl,

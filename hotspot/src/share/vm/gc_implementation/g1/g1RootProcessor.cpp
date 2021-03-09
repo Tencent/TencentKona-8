@@ -33,6 +33,7 @@
 #include "gc_implementation/g1/g1GCPhaseTimes.hpp"
 #include "gc_implementation/g1/g1RemSet.inline.hpp"
 #include "gc_implementation/g1/g1RootProcessor.hpp"
+#include "gc_implementation/g1/g1ParScanThreadState.inline.hpp"
 #include "gc_implementation/shared/weakProcessor.hpp"
 #include "memory/allocation.inline.hpp"
 #include "runtime/fprofiler.hpp"
@@ -128,13 +129,14 @@ void G1RootProcessor::evacuate_roots(OopClosure* scan_non_heap_roots,
                                      CLDClosure* scan_strong_clds,
                                      CLDClosure* scan_weak_clds,
                                      bool trace_metadata,
-                                     uint worker_i) {
+                                     uint worker_i,
+                                     G1ParScanThreadState* pss) {
   // First scan the shared roots.
   double ext_roots_start = os::elapsedTime();
   G1GCPhaseTimes* phase_times = _g1h->g1_policy()->phase_times();
 
-  BufferingOopClosure buf_scan_non_heap_roots(scan_non_heap_roots);
-  BufferingOopClosure buf_scan_non_heap_weak_roots(scan_non_heap_weak_roots);
+  BufferingOopClosure buf_scan_non_heap_roots(scan_non_heap_roots, pss);
+  BufferingOopClosure buf_scan_non_heap_weak_roots(scan_non_heap_weak_roots, pss);
 
   OopClosure* const weak_roots = &buf_scan_non_heap_weak_roots;
   OopClosure* const strong_roots = &buf_scan_non_heap_roots;

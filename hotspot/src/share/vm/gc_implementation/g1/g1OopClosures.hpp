@@ -61,6 +61,7 @@ public:
   bool apply_to_weak_ref_discovered_field() { return true; }
 
   void set_par_scan_thread_state(G1ParScanThreadState* par_scan_state);
+  G1ParScanThreadState* par_scan_state() { return _par_scan_state; }
 };
 
 class G1ParPushHeapRSClosure : public G1ParClosureSuper {
