@@ -258,6 +258,13 @@ class JavaCalls: AllStatic {
   static void call_static(JavaValue* result, KlassHandle klass, Symbol* name, Symbol* signature, Handle arg1, TRAPS);
   static void call_static(JavaValue* result, KlassHandle klass, Symbol* name, Symbol* signature, Handle arg1, Handle arg2, TRAPS);
 
+  // Allocate instance + invoke constructor. This is equivalent to "new Klass(args ...)" expression in Java code.
+  static Handle construct_new_instance(InstanceKlass* klass, Symbol* constructor_signature, JavaCallArguments* args, TRAPS);
+
+  static Handle construct_new_instance(InstanceKlass* klass, Symbol* constructor_signature, TRAPS);
+  static Handle construct_new_instance(InstanceKlass* klass, Symbol* constructor_signature, Handle arg1, TRAPS);
+  static Handle construct_new_instance(InstanceKlass* klass, Symbol* constructor_signature, Handle arg1, Handle arg2, TRAPS);
+
   // Low-level interface
   static void call(JavaValue* result, methodHandle method, JavaCallArguments* args, TRAPS);
 };

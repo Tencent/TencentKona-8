@@ -293,6 +293,35 @@ void JavaCalls::call_static(JavaValue* result, KlassHandle klass, Symbol* name, 
   call_static(result, klass, name, signature, &args, CHECK);
 }
 
+// ============ allocate and initialize new object instance ============
+Handle JavaCalls::construct_new_instance(InstanceKlass* klass, Symbol* constructor_signature, JavaCallArguments* args, TRAPS) {
+  klass->initialize(CHECK_NH); // Quick no-op if already initialized.
+  Handle obj = klass->allocate_instance_handle(CHECK_NH);
+  JavaValue void_result(T_VOID);
+  args->set_receiver(obj); // inserts <obj> as the first argument.
+  JavaCalls::call_special(&void_result, klass,
+                          vmSymbols::object_initializer_name(),
+                          constructor_signature, args, CHECK_NH);
+  return obj;
+}
+
+Handle JavaCalls::construct_new_instance(InstanceKlass* klass, Symbol* constructor_signature, TRAPS) {
+  JavaCallArguments args;
+  return JavaCalls::construct_new_instance(klass, constructor_signature, &args, CHECK_NH);
+}
+
+Handle JavaCalls::construct_new_instance(InstanceKlass* klass, Symbol* constructor_signature, Handle arg1, TRAPS) {
+  JavaCallArguments args;
+  args.push_oop(arg1);
+  return JavaCalls::construct_new_instance(klass, constructor_signature, &args, CHECK_NH);
+}
+
+Handle JavaCalls::construct_new_instance(InstanceKlass* klass, Symbol* constructor_signature, Handle arg1, Handle arg2, TRAPS) {
+  JavaCallArguments args;
+  args.push_oop(arg1);
+  args.push_oop(arg2);
+  return JavaCalls::construct_new_instance(klass, constructor_signature, &args, CHECK_NH);
+}
 
 // -------------------------------------------------
 // Implementation of JavaCalls (low level)
@@ -310,7 +339,7 @@ void JavaCalls::call(JavaValue* result, methodHandle method, JavaCallArguments* 
 void JavaCalls::call_helper(JavaValue* result, methodHandle* m, JavaCallArguments* args, TRAPS) {
   // During dumping, Java execution environment is not fully initialized. Also, Java execution
   // may cause undesirable side-effects in the class metadata.
-  assert(!DumpSharedSpaces, "must not execute Java bytecodes when dumping");
+  assert(!DumpSharedSpaces || UseAppCDS, "must not execute Java bytecodes when dumping");
 
   methodHandle method = *m;
   JavaThread* thread = (JavaThread*)THREAD;
