@@ -26,6 +26,7 @@
 #define SHARE_VM_CLASSFILE_SHAREDCLASSUTIL_HPP
 
 #include "classfile/sharedPathsMiscInfo.hpp"
+#include "classfile/systemDictionaryShared.hpp"
 #include "memory/filemap.hpp"
 
 class SharedClassUtil : AllStatic {
@@ -59,7 +60,14 @@ public:
     ent->_filesize  = filesize;
   }
 
-  static void initialize(TRAPS) {}
+  static void initialize(TRAPS) {
+    if (UseAppCDS) {
+      int size = FileMapInfo::get_number_of_share_classpaths();
+      if (size > 0) {
+        SystemDictionaryShared::allocate_shared_data_arrays(size, THREAD);
+      }
+    }
+  }
 
   inline static bool is_shared_boot_class(Klass* klass) {
     InstanceKlass* ik = (InstanceKlass*)klass;
