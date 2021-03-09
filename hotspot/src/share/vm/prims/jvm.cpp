@@ -1231,9 +1231,7 @@ JVM_ENTRY(jclass, JVM_FindLoadedClass(JNIEnv *env, jobject loader, jstring name)
   if (k == NULL) {
     // If the class is not already loaded, try to see if it's in the shared
     // archive for the current classloader (h_loader).
-    instanceKlassHandle ik = SystemDictionaryShared::find_or_load_shared_class(
-        klass_name, h_loader, CHECK_NULL);
-    k = ik();
+    k = SystemDictionaryShared::find_or_load_shared_class(klass_name, h_loader, CHECK_NULL);
   }
 #endif
   return (k == NULL) ? NULL :

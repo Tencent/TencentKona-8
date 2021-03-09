@@ -26,9 +26,6 @@
  * @test
  * @summary bootclasspath mismatch test.
  * @library /testlibrary
- * @modules java.base/jdk.internal.misc
- *          java.management
- *          jdk.jartool/sun.tools.jar
  * @compile test-classes/Hello.java
  * @run main/othervm BootClassPathMismatch
  */
