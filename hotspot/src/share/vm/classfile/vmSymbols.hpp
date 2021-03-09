@@ -610,6 +610,11 @@
   /* jfr signatures */                                                                                            \
   JFR_TEMPLATES(template)                                                                                         \
                                                                                                                   \
+  /* cds */                                                                                                       \
+  template(toFileURL_name,                         "toFileURL")                                                   \
+  template(toFileURL_signature,                    "(Ljava/lang/String;)Ljava/net/URL;")                          \
+  template(url_void_signature,                     "(Ljava/net/URL;)V")                                           \
+                                                                                                                  \
   /*end*/
 
 // Here are all the intrinsics known to the runtime and the CI.
