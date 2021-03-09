@@ -111,7 +111,7 @@ public:
               CodeBlobClosure* code_root_cl,
               uint worker_i);
 
-  void updateRS(DirtyCardQueue* into_cset_dcq, uint worker_i);
+  void updateRS(DirtyCardQueue* into_cset_dcq, uint worker_i, G1ParScanThreadState* pss);
 
   CardTableModRefBS* ct_bs() { return _ct_bs; }
   size_t cardsScanned() { return _total_cards_scanned; }
