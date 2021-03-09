@@ -191,6 +191,7 @@ class G1CollectedHeap : public SharedHeap {
   friend class G1Allocator;
   friend class G1DefaultAllocator;
   friend class G1ResManAllocator;
+  friend class G1RemSet;
 
   // Closures used in implementation.
   template <G1Barrier barrier, G1Mark do_mark_object>

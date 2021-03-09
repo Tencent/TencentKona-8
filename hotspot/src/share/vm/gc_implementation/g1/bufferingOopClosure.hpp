@@ -29,6 +29,7 @@
 #include "oops/oopsHierarchy.hpp"
 #include "runtime/os.hpp"
 #include "utilities/debug.hpp"
+#include "gc_implementation/g1/g1ParScanThreadState.hpp"
 
 // A BufferingOops closure tries to separate out the cost of finding roots
 // from the cost of applying closures to them.  It maintains an array of
@@ -58,6 +59,7 @@ protected:
 
   OopClosure* _oc;
   double      _closure_app_seconds;
+  G1ParScanThreadState* _par_scan_state;
 
 
   bool is_buffer_empty() {
@@ -93,6 +95,7 @@ protected:
     process_narrowOops();
 
     _closure_app_seconds += (os::elapsedTime() - start);
+    _par_scan_state->trim_queue_partially();
   }
 
   void process_buffer_if_full() {
@@ -134,11 +137,12 @@ public:
     return _closure_app_seconds;
   }
 
-  BufferingOopClosure(OopClosure *oc) :
+  BufferingOopClosure(OopClosure *oc, G1ParScanThreadState* pss = NULL) :
     _oc(oc),
     _oop_top(_buffer),
     _narrowOop_bottom(_buffer + BufferLength - 1),
-    _closure_app_seconds(0.0) { }
+    _closure_app_seconds(0.0),
+    _par_scan_state(pss) { }
 };
 
 #endif // SHARE_VM_GC_IMPLEMENTATION_G1_BUFFERINGOOPCLOSURE_HPP

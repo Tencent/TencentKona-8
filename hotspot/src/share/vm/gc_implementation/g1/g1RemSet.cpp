@@ -112,6 +112,8 @@ class ScanRSClosure : public HeapRegionClosure {
   G1BlockOffsetSharedArray* _bot_shared;
   G1SATBCardTableModRefBS *_ct_bs;
 
+  G1ParScanThreadState* _par_scan_state;
+
   double _strong_code_root_scan_time_sec;
   uint   _worker_i;
   int    _block_size;
@@ -120,14 +122,16 @@ class ScanRSClosure : public HeapRegionClosure {
 public:
   ScanRSClosure(G1ParPushHeapRSClosure* oc,
                 CodeBlobClosure* code_root_cl,
-                uint worker_i) :
+                uint worker_i,
+                G1ParScanThreadState* pss) :
     _oc(oc),
     _code_root_cl(code_root_cl),
     _strong_code_root_scan_time_sec(0.0),
     _cards(0),
     _cards_done(0),
     _worker_i(worker_i),
-    _try_claimed(false)
+    _try_claimed(false),
+    _par_scan_state(pss)
   {
     _g1h = G1CollectedHeap::heap();
     _bot_shared = _g1h->bot_shared();
@@ -171,6 +175,7 @@ public:
   void scan_strong_code_roots(HeapRegion* r) {
     double scan_start = os::elapsedTime();
     r->strong_code_roots_do(_code_root_cl);
+    _par_scan_state->trim_queue_partially();
     _strong_code_root_scan_time_sec += (os::elapsedTime() - scan_start);
   }
 
@@ -240,7 +245,7 @@ void G1RemSet::scanRS(G1ParPushHeapRSClosure* oc,
                       uint worker_i) {
   double rs_time_start = os::elapsedTime();
 
-  ScanRSClosure scanRScl(oc, code_root_cl, worker_i);
+  ScanRSClosure scanRScl(oc, code_root_cl, worker_i, oc->par_scan_state());
 
   _g1->collection_set_iterate_from(&scanRScl, worker_i);
   scanRScl.set_try_claimed();
@@ -263,10 +268,12 @@ void G1RemSet::scanRS(G1ParPushHeapRSClosure* oc,
 class RefineRecordRefsIntoCSCardTableEntryClosure: public CardTableEntryClosure {
   G1RemSet* _g1rs;
   DirtyCardQueue* _into_cset_dcq;
+  G1ParScanThreadState* _par_scan_state;
 public:
   RefineRecordRefsIntoCSCardTableEntryClosure(G1CollectedHeap* g1h,
-                                              DirtyCardQueue* into_cset_dcq) :
-    _g1rs(g1h->g1_rem_set()), _into_cset_dcq(into_cset_dcq)
+                                              DirtyCardQueue* into_cset_dcq,
+                                              G1ParScanThreadState* pss) :
+    _g1rs(g1h->g1_rem_set()), _into_cset_dcq(into_cset_dcq), _par_scan_state(pss)
   {}
   bool do_card_ptr(jbyte* card_ptr, uint worker_i) {
     // The only time we care about recording cards that
@@ -277,6 +284,7 @@ public:
     assert(worker_i < (ParallelGCThreads == 0 ? 1 : ParallelGCThreads), "should be a GC worker");
 
     if (_g1rs->refine_card_during_gc(card_ptr, worker_i)) {
+      _par_scan_state->trim_queue_partially();
       // 'card_ptr' contains references that point into the collection
       // set. We need to record the card in the DCQS
       // (G1CollectedHeap::into_cset_dirty_card_queue_set())
@@ -289,10 +297,10 @@ public:
   }
 };
 
-void G1RemSet::updateRS(DirtyCardQueue* into_cset_dcq, uint worker_i) {
+void G1RemSet::updateRS(DirtyCardQueue* into_cset_dcq, uint worker_i, G1ParScanThreadState* pss) {
   G1GCParPhaseTimesTracker x(_g1p->phase_times(), G1GCPhaseTimes::UpdateRS, worker_i);
   // Apply the given closure to all remaining log entries.
-  RefineRecordRefsIntoCSCardTableEntryClosure into_cset_update_rs_cl(_g1, into_cset_dcq);
+  RefineRecordRefsIntoCSCardTableEntryClosure into_cset_update_rs_cl(_g1, into_cset_dcq, pss);
 
   _g1->iterate_dirty_card_closure(&into_cset_update_rs_cl, into_cset_dcq, false, worker_i);
 }
@@ -326,7 +334,7 @@ void G1RemSet::oops_into_collection_set_do(G1ParPushHeapRSClosure* oc,
 
   assert((ParallelGCThreads > 0) || worker_i == 0, "invariant");
 
-  updateRS(&into_cset_dcq, worker_i);
+  updateRS(&into_cset_dcq, worker_i, oc->par_scan_state());
   scanRS(oc, code_root_cl, worker_i);
 
   // We now clear the cached values of _cset_rs_update_cl for this worker
@@ -721,11 +729,13 @@ void G1RemSet::prepare_for_verify() {
     bool use_hot_card_cache = hot_card_cache->use_cache();
     hot_card_cache->set_use_cache(false);
 
+    G1ParScanThreadState* pss = _g1->new_par_scan_state(0);
     DirtyCardQueue into_cset_dcq(&_g1->into_cset_dirty_card_queue_set());
-    updateRS(&into_cset_dcq, 0);
+    updateRS(&into_cset_dcq, 0, pss);
     _g1->into_cset_dirty_card_queue_set().clear();
 
     hot_card_cache->set_use_cache(use_hot_card_cache);
+    delete pss;
     assert(JavaThread::dirty_card_queue_set().completed_buffers_num() == 0, "All should be consumed");
   }
 }
