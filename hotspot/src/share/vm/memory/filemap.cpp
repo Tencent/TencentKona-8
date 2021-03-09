@@ -218,6 +218,9 @@ bool SharedClassPathEntry::validate() {
   name = this->name();
 
   bool ok = true;
+  if (TraceClassPaths) {
+    tty->print_cr("checking shared classpath entry: %s", name);
+  }
   if (os::stat(name, &st) != 0) {
     FileMapInfo::fail_continue("Required classpath entry does not exist: %s", name);
     ok = false;
@@ -882,9 +885,20 @@ bool FileMapInfo::FileMapHeader::validate() {
                   _obj_alignment, ObjectAlignmentInBytes);
     return false;
   }
+
+  
   if (UseAppCDS) {
     // if the archive file is generated without AppCDS, UseAppCDS should be false
     UseAppCDS = _use_appcds;
+  }
+  // This must be done after header validation because it might change the
+  // header data
+  const char* prop = Arguments::get_property("java.system.class.loader");
+  if (prop != NULL) {
+    warning("Archived non-system classes are disabled because the "
+            "java.system.class.loader property is specified (value = \"%s\"). "
+            "To use archived non-system classes, this property must be not be set", prop);
+    _has_ext_or_app_classes = false;
   }
   return true;
 }
