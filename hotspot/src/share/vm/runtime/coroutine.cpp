@@ -509,9 +509,12 @@ void Coroutine::reset_coroutine(Coroutine* coro) {
 
 void Coroutine::init_coroutine(Coroutine* coro, JavaThread* thread) {
   intptr_t** d = (intptr_t**)coro->_stack_base;
-  *(--d) = NULL;
-  *(--d) = NULL;
-  *(--d) = NULL;
+  // 7 is async profiler's lookup slots count, avoid cross stack
+  // boundary when using async profiler
+  // must be odd number to keep frame pointer align to 16 bytes.
+  for (int32_t i = 0; i < 7; i++) {
+    *(--d) = NULL;
+  }
   *(--d) = (intptr_t*)coroutine_start;
   *(--d) = NULL;
 
