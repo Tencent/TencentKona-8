@@ -391,6 +391,7 @@ void FileMapInfo::allocate_classpath_entry_table() {
 }
 
 int FileMapInfo::populate_manifest_buffer(ClassPathEntry *cpe, ManifestEntry* manifests, int current, TRAPS) {
+  assert(UseAppCDS, "must be");
   ClassLoaderData* loader_data = ClassLoaderData::the_null_class_loader_data();
   ResourceMark rm(THREAD);
   jint manifest_size = 0;
