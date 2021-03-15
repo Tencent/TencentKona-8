@@ -4031,7 +4031,7 @@ class CommandLineFlags {
   product(ccstr, SharedClassListFile, NULL,                                 \
           "Override the default CDS class list")                            \
                                                                             \
-  diagnostic(ccstr, SharedArchiveFile, NULL,                                \
+  product(ccstr, SharedArchiveFile, NULL,                                   \
           "Override the default location of the CDS archive file")          \
                                                                             \
   product(ccstr, ExtraSharedClassListFile, NULL,                            \
