@@ -99,7 +99,7 @@ void G1HotCardCache::drain(uint worker_i,
     for (size_t i = start_idx; i < end_idx; i++) {
       jbyte* card_ptr = _hot_cache[i];
       if (card_ptr != NULL) {
-        if (g1rs->refine_card(card_ptr, worker_i, true)) {
+        if (g1rs->refine_card_during_gc(card_ptr, worker_i)) {
           // The part of the heap spanned by the card contains references
           // that point into the current collection set.
           // We need to record the card pointer in the DirtyCardQueueSet

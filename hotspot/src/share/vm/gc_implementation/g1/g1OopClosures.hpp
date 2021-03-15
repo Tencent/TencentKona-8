@@ -168,6 +168,23 @@ public:
   virtual void do_oop(narrowOop* p) { do_oop_nv(p); }
 };
 
+class G1ConcurrentRefineOopClosure: public ExtendedOopClosure {
+  G1CollectedHeap* _g1;
+  uint _worker_i;
+
+public:
+  G1ConcurrentRefineOopClosure(G1CollectedHeap* g1h, uint worker_i) :
+    _g1(g1h),
+    _worker_i(worker_i) {
+  }
+
+  bool apply_to_weak_ref_discovered_field() { return true; }
+
+  template <class T> void do_oop_nv(T* p);
+  virtual void do_oop(narrowOop* p) { do_oop_nv(p); }
+  virtual void do_oop(oop* p) { do_oop_nv(p); }
+};
+
 class G1UpdateRSOrPushRefOopClosure: public ExtendedOopClosure {
   G1CollectedHeap* _g1;
   HeapRegion* _from;
