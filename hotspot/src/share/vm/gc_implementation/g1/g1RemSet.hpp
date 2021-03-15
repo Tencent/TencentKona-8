@@ -134,12 +134,13 @@ public:
                  uint worker_num, int claim_val);
 
   // Refine the card corresponding to "card_ptr".
-  // If check_for_refs_into_cset is true, a true result is returned
-  // if the given card contains oops that have references into the
-  // current collection set.
-  virtual bool refine_card(jbyte* card_ptr,
-                           uint worker_i,
-                           bool check_for_refs_into_cset);
+  void refine_card_concurrently(jbyte* card_ptr,
+                                uint worker_i);
+
+  // Refine the card corresponding to "card_ptr". Returns "true" if the given card contains
+  // oops that have references into the current collection set.
+  bool refine_card_during_gc(jbyte* card_ptr,
+                             uint worker_i);
 
   // Print accumulated summary info from the start of the VM.
   virtual void print_summary_info();
