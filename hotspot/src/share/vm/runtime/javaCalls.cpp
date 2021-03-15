@@ -295,6 +295,7 @@ void JavaCalls::call_static(JavaValue* result, KlassHandle klass, Symbol* name, 
 
 // ============ allocate and initialize new object instance ============
 Handle JavaCalls::construct_new_instance(InstanceKlass* klass, Symbol* constructor_signature, JavaCallArguments* args, TRAPS) {
+  assert(UseAppCDS, "must be");
   klass->initialize(CHECK_NH); // Quick no-op if already initialized.
   Handle obj = klass->allocate_instance_handle(CHECK_NH);
   JavaValue void_result(T_VOID);

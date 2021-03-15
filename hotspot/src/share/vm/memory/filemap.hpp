@@ -260,7 +260,6 @@ public:
 
   static void allocate_classpath_entry_table();
   bool validate_classpath_entry_table();
-  static void update_shared_classpath(ClassPathEntry *cpe, SharedClassPathEntry* ent, TRAPS);
   static int populate_manifest_buffer(ClassPathEntry *cpe, ManifestEntry* manifests, int current, TRAPS);
 
   static SharedClassPathEntry* shared_classpath(int index) {

@@ -26,7 +26,7 @@
  * @test
  * @summary Class-Path: attribute in MANIFEST file
  * @library /testlibrary
- * @run main ClassPathAttr
+ * @run main/othervm ClassPathAttr
  */
 
 import com.oracle.java.testlibrary.OutputAnalyzer;
