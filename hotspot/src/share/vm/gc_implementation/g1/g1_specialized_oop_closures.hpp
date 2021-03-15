@@ -50,6 +50,7 @@ class G1ParScanClosure;
 class G1ParPushHeapRSClosure;
 
 class G1UpdateRSOrPushRefOopClosure;
+class G1ConcurrentRefineOopClosure;
 class G1CMOopClosure;
 class G1RootRegionScanClosure;
 
@@ -71,7 +72,8 @@ class G1AdjustClosure;
       f(G1MarkAndPushClosure,_nv)                       \
       f(G1CMOopClosure,_nv)                             \
       f(G1RootRegionScanClosure,_nv)                    \
-      f(G1UpdateRSOrPushRefOopClosure,_nv)
+      f(G1UpdateRSOrPushRefOopClosure,_nv)              \
+      f(G1ConcurrentRefineOopClosure,_nv)
 
 #ifdef FURTHER_SPECIALIZED_SINCE_SAVE_MARKS_CLOSURES
 #error "FURTHER_SPECIALIZED_SINCE_SAVE_MARKS_CLOSURES already defined."
