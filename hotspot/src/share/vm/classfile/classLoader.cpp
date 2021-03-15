@@ -1432,6 +1432,7 @@ char* ClassLoader::skip_uri_protocol(char* source) {
 void ClassLoader::record_result(InstanceKlass* ik, const ClassFileStream* stream, TRAPS) {
   assert(DumpSharedSpaces, "sanity");
   assert(stream != NULL, "sanity");
+  assert(UseAppCDS, "must be");
 
   if (ik->is_anonymous()) {
     // We do not archive anonymous classes.

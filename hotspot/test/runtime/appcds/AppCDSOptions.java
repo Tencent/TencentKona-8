@@ -46,7 +46,6 @@ public class AppCDSOptions extends CDSOptions {
     public AppCDSOptions() {
 	super();
         this.prefix.add("-XX:+UseAppCDS");
-        this.prefix.add("-XX:+UnlockDiagnosticVMOptions");
     }
 
 }

@@ -4035,6 +4035,10 @@ jint Arguments::parse(const JavaVMInitArgs* args) {
     VerifySharedSpaces = true;
   }
 
+  if (UseAppCDS && UseSharedSpaces && !PrintSharedArchiveAndExit && RelaxCheckForAppCDS) {
+    RequireSharedSpaces = false;
+  }
+
   // Delay warning until here so that we've had a chance to process
   // the -XX:-PrintWarnings flag
   if (needs_hotspotrc_warning) {

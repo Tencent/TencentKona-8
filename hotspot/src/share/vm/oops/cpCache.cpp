@@ -53,6 +53,7 @@ void ConstantPoolCacheEntry::initialize_entry(int index) {
 }
 
 void ConstantPoolCacheEntry::reinitialize(bool f2_used) {
+  assert(UseAppCDS, "must be");
   _indices &= cp_index_mask;
   _f1 = NULL;
   _flags = 0;
@@ -690,6 +691,7 @@ void ConstantPoolCache::remove_unshareable_info() {
 
 void ConstantPoolCache::walk_entries_for_initialization() {
   assert(DumpSharedSpaces, "sanity");
+  assert(UseAppCDS, "must be");
   // When dumping the archive, we want to clean up the ConstantPoolCache
   // to remove any effect of linking due to the execution of Java code --
   // each ConstantPoolCacheEntry will have the same contents as if
