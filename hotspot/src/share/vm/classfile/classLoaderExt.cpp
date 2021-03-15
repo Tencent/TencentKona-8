@@ -73,6 +73,7 @@ void ClassLoaderExt::setup_app_search_path() {
 }
 
 char* ClassLoaderExt::read_manifest(ClassPathEntry* entry, jint *manifest_size, bool clean_text, TRAPS) {
+  assert(UseAppCDS, "must be");
   const char* name = "META-INF/MANIFEST.MF";
   char* manifest;
   jint size;
@@ -100,6 +101,7 @@ char* ClassLoaderExt::read_manifest(ClassPathEntry* entry, jint *manifest_size, 
 }
 
 char* ClassLoaderExt::get_class_path_attr(const char* jar_path, char* manifest, jint manifest_size) {
+  assert(UseAppCDS, "must be");
   const char* tag = "Class-Path: ";
   const int tag_len = (int)strlen(tag);
   char* found = NULL;
@@ -134,6 +136,7 @@ char* ClassLoaderExt::get_class_path_attr(const char* jar_path, char* manifest, 
 
 void ClassLoaderExt::process_jar_manifest(ClassPathEntry* entry,
                                           bool check_for_duplicates) {
+  assert(UseAppCDS, "must be");
   Thread* THREAD = Thread::current();
   ResourceMark rm(THREAD);
   jint manifest_size;

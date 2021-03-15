@@ -95,6 +95,7 @@ oop SystemDictionaryShared::shared_jar_manifest(int index) {
 
 
 Handle SystemDictionaryShared::get_shared_jar_manifest(int shared_path_index, TRAPS) {
+  assert(UseAppCDS, "must be");
   Handle manifest;
   if (shared_jar_manifest(shared_path_index) == NULL) {
     SharedClassPathEntry* ent = FileMapInfo::shared_classpath(shared_path_index);
@@ -128,6 +129,7 @@ Handle SystemDictionaryShared::get_shared_jar_manifest(int shared_path_index, TR
 }
 
 Handle SystemDictionaryShared::get_shared_jar_url(int shared_path_index, TRAPS) {
+  assert(UseAppCDS, "must be");
   Handle url_h;
   if (shared_jar_url(shared_path_index) == NULL) {
     // File file = new File(path)
@@ -179,6 +181,7 @@ void SystemDictionaryShared::define_shared_package(Symbol*  class_name,
                                                    Handle manifest,
                                                    Handle url,
                                                    TRAPS) {
+  assert(UseAppCDS, "must be");
   // get_package_name() returns a NULL handle if the class is in unnamed package
   Handle pkgname_string = get_package_name(class_name, CHECK);
   if (pkgname_string.not_null()) {
@@ -238,6 +241,7 @@ Handle SystemDictionaryShared::get_shared_protection_domain(Handle class_loader,
 // the given InstanceKlass.
 // Returns the ProtectionDomain for the InstanceKlass.
 Handle SystemDictionaryShared::init_security_info(Handle class_loader, InstanceKlass* ik, TRAPS) {
+  assert(UseAppCDS, "must be");
   Handle pd;
 
   if (ik != NULL) {
@@ -418,6 +422,7 @@ void SystemDictionaryShared::allocate_shared_jar_manifest_array(int size, TRAPS)
 }
 
 void SystemDictionaryShared::allocate_shared_data_arrays(int size, TRAPS) {
+  assert(UseAppCDS, "must be");
   allocate_shared_protection_domain_array(size, CHECK);
   allocate_shared_jar_url_array(size, CHECK);
   allocate_shared_jar_manifest_array(size, CHECK);
