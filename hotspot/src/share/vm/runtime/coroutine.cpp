@@ -814,7 +814,6 @@ JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jobject cont
   if (coro == NULL) {
     coro = Coroutine::create_coroutine(thread, stackSize, JNIHandles::resolve(cont));
     if (coro == NULL) {
-      ThreadInVMfromNative tivm(thread);
       HandleMark mark(thread);
       THROW_0(vmSymbols::java_lang_OutOfMemoryError());
     }
