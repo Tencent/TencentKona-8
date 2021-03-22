@@ -187,7 +187,7 @@ void ClassLoaderExt::process_jar_manifest(ClassPathEntry* entry,
         int n = os::snprintf(libname, libname_len + 1, "%.*s%s", dir_len, dir_name, file_start);
         assert((size_t)n == libname_len, "Unexpected number of characters in string");
         trace_class_path(tty, "library = ", libname);
-        ClassLoader::update_class_path_entry_list(libname, true, false);
+        ClassLoader::update_class_path_entry_list(libname, true, false, true /* from_class_path_attr */);
       }
 
       file_start = file_end;
@@ -215,8 +215,6 @@ void ClassLoaderExt::record_result(const s2 classpath_index,
   } else if (SystemDictionary::is_ext_class_loader(loader)) {
     tty->print_cr("Extension class loader isn't supported by AppCDS with class %s. CDS dump aborted.", result->name()->as_C_string());
     vm_exit(1);
-    //classloader_type = ClassLoader::EXT_LOADER;
-    //ClassLoaderExt::set_has_ext_classes();
   }
   if (classpath_index > ClassLoaderExt::max_used_path_index()) {
     ClassLoaderExt::set_max_used_path_index(classpath_index);

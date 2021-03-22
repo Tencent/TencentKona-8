@@ -120,6 +120,8 @@ template <int N> static void get_header_version(char (&header_version) [N]) {
   const char *vm_version = VM_Version::internal_vm_info_string();
   const int version_len = (int)strlen(vm_version);
 
+  memset(header_version, 0, JVM_IDENT_MAX);
+
   if (version_len < (JVM_IDENT_MAX-1)) {
     strcpy(header_version, vm_version);
 
@@ -186,6 +188,7 @@ void SharedClassPathEntry::init(ClassPathEntry *cpe, const char* name) {
   assert(DumpSharedSpaces, "dump time only");
   _timestamp = 0;
   _filesize  = 0;
+  _from_class_path_attr = false;
 
   if (cpe->is_jar_file()) {
     struct stat st;
@@ -198,6 +201,7 @@ void SharedClassPathEntry::init(ClassPathEntry *cpe, const char* name) {
       FileMapInfo::fail_stop("Unable to open jar file %s.", name);
     }
     _type = jar_entry;
+    _from_class_path_attr = cpe->from_class_path_attr();
     EXCEPTION_MARK; // The following call should never throw, but would exit VM on error.
     SharedClassUtil::update_shared_classpath(cpe, this, st.st_mtime, st.st_size, THREAD);
   } else {
@@ -426,6 +430,7 @@ bool FileMapInfo::validate_classpath_entry_table() {
 
   int count = _header->_classpath_entry_table_size;
   int start_app_index = _header->_app_class_paths_start_index;
+  int shared_app_paths_len = 0;
 
   _classpath_entry_table = _header->_classpath_entry_table;
   _classpath_entry_size = _header->_classpath_entry_size;
@@ -454,6 +459,9 @@ bool FileMapInfo::validate_classpath_entry_table() {
 
     if (app_check) {
       ok = ent->validate();
+      if (!shared_classpath(i)->from_class_path_attr()) {
+        shared_app_paths_len++;
+      }
     } else if (os::stat(name, &st) != 0) {
       fail_continue("Required classpath entry does not exist: %s", name);
       ok = false;
@@ -485,7 +493,11 @@ bool FileMapInfo::validate_classpath_entry_table() {
       return false;
     }
   }
-
+  if (shared_app_paths_len != 0 && !validate_app_class_paths(shared_app_paths_len)) {
+    fail_continue("shared class paths mismatch (hint: enable -XX:+TraceClassPaths to diagnose the failure)");
+    _validating_classpath_entry_table = false;
+    return false;
+  } 
   _classpath_entry_table_size = _header->_classpath_entry_table_size;
   _validating_classpath_entry_table = false;
   return true;
@@ -502,8 +514,31 @@ bool FileMapInfo::init_from_file(int fd) {
     fail_continue("Unable to read the file header.");
     return false;
   }
+
+  if (_header->_magic != (int)0xf00baba2) {
+    FileMapInfo::fail_continue("The shared archive file has a bad magic number.");
+    return false;
+  }
+
   if (_header->_version != current_version()) {
-    fail_continue("The shared archive file has the wrong version.");
+    FileMapInfo::fail_continue("The shared archive file is the wrong version.");
+    return false;
+  }
+
+  char header_version[JVM_IDENT_MAX];
+  get_header_version(header_version);
+  if (strncmp(_header->_jvm_ident, header_version, JVM_IDENT_MAX-1) != 0) {
+    if (TraceClassPaths) {
+      tty->print_cr("Expected: %s", header_version);
+      tty->print_cr("Actual:   %s", _header->_jvm_ident);
+    }
+    FileMapInfo::fail_continue("The shared archive file was created by a different"
+                  " version or build of HotSpot");
+    return false;
+  }
+
+  if (VerifySharedSpaces && _header->compute_crc() != _header->_crc) {
+    fail_continue("Header checksum verification failed.");
     return false;
   }
 
@@ -830,7 +865,10 @@ bool FileMapInfo::initialize() {
     return false;
   }
 
-  init_from_file(_fd);
+  if (!init_from_file(_fd)) {
+    return false;
+  }
+
   if (!validate_header()) {
     return false;
   }
@@ -856,30 +894,6 @@ int FileMapInfo::compute_header_crc() {
 }
 
 bool FileMapInfo::FileMapHeader::validate() {
-  if (_magic != (int)0xf00baba2) {
-    FileMapInfo::fail_continue("The shared archive file has a bad magic number.");
-    return false;
-  }
-  if (VerifySharedSpaces && compute_crc() != _crc) {
-    fail_continue("Header checksum verification failed.");
-    return false;
-  }
-  if (_version != current_version()) {
-    FileMapInfo::fail_continue("The shared archive file is the wrong version.");
-
-    return false;
-  }
-  char header_version[JVM_IDENT_MAX];
-  get_header_version(header_version);
-  if (strncmp(_jvm_ident, header_version, JVM_IDENT_MAX-1) != 0) {
-    if (TraceClassPaths) {
-      tty->print_cr("Expected: %s", header_version);
-      tty->print_cr("Actual:   %s", _jvm_ident);
-    }
-    FileMapInfo::fail_continue("The shared archive file was created by a different"
-                  " version or build of HotSpot");
-    return false;
-  }
   if (_obj_alignment != ObjectAlignmentInBytes) {
     FileMapInfo::fail_continue("The shared archive file's ObjectAlignmentInBytes of %d"
                   " does not equal the current ObjectAlignmentInBytes of %d.",
@@ -995,3 +1009,206 @@ void FileMapInfo::check_nonempty_dir_in_shared_path_table() {
     ClassLoader::exit_with_path_failure("Cannot have non-empty directory in paths", NULL);
   }
 }
+
+class ClasspathStream : public StackObj {
+  const char* _class_path;
+  int _len;
+  int _start;
+  int _end;
+
+public:
+  ClasspathStream(const char* class_path) {
+    _class_path = class_path;
+    _len = (int)strlen(class_path);
+    _start = 0;
+    _end = 0;
+  }
+
+  bool has_next() {
+    return _start < _len;
+  }
+
+  const char* get_next();
+};
+
+const char* ClasspathStream::get_next() {
+  while (_class_path[_end] != '\0' && _class_path[_end] != os::path_separator()[0]) {
+    _end++;
+  }
+  int path_len = _end - _start;
+  char* path = NEW_RESOURCE_ARRAY(char, path_len + 1);
+  strncpy(path, &_class_path[_start], path_len);
+  path[path_len] = '\0';
+
+  while (_class_path[_end] == os::path_separator()[0]) {
+    _end++;
+  }
+  _start = _end;
+  return path;
+}
+
+bool FileMapInfo::same_files(const char* file1, const char* file2) {
+  if (strcmp(file1, file2) == 0) {
+    return true;
+  }
+
+  bool is_same = false;
+  struct stat st1;
+  struct stat st2;
+
+  if (os::stat(file1, &st1) < 0) {
+    return false;
+  }
+
+  if (os::stat(file2, &st2) < 0) {
+    return false;
+  }
+#ifndef _WINDOWS
+  if (st1.st_dev == st2.st_dev && st1.st_ino == st2.st_ino) {
+    // same files
+    is_same = true;
+  } else if (RelaxCheckForAppCDS && st1.st_size == st2.st_size) {
+    is_same = true;
+  }
+#endif
+  return is_same;
+}
+
+int FileMapInfo::num_paths(const char* path) {
+  if (path == NULL) {
+    return 0;
+  }
+  int npaths = 1;
+  char* p = (char*)path;
+  while (p != NULL) {
+    char* prev = p;
+    p = strstr((char*)p, os::path_separator());
+    if (p != NULL) {
+      p++;
+      // don't count empty path
+      if ((p - prev) > 1) {
+       npaths++;
+      }
+    }
+  }
+  return npaths;
+}
+
+GrowableArray<const char*>* FileMapInfo::create_path_array(const char* paths, int* size) {
+  GrowableArray<const char*>* path_array = new GrowableArray<const char*>(10);
+
+  ClasspathStream cp_stream(paths);
+  int n = 0;
+  while (cp_stream.has_next()) {
+    const char* path = cp_stream.get_next();
+    struct stat st;
+    if (os::stat(path, &st) == 0) {
+      n++;
+      if (!RelaxCheckForAppCDS || ((st.st_mode & S_IFREG) == S_IFREG)) {
+        path_array->append(path);
+      }
+    }
+  }
+  *size = n;
+  return path_array;
+}
+
+bool FileMapInfo::classpath_failure(const char* msg, const char* name) {
+  ClassLoader::trace_class_path(tty, msg, name);
+  if (PrintSharedArchiveAndExit) {
+    MetaspaceShared::set_archive_loading_failed();
+  }
+  return false;
+}
+
+bool FileMapInfo::check_paths(int shared_path_start_idx, int num_paths, GrowableArray<const char*>* rp_array) {
+  int i = 0;
+  int j = shared_path_start_idx;
+  bool mismatch = false;
+  while (i < num_paths && !mismatch) {
+    while (shared_classpath(j)->from_class_path_attr() && j < _header->_classpath_entry_table_size) {
+      // shared_path(j) was expanded from the JAR file attribute "Class-Path:"
+      // during dump time. It's not included in the -classpath VM argument.
+      j++;
+    }
+    if (RelaxCheckForAppCDS) {
+      while (shared_classpath(j)->is_dir() && j < _header->_classpath_entry_table_size) {
+        j++;
+      }
+    }
+    if (j >= _header->_classpath_entry_table_size) {
+      break;
+    }
+    if (TraceClassPaths) {
+      tty->print_cr("Compare files:");
+      ClassLoader::trace_class_path(tty, "Expected: ", shared_classpath(j)->name());
+      ClassLoader::trace_class_path(tty, "Actual: ", rp_array->at(i));
+    }
+    if (!same_files(shared_classpath(j)->name(), rp_array->at(i))) {
+      mismatch = true;
+    }
+    i++;
+    j++;
+  }
+  return mismatch;
+}
+
+void FileMapInfo::log_paths(const char* msg, int start_idx, int end_idx) {
+  if (TraceClassPaths) {
+    tty->print("%s", msg);
+    const char* prefix = "";
+    for (int i = start_idx; i < end_idx; i++) {
+      tty->print("%s%s", prefix, shared_classpath(i)->name());
+      prefix = os::path_separator();
+    }
+    tty->cr();
+  }
+}
+
+bool FileMapInfo::validate_app_class_paths(int shared_app_paths_len) {
+  assert(UseAppCDS, "must be");
+  const char *appcp = Arguments::get_appclasspath();
+  int rp_len = num_paths(appcp);
+  bool mismatch = false;
+  if (rp_len < shared_app_paths_len) {
+    return classpath_failure("Run time APP classpath is shorter than the one at dump time: ", appcp);
+  }
+  if (TraceClassPaths) {
+    tty->print_cr("Checking app classpath:");
+    log_paths("Expected: ", _header->_app_class_paths_start_index, _header->_classpath_entry_table_size);
+    ClassLoader::trace_class_path(tty, "Actual: ", appcp);
+  }
+  if (shared_app_paths_len != 0 && rp_len != 0) {
+    // Prefix is OK: E.g., dump with -cp foo.jar, but run with -cp foo.jar:bar.jar.
+    ResourceMark rm;
+    int array_size = 0;
+    GrowableArray<const char*>* rp_array = create_path_array(appcp, &array_size);
+    if (array_size == 0) {
+      // None of the jar file specified in the runtime -cp exists.
+      return classpath_failure("None of the jar file specified in the runtime -cp exists: -Djava.class.path=", appcp);
+    }
+    if (array_size < shared_app_paths_len) {
+      // create_path_array() ignores non-existing paths. Although the dump time and runtime app classpath lengths
+      // are the same initially, after the call to create_path_array(), the runtime app classpath length could become
+      // shorter. We consider app classpath mismatch in this case.
+      return classpath_failure("[APP classpath mismatch, actual: -Djava.class.path=", appcp);
+    }
+
+    // Handling of non-existent entries in the classpath: we eliminate all the non-existent
+    // entries from both the dump time classpath (ClassLoader::update_class_path_entry_list)
+    // and the runtime classpath (FileMapInfo::create_path_array), and check the remaining
+    // entries. E.g.:
+    //
+    // dump : -cp a.jar:NE1:NE2:b.jar  -> a.jar:b.jar -> recorded in archive.
+    // run 1: -cp NE3:a.jar:NE4:b.jar  -> a.jar:b.jar -> matched
+    // run 2: -cp x.jar:NE4:b.jar      -> x.jar:b.jar -> mismatched
+
+    int j = _header->_app_class_paths_start_index;
+    mismatch = check_paths(j, shared_app_paths_len, rp_array);
+    if (mismatch) {
+      return classpath_failure("[APP classpath mismatch, actual: -Djava.class.path=", appcp);
+    }
+  }
+  return true;
+}
+

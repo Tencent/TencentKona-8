@@ -58,6 +58,7 @@ class SharedClassPathEntry VALUE_OBJ_CLASS_SPEC {
 public:
   const char *_name;
   u1     _type;
+  bool   _from_class_path_attr;
   time_t _timestamp;          // jar timestamp,  0 if is directory
   long   _filesize;           // jar file size, -1 if is directory
   char*  _manifest;
@@ -75,6 +76,7 @@ public:
   void set_is_signed()     {
     _type = signed_jar_entry;
   }
+  bool from_class_path_attr() { return _from_class_path_attr; }
   time_t timestamp() const { return _timestamp; }
   long   filesize()  const { return _filesize; }
   const char* name() const { return _name; }
@@ -274,6 +276,16 @@ public:
   static int get_number_of_share_classpaths() {
     return _classpath_entry_table_size;
   }
+
+  static bool same_files(const char* file1, const char* file2);
+private:
+  void  log_paths(const char* msg, int start_idx, int end_idx);
+  int   num_paths(const char* path) NOT_CDS_RETURN_(0);
+  GrowableArray<const char*>* create_path_array(const char* path, int* size) NOT_CDS_RETURN_(NULL);
+  bool  classpath_failure(const char* msg, const char* name) NOT_CDS_RETURN_(false);
+  bool  check_paths(int shared_path_start_idx, int num_paths,
+                    GrowableArray<const char*>* rp_array) NOT_CDS_RETURN_(false);
+  bool  validate_app_class_paths(int shared_app_paths_len) NOT_CDS_RETURN_(false);
 };
 
 #endif // SHARE_VM_MEMORY_FILEMAP_HPP
