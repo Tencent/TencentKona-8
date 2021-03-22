@@ -57,6 +57,9 @@ class ClassPathEntry: public CHeapObj<mtClass> {
     OrderAccess::release_store_ptr(&_next, next);
   }
   virtual bool is_jar_file() = 0;
+  // Is this entry created from the "Class-path" attribute from a JAR Manifest?
+  virtual bool from_class_path_attr() = 0;
+  virtual void set_from_class_path_attr() = 0;
   virtual const char* name() = 0;
   virtual bool is_lazy();
   // Constructor
@@ -75,6 +78,8 @@ class ClassPathDirEntry: public ClassPathEntry {
   const char* _dir;           // Name of directory
  public:
   bool is_jar_file()  { return false;  }
+  bool from_class_path_attr() { return false; }
+  void set_from_class_path_attr() { }
   const char* name()  { return _dir; }
   ClassPathDirEntry(const char* dir);
   ClassFileStream* open_stream(const char* name, TRAPS);
@@ -102,8 +107,11 @@ class ClassPathZipEntry: public ClassPathEntry {
  private:
   jzfile* _zip;              // The zip archive
   const char*   _zip_name;   // Name of zip archive
+  bool _from_class_path_attr;// From the "Class-path" attribute of a jar file
  public:
   bool is_jar_file()  { return true;  }
+  bool from_class_path_attr() { return _from_class_path_attr; }
+  void set_from_class_path_attr() { _from_class_path_attr = true; }
   const char* name()  { return _zip_name; }
   ClassPathZipEntry(jzfile* zip, const char* zip_name);
   ~ClassPathZipEntry();
@@ -132,6 +140,8 @@ class LazyClassPathEntry: public ClassPathEntry {
  public:
   ClassPathEntry* resolve_entry(TRAPS);
   bool is_jar_file();
+  bool from_class_path_attr() { return false; }
+  void set_from_class_path_attr() { }
   const char* name()  { return _path; }
   LazyClassPathEntry(const char* path, const struct stat* st, bool throw_exception);
   u1* open_entry(const char* name, jint* filesize, bool nul_terminate, TRAPS);
@@ -155,7 +165,7 @@ class ClassLoader: AllStatic {
   };
   enum ClassLoaderType {
     BOOT_LOADER = 1,      /* boot loader */
-    EXT_LOADER  = 2, /* ExtClassLoader */
+    EXT_LOADER  = 2,      /* ExtClassLoader */
     APP_LOADER  = 3       /* AppClassLoader */
   };
  protected:
@@ -245,6 +255,7 @@ class ClassLoader: AllStatic {
   static bool update_class_path_entry_list(const char *path,
                                            bool check_for_duplicates,
                                            bool is_boot_append = true,
+                                           bool from_class_path_attr = false,
                                            bool throw_exception=true);
   static void print_bootclasspath();
 

@@ -3625,6 +3625,8 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
     vm_exit_during_initialization(Handle(THREAD, PENDING_EXCEPTION));
   }
 
+  // At this point, the system loader is initialized. Now is a good time to dump out the
+  // internal state of the JVM for sharing with UseAppCDS.
   if (UseAppCDS && DumpSharedSpaces) {
     MetaspaceShared::preload_and_dump(CHECK_0);
     ShouldNotReachHere();
