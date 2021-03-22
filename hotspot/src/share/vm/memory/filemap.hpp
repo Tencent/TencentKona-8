@@ -82,7 +82,7 @@ public:
     return _manifest;
   }
   int manifest_size() const {
-    return (_manifest == NULL) ? 0 : strlen(_manifest);
+    return (_manifest == NULL) ? 0 : (int)strlen(_manifest);
   }
 };
 
