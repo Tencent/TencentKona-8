@@ -316,6 +316,7 @@ ClassPathZipEntry::ClassPathZipEntry(jzfile* zip, const char* zip_name) : ClassP
   char *copy = NEW_C_HEAP_ARRAY(char, strlen(zip_name)+1, mtClass);
   strcpy(copy, zip_name);
   _zip_name = copy;
+  _from_class_path_attr = false;
 }
 
 ClassPathZipEntry::~ClassPathZipEntry() {
@@ -883,6 +884,7 @@ void ClassLoader::add_to_app_classpath_entries(const char* path,
 bool ClassLoader::update_class_path_entry_list(const char *path,
                                                bool check_for_duplicates,
                                                bool is_boot_append,
+                                               bool from_class_path_attr,
                                                bool throw_exception) {
   struct stat st;
   if (os::stat(path, &st) == 0) {
@@ -902,6 +904,9 @@ bool ClassLoader::update_class_path_entry_list(const char *path,
         ClassLoaderExt::add_class_path_entry(path, check_for_duplicates, new_entry);
       }
     } else {
+      if (UseAppCDS && DumpSharedSpaces && from_class_path_attr) {
+        new_entry->set_from_class_path_attr();
+      }
       add_to_app_classpath_entries(path, new_entry, check_for_duplicates);
     }
     return true;
