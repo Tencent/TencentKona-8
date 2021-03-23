@@ -25,6 +25,7 @@
  * @test
  * @bug 4369826
  * @summary Process with lots of output should not crash VM
+ * @run main/othervm LotsOfOutput
  * @author kladko
  */
 
