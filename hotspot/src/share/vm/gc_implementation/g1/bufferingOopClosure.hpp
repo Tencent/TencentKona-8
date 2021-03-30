@@ -95,7 +95,9 @@ protected:
     process_narrowOops();
 
     _closure_app_seconds += (os::elapsedTime() - start);
-    _par_scan_state->trim_queue_partially();
+    if (_par_scan_state) {
+      _par_scan_state->trim_queue_partially();
+    }
   }
 
   void process_buffer_if_full() {
