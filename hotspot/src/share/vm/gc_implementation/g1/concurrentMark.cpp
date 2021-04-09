@@ -745,14 +745,14 @@ ConcurrentMark::ConcurrentMark(G1CollectedHeap* g1h, G1RegionToSpaceMapper* prev
   // so that the assertion in MarkingTaskQueue::task_queue doesn't fail
   _active_tasks = _max_worker_id;
 
-  size_t max_regions = (size_t) _g1h->max_regions();
+  uint max_regions = _g1h->max_regions();
   for (uint i = 0; i < _max_worker_id; ++i) {
     CMTaskQueue* task_queue = new CMTaskQueue();
     task_queue->initialize();
     _task_queues->register_queue(i, task_queue);
 
     _count_card_bitmaps[i] = BitMap(card_bm_size, false);
-    _count_marked_bytes[i] = NEW_C_HEAP_ARRAY(size_t, max_regions, mtGC);
+    _count_marked_bytes[i] = NEW_C_HEAP_ARRAY(size_t, (size_t)max_regions, mtGC);
 
     _tasks[i] = new CMTask(i, this,
                            _count_marked_bytes[i],

@@ -862,7 +862,7 @@ uint HeapRegionRemSet::num_par_rem_sets() {
   if (!G1RebuildRemSet) {
     return MAX2(DirtyCardQueueSet::num_par_ids() + ConcurrentG1Refine::thread_num(), (uint)ParallelGCThreads);
   } else {
-    return DirtyCardQueueSet::num_par_ids() + ConcurrentG1Refine::thread_num() + MAX2(ConcGCThreads, ParallelGCThreads);
+    return DirtyCardQueueSet::num_par_ids() + ConcurrentG1Refine::thread_num() + (uint)MAX2(ConcGCThreads, ParallelGCThreads);
   }
 }
 
