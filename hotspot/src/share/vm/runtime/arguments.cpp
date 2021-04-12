@@ -1283,10 +1283,14 @@ void Arguments::set_cms_and_parnew_gc_flags() {
 
   // Preferred young gen size for "short" pauses:
   // upper bound depends on # of threads and NewRatio.
-  const uintx parallel_gc_threads =
-    (ParallelGCThreads == 0 ? 1 : ParallelGCThreads);
-  const size_t preferred_max_new_size_unaligned =
-    MIN2(max_heap/(NewRatio+1), ScaleForWordSize(young_gen_per_worker * parallel_gc_threads));
+  size_t preferred_max_new_size_unaligned = 0;
+  if (CMSIgnoreYoungGenPerWorker) {
+    preferred_max_new_size_unaligned = max_heap/(NewRatio+1);
+  } else {
+    const uintx parallel_gc_threads = (ParallelGCThreads == 0 ? 1 : ParallelGCThreads);
+    preferred_max_new_size_unaligned =
+      MIN2(max_heap/(NewRatio+1), ScaleForWordSize(young_gen_per_worker * parallel_gc_threads));
+  }
   size_t preferred_max_new_size =
     align_size_up(preferred_max_new_size_unaligned, os::vm_page_size());
 

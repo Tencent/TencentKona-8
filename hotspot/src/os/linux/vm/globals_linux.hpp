@@ -52,6 +52,15 @@
   product(bool, UseContainerSupport, false,                             \
           "Enable detection and runtime container configuration support") \
                                                                         \
+  product(bool, IgnoreNoShareValue, false,                              \
+          "Ignore 1024 as no share")                                    \
+                                                                        \
+  product(uintx, CPUShareScaleFactor, 1,                                \
+          "Scale cpu count when share is used")                         \
+                                                                        \
+  product(uintx, CPUShareScaleLimit, 0,                                 \
+          "Scale cpu count limit, max is active cpu count")             \
+                                                                        \
   product(bool, PreferContainerQuotaForCPUCount, true,                  \
           "Calculate the container CPU availability based on the value" \
           " of quotas (if set), when true. Otherwise, use the CPU"      \

@@ -1641,6 +1641,9 @@ class CommandLineFlags {
           "The maximum size of young gen chosen by default per GC worker "  \
           "thread available")                                               \
                                                                             \
+  product(bool, CMSIgnoreYoungGenPerWorker, false,                          \
+          "Not calucate young gen size by CMSYoungGenPerWorker")            \
+                                                                            \
   product(bool, CMSIncrementalMode, false,                                  \
           "Whether CMS GC should operate in \"incremental\" mode")          \
                                                                             \
