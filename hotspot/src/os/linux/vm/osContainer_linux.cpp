@@ -28,6 +28,7 @@
 #include "utilities/globalDefinitions.hpp"
 #include "memory/allocation.hpp"
 #include "runtime/os.hpp"
+#include "runtime/globals_extension.hpp"
 #include "osContainer_linux.hpp"
 
 #define PER_CPU_SHARES 1024
@@ -304,6 +305,19 @@ void OSContainer::init() {
       tty->print_cr("Container Support not enabled");
     }
     return;
+  }
+  uintptr_t core_limit = (uintptr_t)os::Linux::active_processor_count();
+  if (CPUShareScaleLimit > core_limit || CPUShareScaleLimit == 0) {
+    warning("Ignore invalid CommandLine -XX:CPUShareScaleLimit=%d\n", (int)CPUShareScaleLimit);
+    FLAG_SET_DEFAULT(CPUShareScaleLimit, core_limit);
+  }
+  if (CPUShareScaleFactor == 0) {
+    warning("Ignore invalid CommandLine -XX:CPUShareScaleFactor=%d\n", (int)CPUShareScaleFactor);
+    FLAG_SET_DEFAULT(CPUShareScaleFactor, 1);
+  }
+  if (PrintContainerInfo) {
+    tty->print_cr("CPUShareScaleLimit is %d", (int)CPUShareScaleLimit);
+    tty->print_cr("CPUShareScaleFactor is %d", (int)CPUShareScaleFactor);
   }
 
   /*
@@ -646,6 +660,13 @@ int OSContainer::active_processor_count() {
   }
   if (share > -1) {
     share_count = ceilf((float)share / (float)PER_CPU_SHARES);
+    int scale_limit = (int)CPUShareScaleLimit;
+    if (share_count < scale_limit) {
+      share_count *= (int)CPUShareScaleFactor;
+      if (share_count > scale_limit) {
+        share_count = scale_limit;
+      }
+    }
     if (PrintContainerInfo) {
       tty->print_cr("CPU Share count based on shares: %d", share_count);
     }
@@ -727,7 +748,7 @@ int OSContainer::cpu_shares() {
   GET_CONTAINER_INFO(int, cpu, "/cpu.shares",
                      "CPU Shares is: %d", "%d", shares);
   // Convert 1024 to no shares setup
-  if (shares == 1024) return -1;
+  if (shares == 1024 && IgnoreNoShareValue == false) return -1;
 
   return shares;
 }
