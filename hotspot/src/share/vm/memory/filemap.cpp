@@ -788,9 +788,18 @@ char* FileMapInfo::map_region(int i) {
   size_t size = align_size_up(used, alignment);
   char *requested_addr = si->_base;
 
+  bool read_only;
+
+  // If a tool agent is in use (debugging enabled), we must map the address space RW
+  if (JvmtiExport::can_modify_any_class() || JvmtiExport::can_walk_any_space()) {
+    read_only = false;
+  } else {
+    read_only = si->_read_only;
+  }
+
   // map the contents of the CDS archive in this memory
   char *base = os::map_memory(_fd, _full_path, si->_file_offset,
-                              requested_addr, size, si->_read_only,
+                              requested_addr, size, read_only,
                               si->_allow_exec);
   if (base == NULL || base != si->_base) {
     fail_continue(err_msg("Unable to map %s shared space at required address.", shared_region_name[i]));
@@ -855,11 +864,6 @@ bool FileMapInfo::_validating_classpath_entry_table = false;
 //     region of the archive, which is not mapped yet.
 bool FileMapInfo::initialize() {
   assert(UseSharedSpaces, "UseSharedSpaces expected.");
-
-  if (JvmtiExport::can_modify_any_class() || JvmtiExport::can_walk_any_space()) {
-    fail_continue("Tool agent requires sharing to be disabled.");
-    return false;
-  }
 
   if (!open_for_read()) {
     return false;
