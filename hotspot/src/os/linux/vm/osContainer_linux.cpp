@@ -300,6 +300,9 @@ void OSContainer::init() {
   if (PrintContainerInfo) {
     tty->print_cr("OSContainer::init: Initializing Container Support");
   }
+  if (CPUShareScaleFactor > 1 && !UseContainerSupport) {
+    FLAG_SET_DEFAULT(UseContainerSupport, true);
+  }
   if (!UseContainerSupport) {
     if (PrintContainerInfo) {
       tty->print_cr("Container Support not enabled");
