@@ -93,7 +93,8 @@ public class ThreadExecutorTest {
         AtomicInteger virtualThreadCount = new AtomicInteger();
         ThreadFactory factory1 = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newCachedThreadPool(factory1);
-        /*try (var executor = Executors.newVirtualThreadExecutor())*/ {
+        /*try (var executor = Executors.newVirtualThreadExecutor())*/ 
+        try {
             for (int i=0; i<NUM_TASKS; i++) {
                 executor.submit(() -> {
                     if (Thread.currentThread().isVirtual()) {
@@ -101,10 +102,11 @@ public class ThreadExecutorTest {
                     }
                 });
             }
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(virtualThreadCount.get() == NUM_TASKS);
         }
-        executor.shutdown();
-        executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-        assertTrue(virtualThreadCount.get() == NUM_TASKS);
     }
 
     //Test that shutdownNow stops executing tasks.
@@ -152,7 +154,8 @@ public class ThreadExecutorTest {
     public void testInvokeAnyCompleteNormally1() throws Exception {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newSingleThreadExecutor(factory);
-        /*try (var executor = Executors.newVirtualThreadExecutor())*/ {
+        /*try (var executor = Executors.newVirtualThreadExecutor())*/
+        try {
             Callable<String> task1 = () -> "foo";
             Callable<String> task2 = () -> "bar";
             List<Callable<String>> taskList = new ArrayList<>();
@@ -160,6 +163,10 @@ public class ThreadExecutorTest {
             taskList.add(task2);
             String result = executor.invokeAny(taskList);
             assertTrue("foo".equals(result) || "bar".equals(result));
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -167,7 +174,8 @@ public class ThreadExecutorTest {
     public void testInvokeAnyCompleteNormally2() throws Exception {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
-        /*try (var executor = Executors.newVirtualThreadExecutor())*/ {
+        /*try (var executor = Executors.newVirtualThreadExecutor())*/
+        try {
             Callable<String> task1 = () -> "foo";
             Callable<String> task2 = () -> {
                 Thread.sleep(Duration.ofMinutes(1).toMillis());
@@ -178,6 +186,10 @@ public class ThreadExecutorTest {
             taskList.add(task2);
             String result = executor.invokeAny(taskList);
             assertTrue("foo".equals(result));
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -185,7 +197,8 @@ public class ThreadExecutorTest {
     public void testInvokeAnyCompleteExceptionally1() throws Exception {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
-        /*try (var executor = Executors.newVirtualThreadExecutor())*/ {
+        /*try (var executor = Executors.newVirtualThreadExecutor())*/ 
+        try {
             class FooException extends Exception { }
             Callable<String> task1 = () -> { throw new FooException(); };
             Callable<String> task2 = () -> { throw new FooException(); };
@@ -199,6 +212,10 @@ public class ThreadExecutorTest {
                 Throwable cause = e.getCause();
                 assertTrue(cause instanceof FooException);
             }
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -206,7 +223,8 @@ public class ThreadExecutorTest {
     public void testInvokeAnyCompleteExceptionally2() throws Exception {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
-        /*try (var executor = Executors.newVirtualThreadExecutor())*/ {
+        /*try (var executor = Executors.newVirtualThreadExecutor())*/
+        try {
             class FooException extends Exception { }
             Callable<String> task1 = () -> { throw new FooException(); };
             Callable<String> task2 = () -> {
@@ -223,6 +241,10 @@ public class ThreadExecutorTest {
                 Throwable cause = e.getCause();
                 assertTrue(cause instanceof FooException);
             }
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -230,28 +252,37 @@ public class ThreadExecutorTest {
     public void testInvokeAnySomeCompleteNormally1() throws Exception {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
-        /*try (var executor = Executors.newVirtualThreadExecutor())*/ {
+        /*try (var executor = Executors.newVirtualThreadExecutor())*/
+        try {
             class FooException extends Exception { }
             Callable<String> task1 = () -> "foo";
             Callable<String> task2 = () -> { throw new FooException(); };
             String result = executor.invokeAny(Arrays.asList(task1, task2));
             assertTrue("foo".equals(result));
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
     // Test invokeAny where some, not all, tasks complete normally.
     public void testInvokeAnySomeCompleteNormally2() throws Exception {
-       ThreadFactory factory = Thread.builder().virtual().factory();
-       ExecutorService executor = Executors.newFixedThreadPool(2, factory);
-       //try (var executor = Executors.newVirtualThreadExecutor())
-       {
-            class FooException extends Exception { }
-            Callable<String> task1 = () -> {
-                Thread.sleep(Duration.ofSeconds(2).toMillis());
-                return "foo";
-            };
-            Callable<String> task2 = () -> { throw new FooException(); };
-            String result = executor.invokeAny(Arrays.asList(task1, task2));
-            assertTrue("foo".equals(result));
+        ThreadFactory factory = Thread.builder().virtual().factory();
+        ExecutorService executor = Executors.newFixedThreadPool(2, factory);
+        //try (var executor = Executors.newVirtualThreadExecutor())
+        try {
+             class FooException extends Exception { }
+             Callable<String> task1 = () -> {
+                 Thread.sleep(Duration.ofSeconds(2).toMillis());
+                 return "foo";
+             };
+             Callable<String> task2 = () -> { throw new FooException(); };
+             String result = executor.invokeAny(Arrays.asList(task1, task2));
+             assertTrue("foo".equals(result));
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -259,11 +290,16 @@ public class ThreadExecutorTest {
     public void testInvokeAnyWithTimeout1() throws Exception {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
-        /*try (var executor = Executors.newVirtualThreadExecutor())*/ {
+        /*try (var executor = Executors.newVirtualThreadExecutor())*/
+        try {
             Callable<String> task1 = () -> "foo";
             Callable<String> task2 = () -> "bar";
             String result = executor.invokeAny(Arrays.asList(task1, task2), 1, TimeUnit.MINUTES);
             assertTrue("foo".equals(result) || "bar".equals(result));
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -272,7 +308,8 @@ public class ThreadExecutorTest {
     public void testInvokeAnyWithTimeout2() throws Exception {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
-        /*try (var executor = Executors.newVirtualThreadExecutor())*/ {
+        /*try (var executor = Executors.newVirtualThreadExecutor())*/
+        try {
             Callable<String> task1 = () -> {
                 Thread.sleep(Duration.ofMinutes(1).toMillis());
                 return "foo";
@@ -282,6 +319,10 @@ public class ThreadExecutorTest {
                 return "bar";
             };
             executor.invokeAny(Arrays.asList(task1, task2), 2, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -290,7 +331,8 @@ public class ThreadExecutorTest {
     public void testInvokeAnyWithTimeout3() throws Exception {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
-        /*try (var executor = Executors.newVirtualThreadExecutor())*/ {
+        /*try (var executor = Executors.newVirtualThreadExecutor())*/
+        try {
             class FooException extends Exception { }
             Callable<String> task1 = () -> { throw new FooException(); };
             Callable<String> task2 = () -> {
@@ -298,6 +340,10 @@ public class ThreadExecutorTest {
                 return "bar";
             };
             executor.invokeAny(Arrays.asList(task1, task2), 2, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -305,7 +351,8 @@ public class ThreadExecutorTest {
     public void testInvokeAnyCancelRemaining() throws Exception {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
-        /*try (var executor = Executors.newVirtualThreadExecutor())*/ {
+        /*try (var executor = Executors.newVirtualThreadExecutor())*/
+        try {
             DelayedResult<String> task1 = new DelayedResult("foo", Duration.ofMillis(50));
             DelayedResult<String> task2 = new DelayedResult("bar", Duration.ofMinutes(1));
             String result = executor.invokeAny(Arrays.asList(task1, task2));
@@ -314,6 +361,10 @@ public class ThreadExecutorTest {
                 Thread.sleep(Duration.ofMillis(100).toMillis());
             }
             assertTrue(task2.exception() instanceof InterruptedException);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -321,7 +372,8 @@ public class ThreadExecutorTest {
     public void testInvokeAnyInterrupt1() throws Exception {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
-        /*try (var executor = Executors.newVirtualThreadExecutor())*/ {
+        /*try (var executor = Executors.newVirtualThreadExecutor())*/
+        try {
             Callable<String> task1 = () -> { while(true) { Thread.sleep(100); } };
             Callable<String> task2 = () -> { while(true) { Thread.sleep(100); } };
             Thread.currentThread().interrupt();
@@ -333,6 +385,10 @@ public class ThreadExecutorTest {
             } finally {
                 Thread.interrupted(); // clear interrupt
             }
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -341,7 +397,7 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             Callable<String> task1 = () -> {
                 Thread.sleep(Duration.ofMinutes(1).toMillis());
                 return "foo";
@@ -359,6 +415,10 @@ public class ThreadExecutorTest {
             } finally {
                 Thread.interrupted(); // clear interrupt
             }
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -380,8 +440,12 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             executor.invokeAny(Arrays.asList());
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -391,8 +455,12 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             executor.invokeAny(Arrays.asList(), 1, TimeUnit.MINUTES);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -402,8 +470,12 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             executor.invokeAny(null);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -413,11 +485,15 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             List<Callable<String>> list = new ArrayList<>();
             list.add(() -> "foo");
             list.add(null);
             executor.invokeAny(null);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -426,7 +502,7 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             Callable<String> task1 = () -> "foo";
             Callable<String> task2 = () -> {
                 Thread.sleep(Duration.ofSeconds(1).toMillis());
@@ -444,6 +520,10 @@ public class ThreadExecutorTest {
             //List<String> results = list.stream().map(Future::join).collect(Collectors.toList());
             List<String> results =  Arrays.asList(list.get(0).get(), list.get(1).get());
             assertEquals(results, Arrays.asList("foo", "bar"));
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -452,7 +532,7 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             class FooException extends Exception { }
             class BarException extends Exception { }
             Callable<String> task1 = () -> { throw new FooException(); };
@@ -473,6 +553,10 @@ public class ThreadExecutorTest {
             assertTrue(e1.getCause() instanceof FooException);
             Throwable e2 = expectThrows(ExecutionException.class, () -> list.get(1).get());
             assertTrue(e2.getCause() instanceof BarException);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -481,7 +565,7 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             Callable<String> task1 = () -> "foo";
             Callable<String> task2 = () -> {
                 Thread.sleep(Duration.ofSeconds(1).toMillis());
@@ -499,6 +583,10 @@ public class ThreadExecutorTest {
             //List<String> results = list.stream().map(Future::join).collect(Collectors.toList());
             List<String> results =  Arrays.asList(list.get(0).get(), list.get(1).get());
             assertEquals(results, Arrays.asList("foo", "bar"));
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -507,7 +595,7 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             AtomicReference<Exception> exc = new AtomicReference<>();
             Callable<String> task1 = () -> "foo";
             Callable<String> task2 = () -> {
@@ -537,6 +625,10 @@ public class ThreadExecutorTest {
                 Thread.sleep(50);
             }
             assertTrue(e instanceof InterruptedException);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -622,7 +714,7 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             Callable<String> task1 = () -> "foo";
             Callable<String> task2 = () -> {
                 Thread.sleep(Duration.ofMinutes(1).toMillis());
@@ -638,6 +730,10 @@ public class ThreadExecutorTest {
             } finally {
                 Thread.interrupted(); // clear interrupt
             }
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -645,7 +741,7 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             Callable<String> task1 = () -> "foo";
             Callable<String> task2 = () -> {
                 Thread.sleep(Duration.ofMinutes(1).toMillis());
@@ -661,6 +757,10 @@ public class ThreadExecutorTest {
             } finally {
                 Thread.interrupted(); // clear interrupt
             }
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -693,7 +793,7 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             Callable<String> task1 = () -> "foo";
             DelayedResult<String> task2 = new DelayedResult("bar", Duration.ofMinutes(1));
             ScheduledInterrupter.schedule(Thread.currentThread(), 2000);
@@ -711,6 +811,10 @@ public class ThreadExecutorTest {
             } finally {
                 Thread.interrupted(); // clear interrupt
             }
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -719,7 +823,7 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             Callable<String> task1 = () -> "foo";
             DelayedResult<String> task2 = new DelayedResult("bar", Duration.ofMinutes(1));
             ScheduledInterrupter.schedule(Thread.currentThread(), 2000);
@@ -737,6 +841,10 @@ public class ThreadExecutorTest {
             } finally {
                 Thread.interrupted(); // clear interrupt
             }
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -804,9 +912,13 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             List<Future<Object>> list = executor.invokeAll(Arrays.asList());
             assertTrue(list.size() == 0);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -814,9 +926,13 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             List<Future<Object>> list = executor.invokeAll(Arrays.asList(), 1, TimeUnit.SECONDS);
             assertTrue(list.size() == 0);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -833,8 +949,12 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             executor.invokeAll(null);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -843,11 +963,15 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             List<Callable<String>> tasks = new ArrayList<>();
             tasks.add(() -> "foo");
             tasks.add(null);
             executor.invokeAll(tasks);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -856,8 +980,12 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             executor.invokeAll(null, 1, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -866,9 +994,13 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             Callable<String> task = () -> "foo";
             executor.invokeAll(Arrays.asList(task), 1, null);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 
@@ -877,11 +1009,15 @@ public class ThreadExecutorTest {
         ThreadFactory factory = Thread.builder().virtual().factory();
         ExecutorService executor = Executors.newFixedThreadPool(2, factory);
         // try (var executor = Executors.newVirtualThreadExecutor()) {
-        {
+        try {
             List<Callable<String>> tasks = new ArrayList<>();
             tasks.add(() -> "foo");
             tasks.add(null);
             executor.invokeAll(tasks, 1, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdown();
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            assertTrue(executor.isTerminated());
         }
     }
 

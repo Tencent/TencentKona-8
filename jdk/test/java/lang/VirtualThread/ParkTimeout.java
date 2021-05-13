@@ -5,7 +5,7 @@
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates 
+ * published by the Free Software Foundation. THL A29 Limited designates
  * this particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
@@ -22,8 +22,8 @@
 
 /*
  * @test
- * @run testng ParkTimeout 
- * @summary test virtual thread park timeout 
+ * @run testng ParkTimeout
+ * @summary test virtual thread park timeout
  */
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;

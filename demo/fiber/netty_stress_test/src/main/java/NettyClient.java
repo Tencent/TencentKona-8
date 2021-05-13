@@ -31,7 +31,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.Channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.string.StringDecoder;  
+import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.channel.ChannelOption;

@@ -22,7 +22,7 @@
 
 /*
  * @test
- * @run testng VTCompensate 
+ * @run testng VTCompensate
  * @summary Basic test for ForkJoinPool to compensate when all threads are pinned.
  */
 
@@ -81,10 +81,10 @@ public class VTCompensate {
         lock.unlock();
         System.out.println("main release");
         vt0.join(1000);
-        assertEquals(vt0.getState(),  Thread.State.TERMINATED);        
+        assertEquals(vt0.getState(),  Thread.State.TERMINATED);
         System.out.println("finish vt0");
         vt1.join();
-        assertEquals(vt1.getState(),  Thread.State.TERMINATED);        
+        assertEquals(vt1.getState(),  Thread.State.TERMINATED);
         System.out.println("finish vt1");
         e.shutdown();
     }

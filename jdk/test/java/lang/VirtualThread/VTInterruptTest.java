@@ -5,7 +5,7 @@
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates 
+ * published by the Free Software Foundation. THL A29 Limited designates
  * this particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
@@ -24,7 +24,7 @@
  * @test
  * @run testng VTInterruptTest
  * @summary Virtual Thread interrupt test
- *   Conditional wait\CountDownLatch 
+ *   Conditional wait\CountDownLatch
  */
 import java.util.concurrent.*;
 import java.util.concurrent.locks.*;
@@ -198,7 +198,7 @@ public class VTInterruptTest {
         assertEquals(val, 0);
         executor.shutdown();
     }
- 
+
     // condition wait and interrupt
     static volatile boolean enter_lock = false;
     static void conditionInterruptTest() throws Exception {

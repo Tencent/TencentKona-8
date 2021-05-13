@@ -22,8 +22,8 @@
 
 /*
  * @test
- * @run testng SingleThreadExecutorTest 
- * @summary Basic test for VT before/after park interface 
+ * @run testng SingleThreadExecutorTest
+ * @summary single thread executor, customed executor test
  */
 
 import java.util.ArrayList;
