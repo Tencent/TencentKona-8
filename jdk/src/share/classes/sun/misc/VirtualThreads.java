@@ -23,7 +23,7 @@
  * questions.
  */
 
-package sun.misc; 
+package sun.misc;
 
 import sun.misc.JavaLangAccess;
 import sun.misc.SharedSecrets;

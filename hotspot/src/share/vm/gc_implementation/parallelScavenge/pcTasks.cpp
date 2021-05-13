@@ -86,7 +86,6 @@ void ThreadRootsMarkingTask::do_it(GCTaskManager* manager, uint which) {
 #if INCLUDE_KONA_FIBER
 void ContBucketRootsMarkingTask::do_it(GCTaskManager* manager, uint which) {
   assert(Universe::heap()->is_gc_active(), "called outside gc");
-  assert(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
   guarantee(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
 
   ResourceMark rm;

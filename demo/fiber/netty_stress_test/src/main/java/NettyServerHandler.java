@@ -28,11 +28,8 @@ import io.netty.util.CharsetUtil;
 public class NettyServerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        //System.out.println("[server]receive from client: " + str);
         String reqId = ((String)msg).split(":")[1];
-        //System.out.println("reqId is " + reqId);
         String resp = FutureMapUtil.generatorFrame("hello client", reqId);
-        //System.out.println("[server]ready to send: " + resp); 
         ctx.channel().writeAndFlush(Unpooled.copiedBuffer(resp, CharsetUtil.UTF_8));
     }
 }

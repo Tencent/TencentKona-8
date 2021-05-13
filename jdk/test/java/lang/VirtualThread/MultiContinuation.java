@@ -5,7 +5,7 @@
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates 
+ * published by the Free Software Foundation. THL A29 Limited designates
  * this particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
@@ -27,6 +27,7 @@
  */
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.*;
+import java.util.concurrent.*;
 import org.testng.annotations.Test;
 import static org.testng.Assert.*;
 
@@ -178,7 +179,7 @@ public class MultiContinuation {
                 } catch(InterruptedException e) {
                 }
             }
-        }; 
+        };
 
         Thread thread = new Thread(r, "baz-thread-0");
         thread.start();
@@ -188,6 +189,7 @@ public class MultiContinuation {
     @Test
     public static void quux() throws Exception {
         final Thread kernel = Thread.currentThread();
+        CountDownLatch allStartedSignal = new CountDownLatch(1);
         Runnable target = new Runnable() {
             public void run() {
                 //System.out.println("Continuation first run in " + Thread.currentThread().getName());
@@ -206,22 +208,22 @@ public class MultiContinuation {
         }
         AtomicInteger ai = new AtomicInteger(0);
 
-        Thread[] threads = new Thread[10];
+        Thread[] threads = new Thread[50];
         Runnable r = new Runnable() {
             public void run() {
                 try {
+                    allStartedSignal.await();
                     while (true) {
                         Continuation c = queue.take();
                         c.run();
                         if (c.isDone() == false) {
                             queue.offer(c);
                         } else {
-                            //System.out.println("done");
                             int res = ai.incrementAndGet();
                             if (res < 1000)
                                 continue;
 
-                            for (int i = 0; i < 10; i++) {
+                            for (int i = 0; i < 50; i++) {
                                 if (threads[i] == Thread.currentThread()) {
                                     continue;
                                 }
@@ -234,18 +236,17 @@ public class MultiContinuation {
                 }
             }
         };
-        
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 50; i++) {
             threads[i] = new Thread(r);
         }
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 50; i++) {
             threads[i].start();
         }
-
-        for (int i = 0; i < 10; i++) {
-            threads[i].join(); 
+        allStartedSignal.countDown();
+        for (int i = 0; i < 50; i++) {
+            threads[i].join();
         }
 
         assertEquals(ai.get(), 1000);
