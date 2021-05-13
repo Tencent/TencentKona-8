@@ -22,8 +22,8 @@
 
 /*
  * @test
- * @run testng ThreadLocalTest 
- * @summary Basic test thread local access 
+ * @run testng ThreadLocalTest
+ * @summary Basic test thread local access
  */
 import org.testng.annotations.Test;
 import static org.testng.Assert.*;
@@ -48,7 +48,7 @@ public class ThreadLocalTest {
 
         Thread vt = Thread.builder().virtual(e).task(()->{
             System.out.println(tl.get());
-            assertEquals(tl.get(), null); 
+            assertEquals(tl.get(), null);
             System.out.println("vt1");
             tl.set("virtual");
             System.out.println(tl.get());

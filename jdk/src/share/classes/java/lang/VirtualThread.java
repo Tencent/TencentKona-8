@@ -135,7 +135,7 @@ class VirtualThread extends Thread {
 
     /**
      * Initialize thread local of virtual thread according to characteristics.
-     */  
+     */
     private void initializeThreadLocal(int characteristics) {
         /* In case characteristics has NO_THREAD_LOCALS and threadLocals has been used */
         assert this.threadLocals == null;

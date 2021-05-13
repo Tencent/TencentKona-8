@@ -204,7 +204,7 @@ public class CustomScheduler {
     /**
      * Test carrier interrupt after running task.
      */
-    public void testInterruptAfterRun() {
+    /*public void testInterruptAfterRun() {
         Executor scheduler = (task) -> {
             task.run();
             Thread.currentThread().interrupt();
@@ -251,5 +251,5 @@ public class CustomScheduler {
         } finally {
             Thread.interrupted();
         }
-    }
+    }*/
 }

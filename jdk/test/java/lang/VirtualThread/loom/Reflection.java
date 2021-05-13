@@ -39,7 +39,7 @@ import static org.testng.Assert.*;
 
 @Test
 public class Reflection {
-    
+
     // -- invoke static method --
 
     public void testInvokeStatic1() throws Exception {
@@ -143,7 +143,10 @@ public class Reflection {
             Thread.sleep(100); // give thread time to be scheduled
 
             // unpark with another virtual thread, runs on same carrier thread
-            Thread.builder().virtual(scheduler).task(() -> LockSupport.unpark(vthread));
+            Thread unparker = Thread.builder().virtual(scheduler).task(() -> LockSupport.unpark(vthread)).build();
+            unparker.start();
+            unparker.join();
+            vthread.join();
         } finally {
             scheduler.shutdown();
         }
@@ -282,7 +285,10 @@ public class Reflection {
             Thread.sleep(100); // give thread time to be scheduled
 
             // unpark with another virtual thread, runs on same carrier thread
-            Thread.builder().virtual(scheduler).task(() -> LockSupport.unpark(vthread));
+            Thread unparker = Thread.builder().virtual(scheduler).task(() -> LockSupport.unpark(vthread)).build();
+            unparker.start();
+            unparker.join();
+            vthread.join();
         } finally {
             scheduler.shutdown();
         }

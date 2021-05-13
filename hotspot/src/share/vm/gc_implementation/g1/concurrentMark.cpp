@@ -2760,7 +2760,6 @@ class G1RemarkContsClosure {
     _continuation_parity(SharedHeap::heap()->strong_roots_parity()), _is_par(is_par) {}
 
   void do_continuation(ContBucket* bucket) {
-    assert(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
     guarantee(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
     if (bucket->claim_oops_do(_is_par, _continuation_parity)) {
       bucket->nmethods_do(&_code_cl);

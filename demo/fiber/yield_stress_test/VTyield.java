@@ -5,7 +5,7 @@
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates 
+ * published by the Free Software Foundation. THL A29 Limited designates
  * this particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
@@ -24,12 +24,12 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
 /*
- * test scheduling perfromance
- * input arguments: threadCount requestCount sleepms useFiber={true|false}
+ * test scheduling perfromance with yield
+ * input arguments: threadCount requestCount useFiber={true|false}
  * measures:
- * 1. thread startup time
- * 2. thread execution scheduling time
- * 3. thread pool close time
+ * 1. threads startup time
+ * 2. threads execution scheduling time
+ * 3. threads close time
  */
 public class VTyield {
     private static int threadCount;
@@ -54,7 +54,7 @@ public class VTyield {
         AtomicLong statsTimes = new AtomicLong();
         ExecutorService e;
         if (useFiber) {
-            ThreadFactory f = Thread.builder().virtual().factory(); 
+            ThreadFactory f = Thread.builder().virtual().factory();
             e = Executors.newFixedThreadPool(threadCount, f);
         } else {
             e = Executors.newFixedThreadPool(threadCount);
@@ -89,11 +89,11 @@ public class VTyield {
         statsTimes.set(afterStart);
         startSignal.countDown();
         doneSignal.await();
-        long afterExecution = System.currentTimeMillis(); 
+        long afterExecution = System.currentTimeMillis();
         long duration = (afterExecution - afterStart);
         System.out.println("finish " + count.get() + " time " + duration + "ms throughput " + (count.get()/(duration/1000.0)));
         e.shutdown();
-        e.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS); 
+        e.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
         System.out.println("finish shutdown " + (System.currentTimeMillis() - afterExecution) + "ms");
     }
 }

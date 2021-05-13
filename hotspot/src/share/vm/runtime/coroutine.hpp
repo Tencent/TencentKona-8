@@ -37,7 +37,7 @@
 #define DEBUG_CORO_ONLY(x) x
 #define DEBUG_CORO_PRINT(x) tty->print(x)
 #else
-#define DEBUG_CORO_ONLY(x) 
+#define DEBUG_CORO_ONLY(x)
 #define DEBUG_CORO_PRINT(x)
 #endif
 
@@ -86,10 +86,10 @@ private:
    * this array.
    */
   static GrowableArray<address>* free_array;
-  /* 
+  /*
    * A list of pre mapped stack, each node contains stacks which number is CONT_PREMAPPED_STACK_NUM,
-   * current_pre_mapped_stack pointed to the node which is used currently, 
-   * we should alloc a new pre mapped node when current_pre_mapped_stack is full.
+   * current_pre_mapped_stack pointed to the node which is used currently,
+   * we should alloc a new ContPreMappedStack when current ContPreMappedStack is all allocated.
    */
   static ContPreMappedStack* current_pre_mapped_stack;
   static int free_array_uncommit_index;
@@ -108,11 +108,11 @@ public:
   /*
    * 1. Try to get stack from free array.
    * 2. If free array is not empty, get a stack from free array and return.
-   * 3. If free array is empty, try to get stack from pre-mapped memory.
-   * 4. If pre-mapped memory has no space to assign, add a new pre-mapped block.
-   * 5. Get pre-mapped memory.
+   * 3. If free array is empty, try to get stack from current_pre_mapped_stack.
+   * 4. If current_pre_mapped_stack is all allocated, create a new current_pre_mapped_stack.
+   * 5. Get pre-mapped stack.
    * 6. Set the permisson of yellow page and red page as PROT_NONE.
-   */ 
+   */
   static address get_stack();
   /* Release stack and insert the stack into free array */
   static void insert_stack(address node);
@@ -213,7 +213,7 @@ public:
   enum CoroutineState {
     _onstack    = 0x00000001,
     _current    = 0x00000002,
-    _dead       = 0x00000003,      // TODO is this really needed?
+    _dead       = 0x00000003,
     _dummy      = 0xffffffff
   };
 
@@ -327,8 +327,6 @@ public:
  *
  * This mark is used when call java from native frame, when yield happen and there
  * exists ContNativeFrameMark on stack, yield will fail with native pin.
- *
- * TBD: kernel thread might also has JNI frame and native lock used
  */
 class ContNativeFrameMark: public StackObj {
  private:

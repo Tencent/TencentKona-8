@@ -4,7 +4,7 @@
 #
 # This code is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as
-# published by the Free Software Foundation. THL A29 Limited designates 
+# published by the Free Software Foundation. THL A29 Limited designates
 # this particular file as subject to the "Classpath" exception as provided
 # by Oracle in the LICENSE file that accompanied this code.
 #
@@ -25,7 +25,7 @@ newMainCode = """
   public static void main(final String[] args) {
     Runnable _target = new Runnable() {
       public void run() {
-          try { 
+          try {
               _main(args);
           } catch (Throwable t) {
              System.out.println(t);
@@ -48,7 +48,7 @@ newMainCode2 = """
   public static void main(final String... args) throws Exception {
     Runnable _target = new Runnable() {
       public void run() {
-          try { 
+          try {
               _main(args);
           } catch (Throwable t) {
              System.out.println(t);
@@ -101,7 +101,7 @@ line = f.readline()
 while line:
     if ("public static void main" in line or "static public void main" in line or "public static final void main" in line) and ("println" not in line) and ("\"" not in line) and ("PKCS11Test" not in line):
         if (not re.match(".*[\t| ]+main[\t| ]*\(.*", line)) or ("//" in line):
-            print line, 
+            print line,
         elif ("String..." in line):
             print newMainCode2,
             print line.replace("main", "_main"),
@@ -115,7 +115,7 @@ while line:
         # read unitl empty line line with @
         checkingClassFileInstaller = True
         printClassFileInstaller = checkAddInstall(line, classname)
-        print line, 
+        print line,
     else:
         if checkingClassFileInstaller:
             if "@" in line or "*/" in line:
@@ -134,5 +134,5 @@ while line:
                 break
         printClassFileInstaller = False
         checkingClassFileInstaller = False
-    line = f.readline() 
+    line = f.readline()
 f.close();

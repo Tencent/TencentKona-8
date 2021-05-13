@@ -5,7 +5,7 @@
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates 
+ * published by the Free Software Foundation. THL A29 Limited designates
  * this particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
@@ -24,8 +24,8 @@ import java.sql.*;
 
 public class ConnectionNode {
     private static String url = "jdbc:mysql://localhost:3306/zm?useSSL=false";
-    private static String username = "root";
-    private static String password = "Abc_12345678";
+    private static String u = "root";
+    private static String p = "Abc_12345678";
 
     ConnectionNode next = null;
     Connection con;
@@ -33,7 +33,7 @@ public class ConnectionNode {
 
     public ConnectionNode() {
         try {
-            con = DriverManager.getConnection(url, username, password);
+            con = DriverManager.getConnection(url, u, p);
             stm = con.createStatement();
         } catch (Exception e) {
         }

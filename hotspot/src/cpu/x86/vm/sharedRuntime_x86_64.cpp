@@ -4387,20 +4387,18 @@ void OptoRuntime::generate_exception_blob() {
 #endif // COMPILER2
 
 /*
- * switch from current continuation to target continuation in following method
+ * switch from current continuation to target continuation in following generated methods
  * private static native void switchTo(Continuation current, Continuation target);
  * private static native void switchToAndTerminate(Continuation current, Continuation target);
  * In switchTo, one of continuation must be thread continuation. In switchToAndTerminate
  * target continuation is kernel thread continuation.
  *
  * target_coroutine in "rdx" and current coroutine in "rsi" in runtime ABI first two arguments.
- * 1. monitor lock/JNI check, if lock is hold, JNI frame present on stack, no switch and pinned
- * 2. if switch target continuation on other thread, perform stack/coroutine switch
- *    TODO: if coroutine and stack is managed globally, no need perform switch
- * 3. Save old continuation context: sp
- * 4. Restore new continuation context: sp\stack base\stack size
- * 5. If normal switch, return and execute in new coroutine
- * 6. If terminate, invoke terminate on current thread
+ * 1. Monitor lock/JNI check, if lock is hold, JNI frame present on stack, no switch and pinned
+ * 2. Save old continuation context: sp
+ * 3. Restore new continuation context: sp\stack base\stack size
+ * 4. For normal switch, return and execute in new coroutine
+ * 5. Forterminate, invoke native method on current continuation
  */
 #if INCLUDE_KONA_FIBER
 void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* oop_maps, int &stack_slots, int total_in_args,

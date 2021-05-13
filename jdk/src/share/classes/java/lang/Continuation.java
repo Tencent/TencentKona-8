@@ -135,7 +135,7 @@ public class Continuation {
     public Continuation(ContinuationScope scope, Runnable target) {
         this(scope, 0, target);
     }
-    
+
     /**
      * TBD
      * @param scope TBD
@@ -168,7 +168,7 @@ public class Continuation {
     Continuation getParent() {
         return parent;
     }
-    
+
     /**
      * TBD
      * @return TBD
@@ -190,7 +190,7 @@ public class Continuation {
         // Thread.setScopedCache(null);
         setMounted(0);
     }
-    
+
     /**
      * start/continue execute a continuation
      * 1. no parent continuation, switch from thread coroutine to continuation
@@ -240,7 +240,7 @@ public class Continuation {
             return;
         }
     }
-    
+
     // yield from current caller to target
     // if target is null, yield to thread coroutine
     private final boolean yield0(Continuation target) {
@@ -259,7 +259,7 @@ public class Continuation {
 
     /**
      * TBD
-     * 
+     *
      * @param scope The {@link ContinuationScope} to yield
      * @return {@code true} for success; {@code false} for failure
      * @throws IllegalStateException if not currently in the given {@code scope},
@@ -412,7 +412,7 @@ public class Continuation {
      *
      * check from current continuation to its parent continuation
      * Nested scoped NYI
-     * 
+     *
      * @param scope the continuation scope
      * @return {@code} true if we're in the give scope and are pinned; {@code false otherwise}
      */
