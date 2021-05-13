@@ -5,7 +5,7 @@
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates 
+ * published by the Free Software Foundation. THL A29 Limited designates
  * this particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
@@ -22,7 +22,7 @@
 
 /*
  * @test
- * @run testng VTPinnedCallback 
+ * @run testng VTPinnedCallback
  * @summary Basic test for add a callback of Continuation when Continuation is pinned.
  */
 import java.util.concurrent.*;

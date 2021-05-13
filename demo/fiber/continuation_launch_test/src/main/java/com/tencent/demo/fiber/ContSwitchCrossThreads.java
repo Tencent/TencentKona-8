@@ -5,7 +5,7 @@
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates 
+ * published by the Free Software Foundation. THL A29 Limited designates
  * this particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
@@ -39,7 +39,7 @@ import java.util.concurrent.locks.*;
 @State(Scope.Benchmark)
 
 /*
- * Test continuation switch between threads 
+ * Test continuation switch cross carrier threads
  */
 public class ContSwitchCrossThreads {
     private static ContinuationScope scope = new ContinuationScope("scope");
@@ -95,7 +95,7 @@ public class ContSwitchCrossThreads {
                  }
              });
          }
-         // start two threads running
+         // start two threads
          threads[0] = new Thread(() -> {
              lock1.lock();
              while (true) {

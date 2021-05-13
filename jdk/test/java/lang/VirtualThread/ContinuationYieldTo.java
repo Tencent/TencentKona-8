@@ -5,7 +5,7 @@
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates 
+ * published by the Free Software Foundation. THL A29 Limited designates
  * this particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
@@ -22,7 +22,7 @@
 
 /*
  * @test
- * @run testng ContinuationYieldTo 
+ * @run testng ContinuationYieldTo
  * @summary Basic test for continuation yieldTo api, test start/yieldTo/resume/stop
  */
 import org.testng.annotations.Test;
@@ -74,7 +74,6 @@ public class ContinuationYieldTo {
     @Test
     public static void test_yieldToBetweenConts() {
         value = 0;
-              
         Continuation cont1 = new Continuation(scope, () -> {
            System.out.println("enter cont1");
            foo();
@@ -94,6 +93,7 @@ public class ContinuationYieldTo {
         System.out.println(value);
         assertEquals(value, 1);
         Continuation.yieldTo(cont2);
+        // after cont1 finish, it return to main thread here, not return to cont2
         Continuation.yieldTo(cont2);
     }
 

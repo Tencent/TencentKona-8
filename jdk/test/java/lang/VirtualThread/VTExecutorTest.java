@@ -5,7 +5,7 @@
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates 
+ * published by the Free Software Foundation. THL A29 Limited designates
  * this particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
@@ -39,7 +39,7 @@ public class VTExecutorTest {
     private static int requestCount;
     private static int interval;
 	private static boolean useDefaultScheduler = false;
- 
+
     public static void main(String[] args) throws Exception {
         realThreadCount = Integer.parseInt(args[0]);
         requestCount = Integer.parseInt(args[1]);
@@ -90,8 +90,8 @@ public class VTExecutorTest {
         doneSignal.await();
         System.out.println("finish " + count.get() + " time " + (System.currentTimeMillis()- now));
         if (count.get() != requestCount) {
-           throw new Exception("Not equal"); 
-        } 
+           throw new Exception("Not equal");
+        }
         now = System.currentTimeMillis();
         e.shutdown();
         e.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
