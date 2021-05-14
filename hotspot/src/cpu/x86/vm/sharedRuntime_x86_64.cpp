@@ -4494,14 +4494,12 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
     }
     __ xorl(rax, rax);
     __ ret(0);
-    if (terminate == false) {
-      __ bind(pinSlowPath);
-      __ movl(rax, CONT_PIN_MONITOR);
-      __ movl(r9, CONT_PIN_JNI);
-      __ testl(temp, temp); // check lower 32 bits for moinitor pin
-      __ cmovl(Assembler::zero, rax, r9);
-      __ ret(0);
-    }
+    __ bind(pinSlowPath);
+    __ movl(rax, CONT_PIN_MONITOR);
+    __ movl(r9, CONT_PIN_JNI);
+    __ testl(temp, temp); // check lower 32 bits for moinitor pin
+    __ cmovl(Assembler::zero, rax, r9);
+    __ ret(0);
   } else {
     if (j_rarg1 != old_coroutine_obj) {
       __ movptr(j_rarg1, old_coroutine_obj);
