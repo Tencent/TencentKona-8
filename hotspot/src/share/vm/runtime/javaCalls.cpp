@@ -558,7 +558,7 @@ void JavaCalls::call_continuation_start(oop cont_obj, TRAPS) {
       coro->set_has_javacall(true);
       coro->set_continuation(param);
       hm.~HandleMark();
-      method.remove();
+      method.~methodHandle();
       StubRoutines::call_stub()(
         (address)&link,
         // (intptr_t*)&(result->_value), // see NOTE above (compiler problem)
