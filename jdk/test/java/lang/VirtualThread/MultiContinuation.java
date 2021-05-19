@@ -116,13 +116,17 @@ public class MultiContinuation {
         for (int i = 0; i < 10; i++) {
             conts[i] = new Continuation(scope, target);;
         }
+        CountDownLatch waitSignal1 = new CountDownLatch(1);
+        CountDownLatch waitSignal2 = new CountDownLatch(1);
         Thread thread = new Thread("qux-thread-0"){
             public void run() {
                 for (int i = 0; i < 10; i++) {
                     conts[i].run();
                 }
+                waitSignal1.countDown();
                 try {
-                    Thread.sleep(2000);
+                    // wait main thread finish second round
+                    waitSignal2.await();
                 } catch (Exception e) {
                 }
                 for (int i = 0; i < 10; i++) {
@@ -131,10 +135,12 @@ public class MultiContinuation {
             }
         };
         thread.start();
-        Thread.sleep(1000);
+        // wait thread finish first round run
+        waitSignal1.await();
         for (int i = 0; i < 10; i++) {
             conts[i].run();
         }
+        waitSignal2.countDown();
         thread.join();
     }
 

@@ -28,6 +28,7 @@
 
 import static org.testng.Assert.*;
 import org.testng.annotations.Test;
+import java.util.concurrent.CountDownLatch;
 
 public class SwitchThreadTest {
     static long count = 0;
@@ -126,6 +127,7 @@ public class SwitchThreadTest {
 
     static void baz() throws Exception {
         final Thread kernel = Thread.currentThread();
+        internal = null;
         Runnable target = new Runnable() {
             public void run() {
                 System.out.println("before yield, Continuation run in " + Thread.currentThread().getName());
@@ -135,22 +137,26 @@ public class SwitchThreadTest {
                 assertEquals(Thread.currentThread().getName(), "baz-thread-0");
             }
         };
+        CountDownLatch waitSignal1 = new CountDownLatch(1);
+        CountDownLatch waitSignal2 = new CountDownLatch(1);
         Thread thread = new Thread("baz-thread-0"){
             public void run() {
                 Continuation cont = new Continuation(scope, target);
                 System.out.println("Continuation create in " + Thread.currentThread().getName());
                 assertEquals(Thread.currentThread().getName(), "baz-thread-0");
                 internal = cont;
+                waitSignal1.countDown();
                 try {
-                    Thread.sleep(2000);
+                    waitSignal2.await();
                 } catch (Exception e) {
                 }
                 cont.run();
             }
         };
         thread.start();
-        Thread.sleep(1000);
+        waitSignal1.await();
         internal.run();
+        waitSignal2.countDown();
         thread.join();
     }
 
