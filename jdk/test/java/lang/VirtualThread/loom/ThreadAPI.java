@@ -860,12 +860,12 @@ public class ThreadAPI {
         });
     }
 
-    public void testSetDaemon1() {
+    /*public void testSetDaemon1() {
         Thread thread = Thread.newThread(Thread.VIRTUAL, () -> { });
         assertTrue(thread.isDaemon());
         thread.setDaemon(false);
         assertTrue(thread.isDaemon());
-    }
+    }*/
 
     public void testSetDaemon2() throws Exception {
         Thread thread = Thread.newThread(Thread.VIRTUAL, () -> LockSupport.park());
@@ -1520,14 +1520,14 @@ public class ThreadAPI {
     }
 
     // thread group of kernel threads created by virtual threads
-    public void testThreadGroup2() throws Exception {
+    /*public void testThreadGroup2() throws Exception {
         TestHelper.runInVirtualThread(() -> {
             ThreadGroup vgroup = Thread.currentThread().getThreadGroup();
             Thread child = new Thread(() -> { });
             ThreadGroup group = child.getThreadGroup();
             assertTrue(group != vgroup);
         });
-    }
+    }*/
 
     // enumerate recurse=false
     public void testEnumerate1() throws Exception {
