@@ -80,7 +80,7 @@ public class VTCompensate {
         }
         lock.unlock();
         System.out.println("main release");
-        vt0.join(1000);
+        vt0.join();
         assertEquals(vt0.getState(),  Thread.State.TERMINATED);
         System.out.println("finish vt0");
         vt1.join();

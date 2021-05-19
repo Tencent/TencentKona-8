@@ -63,7 +63,8 @@ public class ContinuationYieldToError {
         });
         cont1.run();
         cont2.run();
-        assertEquals(findEx, true); 
+        assertEquals(findEx, true);
+        cont1.run();
     }
 }
 
