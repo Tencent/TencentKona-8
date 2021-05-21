@@ -56,6 +56,9 @@
 #include "runtime/vm_operations.hpp"
 #include "services/memoryService.hpp"
 #include "utilities/stack.inline.hpp"
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+#endif
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
@@ -415,6 +418,11 @@ bool PSScavenge::invoke_no_policy() {
       q->enqueue(new ScavengeRootsTask(ScavengeRootsTask::jni_handles));
       // We scan the thread roots in parallel
       Threads::create_thread_roots_tasks(q);
+#if INCLUDE_KONA_FIBER
+      if (UseKonaFiber) {
+        ContBucket::create_cont_bucket_roots_tasks(q);
+      }
+#endif
       q->enqueue(new ScavengeRootsTask(ScavengeRootsTask::object_synchronizer));
       q->enqueue(new ScavengeRootsTask(ScavengeRootsTask::flat_profiler));
       q->enqueue(new ScavengeRootsTask(ScavengeRootsTask::management));

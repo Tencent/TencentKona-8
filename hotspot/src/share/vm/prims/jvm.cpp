@@ -96,6 +96,9 @@
 #endif // INCLUDE_ALL_GCS
 
 #include <errno.h>
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+#endif
 
 #ifndef USDT2
 HS_DTRACE_PROBE_DECL1(hotspot, thread__sleep__begin, long long);
@@ -771,6 +774,14 @@ JVM_LEAF(jint, JVM_GetLastErrorString(char *buf, int len))
   return (jint)os::lasterror(buf, len);
 JVM_END
 
+// java.lang.Continuation /////////////////////////////////////////////////////
+JVM_ENTRY(void, JVM_RegisterContinuationMethods(JNIEnv *env, jclass cls))
+#if INCLUDE_KONA_FIBER
+  CONT_RegisterNativeMethods(env, cls, thread);
+#else
+  fatal("can not regist continuation methods when using --disable-kona-fiber");
+#endif
+JVM_END
 
 // java.io.File ///////////////////////////////////////////////////////////////
 

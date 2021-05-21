@@ -56,6 +56,9 @@
 #if INCLUDE_JFR
 #include "jfr/jfr.hpp"
 #endif // INCLUDE_JFR
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+#endif
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
@@ -540,6 +543,11 @@ void PSMarkSweep::mark_sweep_phase1(bool clear_all_softrefs) {
     CLDToOopClosure mark_and_push_from_cld(mark_and_push_closure());
     MarkingCodeBlobClosure each_active_code_blob(mark_and_push_closure(), !CodeBlobToOopClosure::FixRelocations);
     Threads::oops_do(mark_and_push_closure(), &mark_and_push_from_cld, &each_active_code_blob);
+#if INCLUDE_KONA_FIBER
+    if (UseKonaFiber) {
+      ContContainer::oops_do(mark_and_push_closure(), &mark_and_push_from_cld, &each_active_code_blob);
+    }
+#endif
     ObjectSynchronizer::oops_do(mark_and_push_closure());
     FlatProfiler::oops_do(mark_and_push_closure());
     Management::oops_do(mark_and_push_closure());
@@ -624,6 +632,11 @@ void PSMarkSweep::mark_sweep_phase3() {
   JNIHandles::oops_do(adjust_pointer_closure());   // Global (strong) JNI handles
   CLDToOopClosure adjust_from_cld(adjust_pointer_closure());
   Threads::oops_do(adjust_pointer_closure(), &adjust_from_cld, NULL);
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    ContContainer::oops_do(adjust_pointer_closure(), &adjust_from_cld, NULL);
+  }
+#endif
   ObjectSynchronizer::oops_do(adjust_pointer_closure());
   FlatProfiler::oops_do(adjust_pointer_closure());
   Management::oops_do(adjust_pointer_closure());

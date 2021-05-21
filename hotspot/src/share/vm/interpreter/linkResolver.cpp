@@ -165,6 +165,9 @@ CallInfo::CallInfo(Method* resolved_method, Klass* resolved_klass) {
 
 #ifdef ASSERT
     // Ensure that this is really the case.
+#if INCLUDE_KONA_FIBER
+    ResourceMark rm; // added for continuation
+#endif
     KlassHandle object_klass = SystemDictionary::Object_klass();
     Method * object_resolved_method = object_klass()->vtable()->method_at(index);
     assert(object_resolved_method->name() == resolved_method->name(),

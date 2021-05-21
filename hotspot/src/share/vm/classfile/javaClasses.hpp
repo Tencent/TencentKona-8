@@ -1438,7 +1438,48 @@ class InjectedField {
   CLASS_INJECTED_FIELDS(macro)              \
   CLASSLOADER_INJECTED_FIELDS(macro)        \
   MEMBERNAME_INJECTED_FIELDS(macro)
+#if INCLUDE_KONA_FIBER
+class java_lang_Continuation: AllStatic {
+private:
+  // Note that to reduce dependencies on the JDK we compute these offsets at run-time.
+  static int _data_offset;
 
+  static void compute_offsets();
+
+public:
+  // Accessors
+  static jlong data(oop obj);
+  static void set_data(oop obj, jlong value);
+
+  static int get_data_offset()    { return _data_offset; }
+
+  // Debugging
+  friend class JavaClasses;
+};
+
+class java_lang_VTContinuation: AllStatic {
+private:
+  static int _VT_offset;
+  static void compute_offsets();
+
+public:
+  static oop VT(oop obj);
+
+  // Debugging
+  friend class JavaClasses;
+};
+
+class java_lang_VT: AllStatic {
+private:
+  static int _state_offset;
+  static void compute_offsets();
+
+public:
+  static int state(oop obj);
+  // Debugging
+  friend class JavaClasses;
+};
+#endif
 // Interface to hard-coded offset checking
 
 class JavaClasses : AllStatic {

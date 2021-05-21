@@ -384,7 +384,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
     private int doJoin() {
         int s; Thread t; ForkJoinWorkerThread wt; ForkJoinPool.WorkQueue w;
         return (s = status) < 0 ? s :
-            ((t = Thread.currentThread()) instanceof ForkJoinWorkerThread) ?
+            ((t = Thread.currentCarrierThread()) instanceof ForkJoinWorkerThread) ?
             (w = (wt = (ForkJoinWorkerThread)t).workQueue).
             tryUnpush(this) && (s = doExec()) < 0 ? s :
             wt.pool.awaitJoin(w, this, 0L) :
@@ -399,7 +399,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
     private int doInvoke() {
         int s; Thread t; ForkJoinWorkerThread wt;
         return (s = doExec()) < 0 ? s :
-            ((t = Thread.currentThread()) instanceof ForkJoinWorkerThread) ?
+            ((t = Thread.currentCarrierThread()) instanceof ForkJoinWorkerThread) ?
             (wt = (ForkJoinWorkerThread)t).pool.
             awaitJoin(wt.workQueue, this, 0L) :
             externalAwaitDone();
@@ -696,7 +696,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      */
     public final ForkJoinTask<V> fork() {
         Thread t;
-        if ((t = Thread.currentThread()) instanceof ForkJoinWorkerThread)
+        if ((t = Thread.currentCarrierThread()) instanceof ForkJoinWorkerThread)
             ((ForkJoinWorkerThread)t).workQueue.push(this);
         else
             ForkJoinPool.common.externalPush(this);
@@ -997,7 +997,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      * member of a ForkJoinPool and was interrupted while waiting
      */
     public final V get() throws InterruptedException, ExecutionException {
-        int s = (Thread.currentThread() instanceof ForkJoinWorkerThread) ?
+        int s = (Thread.currentCarrierThread() instanceof ForkJoinWorkerThread) ?
             doJoin() : externalInterruptibleAwaitDone();
         Throwable ex;
         if ((s &= DONE_MASK) == CANCELLED)
@@ -1030,7 +1030,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         if ((s = status) >= 0 && nanos > 0L) {
             long d = System.nanoTime() + nanos;
             long deadline = (d == 0L) ? 1L : d; // avoid 0
-            Thread t = Thread.currentThread();
+            Thread t = Thread.currentCarrierThread();
             if (t instanceof ForkJoinWorkerThread) {
                 ForkJoinWorkerThread wt = (ForkJoinWorkerThread)t;
                 s = wt.pool.awaitJoin(wt.workQueue, this, deadline);
@@ -1097,7 +1097,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      */
     public static void helpQuiesce() {
         Thread t;
-        if ((t = Thread.currentThread()) instanceof ForkJoinWorkerThread) {
+        if ((t = Thread.currentCarrierThread()) instanceof ForkJoinWorkerThread) {
             ForkJoinWorkerThread wt = (ForkJoinWorkerThread)t;
             wt.pool.helpQuiescePool(wt.workQueue);
         }
@@ -1136,7 +1136,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      * @return the pool, or {@code null} if none
      */
     public static ForkJoinPool getPool() {
-        Thread t = Thread.currentThread();
+        Thread t = Thread.currentCarrierThread();
         return (t instanceof ForkJoinWorkerThread) ?
             ((ForkJoinWorkerThread) t).pool : null;
     }
@@ -1150,7 +1150,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      * or {@code false} otherwise
      */
     public static boolean inForkJoinPool() {
-        return Thread.currentThread() instanceof ForkJoinWorkerThread;
+        return Thread.currentCarrierThread() instanceof ForkJoinWorkerThread;
     }
 
     /**
@@ -1165,7 +1165,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      */
     public boolean tryUnfork() {
         Thread t;
-        return (((t = Thread.currentThread()) instanceof ForkJoinWorkerThread) ?
+        return (((t = Thread.currentCarrierThread()) instanceof ForkJoinWorkerThread) ?
                 ((ForkJoinWorkerThread)t).workQueue.tryUnpush(this) :
                 ForkJoinPool.common.tryExternalUnpush(this));
     }
@@ -1180,7 +1180,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      */
     public static int getQueuedTaskCount() {
         Thread t; ForkJoinPool.WorkQueue q;
-        if ((t = Thread.currentThread()) instanceof ForkJoinWorkerThread)
+        if ((t = Thread.currentCarrierThread()) instanceof ForkJoinWorkerThread)
             q = ((ForkJoinWorkerThread)t).workQueue;
         else
             q = ForkJoinPool.commonSubmitterQueue();
@@ -1256,7 +1256,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      */
     protected static ForkJoinTask<?> peekNextLocalTask() {
         Thread t; ForkJoinPool.WorkQueue q;
-        if ((t = Thread.currentThread()) instanceof ForkJoinWorkerThread)
+        if ((t = Thread.currentCarrierThread()) instanceof ForkJoinWorkerThread)
             q = ((ForkJoinWorkerThread)t).workQueue;
         else
             q = ForkJoinPool.commonSubmitterQueue();
@@ -1274,7 +1274,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      */
     protected static ForkJoinTask<?> pollNextLocalTask() {
         Thread t;
-        return ((t = Thread.currentThread()) instanceof ForkJoinWorkerThread) ?
+        return ((t = Thread.currentCarrierThread()) instanceof ForkJoinWorkerThread) ?
             ((ForkJoinWorkerThread)t).workQueue.nextLocalTask() :
             null;
     }
@@ -1294,7 +1294,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      */
     protected static ForkJoinTask<?> pollTask() {
         Thread t; ForkJoinWorkerThread wt;
-        return ((t = Thread.currentThread()) instanceof ForkJoinWorkerThread) ?
+        return ((t = Thread.currentCarrierThread()) instanceof ForkJoinWorkerThread) ?
             (wt = (ForkJoinWorkerThread)t).pool.nextTaskFor(wt.workQueue) :
             null;
     }

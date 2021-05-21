@@ -43,6 +43,10 @@
 #ifdef COMPILER2
 #include "opto/runtime.hpp"
 #endif
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+void coroutine_start(void* dummy, const void* coroutineObj);
+#endif
 
 #define __ masm->
 
@@ -1719,7 +1723,9 @@ static void gen_special_dispatch(MacroAssembler* masm,
   MethodHandles::generate_method_handle_dispatch(masm, iid,
                                                  receiver_reg, member_reg, /*for_compiler_entry:*/ true);
 }
-
+#if INCLUDE_KONA_FIBER
+void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* oop_maps, int &stack_slots, int total_in_args, BasicType *in_sig_bt, VMRegPair *in_regs, BasicType ret_type, bool terminate);
+#endif
 // ---------------------------------------------------------------------------
 // Generate a native wrapper for a given method.  The method takes arguments
 // in the Java compiled code convention, marshals them to the native
@@ -2007,6 +2013,14 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     __ fat_nop();
   }
 
+  // the continuation support methods have a hand-coded fast version that will handle the most common cases
+#if INCLUDE_KONA_FIBER
+  if (method->intrinsic_id() == vmIntrinsics::_contSwitchTo) {
+    continuation_switchTo_contents(masm, start, oop_maps, stack_slots, total_in_args, in_sig_bt, in_regs, ret_type, false);
+  } else if (method->intrinsic_id() == vmIntrinsics::_contSwitchToAndTerminate) {
+    continuation_switchTo_contents(masm, start, oop_maps, stack_slots, total_in_args, in_sig_bt, in_regs, ret_type, true);
+  }
+#endif
   // Generate a new frame for the wrapper.
   __ enter();
   // -2 because return address is already present and so is saved rbp
@@ -2322,6 +2336,11 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     // Slow path will re-enter here
 
     __ bind(lock_done);
+#if INCLUDE_KONA_FIBER
+    if (UseKonaFiber) {
+      __ addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
+    }
+#endif
   }
 
 
@@ -2485,7 +2504,11 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     }
 
     __ bind(done);
-
+#if INCLUDE_KONA_FIBER
+    if (UseKonaFiber) {
+      __ subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
+    }
+#endif
   }
   {
     SkipIfEqual skip(masm, &DTraceMethodProbes, false);
@@ -2521,9 +2544,12 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     __ cmpptr(Address(r15_thread, in_bytes(Thread::pending_exception_offset())), (int32_t)NULL_WORD);
     __ jcc(Assembler::notEqual, exception_pending);
   }
-
-  // Return
-
+#if INCLUDE_KONA_FIBER
+  if (method->intrinsic_id() == vmIntrinsics::_contSwitchToAndTerminate) {
+    // yield back to kernel thread, return "cont.run"
+    __ xorl(rax, rax);
+  }
+#endif
   __ ret(0);
 
   // Unexpected paths are out of line and go here
@@ -2562,6 +2588,11 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     __ jcc(Assembler::equal, L);
     __ stop("no pending exception allowed on exit from monitorenter");
     __ bind(L);
+    }
+#endif
+#if INCLUDE_KONA_FIBER
+    if (UseKonaFiber) {
+      __ subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
     }
 #endif
     __ jmp(lock_done);
@@ -2608,6 +2639,11 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     if (ret_type == T_FLOAT || ret_type == T_DOUBLE ) {
       restore_native_result(masm, ret_type, stack_slots);
     }
+#if INCLUDE_KONA_FIBER
+    if (UseKonaFiber) {
+      __ addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
+    }
+#endif
     __ jmp(unlock_done);
 
     // END Slow path unlock
@@ -4349,3 +4385,126 @@ void OptoRuntime::generate_exception_blob() {
   _exception_blob =  ExceptionBlob::create(&buffer, oop_maps, SimpleRuntimeFrame::framesize >> 1);
 }
 #endif // COMPILER2
+
+/*
+ * switch from current continuation to target continuation in following generated methods
+ * private static native void switchTo(Continuation current, Continuation target);
+ * private static native void switchToAndTerminate(Continuation current, Continuation target);
+ * In switchTo, one of continuation must be thread continuation. In switchToAndTerminate
+ * target continuation is kernel thread continuation.
+ *
+ * target_coroutine in "rdx" and current coroutine in "rsi" in runtime ABI first two arguments.
+ * 1. Monitor lock/JNI check, if lock is hold, JNI frame present on stack, no switch and pinned
+ * 2. Save old continuation context: sp
+ * 3. Restore new continuation context: sp\stack base\stack size
+ * 4. For normal switch, return and execute in new coroutine
+ * 5. Forterminate, invoke native method on current continuation
+ */
+#if INCLUDE_KONA_FIBER
+void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* oop_maps, int &stack_slots, int total_in_args,
+                                    BasicType *in_sig_bt, VMRegPair *in_regs, BasicType ret_type, bool terminate) {
+  assert(total_in_args == 2, "wrong number of arguments");
+#ifdef LINUX
+  assert(j_rarg0 == rsi && j_rarg1 == rdx, "unexpcted register");
+#endif
+  if (j_rarg0 != rsi) {
+    __ movptr(rsi, j_rarg0); // j_rarg0 is target
+  }
+  if (j_rarg1 != rdx) {
+    __ movptr(rdx, j_rarg1); // j_rarg1 is current
+  }
+
+  // resgister should not overlap
+  Register thread                = r15;
+  Register target_coroutine_obj  = rsi;
+  Register target_coroutine      = r10;
+  Register old_coroutine_obj     = rdx;
+  Register old_coroutine         = r9;
+  Register temp                  = r8;
+
+  // check if continuation is pinned, return pinned result
+  // terminate must happen in Continuation.start method no JNI and lock
+  Label pinSlowPath;
+  if (terminate == false) {
+    __ movq(temp, Address(thread, in_bytes(Thread::ContAlignedLong_offset())));
+    __ testq(temp, temp);
+    __ jcc(Assembler::notZero, pinSlowPath);
+  }
+  // push the current IP and frame pointer onto the stack
+  __ push(rbp);
+
+  // invoke verification with old and target coroutine
+  __ movptr(target_coroutine, Address(target_coroutine_obj, java_lang_Continuation::get_data_offset()));
+  __ movptr(old_coroutine, Address(old_coroutine_obj, java_lang_Continuation::get_data_offset()));
+  if (VerifyCoroutineStateOnYield) {
+    __ VerifyCoroutineState(old_coroutine, target_coroutine, terminate);
+  }
+
+  // save old continuation, save rsp
+  if(terminate == false)	{
+#ifdef ASSERT
+    __ movl(temp, Address(thread, JavaThread::java_call_counter_offset()));
+    __ movl(Address(old_coroutine, Coroutine::java_call_counter_offset()), temp);
+#endif
+    __ movptr(Address(old_coroutine, in_bytes(Coroutine::thread_offset())), 0x0);
+  }
+  __ movl(Address(old_coroutine, Coroutine::state_offset()) , Coroutine::_onstack);
+  __ movptr(Address(old_coroutine, Coroutine::last_sp_offset()), rsp);
+
+  // load target continuation context
+#ifdef ASSERT
+  __ movl(temp, Address(target_coroutine, Coroutine::java_call_counter_offset()));
+  __ movl(Address(thread, JavaThread::java_call_counter_offset()), temp);
+#endif
+  __ movptr(Address(target_coroutine, in_bytes(Coroutine::thread_offset())), thread);
+  __ movl(Address(target_coroutine, Coroutine::state_offset()), Coroutine::_current);
+  __ movptr(Address(thread,JavaThread::current_coro_offset()), target_coroutine);
+  __ movptr(temp, Address(target_coroutine, Coroutine::stack_base_offset()));
+  __ movptr(Address(thread, JavaThread::stack_base_offset()), temp);
+  __ movl(temp, Address(target_coroutine, Coroutine::stack_size_offset()));
+  __ movl(Address(thread, JavaThread::stack_size_offset()), temp);
+  __ movptr(rsp, Address(target_coroutine, Coroutine::last_sp_offset()));
+#if defined(_WINDOWS)
+    {
+      Register tib = rax;
+      // get the linear address of the TIB (thread info block)
+      // __ prefix(Assembler::GS_segment); this api is protected
+      __ emit_int8(Assembler::GS_segment);
+      __ movptr(tib, Address(noreg, 0x30));
+
+      // update the TIB stack base and top
+      __ movptr(temp, Address(target_coroutine, Coroutine::stack_base_offset()));
+      __ movptr(Address(tib, 0x8), temp);
+      __ subptr(temp, Address(target_coroutine, Coroutine::stack_size_offset()));
+      __ movptr(Address(tib, 0x10), temp);
+    }
+#endif
+  __ pop(rbp);
+
+  // jump and prepare arguments
+  __ reinit_heapbase();
+  if (!terminate) {
+    if (c_rarg1 != target_coroutine_obj) {
+      Label normal;
+      __ lea(rcx, RuntimeAddress((unsigned char*)coroutine_start));
+      __ cmpq(Address(rsp, 0), rcx);
+      __ jcc(Assembler::notEqual, normal);
+      __ movq(c_rarg1, target_coroutine_obj);
+      __ bind(normal);
+    }
+    __ xorl(rax, rax);
+    __ ret(0);
+    __ bind(pinSlowPath);
+    __ movl(rax, CONT_PIN_MONITOR);
+    __ movl(r9, CONT_PIN_JNI);
+    __ testl(temp, temp); // check lower 32 bits for moinitor pin
+    __ cmovl(Assembler::zero, rax, r9);
+    __ ret(0);
+  } else {
+    if (j_rarg1 != old_coroutine_obj) {
+      __ movptr(j_rarg1, old_coroutine_obj);
+    }
+    __ movptr(j_rarg0, 0);
+  }
+}
+#endif // INCLUDE_KONA_FIBER

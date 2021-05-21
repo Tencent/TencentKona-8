@@ -3988,6 +3988,21 @@ class CommandLineFlags {
           "EINTR for I/O operations results in OS_INTRPT. The default "     \
           "value of this flag is true for JDK 6 and earlier")               \
                                                                             \
+  product(bool, UseKonaFiber, true,                                         \
+          "Enable Kona Fiber")                                              \
+                                                                            \
+  product(uintx, DefaultCoroutineStackSize, 4*8*8*K,                        \
+        "Default size of the stack that is associated with new coroutines") \
+                                                                            \
+  product(uintx, MaxFreeCoroutinesCacheSize, 20,                            \
+          "The number of free coroutine stacks a thread can keep")          \
+                                                                            \
+  diagnostic(bool, TraceCoroutine, false,                                   \
+          "Trace Coroutine create/switch/terminate")                        \
+                                                                            \
+  diagnostic(bool, VerifyCoroutineStateOnYield, false,                      \
+          "Verify coroutine state after yield success")                     \
+                                                                            \
   diagnostic(bool, WhiteBoxAPI, false,                                      \
           "Enable internal testing APIs")                                   \
                                                                             \

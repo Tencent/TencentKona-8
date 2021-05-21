@@ -2122,6 +2122,15 @@ bool PhaseMacroExpand::eliminate_locking_node(AbstractLockNode *alock) {
   return true;
 }
 
+#if INCLUDE_KONA_FIBER
+Node *PhaseMacroExpand::updateLockCounter(Node *ctrl, Node *mem, bool inc) {
+  // update locks acquired, update mem status, needed by coroutine, might add options here
+  Node* thread = transform_later(new (C) ThreadLocalNode());
+  Node* counter = make_load(ctrl, mem, thread, in_bytes(Thread::locksAcquired_offset()), TypeInt::INT, T_INT);
+  Node* addNode = transform_later(new (C) AddINode(counter, intcon(inc ? 1 : -1)));
+  return make_store(ctrl, mem, thread, in_bytes(Thread::locksAcquired_offset()), addNode, T_INT);
+}
+#endif
 
 //------------------------------expand_lock_node----------------------
 void PhaseMacroExpand::expand_lock_node(LockNode *lock) {
@@ -2355,8 +2364,18 @@ void PhaseMacroExpand::expand_lock_node(LockNode *lock) {
   _igvn.replace_node(_fallthroughproj, region);
 
   Node *memproj = transform_later( new(C) ProjNode(call, TypeFunc::Memory) );
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    memproj = updateLockCounter(slow_ctrl, memproj, false);
+  }
+#endif
   mem_phi->init_req(1, memproj );
   transform_later(mem_phi);
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    mem_phi = updateLockCounter(region, mem_phi, true);
+  }
+#endif
   _igvn.replace_node(_memproj_fallthrough, mem_phi);
 }
 
@@ -2420,9 +2439,20 @@ void PhaseMacroExpand::expand_unlock_node(UnlockNode *unlock) {
   _igvn.replace_node(_fallthroughproj, region);
 
   Node *memproj = transform_later( new(C) ProjNode(call, TypeFunc::Memory) );
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    memproj = updateLockCounter(slow_ctrl, memproj, true);
+  }
+#endif
+
   mem_phi->init_req(1, memproj );
   mem_phi->init_req(2, mem);
   transform_later(mem_phi);
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    mem_phi = updateLockCounter(region, mem_phi, false);
+  }
+#endif
   _igvn.replace_node(_memproj_fallthrough, mem_phi);
 }
 

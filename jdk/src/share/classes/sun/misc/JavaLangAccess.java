@@ -132,4 +132,61 @@ public interface JavaLangAccess {
      * Invokes the finalize method of the given object.
      */
     void invokeFinalize(Object o) throws Throwable;
+
+    /**
+     * Returns a reference to the Thread object for the currently executing
+     * carrier thread.
+     *
+     * @return carrier Thread object
+     */
+    Thread currentCarrierThread();
+
+    /**
+     * Returns the value of the current carrier thread's copy of a thread-local.
+     */
+    <T> T getCarrierThreadLocal(ThreadLocal<T> local);
+
+    /**
+     * Sets the value of the current carrier thread's copy of a thread-local.
+     */
+    <T> void setCarrierThreadLocal(ThreadLocal<T> local, T value);
+
+    /**
+     * Parks the current virtual thread. If current thread is not virutal,
+     * will throw InternalError.
+     */
+    void parkVirtualThread();
+
+    /**
+     * Parks the current virtual thread.for up to the given waiting time.
+     * If current thread is not virutal, will throw InternalError.
+     *
+     * @param nanoseconds for waiting
+     */
+    void parkVirtualThread(long nanos);
+
+    /**
+     * Unparks the given virtual thread. If thread is not virtual, will
+     * throw ClassCastException.
+     *
+     * @param VirtualThread to unaprk
+     */
+    void unparkVirtualThread(Thread thread);
+
+    /**
+     * Returns true if the given virtual thread is parking. If thread is
+     * not virtual, will throw ClassCastException.
+     *
+     * @return true if thread is virtual and parking, otherwise false
+     */
+    boolean isVirtualThreadParking(Thread thread);
+
+    /**
+     * Add pinned action of virtual thread when it try to yield and it is
+     * pinned. If thread is not virtual, will throw ClassCastException.
+     *
+     * @param VirtualThread to add pinned action.
+     * @param Continuation.PinnedAction is the added interface.
+     */
+    void setVirtualThreadPinnedAction(Thread thread, Continuation.PinnedAction pinnedAction);
 }

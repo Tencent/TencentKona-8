@@ -35,6 +35,8 @@
 
 package java.util.concurrent.locks;
 import sun.misc.Unsafe;
+import sun.misc.VirtualThreads;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Basic thread blocking primitives for creating locks and other
@@ -137,8 +139,13 @@ public class LockSupport {
      *        this operation has no effect
      */
     public static void unpark(Thread thread) {
-        if (thread != null)
-            UNSAFE.unpark(thread);
+        if (thread != null) {
+            if (thread.isVirtual()) {
+                VirtualThreads.unpark(thread);
+            } else {
+                UNSAFE.unpark(thread);
+            }
+        }
     }
 
     /**
@@ -172,7 +179,11 @@ public class LockSupport {
     public static void park(Object blocker) {
         Thread t = Thread.currentThread();
         setBlocker(t, blocker);
-        UNSAFE.park(false, 0L);
+        if (t.isVirtual()) {
+            VirtualThreads.park();
+        } else {
+            UNSAFE.park(false, 0L);
+        }
         setBlocker(t, null);
     }
 
@@ -212,7 +223,11 @@ public class LockSupport {
         if (nanos > 0) {
             Thread t = Thread.currentThread();
             setBlocker(t, blocker);
-            UNSAFE.park(false, nanos);
+            if (t.isVirtual()) {
+                VirtualThreads.park(nanos);
+            } else {
+                UNSAFE.park(false, nanos);
+            }
             setBlocker(t, null);
         }
     }
@@ -253,7 +268,13 @@ public class LockSupport {
     public static void parkUntil(Object blocker, long deadline) {
         Thread t = Thread.currentThread();
         setBlocker(t, blocker);
-        UNSAFE.park(true, deadline);
+        if (t.isVirtual()) {
+            long millis = deadline - System.currentTimeMillis();
+            long nanos = TimeUnit.NANOSECONDS.convert(millis, TimeUnit.MILLISECONDS);
+            VirtualThreads.park(nanos);
+        } else {
+            UNSAFE.park(true, deadline);
+        }
         setBlocker(t, null);
     }
 
@@ -301,7 +322,11 @@ public class LockSupport {
      * for example, the interrupt status of the thread upon return.
      */
     public static void park() {
-        UNSAFE.park(false, 0L);
+        if (Thread.currentThread().isVirtual()) {
+            VirtualThreads.park();
+        } else {
+            UNSAFE.park(false, 0L);
+        }
     }
 
     /**
@@ -334,8 +359,13 @@ public class LockSupport {
      * @param nanos the maximum number of nanoseconds to wait
      */
     public static void parkNanos(long nanos) {
-        if (nanos > 0)
-            UNSAFE.park(false, nanos);
+        if (nanos > 0) {
+            if (Thread.currentThread().isVirtual()) {
+                VirtualThreads.park(nanos);
+            } else {
+                UNSAFE.park(false, nanos);
+            }
+        }
     }
 
     /**
@@ -369,7 +399,13 @@ public class LockSupport {
      *        to wait until
      */
     public static void parkUntil(long deadline) {
-        UNSAFE.park(true, deadline);
+        if (Thread.currentThread().isVirtual()) {
+            long millis = deadline - System.currentTimeMillis();
+            long nanos = TimeUnit.NANOSECONDS.convert(millis, TimeUnit.MILLISECONDS);
+            VirtualThreads.park(nanos);
+        } else {
+            UNSAFE.park(true, deadline);
+        }
     }
 
     /**

@@ -49,6 +49,9 @@
 #include "prims/privilegedStack.hpp"
 #include "runtime/arguments.hpp"
 #include "runtime/biasedLocking.hpp"
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+#endif
 #include "runtime/deoptimization.hpp"
 #include "runtime/fprofiler.hpp"
 #include "runtime/frame.inline.hpp"
@@ -262,6 +265,10 @@ Thread::Thread() {
   omFreeProvision = 32 ;
   omInUseList = NULL ;
   omInUseCount = 0 ;
+#if INCLUDE_KONA_FIBER
+  locksAcquired = 0;
+  contJniFrames = 0;
+#endif
 
 #ifdef ASSERT
   _visited_for_critical_count = false;
@@ -1486,6 +1493,14 @@ void JavaThread::initialize() {
   _interp_only_mode    = 0;
   _special_runtime_exit_condition = _no_async_condition;
   _pending_async_exception = NULL;
+#if INCLUDE_KONA_FIBER
+  _current_coroutine = NULL;
+  if (UseKonaFiber) {
+    _coroutine_cache = NULL;
+    _coroutine_cache_size = 0;
+  }
+#endif
+
   _thread_stat = NULL;
   _thread_stat = new ThreadStatistics();
   _blocked_on_compilation = false;
@@ -1620,6 +1635,22 @@ JavaThread::JavaThread(ThreadFunction entry_point, size_t stack_sz) :
 }
 
 JavaThread::~JavaThread() {
+#if INCLUDE_KONA_FIBER
+  if (_current_coroutine != NULL) {
+    guarantee(_current_coroutine->is_thread_coroutine(), "must thread coroutine");
+    while (coroutine_cache() != NULL) {
+      Coroutine* coro_cache = coroutine_cache();
+      coro_cache->remove_from_list(coroutine_cache());
+      _coroutine_cache_size--;
+      delete coro_cache;
+    }
+    guarantee(_coroutine_cache_size == 0, "not zero after delete all cache continuations.");
+    ContContainer::remove(current_coroutine());
+    delete _current_coroutine;
+    _current_coroutine = NULL;
+  }
+#endif
+
   if (TraceThreadEvents) {
       tty->print_cr("terminate thread %p", this);
   }
@@ -1671,6 +1702,12 @@ void JavaThread::run() {
 
   // Initialize thread local storage; set before calling MutexLocker
   this->initialize_thread_local_storage();
+
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    this->initialize_coroutine_support();
+  }
+#endif
 
   this->create_stack_guard_pages();
 
@@ -1893,6 +1930,12 @@ void JavaThread::exit(bool destroy_vm, ExitType exit_type) {
     ObjectSynchronizer::release_monitors_owned_by_thread(this);
     assert(!this->has_pending_exception(), "release_monitors should have cleared");
   }
+
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    guarantee(this->locksAcquired == 0, "java monitor not release before exit");
+  }
+#endif
 
   // These things needs to be done while we are still a Java Thread. Make sure that thread
   // is in a consistent state, in case GC happens
@@ -2870,6 +2913,16 @@ void JavaThread::print_thread_state() const {
 };
 #endif // PRODUCT
 
+#if INCLUDE_KONA_FIBER
+void JavaThread::print_coroutine_on(outputStream* st, bool printstack) const {
+  if (this == Coroutine::main_thread()) {
+    st->cr();
+    st->print_cr("Print all Coroutines:");
+    ContContainer::print_stack_on(st);
+  }
+}
+#endif
+
 // Called by Threads::print() for VM_PrintThreads operation
 void JavaThread::print_on(outputStream *st, bool print_extended_info) const {
   st->print("\"%s\" ", get_thread_name());
@@ -2883,7 +2936,13 @@ void JavaThread::print_on(outputStream *st, bool print_extended_info) const {
   // print guess for valid stack memory region (assume 4K pages); helps lock debugging
   st->print_cr("[" INTPTR_FORMAT "]", (intptr_t)last_Java_sp() & ~right_n_bits(12));
   if (thread_oop != NULL && JDK_Version::is_gte_jdk15x_version()) {
-    st->print_cr("   java.lang.Thread.State: %s", java_lang_Thread::thread_status_name(thread_oop));
+    st->print("   java.lang.Thread.State: %s", java_lang_Thread::thread_status_name(thread_oop));
+#if INCLUDE_KONA_FIBER
+    if (UseKonaFiber && _current_coroutine != NULL) {
+      _current_coroutine->print_VT_info(st);
+    }
+#endif
+    st->cr();
   }
 #ifndef PRODUCT
   print_thread_state_on(st);
@@ -3435,7 +3494,14 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   // of the guard pages.
   main_thread->record_stack_base_and_size();
   main_thread->initialize_thread_local_storage();
-
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    ContReservedStack::init();
+    ContContainer::init();
+    Coroutine::set_main_thread(main_thread);
+    main_thread->initialize_coroutine_support();
+  }
+#endif
   main_thread->set_active_handles(JNIHandleBlock::allocate_block());
 
   if (!main_thread->set_as_starting_thread()) {
@@ -4236,6 +4302,18 @@ void Threads::possibly_parallel_oops_do(OopClosure* f, CLDClosure* cld_f, CodeBl
   if (vmt->claim_oops_do(is_par, cp)) {
     vmt->oops_do(f, cld_f, cf);
   }
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    guarantee(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
+
+    for (size_t i = 0; i < CONT_CONTAINER_SIZE; i++) {
+      ContBucket* bucket = ContContainer::bucket(i);
+      if (bucket->claim_oops_do(is_par, cp)) {
+        bucket->oops_do(f, cld_f, cf);
+      }
+    }
+  }
+#endif
 }
 
 #if INCLUDE_ALL_GCS
@@ -4261,30 +4339,51 @@ void Threads::nmethods_do(CodeBlobClosure* cf) {
     p->nmethods_do(cf);
   }
   VMThread::vm_thread()->nmethods_do(cf);
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    ContContainer::nmethods_do(cf);
+  }
+#endif
 }
 
 void Threads::metadata_do(void f(Metadata*)) {
   ALL_JAVA_THREADS(p) {
     p->metadata_do(f);
   }
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    ContContainer::metadata_do(f);
+  }
+#endif
 }
 
 void Threads::gc_epilogue() {
   ALL_JAVA_THREADS(p) {
     p->gc_epilogue();
   }
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    ContContainer::frames_do(frame_gc_epilogue);
+  }
+#endif
 }
 
 void Threads::gc_prologue() {
   ALL_JAVA_THREADS(p) {
     p->gc_prologue();
   }
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    ContContainer::frames_do(frame_gc_prologue);
+  }
+#endif
 }
 
 void Threads::deoptimized_wrt_marked_nmethods() {
   ALL_JAVA_THREADS(p) {
     p->deoptimized_wrt_marked_nmethods();
   }
+  // TODO: need ContContainer::xxx_do?
 }
 
 
@@ -4384,6 +4483,13 @@ void Threads::print_on(outputStream* st, bool print_stacks,
         p->print_stack_on(st);
       }
     }
+#if INCLUDE_KONA_FIBER
+    if (UseKonaFiber) {
+      // TODO: if print_stacks is false, only need print coroutine and VT info
+      p->print_coroutine_on(st, print_stacks);
+    }
+#endif
+
     st->cr();
 #if INCLUDE_ALL_GCS
     if (print_concurrent_locks) {
@@ -4724,4 +4830,20 @@ void Threads::verify() {
   }
   VMThread* thread = VMThread::vm_thread();
   if (thread != NULL) thread->verify();
+  // TODO: oops_do
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    ContContainer::frames_do(frame_verify);
+  }
+#endif
 }
+
+#if INCLUDE_KONA_FIBER
+void JavaThread::initialize_coroutine_support() {
+  // no lock in thread initialization
+  Coroutine* coro = Coroutine::create_thread_coroutine(this);
+  _current_coroutine = coro;
+  OrderAccess::release();
+}
+#endif
+

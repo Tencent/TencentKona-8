@@ -40,6 +40,9 @@
 #include "runtime/thread.hpp"
 #include "runtime/vmThread.hpp"
 #include "services/management.hpp"
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+#endif
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
@@ -77,6 +80,34 @@ void ThreadRootsMarkingTask::do_it(GCTaskManager* manager, uint which) {
   cm->follow_marking_stacks();
 }
 
+//
+// ContBucketRootsMarkingTask
+//
+#if INCLUDE_KONA_FIBER
+void ContBucketRootsMarkingTask::do_it(GCTaskManager* manager, uint which) {
+  assert(Universe::heap()->is_gc_active(), "called outside gc");
+  guarantee(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
+
+  ResourceMark rm;
+
+  NOT_PRODUCT(GCTraceTime tm("ThreadRootsMarkingTask",
+    PrintGCDetails && TraceParallelOldGCTasks, true, NULL, PSParallelCompact::gc_tracer()->gc_id()));
+  ParCompactionManager* cm =
+    ParCompactionManager::gc_thread_compaction_manager(which);
+
+  PSParallelCompact::MarkAndPushClosure mark_and_push_closure(cm);
+  CLDToOopClosure mark_and_push_from_clds(&mark_and_push_closure, true);
+  MarkingCodeBlobClosure mark_and_push_in_blobs(&mark_and_push_closure, !CodeBlobToOopClosure::FixRelocations);
+
+  ContBucket* bucket = ContContainer::bucket(_bucket_index);
+  {
+    bucket->oops_do(&mark_and_push_closure, &mark_and_push_from_clds, &mark_and_push_in_blobs);
+  }
+
+  // Do the real work
+  cm->follow_marking_stacks();
+}
+#endif
 
 void MarkFromRootsTask::do_it(GCTaskManager* manager, uint which) {
   assert(Universe::heap()->is_gc_active(), "called outside gc");

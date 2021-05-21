@@ -559,6 +559,9 @@ class StackFrameStream : public StackObj {
   bool        _is_done;
  public:
    StackFrameStream(JavaThread *thread, bool update = true);
+#if INCLUDE_KONA_FIBER
+   StackFrameStream(JavaThread *thread, frame last_frame, bool update = true);
+#endif
 
   // Iteration
   bool is_done()                  { return (_is_done) ? true : (_is_done = _fr.is_first_frame(), false); }

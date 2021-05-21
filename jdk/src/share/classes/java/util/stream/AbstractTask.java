@@ -158,7 +158,7 @@ abstract class AbstractTask<P_IN, P_OUT, R,
      * if leaf tasks are uneven or some processors are otherwise busy.
      */
     public static int getLeafTarget() {
-        Thread t = Thread.currentThread();
+        Thread t = Thread.currentCarrierThread();
         if (t instanceof ForkJoinWorkerThread) {
             return ((ForkJoinWorkerThread) t).getPool().getParallelism() << 2;
         }

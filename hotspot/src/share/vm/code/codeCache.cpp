@@ -745,11 +745,17 @@ void CodeCache::mark_all_nmethods_for_deoptimization() {
   MutexLockerEx mu(CodeCache_lock, Mutex::_no_safepoint_check_flag);
   FOR_ALL_ALIVE_NMETHODS(nm) {
     if (!nm->method()->is_method_handle_intrinsic()) {
-      nm->mark_for_deoptimization();
+#if INCLUDE_KONA_FIBER
+      if (nm->method()->intrinsic_id() != vmIntrinsics::_contSwitchTo &&
+          nm->method()->intrinsic_id() != vmIntrinsics::_contSwitchToAndTerminate) {
+#endif
+        nm->mark_for_deoptimization();
+#if INCLUDE_KONA_FIBER
+      }
+#endif
     }
   }
 }
-
 
 int CodeCache::mark_for_deoptimization(Method* dependee) {
   MutexLockerEx mu(CodeCache_lock, Mutex::_no_safepoint_check_flag);

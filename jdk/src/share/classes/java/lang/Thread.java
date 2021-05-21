@@ -31,16 +31,21 @@ import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.AccessControlContext;
 import java.security.PrivilegedAction;
+import java.security.ProtectionDomain;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.LockSupport;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadFactory;
+import java.util.Objects;
 import sun.nio.ch.Interruptible;
 import sun.reflect.CallerSensitive;
 import sun.reflect.Reflection;
 import sun.security.util.SecurityConstants;
-
+import sun.misc.Unsafe;
 
 /**
  * A <i>thread</i> is a thread of execution in a program. The Java
@@ -261,7 +266,15 @@ class Thread implements Runnable {
      *
      * @return  the currently executing thread.
      */
-    public static native Thread currentThread();
+    public static Thread currentThread() {
+        Thread t = currentThread0();
+        if (t != null && t.vthread != null) {
+            return t.vthread;
+        } else {
+            return t;
+        }
+    }
+    public static native Thread currentThread0();
 
     /**
      * A hint to the scheduler that the current thread is willing to yield
@@ -279,7 +292,15 @@ class Thread implements Runnable {
      * concurrency control constructs such as the ones in the
      * {@link java.util.concurrent.locks} package.
      */
-    public static native void yield();
+    public static void yield() {
+        VirtualThread vthread = currentCarrierThread().getVirtualThread();
+        if (vthread != null) {
+            vthread.tryYield();
+        } else {
+            yield0();
+        }
+    }
+    private static native void yield0();
 
     /**
      * Causes the currently executing thread to sleep (temporarily cease
@@ -298,7 +319,20 @@ class Thread implements Runnable {
      *          <i>interrupted status</i> of the current thread is
      *          cleared when this exception is thrown.
      */
-    public static native void sleep(long millis) throws InterruptedException;
+    public static void sleep(long millis) throws InterruptedException {
+        if (millis < 0) {
+            throw new IllegalArgumentException("timeout value is negative");
+        }
+
+        Thread t = currentCarrierThread();
+        VirtualThread vthread;
+        if (t != null && ((vthread = t.getVirtualThread())!= null)) {
+            vthread.sleepNanos(TimeUnit.MILLISECONDS.toNanos(millis));
+        } else {
+            sleep0(millis);
+        }
+    }
+    public static native void sleep0(long millis) throws InterruptedException;
 
     /**
      * Causes the currently executing thread to sleep (temporarily cease
@@ -389,6 +423,11 @@ class Thread implements Runnable {
             }
         }
 
+        /* can't create a kernel thread in the virtual thread group */
+        if (sun.misc.VM.isBooted() && (g == VirtualThreads.THREAD_GROUP)) {
+            g = VirtualThreads.THREAD_SUBGROUP;
+        }
+
         /* checkAccess regardless of whether or not threadgroup is
            explicitly passed in. */
         g.checkAccess();
@@ -411,8 +450,14 @@ class Thread implements Runnable {
             this.contextClassLoader = parent.getContextClassLoader();
         else
             this.contextClassLoader = parent.contextClassLoader;
-        this.inheritedAccessControlContext =
-                acc != null ? acc : AccessController.getContext();
+
+        if (!isVirtual()) {
+            this.inheritedAccessControlContext =
+                    acc != null ? acc : AccessController.getContext();
+        } else {
+            this.inheritedAccessControlContext = VirtualThreads.ACCESS_CONTROL_CONTEXT;
+        }
+
         this.target = target;
         setPriority(priority);
         if (inheritThreadLocals && parent.inheritableThreadLocals != null)
@@ -420,6 +465,8 @@ class Thread implements Runnable {
                 ThreadLocal.createInheritedMap(parent.inheritableThreadLocals);
         /* Stash the specified stack size in case the VM cares */
         this.stackSize = stackSize;
+
+        // initThreadContinuation();
 
         /* Set thread ID */
         tid = nextThreadID();
@@ -509,6 +556,19 @@ class Thread implements Runnable {
      */
     public Thread(String name) {
         init(null, null, name, 0);
+    }
+
+    /*
+     * If the thread is a parent class of virtual thread, the inheritableThreadLocals
+     * should not be initialized.
+     * This is not a public constructor.
+     */
+    Thread(String name, int characteristics) {
+        if ((characteristics & Thread.VIRTUAL) != 0) {
+            init(null, target, name, 0, null, false);
+        } else {
+            init(null, target, name, 0);
+        }
     }
 
     /**
@@ -744,8 +804,10 @@ class Thread implements Runnable {
      */
     @Override
     public void run() {
-        if (target != null) {
-            target.run();
+        if (!isVirtual()) {
+            if (target != null) {
+                target.run();
+            }
         }
     }
 
@@ -843,6 +905,10 @@ class Thread implements Runnable {
                 security.checkPermission(SecurityConstants.STOP_THREAD_PERMISSION);
             }
         }
+
+        if (isVirtual())
+            throw new UnsupportedOperationException();
+
         // A zero status value corresponds to "NEW", it can't change to
         // not-NEW because we hold the lock.
         if (threadStatus != 0) {
@@ -944,7 +1010,11 @@ class Thread implements Runnable {
      * @revised 6.0
      */
     public static boolean interrupted() {
-        return currentThread().isInterrupted(true);
+        Thread t = currentThread();
+        if (t.isVirtual()) {
+            return ((VirtualThread)t).getAndClearInterrupt();
+        }
+        return t.isInterrupted(true);
     }
 
     /**
@@ -1000,7 +1070,15 @@ class Thread implements Runnable {
      * @return  <code>true</code> if this thread is alive;
      *          <code>false</code> otherwise.
      */
-    public final native boolean isAlive();
+    public final boolean isAlive() {
+        if (isVirtual()) {
+            State state = getState();
+            return (state != State.NEW && state != State.TERMINATED);
+        } else {
+            return isAlive0();
+        }
+    }
+    private final native boolean isAlive0();
 
     /**
      * Suspends this thread.
@@ -1029,6 +1107,8 @@ class Thread implements Runnable {
     @Deprecated
     public final void suspend() {
         checkAccess();
+        if (isVirtual())
+            throw new UnsupportedOperationException();
         suspend0();
     }
 
@@ -1055,6 +1135,8 @@ class Thread implements Runnable {
     @Deprecated
     public final void resume() {
         checkAccess();
+        if (isVirtual())
+            throw new UnsupportedOperationException();
         resume0();
     }
 
@@ -1088,7 +1170,7 @@ class Thread implements Runnable {
         if (newPriority > MAX_PRIORITY || newPriority < MIN_PRIORITY) {
             throw new IllegalArgumentException();
         }
-        if((g = getThreadGroup()) != null) {
+        if(!isVirtual() && (g = getThreadGroup()) != null) {
             if (newPriority > g.getMaxPriority()) {
                 newPriority = g.getMaxPriority();
             }
@@ -1103,7 +1185,11 @@ class Thread implements Runnable {
      * @see     #setPriority
      */
     public final int getPriority() {
-        return priority;
+        if (isVirtual()) {
+            return Thread.NORM_PRIORITY;
+        } else {
+            return priority;
+        }
     }
 
     /**
@@ -1127,7 +1213,7 @@ class Thread implements Runnable {
         }
 
         this.name = name;
-        if (threadStatus != 0) {
+        if (!isVirtual() && threadStatus != 0) {
             setNativeName(name);
         }
     }
@@ -1150,7 +1236,11 @@ class Thread implements Runnable {
      * @return  this thread's thread group.
      */
     public final ThreadGroup getThreadGroup() {
-        return group;
+        if (isVirtual()) {
+            return (getState() == State.TERMINATED) ? null : VirtualThreads.THREAD_GROUP;
+        } else {
+            return group;
+        }
     }
 
     /**
@@ -1238,27 +1328,35 @@ class Thread implements Runnable {
      *          <i>interrupted status</i> of the current thread is
      *          cleared when this exception is thrown.
      */
-    public final synchronized void join(long millis)
-    throws InterruptedException {
-        long base = System.currentTimeMillis();
-        long now = 0;
-
+    public final void join(long millis) throws InterruptedException {
         if (millis < 0) {
             throw new IllegalArgumentException("timeout value is negative");
         }
 
-        if (millis == 0) {
-            while (isAlive()) {
-                wait(0);
+        if (isVirtual()) {
+            if (isAlive()) {
+                long nanos = TimeUnit.MILLISECONDS.toNanos(millis);
+                ((VirtualThread) this).joinNanos(nanos);
             }
-        } else {
-            while (isAlive()) {
-                long delay = millis - now;
-                if (delay <= 0) {
-                    break;
+            return;
+        }
+
+        synchronized (this) {
+            long base = System.currentTimeMillis();
+            long now = 0;
+            if (millis == 0) {
+                while (isAlive()) {
+                    wait(0);
                 }
-                wait(delay);
-                now = System.currentTimeMillis() - base;
+            } else {
+                while (isAlive()) {
+                    long delay = millis - now;
+                    if (delay <= 0) {
+                        break;
+                    }
+                    wait(delay);
+                    now = System.currentTimeMillis() - base;
+                }
             }
         }
     }
@@ -1358,17 +1456,25 @@ class Thread implements Runnable {
         if (isAlive()) {
             throw new IllegalThreadStateException();
         }
+        if (isVirtual()) {
+            return;
+        }
         daemon = on;
     }
 
     /**
      * Tests if this thread is a daemon thread.
+     * Note: if this thread is a virtual thread,
+     *       it will always return true.
      *
      * @return  <code>true</code> if this thread is a daemon thread;
      *          <code>false</code> otherwise.
      * @see     #setDaemon(boolean)
      */
     public final boolean isDaemon() {
+        if (isVirtual()) {
+            return true;
+        }
         return daemon;
     }
 
@@ -1928,7 +2034,7 @@ class Thread implements Runnable {
      */
     public UncaughtExceptionHandler getUncaughtExceptionHandler() {
         return uncaughtExceptionHandler != null ?
-            uncaughtExceptionHandler : group;
+            uncaughtExceptionHandler : getThreadGroup();
     }
 
     /**
@@ -1955,7 +2061,7 @@ class Thread implements Runnable {
      * Dispatch an uncaught exception to the handler. This method is
      * intended to be called only by the JVM.
      */
-    private void dispatchUncaughtException(Throwable e) {
+    protected void dispatchUncaughtException(Throwable e) {
         getUncaughtExceptionHandler().uncaughtException(this, e);
     }
 
@@ -2021,6 +2127,53 @@ class Thread implements Runnable {
         }
     }
 
+    private static class VirtualThreads {
+        // Thread group for virtual threads.
+        static final ThreadGroup THREAD_GROUP;
+
+        // Thread group for kernel threads created by virtual threads
+        static final ThreadGroup THREAD_SUBGROUP;
+
+        // AccessControlContext that doesn't support any permissions.
+        static final AccessControlContext ACCESS_CONTROL_CONTEXT;
+
+        static {
+            PrivilegedAction<ThreadGroup> pa = new PrivilegedAction<ThreadGroup>() {
+                @Override
+                public ThreadGroup run() {
+                    ThreadGroup parent = Thread.currentCarrierThread().getThreadGroup();
+                    for (ThreadGroup p; (p = parent.getParent()) != null; )
+                        parent = p;
+                    return parent;
+                }
+            };
+            ThreadGroup root = AccessController.doPrivileged(pa);
+
+            ThreadGroup vgroup = new ThreadGroup(root, "VirtualThreads", false) {
+                @Override
+                @SuppressWarnings({"deprecation", "removal"})
+                public boolean allowThreadSuspension(boolean b) {
+                    return false;
+                }
+            };
+            vgroup.setDaemon(true);
+            vgroup.setMaxPriority(NORM_PRIORITY);
+            THREAD_GROUP = vgroup;
+
+            ThreadGroup subgroup = new ThreadGroup(vgroup, "other", false);
+            subgroup.setDaemon(true);
+            if (System.getSecurityManager() == null) {
+                subgroup.setMaxPriority(NORM_PRIORITY);
+            } else {
+                subgroup.setMaxPriority(MIN_PRIORITY);
+            }
+            THREAD_SUBGROUP = subgroup;
+
+            ACCESS_CONTROL_CONTEXT = new AccessControlContext(new ProtectionDomain[] {
+                new ProtectionDomain(null, null)
+            });
+        }
+    }
 
     // The following three initially uninitialized fields are exclusively
     // managed by class java.util.concurrent.ThreadLocalRandom. These
@@ -2047,4 +2200,779 @@ class Thread implements Runnable {
     private native void resume0();
     private native void interrupt0();
     private native void setNativeName(String name);
+
+    /* Continuation support */
+    private Continuation threadCont;
+    private Continuation cont;
+    private VirtualThread vthread;
+
+    VirtualThread getVirtualThread() {
+        return vthread;
+    }
+    void setVirtualThread(VirtualThread vthread) {
+        this.vthread = vthread;
+    }
+
+    /**
+     * Invoke from VirutalThread inerrupt or interrupted VirtualThread get scheduled
+     * set its kernel thread also interrupted
+     */
+    void setInterrupt() {
+        interrupt0();
+    }
+
+    /**
+     * Tests if this thread is interrupted and clean interrupt flag
+     * of thread.
+     *
+     * @return  {@code true} if thread is interrupted;
+     *          {@code false} if thread is not interrupted.
+     */
+    boolean getAndClearInterrupt() {
+        return isInterrupted(true);
+    }
+
+    /**
+     * Invoke from VirutalThread when clear interrupt/resume executing
+     * clear kernel thread's interrupt status.
+     */
+    void clearInterrupt() {
+        isInterrupted(true);
+    }
+
+    /**
+     * Returns a reference to the currently executing carrier thread object.
+     * <p>currentThread returns VirtualThread if VirtualThread is running on
+     * current carrier thread.
+     *
+     * @return  the currently executing carrier thread.
+     */
+    public static Thread currentCarrierThread() {
+        return currentThread0();
+    }
+
+    /**
+     * TEMP:
+     * Returns a reference to VirutalThread's target runnable.
+     * Return null if thread is not VirtualThread.
+     */
+    public final Runnable VTTarget() {
+        if (isVirtual()) {
+            return ((VirtualThread)this).target();
+        }
+        return null;
+    }
+
+    /**
+     * Invoke from Continuation, try get continuation running on current carrier Thread
+     */
+    Continuation getContinuation() {
+        return cont;
+    }
+
+    /**
+     * Check if current thread has continuation running.
+     *
+     * @return  the currently executing carrier thread.
+     */
+    public boolean inContinuation() {
+        return cont != null;
+    }
+
+    /**
+     * Invoke from Continuation run, get continuation represent carrier thread
+     */
+    Continuation getThreadContinuation() {
+        if (threadCont == null) {
+            threadCont = new Continuation();
+        }
+        return threadCont;
+    }
+
+    /**
+     * Invoke from Continuation mount/unmount, update carrier thread's cont
+     */
+    void setContinuation(Continuation cont) {
+        this.cont = cont;
+    }
+
+    /**
+     * Invoke from VirtualThread interrupt, interrupt blocker object
+     */
+    protected Interruptible getBlocker() {
+        return blocker;
+    }
+
+    /**
+     * Invoke from Continuation interrupt/resume execution, block when
+     * status/interupt might change
+     */
+    protected Object getBlockerLock() {
+        return blockerLock;
+    }
+
+    /**
+     * Characteristic value signifying that the thread should be scheduled by
+     * the Java virtual machine rather than the operating system.
+     *
+     * @since 99
+     */
+    public static final int VIRTUAL = 1 << 0;
+
+    /**
+     * Characteristic value signifying that {@link ThreadLocal thread-locals}
+     * are not supported by the thread.
+     *
+     * @apiNote This is for experimental purposes, a lot of existing code will
+     * not run if thread locals are not supported.
+     *
+     * @since 99
+     */
+    public static final int NO_THREAD_LOCALS = 1 << 1;
+
+    /**
+     * Characteristic value signifying that {@link InheritableThreadLocal
+     * inheritable-thread-locals} are inherihted from the constructing thread.
+     * This characteristic is incompatible with {@linkplain #NO_THREAD_LOCALS},
+     * they may not be used together.
+     *
+     * @since 99
+     */
+    public static final int INHERIT_THREAD_LOCALS = 1 << 2;
+
+    private static int validCharacteristics() {
+        return (VIRTUAL | NO_THREAD_LOCALS | INHERIT_THREAD_LOCALS);
+    }
+
+    private static void checkCharacteristics(int characteristics) {
+        if (characteristics != 0) {
+            if ((characteristics & ~validCharacteristics()) != 0)
+                throw new IllegalArgumentException();
+            if ((characteristics & NO_THREAD_LOCALS) != 0
+                    && (characteristics & INHERIT_THREAD_LOCALS) != 0)
+                throw new IllegalArgumentException();
+        }
+    }
+
+    /**
+     * Creates an unnamed thread.
+     *
+     * By default, the thread is scheduled by the operating system, supports
+     * {@link ThreadLocal thread-locals}, and does not inherit any initial values
+     * for {@link InheritableThreadLocal inheritable-thread-locals}.
+     * The {@link ThreadGroup ThreadGroup}, {@link #isDaemon() daemon status},
+     * {@link #getPriority() priority}, and the {@link #getContextClassLoader()
+     * context-class-loader} are inherited from the current thread.
+     *
+     * <p> The characteristic {@linkplain Thread#VIRTUAL VIRTUAL} is
+     * used to create a thread that is scheduled by the Java virtual machine
+     * using the default scheduler. The default in this case is to only inherit
+     * the {@link #getContextClassLoader() context-class-loader} from the current
+     * thread.
+     *
+     * @apiNote The characteristics will probably be replaced by an enum
+     *
+     * @param characteristics characteristics of the thread
+     * @param task the object to run when the thread executes
+     * @throws IllegalArgumentException if an unknown characteristic or an invalid
+     *         combination of characteristic is specified
+     * @throws NullPointerException if task is null
+     * @return an un-started virtual thread
+     *
+     * @since 99
+     */
+    public static Thread newThread(int characteristics, Runnable task) {
+        if ((characteristics & VIRTUAL) != 0) {
+            return new VirtualThread(null, null, characteristics, task);
+        } else {
+            if (characteristics != 0) {
+                throw new IllegalStateException("create thread with characteristics");
+            }
+            return new Thread(task, "Thread-" + nextThreadNum());
+        }
+    }
+
+    /**
+     * Creates a named thread.
+     *
+     * By default, the thread is scheduled by the operating system, supports
+     * {@link ThreadLocal thread-locals}, and does not inherit any initial values
+     * for {@link InheritableThreadLocal inheritable-thread-locals}.
+     * The {@link ThreadGroup ThreadGroup}, {@link #isDaemon() daemon status},
+     * {@link #getPriority() priority}, and the {@link #getContextClassLoader()
+     * context-class-loader} are inherited from the current thread.
+     *
+     * <p> The characteristic {@linkplain Thread#VIRTUAL VIRTUAL} is
+     * used to create a thread that is scheduled by the Java virtual machine
+     * using the default scheduler. The default in this case is to only inherit
+     * the {@link #getContextClassLoader() context-class-loader} from the current
+     * thread.
+     *
+     * @apiNote The characteristics will probably be replaced by an enum
+     *
+     * @param name the thread name
+     * @param characteristics characteristics of the thread
+     * @param task the object to run when the thread executes
+     * @throws IllegalArgumentException if an unknown characteristic or an invalid
+     *         combination of characteristic is specified
+     * @throws NullPointerException if name or task is null
+     * @return an un-started virtual thread
+     *
+     * @since 99
+     */
+    public static Thread newThread(String name, int characteristics, Runnable task) {
+        Objects.requireNonNull(name);
+        Objects.requireNonNull(task);
+        if ((characteristics & VIRTUAL) != 0) {
+            return new VirtualThread(null, name, characteristics, task);
+        } else {
+            if (characteristics != 0) {
+                throw new IllegalStateException("create thread with characteristics");
+            }
+            return new Thread(task, name);
+        }
+    }
+
+    /**
+     * Starts a new virtual thread to execute a task. The thread is scheduled
+     * by the Java virtual machine using the default scheduler. The resulting
+     * thread supports {@link ThreadLocal thread-locals} but does not inherit any
+     * initial values for {@link InheritableThreadLocal inheritable-thread-locals}.
+     * It inherits the {@link #getContextClassLoader() context-class-loader} from
+     * the current thread. It has no {@link java.security.Permission permissions}.
+     * @param task the object to run when the thread executes
+     * @throws NullPointerException if task is null
+     * @return a new, and started, virtual thread
+     * @since 99
+     */
+    public static Thread startVirtualThread(Runnable task) {
+        Objects.requireNonNull(task);
+        VirtualThread thread = new VirtualThread(null, null, VIRTUAL, task);
+        thread.start();
+        return thread;
+    }
+
+    /**
+     * Returns {@code true} if this thread scheduled by the Java virtual machine
+     * rather than the operating system.
+     *
+     * <p> Threads that are scheduled by the Java virtual machine do not support
+     * all features of Thread. In particular, the Thread is not an <i>active thread</i>
+     * in its thread group and so is not enumerated or acted on by thread group
+     * operations. In addition it does not support the stop, suspend or resume
+     * methods.
+     *
+     * @return {@code true} if this thread is scheduled by the Java virtual
+     *         machine rather than the operating system
+     *
+     * @since 99
+     */
+    public final boolean isVirtual() {
+        return (this instanceof VirtualThread);
+    }
+
+    /**
+     * Returns a builder for creating {@code Thread} or {@code ThreadFactory} objects.
+     *
+     * @apiNote The following are examples using the builder:
+     *
+     * <pre>{@code
+     *   // Create a daemon thread that is scheduled by the operating system
+     *   Thread thread = Thread.builder()
+     *                 .name("duke")
+     *                 .daemon(true)
+     *                 .priority(Thread.NORM_PRIORITY)
+     *                 .inheritThreadLocals()
+     *                 .task(...)
+     *                 .build();
+     *
+     *   // A ThreadFactory that creates daemon threads named "worker-0", "worker-1", ...
+     *   ThreadFactory factory = Thread.builder().daemon(true).name("worker-", 0).factory();
+     *
+     *   // Create an unnamed virtual thread
+     *   Thread thread1 = Thread.builder().virtual().task(...).build();
+     *
+     *   // Create a named virtual thread
+     *   Thread thread2 = Thread.builder().virtual().name("duke").task(...).build();
+     *
+     *   // Create and start a virtual thread
+     *   Thread thread = Thread.builder().virtual().task(...).start();
+     *
+     *   // A ThreadFactory that creates virtual threads
+     *   ThreadFactory factory = Thread.builder().virtual().factory();
+     *
+     *   // A ThreadFactory that creates virtual threads and uses a custom scheduler
+     *   Executor scheduler = ...
+     *   ThreadFactory factory = Thread.builder().virtual(scheduler).factory();
+     * }</pre>
+     *
+     * @return A builder for creating {@code Thread} or {@code ThreadFactory} objects.
+     *
+     * @since 99
+     */
+    public static Builder builder() {
+        return new BuilderImpl();
+    }
+
+    /**
+     * A mutable builder for a {@link Thread} or {@link ThreadFactory}.
+     *
+     * <p> {@code Builder} defines methods to set the {@code Thread} characteristics
+     * and features. Once set, a {@code Thread} or {@code ThreadFactory} can be
+     * created with the following methods:
+     *
+     * <ul>
+     *     <li> The {@linkplain #build() build} method creates an unstarted {@code Thread}.
+     *     <li> The {@linkplain #start() start} method creates and starts a {@code Thread}.
+     *     <li> The {@linkplain #factory() factory} method creates a {@code ThreadFactory}.
+     * </ul>
+     *
+     * <p> A {@code Builder} is not thread safe. The {@code ThreadFactory}
+     * returned by the builder's {@code factory() method} is thread safe.
+     *
+     * <p> Unless otherwise specified, passing a null argument to a method in
+     * this interface causes a {@code NullPointerException} to be thrown.
+     *
+     * @apiNote {@code Builder} checks invariants as components are added to the builder.
+     * The rationale for this is to detect errors as early as possible and not defer
+     * all validation to the {@code build} method.
+     *
+     * @see Thread#builder()
+     * @since 99
+     */
+    public interface Builder {
+
+        /**
+         * Sets the thread group.
+         *
+         * <p> The thread group for threads that are scheduled by the Java virtual
+         * machine threads does not support all features of regular thread groups.
+         * The thread group can only be set for threads that are scheduled by
+         * the operating system.
+         *
+         * @param group the thread group
+         * @return this builder
+         * @throws IllegalStateException if this is a builder for a virtual thread
+         */
+        Builder group(ThreadGroup group);
+
+        /**
+         * Sets the thread name.
+         * @param name thread name
+         * @return this builder
+         */
+        Builder name(String name);
+
+        /**
+         * Sets the thread name to be the concatenation of a string prefix and
+         * a counter value.
+         * @param prefix thread name prefix
+         * @param start counter start
+         * @return this builder
+         * @throws IllegalArgumentException if count is negative
+         */
+        Builder name(String prefix, int start);
+
+        /**
+         * The thread will be scheduled by the Java virtual machine rather than
+         * the operating system with the default scheduler.
+         * @return this builder
+         * @throws IllegalStateException if a thread group has been set
+         */
+        Builder virtual();
+
+        /**
+         * The thread will be scheduled by the Java virtual machine rather than
+         * the operating system with the given scheduler. The scheduler's {@link
+         * Executor#execute(Runnable) execute} method is invoked with tasks of
+         * type {@link VirtualThreadTask}. It may be invoked in the context of
+         * a virtual thread. The scheduler should arrange to execute these tasks
+         * on a kernel thread. Attempting to execute the task on a virtual thread
+         * causes an exception to be thrown (see {@link VirtualThreadTask#run()}).
+         * The {@code execute} method may be invoked at sensitive times (e.g. when
+         * unparking a thread) so care should be taken to not directly execute the
+         * task on the <em>current thread</em>.
+         * @param scheduler the scheduler
+         * @return this builder
+         * @throws IllegalStateException if a thread group has been set
+         */
+        Builder virtual(Executor scheduler);
+
+        /**
+         * Disallow threads locals.
+         * @return this builder
+         * @throws IllegalStateException if inheritThreadLocals has already been set
+         */
+        Builder disallowThreadLocals();
+
+        /**
+         * Inherit threads locals. Thread locals are inherited when the {@code Thread}
+         * is created with the {@link #build() build} method or when the thread
+         * factory {@link ThreadFactory#newThread(Runnable) newThread} method
+         * is invoked.
+         * @return this builder
+         * @throws IllegalStateException if disallowThreadLocals has already been set
+         */
+        Builder inheritThreadLocals();
+
+        /**
+         * Sets the daemon status.
+         * The {@link #isDaemon() daemon status} of virtual threads is always {@code true}.
+         * Setting the daemon status at build time has no effect.
+         * @param on {@code true} to create daemon threads
+         * @return this builder
+         */
+        Builder daemon(boolean on);
+
+        /**
+         * Sets the thread priority.
+         * The priority of virtual threads is always {@linkplain Thread#NORM_PRIORITY}.
+         * Setting the priority of a virtual thread at build time has no effect.
+         * @param priority priority
+         * @return this builder
+         * @throws IllegalArgumentException if the priority is less than
+         *        {@link Thread#MIN_PRIORITY} or greater than {@link Thread#MAX_PRIORITY}
+         */
+        Builder priority(int priority);
+
+        /**
+         * Sets the uncaught exception handler.
+         * @param ueh uncaught exception handler
+         * @return this builder
+         */
+        Builder uncaughtExceptionHandler(UncaughtExceptionHandler ueh);
+
+        /**
+         * Sets the task for the thread to run.
+         * @param task the task to run
+         * @return this builder
+         */
+        Builder task(Runnable task);
+
+        /**
+         * Creates a new unstarted {@code Thread} from the current state of the
+         * builder.
+         *
+         * <p> When this method creates a kernel thread then it will inherit the
+         * {@linkplain ThreadGroup}, {@link #getPriority() priority}, and {@link
+         * #isDaemon() daemon status} of the current thread when these
+         * characteristics have not been set. When this method creates a virtual
+         * thread then will have no {@link java.security.Permission permissions}.
+         *
+         * @return a new unstarted Thread
+         * @throws IllegalStateException if the task object to run object has not been set
+         * @throws SecurityException if a thread group has been set and the current thread
+         *         cannot create a thread in that thread group
+         */
+        Thread build();
+
+        /**
+         * Returns a {@code ThreadFactory} to create threads from the current
+         * state of the builder. The returned thread factory is safe for use by
+         * multiple concurrent threads.
+         *
+         * @return a thread factory to create threads
+         */
+        ThreadFactory factory();
+
+        /**
+         * Creates a new {@code Thread} from the current state of the builder
+         * and starts it as if by invoking the {@linkplain Thread#start() start}
+         * method.
+         *
+         * <p> When this method creates a kernel thread then it will inherit the
+         * {@linkplain ThreadGroup}, {@link #getPriority() priority}, and {@link
+         * #isDaemon() daemon status} of the current thread when these
+         * characteristics have not been set. When this method creates a virtual
+         * thread then will have no {@link java.security.Permission permissions}.
+         *
+         * @implSpec The default implementation invokes {@linkplain #build() build}
+         * to create a {@code Thread} and then invokes its {@linkplain Thread#start()
+         * start} method to start it.
+         *
+         * @return The started thread
+         * @throws IllegalStateException if the task object to run object has not been set
+         * @throws SecurityException if a thread group has been set and the current thread
+         *         cannot create a thread in that thread group
+         */
+        default Thread start() {
+            Thread thread = build();
+            thread.start();
+            return thread;
+        }
+    }
+
+    private static class BuilderImpl implements Builder {
+        private ThreadGroup group;
+        private Executor scheduler;
+        private String name;
+        private int counter;
+        private boolean virtual;
+        private boolean disallowThreadLocals;
+        private boolean inheritThreadLocals;
+        private boolean daemon;
+        private boolean daemonChanged;
+        private int priority;
+        private UncaughtExceptionHandler uhe;
+        private Runnable task;
+
+        BuilderImpl() { }
+
+        private int characteristics() {
+            int characteristics = 0;
+            if (virtual)
+                characteristics |= Thread.VIRTUAL;
+            else if(disallowThreadLocals || inheritThreadLocals) {
+                throw new IllegalArgumentException("Kernel thread override default thread local policy");
+            }
+            if (disallowThreadLocals)
+                characteristics |= Thread.NO_THREAD_LOCALS;
+            if (inheritThreadLocals)
+                characteristics |= Thread.INHERIT_THREAD_LOCALS;
+            return characteristics;
+        }
+
+        @Override
+        public Builder group(ThreadGroup group) {
+            Objects.requireNonNull(group);
+            if (virtual)
+                throw new IllegalStateException();
+            this.group = group;
+            return this;
+        }
+
+        @Override
+        public Builder name(String name) {
+            this.name = Objects.requireNonNull(name);
+            this.counter = -1;
+            return this;
+        }
+
+        @Override
+        public Builder name(String prefix, int start) {
+            Objects.requireNonNull(prefix);
+            if (start < 0)
+                throw new IllegalArgumentException("'start' is negative");
+            this.name = prefix;
+            this.counter = start;
+            return this;
+        }
+
+        @Override
+        public Builder virtual() {
+            if (group != null)
+                throw new IllegalStateException();
+            this.virtual = true;
+            this.scheduler = null;
+            return this;
+        }
+
+        @Override
+        public Builder virtual(Executor scheduler) {
+            if (group != null)
+                throw new IllegalStateException();
+            this.virtual = true;
+            if (scheduler == null)
+                scheduler = VirtualThread.defaultScheduler();
+            this.scheduler = scheduler;
+            return this;
+        }
+
+        @Override
+        public Builder disallowThreadLocals() {
+            if (inheritThreadLocals)
+                throw new IllegalStateException();
+            this.disallowThreadLocals = true;
+            return this;
+        }
+
+        @Override
+        public Builder inheritThreadLocals() {
+            if (disallowThreadLocals)
+                throw new IllegalStateException();
+            this.inheritThreadLocals = true;
+            return this;
+        }
+
+        @Override
+        public Builder daemon(boolean on) {
+            daemon = on;
+            daemonChanged = true;
+            return this;
+        }
+
+        @Override
+        public Builder priority(int priority) {
+            if (priority < Thread.MIN_PRIORITY || priority > Thread.MAX_PRIORITY)
+                throw new IllegalArgumentException();
+            this.priority = priority;
+            return this;
+        }
+
+        @Override
+        public Builder uncaughtExceptionHandler(UncaughtExceptionHandler ueh) {
+            this.uhe = Objects.requireNonNull(ueh);
+            return this;
+        }
+
+        @Override
+        public Thread build() {
+            Runnable task = this.task;
+            if (task == null)
+                throw new IllegalStateException("No task specified");
+
+            int characteristics = characteristics();
+            Thread thread;
+            if ((characteristics & Thread.VIRTUAL) != 0) {
+                String name = this.name;
+                if (name != null && counter >= 0) {
+                    name = name + (counter++);
+                }
+                thread = new VirtualThread(scheduler, name, characteristics, task);
+            } else {
+                if (characteristics != 0) {
+                    throw new IllegalStateException();
+                }
+                String name = this.name;
+                if (name == null) {
+                    name = "Thread-" + nextThreadNum();
+                } else if (counter >= 0) {
+                    name = name + (counter++);
+                }
+                thread = new Thread(group, task, name);
+                if (daemonChanged)
+                    thread.setDaemon(daemon);
+                if (priority != 0)
+                    thread.setPriority(priority);
+            }
+            if (uhe != null)
+                thread.setUncaughtExceptionHandler(uhe);
+            return thread;
+        }
+
+        @Override
+        public Builder task(Runnable task) {
+            this.task = Objects.requireNonNull(task);
+            return this;
+        }
+
+        @Override
+        public ThreadFactory factory() {
+            int characteristics = characteristics();
+            if ((characteristics & Thread.VIRTUAL) != 0) {
+                return new VirtualThreadFactory(scheduler, name, counter, characteristics, uhe);
+            } else {
+                return new KernelThreadFactory(group, name, counter, characteristics,
+                                               daemon, priority, uhe);
+            }
+        }
+    }
+
+    private static abstract class CountingThreadFactory implements ThreadFactory {
+        private static final long COUNT_OFFSET;
+        private static final Unsafe unsafe = Unsafe.getUnsafe();
+        static {
+            try {
+                Unsafe unsafe = Unsafe.getUnsafe();
+                COUNT_OFFSET = unsafe.objectFieldOffset(CountingThreadFactory.class.getDeclaredField("count"));
+            } catch (Exception e) {
+                throw new InternalError(e);
+            }
+        }
+        private volatile int count;
+        private final boolean hasCounter;
+
+        CountingThreadFactory(int start) {
+            if (start >= 0) {
+                count = start;
+                hasCounter = true;
+            } else {
+                hasCounter = false;
+            }
+        }
+
+        boolean hasCounter() {
+            return hasCounter;
+        }
+
+        int next() {
+            return unsafe.getAndAddInt(this, COUNT_OFFSET, 1);
+        }
+    }
+
+    private static class VirtualThreadFactory extends CountingThreadFactory {
+        private final Executor scheduler;
+        private final String name;
+        private final int characteristics;
+        private final UncaughtExceptionHandler uhe;
+
+        VirtualThreadFactory(Executor scheduler,
+                             String name,
+                             int start,
+                             int characteristics,
+                             UncaughtExceptionHandler uhe) {
+            super(start);
+            this.scheduler = scheduler;
+            this.name = name;
+            this.characteristics = characteristics;
+            this.uhe = uhe;
+        }
+
+        @Override
+        public Thread newThread(Runnable task) {
+            Objects.requireNonNull(task);
+            String name = this.name;
+            if (name != null && hasCounter()) {
+                name += next();
+            }
+            Thread thread = new VirtualThread(scheduler, name, characteristics, task);
+            if (uhe != null)
+                thread.setUncaughtExceptionHandler(uhe);
+            return thread;
+        }
+    }
+
+    private static class KernelThreadFactory extends CountingThreadFactory {
+        private final ThreadGroup group;
+        private final String name;
+        private final int characteristics;
+        private final boolean daemon;
+        private final int priority;
+        private final UncaughtExceptionHandler uhe;
+
+        KernelThreadFactory(ThreadGroup group,
+                            String name,
+                            int start,
+                            int characteristics,
+                            boolean daemon,
+                            int priority,
+                            UncaughtExceptionHandler uhe) {
+            super(start);
+            this.group = group;
+            this.name = name;
+            this.characteristics = characteristics;
+            this.daemon = daemon;
+            this.priority = priority;
+            this.uhe = uhe;
+        }
+
+        @Override
+        public Thread newThread(Runnable task) {
+            Objects.requireNonNull(task);
+            String name = this.name;
+            if (name == null) {
+                name = "Thread-" + nextThreadNum();
+            } else if (hasCounter()) {
+                name += next();
+            }
+            Thread thread = new Thread(group, task, name);
+            if (daemon)
+                thread.setDaemon(true);
+            if (priority != 0)
+                thread.setPriority(priority);
+            if (uhe != null)
+                thread.setUncaughtExceptionHandler(uhe);
+            return thread;
+        }
+    }
 }

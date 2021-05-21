@@ -3312,6 +3312,48 @@ void java_nio_Buffer::compute_offsets() {
   compute_offset(_limit_offset, k, vmSymbols::limit_name(), vmSymbols::int_signature());
 }
 
+/* stack manipulation */
+#if INCLUDE_KONA_FIBER
+int java_lang_Continuation::_data_offset = 0;
+void java_lang_Continuation::compute_offsets() {
+  Klass* k = SystemDictionary::continuation_klass();
+  if (k != NULL) {
+    compute_offset(_data_offset, k, vmSymbols::data_name(), vmSymbols::long_signature());
+  }
+}
+
+jlong java_lang_Continuation::data(oop obj) {
+  return obj->long_field(_data_offset);
+}
+
+void java_lang_Continuation::set_data(oop obj, jlong value) {
+  obj->long_field_put(_data_offset, value);
+}
+
+int java_lang_VTContinuation::_VT_offset = 0;
+void java_lang_VTContinuation::compute_offsets() {
+  Klass* k = SystemDictionary::VTcontinuation_klass();
+  if (k != NULL) {
+    compute_offset(_VT_offset, k, vmSymbols::outer_instance_0(), vmSymbols::VT_signature());
+  }
+}
+
+oop java_lang_VTContinuation::VT(oop obj) {
+  return obj->obj_field(_VT_offset);
+}
+
+int java_lang_VT::_state_offset = 0;
+void java_lang_VT::compute_offsets() {
+  Klass* k = SystemDictionary::VT_klass();
+  if (k != NULL) {
+    compute_offset(_state_offset, k, vmSymbols::state_name(), vmSymbols::int_signature());
+  }
+}
+
+int java_lang_VT::state(oop obj) {
+  return obj->int_field(_state_offset);
+}
+#endif
 void java_util_concurrent_locks_AbstractOwnableSynchronizer::initialize(TRAPS) {
   if (_owner_offset != 0) return;
 
@@ -3421,6 +3463,11 @@ void JavaClasses::compute_offsets() {
 
   // generated interpreter code wants to know about the offsets we just computed:
   AbstractAssembler::update_delayed_values();
+#if INCLUDE_KONA_FIBER
+  java_lang_Continuation::compute_offsets();
+  java_lang_VTContinuation::compute_offsets();
+  java_lang_VT::compute_offsets();
+#endif
 }
 
 #ifndef PRODUCT

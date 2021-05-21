@@ -90,6 +90,10 @@ DEBUG_ONLY(class ResourceMark;)
 
 class WorkerThread;
 
+#if INCLUDE_KONA_FIBER
+class Coroutine;
+#endif
+
 // Class hierarchy
 // - Thread
 //   - NamedThread
@@ -287,6 +291,24 @@ class Thread: public ThreadShadow {
   int omFreeProvision;                          // reload chunk size
   ObjectMonitor* omInUseList;                   // SLL to track monitors in circulation
   int omInUseCount;                             // length of omInUseList
+
+#if INCLUDE_KONA_FIBER
+  union {
+    struct {
+      int locksAcquired;                            // number of locks acquired by this thread
+      int contJniFrames;                            // number of JNI frames in current continuation
+    };
+    uint64_t contAlignedLong;                       // make locksAcquired and contJniFrames in 8 bytes aligned space
+  };
+  void inc_locks_acquired()                     {
+    if (UseKonaFiber) { locksAcquired++; assert(locksAcquired >= 1, "invalid state"); }
+  }
+  void dec_locks_acquired()                     {
+    if (UseKonaFiber) {locksAcquired--; assert(locksAcquired >= 0, "invalid state"); }
+  }
+  void inc_cont_jni_frames()                    { contJniFrames++; }
+  void dec_cont_jni_frames()                    { contJniFrames--; assert(contJniFrames >= 0, "invalid state"); }
+#endif
 
 #ifdef ASSERT
  private:
@@ -618,6 +640,10 @@ protected:
 
   static ByteSize stack_base_offset()            { return byte_offset_of(Thread, _stack_base ); }
   static ByteSize stack_size_offset()            { return byte_offset_of(Thread, _stack_size ); }
+#if INCLUDE_KONA_FIBER
+  static ByteSize locksAcquired_offset()         { return byte_offset_of(Thread, locksAcquired); }
+  static ByteSize ContAlignedLong_offset()       { return byte_offset_of(Thread, contAlignedLong); }
+#endif
 
 #define TLAB_FIELD_OFFSET(name) \
   static ByteSize tlab_##name##_offset()         { return byte_offset_of(Thread, _tlab) + ThreadLocalAllocBuffer::name##_offset(); }
@@ -972,6 +998,22 @@ class JavaThread: public Thread {
   // _frames_to_pop_failed_realloc frames, the ones that reference
   // failed reallocations.
   int _frames_to_pop_failed_realloc;
+
+  // coroutine support
+#if INCLUDE_KONA_FIBER
+  Coroutine*        _coroutine_cache;
+  uintx             _coroutine_cache_size;
+  Coroutine*        _current_coroutine;
+
+ public:
+  Coroutine* current_coroutine() const           { return _current_coroutine;}
+  Coroutine*& coroutine_cache()                  { return _coroutine_cache; }
+  uintx& coroutine_cache_size()                  { return _coroutine_cache_size; }
+  
+  void initialize_coroutine_support();
+
+ private:
+#endif
 
 #ifndef PRODUCT
   int _jmp_ring_index;
@@ -1403,6 +1445,12 @@ class JavaThread: public Thread {
   static ByteSize is_method_handle_return_offset() { return byte_offset_of(JavaThread, _is_method_handle_return); }
   static ByteSize stack_guard_state_offset()     { return byte_offset_of(JavaThread, _stack_guard_state   ); }
   static ByteSize suspend_flags_offset()         { return byte_offset_of(JavaThread, _suspend_flags       ); }
+#if INCLUDE_KONA_FIBER
+  static ByteSize current_coro_offset()          { return byte_offset_of(JavaThread,_current_coroutine    ); }
+#ifdef ASSERT
+  static ByteSize java_call_counter_offset()     { return byte_offset_of(JavaThread, _java_call_counter   ); }
+#endif
+#endif
 
   static ByteSize do_not_unlock_if_synchronized_offset() { return byte_offset_of(JavaThread, _do_not_unlock_if_synchronized); }
   static ByteSize should_post_on_exceptions_flag_offset() {
@@ -1493,6 +1541,9 @@ class JavaThread: public Thread {
   char* name() const { return (char*)get_thread_name(); }
   void print_on(outputStream* st, bool print_extended_info) const;
   void print_on(outputStream* st) const { print_on(st, false); }
+#if INCLUDE_KONA_FIBER
+  void print_coroutine_on(outputStream* st, bool printstack) const;
+#endif
   void print() const { print_on(tty); }
   void print_value();
   void print_thread_state_on(outputStream* ) const      PRODUCT_RETURN;

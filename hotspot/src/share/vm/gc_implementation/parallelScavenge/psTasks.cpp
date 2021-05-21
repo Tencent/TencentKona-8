@@ -41,6 +41,9 @@
 #include "runtime/vmThread.hpp"
 #include "services/management.hpp"
 #include "utilities/taskqueue.hpp"
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+#endif
 
 //
 // ScavengeRootsTask
@@ -134,6 +137,29 @@ void ThreadRootsTask::do_it(GCTaskManager* manager, uint which) {
   // Do the real work
   pm->drain_stacks(false);
 }
+
+//
+// ContBucketRootsTask
+//
+#if INCLUDE_KONA_FIBER
+void ContBucketRootsTask::do_it(GCTaskManager* manager, uint which) {
+  assert(Universe::heap()->is_gc_active(), "called outside gc");
+  guarantee(SafepointSynchronize::is_at_safepoint(), "should be at safepoint");
+
+  PSPromotionManager* pm = PSPromotionManager::gc_thread_promotion_manager(which);
+  PSScavengeRootsClosure roots_closure(pm);
+  CLDClosure* roots_from_clds = NULL;  // Not needed. All CLDs are already visited.
+  MarkingCodeBlobClosure roots_in_blobs(&roots_closure, CodeBlobToOopClosure::FixRelocations);
+
+  ContBucket* bucket = ContContainer::bucket(_bucket_index);
+  {
+    bucket->oops_do(&roots_closure, roots_from_clds, &roots_in_blobs);
+  }
+
+   // Do the real work
+   pm->drain_stacks(false);
+}
+#endif
 
 //
 // StealTask
