@@ -583,6 +583,14 @@ void InterpreterGenerator::lock_method(void) {
   __ str(r0, Address(esp, BasicObjectLock::obj_offset_in_bytes()));
   __ mov(c_rarg1, esp); // object address
   __ lock_object(c_rarg1);
+
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    __ ldrw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
+    __ addw(rscratch1, rscratch1, 1);
+    __ strw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
+  }
+#endif
 }
 
 // Generate a fixed interpreter frame. This is identical setup for
@@ -1280,6 +1288,13 @@ address InterpreterGenerator::generate_native_entry(bool synchronized) {
 
       __ bind(unlock);
       __ unlock_object(c_rarg1);
+#if INCLUDE_KONA_FIBER
+      if (UseKonaFiber) {
+        __ ldrw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
+        __ subw(rscratch1, rscratch1, 1);
+        __ strw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
+      }
+#endif
     }
     __ bind(L);
   }
