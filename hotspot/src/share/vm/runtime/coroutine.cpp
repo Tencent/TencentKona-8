@@ -28,6 +28,9 @@
 #ifdef TARGET_ARCH_x86
 # include "vmreg_x86.inline.hpp"
 #endif
+#ifdef TARGET_ARCH_aarch64
+# include "vmreg_aarch64.inline.hpp"
+#endif
 #include "services/threadService.hpp"
 #if INCLUDE_ALL_GCS
 #include "gc_implementation/concurrentMarkSweep/concurrentMarkSweepThread.hpp"
@@ -344,7 +347,7 @@ void Coroutine::add_stack_frame(void* frames, int* depth, javaVFrame* jvf) {
 
 #if defined(LINUX) || defined(_ALLBSD_SOURCE) || defined(_WINDOWS)
 void coroutine_start(void* dummy, const void* coroutineObjAddr) {
-#ifndef AMD64
+#if !defined(AMD64) && !defined(AARCH64)
   fatal("Corotuine not supported on current platform");
 #endif
   JavaThread* thread = JavaThread::current();
@@ -515,6 +518,11 @@ void Coroutine::init_coroutine(Coroutine* coro, JavaThread* thread) {
   for (int32_t i = 0; i < 7; i++) {
     *(--d) = NULL;
   }
+#if defined TARGET_ARCH_aarch64
+  // aarch64 pops 2 slots when doing coroutine switch
+  // must keep frame pointer align to 16 bytes
+  *(--d) = NULL;
+#endif
   *(--d) = (intptr_t*)coroutine_start;
   *(--d) = NULL;
 
@@ -699,6 +707,14 @@ void Coroutine::print_VT_info(outputStream* st) {
   }
 }
 
+#if defined TARGET_ARCH_x86
+#define FRAME_POINTER rbp
+#elif defined TARGET_ARCH_aarch64
+#define FRAME_POINTER rfp
+#else
+#error "Arch is not supported."
+#endif
+
 void Coroutine::print_stack_on(outputStream* st, void* frames, int* depth) {
   if (_last_sp == NULL) return;
   address pc = ((address*)_last_sp)[1];
@@ -707,7 +723,7 @@ void Coroutine::print_stack_on(outputStream* st, void* frames, int* depth) {
     intptr_t* sp = ((intptr_t*)_last_sp) + 2;
 
     RegisterMap _reg_map(_thread, true);
-    _reg_map.set_location(rbp->as_VMReg(), (address)_last_sp);
+    _reg_map.set_location(FRAME_POINTER->as_VMReg(), (address)_last_sp);
     _reg_map.set_include_argument_oops(false);
     frame f(sp, fp, pc);
     vframe* start_vf = NULL;
@@ -756,7 +772,7 @@ void Coroutine::on_stack_frames_do(FrameClosure* fc, bool isThreadCoroutine) {
     intptr_t* sp = ((intptr_t*)_last_sp) + 2;
     frame fr(sp, fp, pc);
     StackFrameStream fst(_thread, fr);
-    fst.register_map()->set_location(rbp->as_VMReg(), (address)_last_sp);
+    fst.register_map()->set_location(FRAME_POINTER->as_VMReg(), (address)_last_sp);
     fst.register_map()->set_include_argument_oops(false);
     for(; !fst.is_done(); fst.next()) {
       fc->frames_do(fst.current(), fst.register_map());

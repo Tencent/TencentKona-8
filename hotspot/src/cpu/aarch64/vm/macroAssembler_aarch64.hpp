@@ -938,6 +938,10 @@ public:
   // prints msg and continues
   void warn(const char* msg);
 
+#if INCLUDE_KONA_FIBER
+  void VerifyCoroutineState(Register old_coroutine, Register target_coroutine, bool terminate);
+#endif
+
   static void debug64(char* msg, int64_t pc, int64_t regs[]);
 
   void untested()                                { stop("untested"); }

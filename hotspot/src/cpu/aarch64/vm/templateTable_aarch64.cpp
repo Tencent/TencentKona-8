@@ -3867,6 +3867,14 @@ void TemplateTable::monitorenter()
   __ save_bcp();  // in case of exception
   __ generate_stack_overflow_check(0);
 
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    __ ldrw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
+    __ addw(rscratch1, rscratch1, 1);
+    __ strw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
+  }
+#endif
+
   // The bcp has already been incremented. Just need to dispatch to
   // next instruction.
   __ dispatch_next(vtos);
@@ -3921,6 +3929,13 @@ void TemplateTable::monitorexit()
   __ bind(found);
   __ push_ptr(r0); // make sure object is on stack (contract with oopMaps)
   __ unlock_object(c_rarg1);
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    __ ldrw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
+    __ subw(rscratch1, rscratch1, 1);
+    __ strw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
+  }
+#endif
   __ pop_ptr(r0); // discard object
 }
 

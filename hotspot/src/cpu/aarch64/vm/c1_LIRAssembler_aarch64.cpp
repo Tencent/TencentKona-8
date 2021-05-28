@@ -429,6 +429,13 @@ int LIR_Assembler::emit_unwind_handler() {
     stub = new MonitorExitStub(FrameMap::r0_opr, true, 0);
     __ unlock_object(r5, r4, r0, *stub->entry());
     __ bind(*stub->continuation());
+#if INCLUDE_KONA_FIBER
+    if (UseKonaFiber) {
+      __ ldrw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
+      __ subw(rscratch1, rscratch1, 1);
+      __ strw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
+    }
+#endif
   }
 
   if (compilation()->env()->dtrace_method_probes()) {
@@ -2587,7 +2594,24 @@ void LIR_Assembler::emit_lock(LIR_OpLock* op) {
   } else {
     Unimplemented();
   }
+#if INCLUDE_KONA_FIBER
+  // Deoptimization might happen in Runtime1::monitorenter
+  // inc only in fast path, slow path update lock acquire count in Runtime1::monitorenter
+  if (UseKonaFiber && op->code() == lir_lock) {
+    __ ldrw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
+    __ addw(rscratch1, rscratch1, 1);
+    __ strw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
+  }
+#endif
   __ bind(*op->stub()->continuation());
+#if INCLUDE_KONA_FIBER
+  // dec after all path
+  if (UseKonaFiber && op->code() == lir_unlock) {
+    __ ldrw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
+    __ subw(rscratch1, rscratch1, 1);
+    __ strw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
+  }
+#endif
 }
 
 

@@ -2014,6 +2014,24 @@ void MacroAssembler::warn(const char* msg) {
   popa();
 }
 
+#if INCLUDE_KONA_FIBER
+#include "runtime/coroutine.hpp"
+void MacroAssembler::VerifyCoroutineState(Register old_coroutine, Register target_coroutine,
+                                          bool terminate) {
+  push(RegSet::of(rfp, lr), sp);
+  mov(rfp, sp);
+  andr(sp, rfp, -16);
+  push_CPU_state();   // keeps alignment at 16 bytes
+  mov(c_rarg0, old_coroutine);
+  mov(c_rarg1, target_coroutine);
+  mov(c_rarg2, (int)terminate);
+  call_VM_leaf(CAST_FROM_FN_PTR(address, Coroutine::yield_verify),c_rarg0, c_rarg1, c_rarg2);
+  pop_CPU_state();
+  mov(sp, rfp);
+  pop(RegSet::of(rfp, lr), sp);
+}
+#endif
+
 // If a constant does not fit in an immediate field, generate some
 // number of MOV instructions and then perform the operation.
 void MacroAssembler::wrap_add_sub_imm_insn(Register Rd, Register Rn, unsigned imm,
