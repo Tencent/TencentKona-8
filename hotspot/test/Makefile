@@ -295,14 +295,6 @@ JTREG_BASIC_OPTIONS += $(EXTRA_JTREG_OPTIONS)
 # Set other vm and test options
 JTREG_TEST_OPTIONS = $(JAVA_ARGS:%=-javaoptions:%) $(JAVA_OPTIONS:%=-vmoption:%) $(JAVA_VM_ARGS:%=-vmoption:%)
 
-# Option to tell jtreg to not run tests marked with "ignore"
-ifeq ($(PLATFORM), windows)
-  JTREG_KEY_OPTION = -k:!ignore
-else
-  JTREG_KEY_OPTION = -k:\!ignore
-endif
-JTREG_BASIC_OPTIONS += $(JTREG_KEY_OPTION)
- 
 # Make sure jtreg exists
 $(JTREG): $(JT_HOME)
 
