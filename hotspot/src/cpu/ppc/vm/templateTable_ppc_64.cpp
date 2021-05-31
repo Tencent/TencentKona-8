@@ -2368,7 +2368,7 @@ void TemplateTable::pop_and_check_object(Register Roop) {
 }
 
 // PPC64: implement volatile loads as fence-store-acquire.
-void TemplateTable::getfield_or_static(int byte_no, bool is_static) {
+void TemplateTable::getfield_or_static(int byte_no, bool is_static, RewriteControl rc) {
   transition(vtos, vtos);
 
   Label Lacquire, Lisync;
@@ -2678,7 +2678,7 @@ void TemplateTable::jvmti_post_field_mod(Register Rcache, Register Rscratch, boo
 }
 
 // PPC64: implement volatile stores as release-store (return bytecode contains an additional release).
-void TemplateTable::putfield_or_static(int byte_no, bool is_static) {
+void TemplateTable::putfield_or_static(int byte_no, bool is_static, RewriteControl rc) {
   Label Lvolatile;
 
   const Register Rcache        = R5_ARG3,  // Do not use ARG1/2 (causes trouble in jvmti_post_field_mod).
