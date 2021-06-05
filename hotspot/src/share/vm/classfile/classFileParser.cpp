@@ -4042,7 +4042,11 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
           (!UseAppCDS || _host_klass.is_null())) {
         if (name != NULL) {
           ResourceMark rm(THREAD);
-          classlist_file->print_cr("%s", name->as_C_string());
+          if (PrintClassLoadingDetails && !class_loader.is_null()) {
+            classlist_file->print_cr("%s from %s", name->as_C_string(), cfs->source());
+          } else {
+            classlist_file->print_cr("%s", name->as_C_string());
+          }
           classlist_file->flush();
         }
       }
