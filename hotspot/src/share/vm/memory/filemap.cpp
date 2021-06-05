@@ -94,7 +94,7 @@ void FileMapInfo::fail_continue(const char *msg, ...) {
     if (RequireSharedSpaces) {
       fail(msg, ap);
     } else {
-      if (PrintSharedSpaces) {
+      if (PrintSharedSpaces || RelaxCheckForAppCDS) {
         tty->print_cr("UseSharedSpaces: %s", msg);
       }
     }
