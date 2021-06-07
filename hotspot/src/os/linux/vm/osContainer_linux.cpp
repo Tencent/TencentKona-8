@@ -311,11 +311,9 @@ void OSContainer::init() {
   }
   uintptr_t core_limit = (uintptr_t)os::Linux::active_processor_count();
   if (CPUShareScaleLimit > core_limit || CPUShareScaleLimit == 0) {
-    warning("Ignore invalid CommandLine -XX:CPUShareScaleLimit=%d\n", (int)CPUShareScaleLimit);
     FLAG_SET_DEFAULT(CPUShareScaleLimit, core_limit);
   }
   if (CPUShareScaleFactor == 0) {
-    warning("Ignore invalid CommandLine -XX:CPUShareScaleFactor=%d\n", (int)CPUShareScaleFactor);
     FLAG_SET_DEFAULT(CPUShareScaleFactor, 1);
   }
   if (PrintContainerInfo) {
