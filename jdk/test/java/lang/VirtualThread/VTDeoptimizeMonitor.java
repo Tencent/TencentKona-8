@@ -63,7 +63,7 @@ public class VTDeoptimizeMonitor {
                 }
             }
         };
-        Thread vt = Thread.builder().virtual(executor).name("test_thread").task(target).build();
+        Thread vt = Thread.ofVirtual().scheduler(executor).name("test_thread").unstarted(target);
         vt.start();
         vt.join();
 

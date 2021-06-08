@@ -90,7 +90,7 @@ public class VTGetStackTrace {
 
         releaseFlag = false;
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        ThreadFactory f = Thread.builder().virtual(executor).name("vt_", 0).factory();
+        ThreadFactory f = Thread.ofVirtual().scheduler(executor).name("vt_", 0).factory();
         Thread vt = f.newThread(target);
 
         vt.start();
@@ -117,7 +117,7 @@ public class VTGetStackTrace {
         };
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        ThreadFactory f = Thread.builder().virtual(executor).name("vt_", 0).factory();
+        ThreadFactory f = Thread.ofVirtual().scheduler(executor).name("vt_", 0).factory();
         Thread vt = f.newThread(target);
 
         vt.start();

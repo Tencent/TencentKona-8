@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,8 +23,8 @@
 
 /**
  * @test
- * @run testng BuilderTest
  * @summary Unit test for Thread.Builder
+ * @run testng BuilderTest
  */
 
 import java.util.concurrent.*;
@@ -35,17 +35,17 @@ import java.util.concurrent.locks.LockSupport;
 import org.testng.annotations.Test;
 import static org.testng.Assert.*;
 
-@Test
 public class BuilderTest {
 
-    // kernel thread
-    public void testKernelThread1() throws Exception {
+    // platform thread
+    @Test
+    public void testPlatformThread1() throws Exception {
         Thread parent = Thread.currentThread();
-        Thread.Builder builder = Thread.builder();
+        Thread.Builder.OfPlatform builder = Thread.ofPlatform();
 
-        // build
+        // unstarted
         AtomicBoolean done1 = new AtomicBoolean();
-        Thread thread1 = builder.task(() -> done1.set(true)).build();
+        Thread thread1 = builder.unstarted(() -> done1.set(true));
         assertFalse(thread1.isVirtual());
         assertTrue(thread1.getState() == Thread.State.NEW);
         assertFalse(thread1.getName().isEmpty());
@@ -59,7 +59,7 @@ public class BuilderTest {
 
         // start
         AtomicBoolean done2 = new AtomicBoolean();
-        Thread thread2 = builder.task(() -> done2.set(true)).start();
+        Thread thread2 = builder.start(() -> done2.set(true));
         assertFalse(thread2.isVirtual());
         assertTrue(thread2.getState() != Thread.State.NEW);
         assertFalse(thread2.getName().isEmpty());
@@ -87,13 +87,14 @@ public class BuilderTest {
     }
 
     // virtual thread
+    @Test
     public void testVirtualThread1() throws Exception {
         Thread parent = Thread.currentThread();
-        Thread.Builder builder = Thread.builder().virtual();
+        Thread.Builder.OfVirtual builder = Thread.ofVirtual();
 
-        // build
+        // unstarted
         AtomicBoolean done1 = new AtomicBoolean();
-        Thread thread1 = builder.task(() -> done1.set(true)).build();
+        Thread thread1 = builder.unstarted(() -> done1.set(true));
         assertTrue(thread1.isVirtual());
         assertTrue(thread1.getState() == Thread.State.NEW);
         assertEquals(thread1.getName(), "<unnamed>");
@@ -106,7 +107,7 @@ public class BuilderTest {
 
         // start
         AtomicBoolean done2 = new AtomicBoolean();
-        Thread thread2 = builder.task(() -> done2.set(true)).start();
+        Thread thread2 = builder.start(() -> done2.set(true));
         assertTrue(thread2.isVirtual());
         assertTrue(thread2.getState() != Thread.State.NEW);
         assertEquals(thread2.getName(), "<unnamed>");
@@ -131,11 +132,12 @@ public class BuilderTest {
     }
 
     // thread name
+    @Test
     public void testName1() {
-        Thread.Builder builder = Thread.builder().name("duke");
+        Thread.Builder builder = Thread.ofPlatform().name("duke");
 
-        Thread thread1 = builder.task(() -> { }).build();
-        Thread thread2 = builder.task(() -> { }).start();
+        Thread thread1 = builder.unstarted(() -> { });
+        Thread thread2 = builder.start(() -> { });
         Thread thread3 = builder.factory().newThread(() -> { });
 
         assertTrue(thread1.getName().equals("duke"));
@@ -143,11 +145,12 @@ public class BuilderTest {
         assertTrue(thread3.getName().equals("duke"));
     }
 
+    @Test
     public void testName2() {
-        Thread.Builder builder = Thread.builder().virtual().name("duke");
+        Thread.Builder builder = Thread.ofVirtual().name("duke");
 
-        Thread thread1 = builder.task(() -> { }).build();
-        Thread thread2 = builder.task(() -> { }).start();
+        Thread thread1 = builder.unstarted(() -> { });
+        Thread thread2 = builder.start(() -> { });
         Thread thread3 = builder.factory().newThread(() -> { });
 
         assertTrue(thread1.getName().equals("duke"));
@@ -155,12 +158,13 @@ public class BuilderTest {
         assertTrue(thread3.getName().equals("duke"));
     }
 
+    @Test
     public void testName3() {
-        Thread.Builder builder = Thread.builder().name("duke-", 100);
+        Thread.Builder builder = Thread.ofPlatform().name("duke-", 100);
 
-        Thread thread1 = builder.task(() -> { }).build();
-        Thread thread2 = builder.task(() -> { }).build();
-        Thread thread3 = builder.task(() -> { }).build();
+        Thread thread1 = builder.unstarted(() -> { });
+        Thread thread2 = builder.unstarted(() -> { });
+        Thread thread3 = builder.unstarted(() -> { });
 
         assertTrue(thread1.getName().equals("duke-100"));
         assertTrue(thread2.getName().equals("duke-101"));
@@ -176,12 +180,13 @@ public class BuilderTest {
         assertTrue(thread6.getName().equals("duke-105"));
     }
 
+    @Test
     public void testName4() {
-        Thread.Builder builder = Thread.builder().virtual().name("duke-", 100);
+        Thread.Builder builder = Thread.ofVirtual().name("duke-", 100);
 
-        Thread thread1 = builder.task(() -> { }).build();
-        Thread thread2 = builder.task(() -> { }).build();
-        Thread thread3 = builder.task(() -> { }).build();
+        Thread thread1 = builder.unstarted(() -> { });
+        Thread thread2 = builder.unstarted(() -> { });
+        Thread thread3 = builder.unstarted(() -> { });
 
         assertTrue(thread1.getName().equals("duke-100"));
         assertTrue(thread2.getName().equals("duke-101"));
@@ -198,18 +203,19 @@ public class BuilderTest {
     }
 
     // ThreadGroup
+    @Test
     public void testThreadGroup1() {
         ThreadGroup group = new ThreadGroup("groupies");
-        Thread.Builder builder = Thread.builder().group(group);
+        Thread.Builder builder = Thread.ofPlatform().group(group);
 
-        Thread thread1 = builder.task(() -> { }).build();
+        Thread thread1 = builder.unstarted(() -> { });
 
         AtomicBoolean done = new AtomicBoolean();
-        Thread thread2 = builder.task(() -> {
+        Thread thread2 = builder.start(() -> {
             while (!done.get()) {
                 LockSupport.park();
             }
-        }).start();
+        });
 
         Thread thread3 = builder.factory().newThread(() -> { });
 
@@ -222,19 +228,146 @@ public class BuilderTest {
             LockSupport.unpark(thread2);
         }
     }
+
+    @Test
     public void testThreadGroup2() {
-        ThreadGroup group = new ThreadGroup("groupies");
+        ThreadGroup vgroup = Thread.ofVirtual().unstarted(() -> { }).getThreadGroup();
+        assertEquals(vgroup.getName(), "VirtualThreads");
 
-        Thread.Builder builder1 = Thread.builder().virtual();
-        assertThrows(IllegalStateException.class, () -> builder1.group(group));
+        Thread thread1 = Thread.ofVirtual().unstarted(() -> { });
+        Thread thread2 = Thread.ofVirtual().start(LockSupport::park);
+        Thread thread3 = Thread.ofVirtual().factory().newThread(() -> { });
 
-        Thread.Builder builder2 = Thread.builder().group(group);
-        assertThrows(IllegalStateException.class, () -> builder2.virtual());
-
+        try {
+            assertTrue(thread1.getThreadGroup() == vgroup);
+            assertTrue(thread2.getThreadGroup() == vgroup);
+            assertTrue(thread3.getThreadGroup() == vgroup);
+        } finally {
+            LockSupport.unpark(thread2);
+        }
     }
 
-    // Executor
-    public void testExecutor() throws Exception {
+    // priority
+    @Test
+    public void testPriority1() {
+        int priority = Thread.currentThread().getPriority();
+
+        Thread.Builder builder = Thread.ofPlatform();
+        Thread thread1 = builder.unstarted(() -> { });
+        Thread thread2 = builder.start(() -> { });
+        Thread thread3 = builder.factory().newThread(() -> { });
+
+        assertTrue(thread1.getPriority() == priority);
+        assertTrue(thread2.getPriority() == priority);
+        assertTrue(thread3.getPriority() == priority);
+    }
+
+    @Test
+    public void testPriority2() {
+        int priority = Thread.MIN_PRIORITY;
+
+        Thread.Builder builder = Thread.ofPlatform().priority(priority);
+        Thread thread1 = builder.unstarted(() -> { });
+        Thread thread2 = builder.start(() -> { });
+        Thread thread3 = builder.factory().newThread(() -> { });
+
+        assertTrue(thread1.getPriority() == priority);
+        assertTrue(thread2.getPriority() == priority);
+        assertTrue(thread3.getPriority() == priority);
+    }
+
+    @Test
+    public void testPriority3() {
+        int maxPriority = Thread.currentThread().getThreadGroup().getMaxPriority();
+        int priority = Math.min(maxPriority + 1, Thread.MAX_PRIORITY);
+
+        Thread.Builder builder = Thread.ofPlatform().priority(priority);
+        Thread thread1 = builder.unstarted(() -> { });
+        Thread thread2 = builder.start(() -> { });
+        Thread thread3 = builder.factory().newThread(() -> { });
+
+        assertTrue(thread1.getPriority() == priority);
+        assertTrue(thread2.getPriority() == priority);
+        assertTrue(thread3.getPriority() == priority);
+    }
+
+    @Test(expectedExceptions = { IllegalArgumentException.class })
+    public void testPriority4() {
+        Thread.ofPlatform().priority(Thread.MIN_PRIORITY - 1);
+    }
+
+    @Test(expectedExceptions = { IllegalArgumentException.class })
+    public void testPriority5() {
+        Thread.ofPlatform().priority(Thread.MAX_PRIORITY + 1);
+    }
+
+    // daemon status
+    @Test
+    public void testDaemon1() {
+        Thread.Builder builder = Thread.ofPlatform().daemon(false);
+
+        Thread thread1 = builder.unstarted(() -> { });
+        Thread thread2 = builder.start(() -> { });
+        Thread thread3 = builder.factory().newThread(() -> { });
+
+        assertFalse(thread1.isDaemon());
+        assertFalse(thread2.isDaemon());
+        assertFalse(thread3.isDaemon());
+    }
+
+    @Test
+    public void testDaemon2() {
+        Thread.Builder builder = Thread.ofPlatform().daemon(true);
+
+        Thread thread1 = builder.unstarted(() -> { });
+        Thread thread2 = builder.start(() -> { });
+        Thread thread3 = builder.factory().newThread(() -> { });
+
+        assertTrue(thread1.isDaemon());
+        assertTrue(thread2.isDaemon());
+        assertTrue(thread3.isDaemon());
+    }
+
+    @Test
+    public void testDaemon3() {
+        Thread.Builder builder = Thread.ofVirtual();
+
+        Thread thread1 = builder.unstarted(() -> { });
+        Thread thread2 = builder.start(() -> { });
+        Thread thread3 = builder.factory().newThread(() -> { });
+
+        assertTrue(thread1.isDaemon());
+        assertTrue(thread2.isDaemon());
+        assertTrue(thread3.isDaemon());
+    }
+
+    // stack size
+    @Test
+    public void testStackSize1() {
+        Thread.Builder builder = Thread.ofPlatform().stackSize(1024*1024);
+
+        Thread thread1 = builder.unstarted(() -> { });
+        Thread thread2 = builder.start(() -> { });
+        Thread thread3 = builder.factory().newThread(() -> { });
+    }
+
+    @Test
+    public void testStackSize2() {
+        Thread.Builder builder = Thread.ofPlatform().stackSize(0);
+
+        Thread thread1 = builder.unstarted(() -> { });
+        Thread thread2 = builder.start(() -> { });
+        Thread thread3 = builder.factory().newThread(() -> { });
+    }
+
+    @Test(expectedExceptions = { IllegalArgumentException.class })
+    public void testStackSize3() {
+        Thread.ofPlatform().stackSize(-1);
+    }
+
+    // scheduler
+    @Test
+    public void testScheduler() throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(1);
         try {
             Thread carrierThread = pool.submit(Thread::currentThread).get();
@@ -248,13 +381,13 @@ public class BuilderTest {
                 } catch (InterruptedException ignore) { }
             });
 
-            Thread.Builder builder = Thread.builder().virtual(wrapper::execute);
+            Thread.Builder builder = Thread.ofVirtual().scheduler(wrapper::execute);
 
-            Thread thread1 = builder.task(() -> { }).build();
+            Thread thread1 = builder.unstarted(() -> { });
             thread1.start();
             thread1.join();
 
-            Thread thread2 = builder.task(() -> { }).start();
+            Thread thread2 = builder.start(() -> { });
             thread2.join();
 
             Thread thread3 = builder.factory().newThread(() -> { });
@@ -268,110 +401,47 @@ public class BuilderTest {
         }
     }
 
-    // priority
-    public void testPriority1() {
-        int priority = Thread.currentThread().getThreadGroup().getMaxPriority();
-        Thread.Builder builder = Thread.builder().priority(priority);
-
-        Thread thread1 = builder.task(() -> { }).build();
-        Thread thread2 = builder.task(() -> { }).start();
-        Thread thread3 = builder.factory().newThread(() -> { });
-
-        assertTrue(thread1.getPriority() == priority);
-        assertTrue(thread2.getPriority() == priority);
-        assertTrue(thread3.getPriority() == priority);
-    }
-
-    public void testPriority2() {
-        Thread.Builder builder = Thread.builder().virtual().priority(Thread.MAX_PRIORITY);
-
-        Thread thread1 = builder.task(() -> { }).build();
-        Thread thread2 = builder.task(() -> { }).start();
-        Thread thread3 = builder.factory().newThread(() -> { });
-
-        assertTrue(thread1.getPriority() == Thread.NORM_PRIORITY);
-        assertTrue(thread2.getPriority() == Thread.NORM_PRIORITY);
-        assertTrue(thread3.getPriority() == Thread.NORM_PRIORITY);
-    }
-
-    // daemon status
-    public void testDaemon1() {
-        Thread.Builder builder = Thread.builder().daemon(false);
-
-        Thread thread1 = builder.task(() -> { }).build();
-        Thread thread2 = builder.task(() -> { }).start();
-        Thread thread3 = builder.factory().newThread(() -> { });
-
-        assertFalse(thread1.isDaemon());
-        assertFalse(thread2.isDaemon());
-        assertFalse(thread3.isDaemon());
-    }
-
-    public void testDaemon2() {
-        Thread.Builder builder = Thread.builder().daemon(true);
-
-        Thread thread1 = builder.task(() -> { }).build();
-        Thread thread2 = builder.task(() -> { }).start();
-        Thread thread3 = builder.factory().newThread(() -> { });
-
-        assertTrue(thread1.isDaemon());
-        assertTrue(thread2.isDaemon());
-        assertTrue(thread3.isDaemon());
-    }
-
-    public void testDaemon3() {
-        Thread.Builder builder = Thread.builder().virtual().daemon(false);
-
-        Thread thread1 = builder.task(() -> { }).build();
-        Thread thread2 = builder.task(() -> { }).start();
-        Thread thread3 = builder.factory().newThread(() -> { });
-
-        assertTrue(thread1.isDaemon());
-        assertTrue(thread2.isDaemon());
-        assertTrue(thread3.isDaemon());
-    }
-
     // uncaught exception handler
+    @Test
     public void testUncaughtExceptionHandler1() throws Exception {
         class FooException extends RuntimeException { }
         AtomicReference<Thread> threadRef = new AtomicReference<>();
         AtomicReference<Throwable> exceptionRef = new AtomicReference<>();
-        Thread thread = Thread.builder()
-                .task(() -> { throw new FooException(); })
+        Thread thread = Thread.ofPlatform()
                 .uncaughtExceptionHandler((t, e) -> {
                     assertTrue(t == Thread.currentThread());
                     threadRef.set(t);
                     exceptionRef.set(e);
                 })
-                .start();
+                .start(() -> { throw new FooException(); });
         thread.join();
         assertTrue(threadRef.get() == thread);
         assertTrue(exceptionRef.get() instanceof FooException);
     }
 
+    @Test
     public void testUncaughtExceptionHandler2() throws Exception {
         class FooException extends RuntimeException { }
         AtomicReference<Thread> threadRef = new AtomicReference<>();
         AtomicReference<Throwable> exceptionRef = new AtomicReference<>();
-        Thread thread = Thread.builder()
-                .virtual()
-                .task(() -> { throw new FooException(); })
+        Thread thread = Thread.ofVirtual()
                 .uncaughtExceptionHandler((t, e) -> {
                     assertTrue(t == Thread.currentThread());
                     threadRef.set(t);
                     exceptionRef.set(e);
                 })
-                .start();
+                .start(() -> { throw new FooException(); });
         thread.join();
         assertTrue(threadRef.get() == thread);
         assertTrue(exceptionRef.get() instanceof FooException);
     }
 
+    /*@Test
     public void testUncaughtExceptionHandler3() throws Exception {
         class FooException extends RuntimeException { }
         AtomicReference<Thread> threadRef = new AtomicReference<>();
         AtomicReference<Throwable> exceptionRef = new AtomicReference<>();
-        Thread thread = Thread.builder()
+        Thread thread = Thread.ofPlatform()
                 .uncaughtExceptionHandler((t, e) -> {
                     assertTrue(t == Thread.currentThread());
                     threadRef.set(t);
@@ -383,14 +453,14 @@ public class BuilderTest {
         thread.join();
         assertTrue(threadRef.get() == thread);
         assertTrue(exceptionRef.get() instanceof FooException);
-    }
+    }*/
 
+    /*@Test
     public void testUncaughtExceptionHandler4() throws Exception {
         class FooException extends RuntimeException { }
         AtomicReference<Thread> threadRef = new AtomicReference<>();
         AtomicReference<Throwable> exceptionRef = new AtomicReference<>();
-        Thread thread = Thread.builder()
-                .virtual()
+        Thread thread = Thread.ofPlatform()
                 .uncaughtExceptionHandler((t, e) -> {
                     assertTrue(t == Thread.currentThread());
                     threadRef.set(t);
@@ -402,8 +472,7 @@ public class BuilderTest {
         thread.join();
         assertTrue(threadRef.get() == thread);
         assertTrue(exceptionRef.get() instanceof FooException);
-    }
-
+    }*/
 
     static final ThreadLocal<Object> LOCAL = new ThreadLocal<>();
     static final ThreadLocal<Object> INHERITED_LOCAL = new InheritableThreadLocal<>();
@@ -421,16 +490,15 @@ public class BuilderTest {
         };
 
         done.set(false);
-        Thread thread1 = builder.task(task).build();
+        Thread thread1 = builder.unstarted(task);
         thread1.start();
         thread1.join();
         assertTrue(done.get());
 
         done.set(false);
-        Thread thread2 = builder.task(task).start();
+        Thread thread2 = builder.start(task);
         thread2.join();
         assertTrue(done.get());
-
 
         done.set(false);
         Thread thread3 = builder.factory().newThread(task);
@@ -445,30 +513,23 @@ public class BuilderTest {
     private void testNoThreadLocals(Thread.Builder builder) throws Exception {
         AtomicBoolean done = new AtomicBoolean();
         Runnable task = () -> {
-            boolean failed = false;
-            try {
-                LOCAL.get();
-                failed = true;
-            } catch (UnsupportedOperationException e) { }
             try {
                 LOCAL.set(new Object());
-                failed = true;
-            } catch (UnsupportedOperationException e) { }
-            if (!failed)
+            } catch (UnsupportedOperationException expected) {
                 done.set(true);
+            }
         };
 
         done.set(false);
-        Thread thread1 = builder.task(task).build();
+        Thread thread1 = builder.unstarted(task);
         thread1.start();
         thread1.join();
         assertTrue(done.get());
 
         done.set(false);
-        Thread thread2 = builder.task(task).start();
+        Thread thread2 = builder.start(task);
         thread2.join();
         assertTrue(done.get());
-
 
         done.set(false);
         Thread thread3 = builder.factory().newThread(task);
@@ -477,28 +538,47 @@ public class BuilderTest {
         assertTrue(done.get());
     }
 
+    @Test
     public void testThreadLocals1() throws Exception {
-        Thread.Builder builder = Thread.builder();
+        Thread.Builder builder = Thread.ofPlatform();
         testThreadLocals(builder);
     }
 
+    @Test
     public void testThreadLocals2() throws Exception {
-        Thread.Builder builder = Thread.builder().virtual();
+        Thread.Builder builder = Thread.ofVirtual();
         testThreadLocals(builder);
     }
 
-    /*public void testThreadLocals3() throws Exception {
-        Thread.Builder builder = Thread.builder().disallowThreadLocals();
+    /*@Test
+    public void testThreadLocals3() throws Exception {
+        Thread.Builder builder = Thread.ofPlatform();
+
+        // disallow
+        builder.allowSetThreadLocals(false);
         testNoThreadLocals(builder);
+
+        // allow
+        builder.allowSetThreadLocals(true);
+        testThreadLocals(builder);
     }*/
 
-    /*public void testThreadLocals4() throws Exception {
-        Thread.Builder builder = Thread.builder().virtual().disallowThreadLocals();
+    @Test
+    public void testThreadLocals4() throws Exception {
+        Thread.Builder builder = Thread.ofVirtual();
+
+        // disallow
+        builder.allowSetThreadLocals(false);
         testNoThreadLocals(builder);
-    }*/
+
+        // allow
+        builder.allowSetThreadLocals(true);
+        testThreadLocals(builder);
+    }
 
     /**
-     * Tests that a build creates threads that inherit thread locals
+     * Tests that a builder creates threads that inherits the initial values of
+     * inheritable thread locals.
      */
     private void testInheritedThreadLocals(Thread.Builder builder) throws Exception {
         Object value = new Object();
@@ -511,16 +591,15 @@ public class BuilderTest {
         };
 
         done.set(false);
-        Thread thread1 = builder.task(task).build();
+        Thread thread1 = builder.unstarted(task);
         thread1.start();
         thread1.join();
         assertTrue(done.get());
 
         done.set(false);
-        Thread thread2 = builder.task(task).start();
+        Thread thread2 = builder.start(task);
         thread2.join();
         assertTrue(done.get());
-
 
         done.set(false);
         Thread thread3 = builder.factory().newThread(task);
@@ -540,16 +619,15 @@ public class BuilderTest {
         };
 
         done.set(false);
-        Thread thread1 = builder.task(task).build();
+        Thread thread1 = builder.unstarted(task);
         thread1.start();
         thread1.join();
         assertTrue(done.get());
 
         done.set(false);
-        Thread thread2 = builder.task(task).start();
+        Thread thread2 = builder.start(task);
         thread2.join();
         assertTrue(done.get());
-
 
         done.set(false);
         Thread thread3 = builder.factory().newThread(task);
@@ -558,34 +636,93 @@ public class BuilderTest {
         assertTrue(done.get());
     }
 
-    /*public void testInheritedThreadLocals1() throws Exception {
-        Thread.Builder builder = Thread.builder().inheritThreadLocals();
+    @Test
+    public void testInheritedThreadLocals1() throws Exception {
+        Thread.Builder builder = Thread.ofPlatform();
+        testInheritedThreadLocals(builder); // default
+
+        // do no inheit
+        //builder.inheritInheritableThreadLocals(false);
+        //testNoInheritedThreadLocals(builder);
+
+        // inherit
+        builder.inheritInheritableThreadLocals(true);
         testInheritedThreadLocals(builder);
-    }*/
+    }
 
-    /*public void testInheritedThreadLocals2() throws Exception {
-        Thread.Builder builder = Thread.builder().virtual().inheritThreadLocals();
+    @Test
+    public void testInheritedThreadLocals2() throws Exception {
+        Thread.Builder builder = Thread.ofVirtual();
+        testInheritedThreadLocals(builder); // default
+
+        // do no inheit
+        builder.inheritInheritableThreadLocals(false);
+        testNoInheritedThreadLocals(builder);
+
+        // inherit
+        builder.inheritInheritableThreadLocals(true);
         testInheritedThreadLocals(builder);
-    }*/
+    }
 
-    /*public void testInheritedThreadLocals3() throws Exception {
-        Thread.Builder builder = Thread.builder();
-        testNoInheritedThreadLocals(builder);
-    }*/
+    @Test
+    public void testInheritedThreadLocals3() throws Exception {
+        Thread.Builder builder = Thread.ofPlatform();
 
-    /*public void testInheritedThreadLocals4() throws Exception {
-        Thread.Builder builder = Thread.builder().virtual();
+        // thread locals not allowed
+        //builder.allowSetThreadLocals(false);
+        //testNoInheritedThreadLocals(builder);
+        //builder.inheritInheritableThreadLocals(false);
+        //testNoInheritedThreadLocals(builder);
+        //builder.inheritInheritableThreadLocals(true);
+        //testNoInheritedThreadLocals(builder);
+
+        // thread locals allowed
+        //builder.allowSetThreadLocals(true);
+        //builder.inheritInheritableThreadLocals(false);
+        //testNoInheritedThreadLocals(builder);
+        //builder.inheritInheritableThreadLocals(true);
+        testInheritedThreadLocals(builder);
+    }
+
+    @Test
+    public void testInheritedThreadLocals4() throws Exception {
+        Thread.Builder builder = Thread.ofVirtual();
+
+        // thread locals not allowed
+        builder.allowSetThreadLocals(false);
         testNoInheritedThreadLocals(builder);
-    }*/
+        builder.inheritInheritableThreadLocals(false);
+        testNoInheritedThreadLocals(builder);
+        builder.inheritInheritableThreadLocals(true);
+        testNoInheritedThreadLocals(builder);
+
+        // thread locals allowed
+        builder.allowSetThreadLocals(true);
+        builder.inheritInheritableThreadLocals(false);
+        testNoInheritedThreadLocals(builder);
+        builder.inheritInheritableThreadLocals(true);
+        testInheritedThreadLocals(builder);
+    }
 
     // test null parameters
-    public void testNulls() {
-        Thread.Builder builder = Thread.builder();
+    @Test
+    public void testNulls1() {
+        Thread.Builder.OfPlatform builder = Thread.ofPlatform();
         assertThrows(NullPointerException.class, () -> builder.group(null));
-        //assertThrows(NullPointerException.class, () -> builder.virtual(null));
         assertThrows(NullPointerException.class, () -> builder.name(null));
         assertThrows(NullPointerException.class, () -> builder.name(null, 0));
-        assertThrows(NullPointerException.class, () -> builder.task(null));
         assertThrows(NullPointerException.class, () -> builder.uncaughtExceptionHandler(null));
+        assertThrows(NullPointerException.class, () -> builder.unstarted(null));
+        assertThrows(NullPointerException.class, () -> builder.start(null));
+    }
+
+    @Test
+    public void testNulls2() {
+        Thread.Builder builder = Thread.ofVirtual();
+        assertThrows(NullPointerException.class, () -> builder.name(null));
+        assertThrows(NullPointerException.class, () -> builder.name(null, 0));
+        assertThrows(NullPointerException.class, () -> builder.uncaughtExceptionHandler(null));
+        assertThrows(NullPointerException.class, () -> builder.unstarted(null));
+        assertThrows(NullPointerException.class, () -> builder.start(null));
     }
 }

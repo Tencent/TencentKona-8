@@ -61,7 +61,7 @@ public class VTExecutorTest {
 
     private static void testSchedule(int sleepMilli) throws Exception {
         AtomicInteger count = new AtomicInteger();
-        ThreadFactory f = Thread.builder().virtual().factory();
+        ThreadFactory f = Thread.ofVirtual().factory();
         ExecutorService e = Executors.newFixedThreadPool(realThreadCount, f);
         CountDownLatch startSignal = new CountDownLatch(1);
         CountDownLatch doneSignal = new CountDownLatch(requestCount);

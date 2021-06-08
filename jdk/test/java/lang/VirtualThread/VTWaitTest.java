@@ -57,17 +57,17 @@ public class VTWaitTest {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Lock lock = new ReentrantLock();
 
-        Thread vt1 = Thread.builder().virtual(executor).name("vt-1").task(() -> {
+        Thread vt1 = Thread.ofVirtual().scheduler(executor).name("vt-1").unstarted(() -> {
             lock.lock();
             assertEquals(val, 1);
             val++;
             lock.unlock();
-        }).build();
+        });
 
-        Thread vt2 = Thread.builder().virtual(executor).name("vt-2").task(() -> {
+        Thread vt2 = Thread.ofVirtual().scheduler(executor).name("vt-2").unstarted(() -> {
             assertEquals(val, 0);
             val++;
-        }).build();
+        });
 
         lock.lock();
         vt1.start();
@@ -97,7 +97,7 @@ public class VTWaitTest {
         Condition cond = lock.newCondition();
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        Thread vt1 = Thread.builder().virtual(executor).name("vt-1").task(() -> {
+        Thread vt1 = Thread.ofVirtual().scheduler(executor).name("vt-1").unstarted(() -> {
             lock.lock();
             enter_lock = true;
             try {
@@ -109,12 +109,12 @@ public class VTWaitTest {
             }
             assertEquals(val, 1);
             val++;
-        }).build();
+        });
 
-        Thread vt2 = Thread.builder().virtual(executor).name("vt-2").task(() -> { 
+        Thread vt2 = Thread.ofVirtual().scheduler(executor).name("vt-2").unstarted(() -> { 
             assertEquals(val, 0);
             val++;
-        }).build();
+        });
 
         vt1.start();
         vt2.start();
@@ -153,7 +153,7 @@ public class VTWaitTest {
         };
 
         Thread[] vts = new Thread[40];
-        ThreadFactory f = Thread.builder().virtual(executor).name("MultiVThreadLockRace_", 0).factory();
+        ThreadFactory f = Thread.ofVirtual().scheduler(executor).name("MultiVThreadLockRace_", 0).factory();
         for (int i = 0; i < 40; i++) {
             vts[i] = f.newThread(target);
         }
@@ -197,8 +197,8 @@ public class VTWaitTest {
 
         Thread[] vts = new Thread[40];
         Thread[] threads = new Thread[40];
-        ThreadFactory vf = Thread.builder().virtual(executor).name("vt_", 0).factory();
-        ThreadFactory tf = Thread.builder().name("thread_", 0).factory();
+        ThreadFactory vf = Thread.ofVirtual().scheduler(executor).name("vt_", 0).factory();
+        ThreadFactory tf = Thread.ofVirtual().name("thread_", 0).factory();
         for (int i = 0; i < 40; i++) {
             vts[i] = vf.newThread(target);
             threads[i] = tf.newThread(thread_target);
@@ -243,7 +243,7 @@ public class VTWaitTest {
         };
 
         Thread[] vts = new Thread[100];
-        ThreadFactory f = Thread.builder().virtual(executor).name("vt_", 0).factory();
+        ThreadFactory f = Thread.ofVirtual().scheduler(executor).name("vt_", 0).factory();
         for (int i = 0; i < 100; i++) {
             vts[i] = f.newThread(target);
         }

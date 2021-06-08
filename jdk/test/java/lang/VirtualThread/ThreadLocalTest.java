@@ -46,24 +46,24 @@ public class ThreadLocalTest {
             }
         };
 
-        Thread vt = Thread.builder().virtual(e).task(()->{
+        Thread vt = Thread.ofVirtual().scheduler(e).unstarted(()->{
             System.out.println(tl.get());
             assertEquals(tl.get(), null);
             System.out.println("vt1");
             tl.set("virtual");
             System.out.println(tl.get());
             assertEquals(tl.get().equals("virtual"), true);
-        }).build();
+        });
         vt.start();
         System.out.println("carrier thread " + tl.get());
         assertEquals(tl.get().equals("main"), true);
-        vt = Thread.builder().virtual(e).task(()->{
+        vt = Thread.ofVirtual().scheduler(e).unstarted(()->{
             System.out.println(jla.getCarrierThreadLocal(tl));
             assertEquals(jla.getCarrierThreadLocal(tl).equals("main"), true);
             System.out.println("vt2");
             jla.setCarrierThreadLocal(tl, "virtual");
             System.out.println(jla.getCarrierThreadLocal(tl));
-        }).build();
+        });
         vt.start();
         System.out.println("carrier thread " + tl.get());
         assertEquals(jla.getCarrierThreadLocal(tl).equals("virtual"), true);

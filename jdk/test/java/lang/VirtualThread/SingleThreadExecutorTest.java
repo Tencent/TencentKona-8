@@ -44,7 +44,7 @@ public class SingleThreadExecutorTest {
     @Test
     public static void test() throws Exception {
         ExecutorService e = new SingleThreadExecutor();
-        ThreadFactory tf = Thread.builder().virtual(e).name("vt", 0).factory();
+        ThreadFactory tf = Thread.ofVirtual().scheduler(e).name("vt", 0).factory();
         // VT0, VT1, main
         // 1. main acquire lock
         // 2. VT0 start, acquire lock and park
@@ -72,8 +72,8 @@ public class SingleThreadExecutorTest {
                 lock.unlock();
             }
         };
-        Thread vt0 = Thread.builder().virtual(e).task(vt0_r).name("vt0").build();
-        Thread vt1 = Thread.builder().virtual(e).task(vt1_r).name("vt1").build();
+        Thread vt0 = Thread.ofVirtual().scheduler(e).name("vt0").unstarted(vt0_r);
+        Thread vt1 = Thread.ofVirtual().scheduler(e).name("vt1").unstarted(vt1_r);
         lock.lock();
         System.out.println("main lock");
         vt0.start();

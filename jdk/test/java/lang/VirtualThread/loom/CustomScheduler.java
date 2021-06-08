@@ -123,7 +123,7 @@ public class CustomScheduler {
             }
             //assertTrue(exc.get() instanceof IllegalCallerException);
         };
-        Thread.builder().virtual(scheduler).task(LockSupport::park).start();
+        Thread.ofVirtual().scheduler(scheduler).start(LockSupport::park);
     }
 
     /**
@@ -154,10 +154,10 @@ public class CustomScheduler {
     public void testParkWithInterruptSet() {
         Thread carrier = Thread.currentThread();
         try {
-            Thread vthread = Thread.builder().virtual(Runnable::run).task(() -> {
+            Thread vthread = Thread.ofVirtual().scheduler(Runnable::run).start(() -> {
                 Thread.currentThread().interrupt();
                 Thread.yield();
-            }).start();
+            });
             assertTrue(vthread.isInterrupted());
             assertFalse(carrier.isInterrupted());
         } finally {
@@ -172,9 +172,9 @@ public class CustomScheduler {
     public void testTerminateWithInterruptSet() {
         Thread carrier = Thread.currentThread();
         try {
-            Thread vthread = Thread.builder().virtual(Runnable::run).task(() -> {
+            Thread vthread = Thread.ofVirtual().scheduler(Runnable::run).start(() -> {
                 Thread.currentThread().interrupt();
-            }).start();
+            });
             assertTrue(vthread.isInterrupted());
             assertFalse(carrier.isInterrupted());
         } finally {
@@ -192,9 +192,9 @@ public class CustomScheduler {
         };
         try {
             AtomicBoolean interrupted = new AtomicBoolean();
-            Thread vthread = Thread.builder().virtual(scheduler).task(() -> {
+            Thread vthread = Thread.ofVirtual().scheduler(scheduler).start(() -> {
                 interrupted.set(Thread.currentThread().isInterrupted());
-            }).start();
+            });
             assertFalse(vthread.isInterrupted());
         } finally {
             Thread.interrupted();
