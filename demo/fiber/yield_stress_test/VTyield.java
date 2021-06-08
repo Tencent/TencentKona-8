@@ -54,7 +54,7 @@ public class VTyield {
         AtomicLong statsTimes = new AtomicLong();
         ExecutorService e;
         if (useFiber) {
-            ThreadFactory f = Thread.builder().virtual().factory();
+            ThreadFactory f = Thread.ofVirtual().factory();
             e = Executors.newFixedThreadPool(threadCount, f);
         } else {
             e = Executors.newFixedThreadPool(threadCount);

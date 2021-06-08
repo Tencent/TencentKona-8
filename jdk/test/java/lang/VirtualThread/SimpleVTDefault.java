@@ -44,7 +44,7 @@ public class SimpleVTDefault {
                 finished_vt_count++;
             }
         };
-        Thread vt = Thread.newThread("foo_thread", Thread.VIRTUAL, target);
+        Thread vt = Thread.ofVirtual().name("foo_thread").unstarted(target);
         vt.start();
         vt.join();
         //Thread.sleep(1000);
@@ -65,7 +65,7 @@ public class SimpleVTDefault {
         };
 
         Thread[] vts = new Thread[40];
-        ThreadFactory f = Thread.builder().virtual().name("FixedThreadPoolSimple_", 0).factory();
+        ThreadFactory f = Thread.ofVirtual().name("FixedThreadPoolSimple_", 0).factory();
         for (int i = 0; i < 40; i++) {
             vts[i] = f.newThread(target);
         }
@@ -93,7 +93,7 @@ public class SimpleVTDefault {
                 assertNotEquals(Thread.currentCarrierThread(), kernel);
             }
         };
-        Thread vt = Thread.newThread("park_thread", Thread.VIRTUAL, target);
+        Thread vt = Thread.ofVirtual().name("park_thread").unstarted(target);
         vt.start();
 
         System.out.println("after start " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
@@ -143,7 +143,7 @@ public class SimpleVTDefault {
                 assertEquals(Thread.currentThread().getName(), "vt" + myIndex);
             }
         };
-        ThreadFactory f = Thread.builder().virtual().name("vt", 0).factory();
+        ThreadFactory f = Thread.ofVirtual().name("vt", 0).factory();
         for (int i = 0; i < 10; i++) {
             vts[i] = f.newThread(target);
         }
@@ -182,7 +182,7 @@ public class SimpleVTDefault {
                 assertEquals(Thread.currentThread().getName(), "vt" + myIndex);
             }
         };
-        ThreadFactory f = Thread.builder().virtual().name("vt", 0).factory();
+        ThreadFactory f = Thread.ofVirtual().name("vt", 0).factory();
         for (int i = 0; i < 100; i++) {
             vts[i] = f.newThread(target);
         }

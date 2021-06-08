@@ -46,7 +46,7 @@ public class SimpleVT {
                 finished_vt_count++;
             }
         };
-        Thread vt = Thread.builder().virtual(executor).name("foo_thread").task(target).build();
+        Thread vt = Thread.ofVirtual().scheduler(executor).name("foo_thread").unstarted(target);
         vt.start();
         vt.join();
         //Thread.sleep(1000);
@@ -69,7 +69,7 @@ public class SimpleVT {
         };
 
         Thread[] vts = new Thread[40];
-        ThreadFactory f = Thread.builder().virtual(executor).name("FixedThreadPoolSimple_", 0).factory();
+        ThreadFactory f = Thread.ofVirtual().scheduler(executor).name("FixedThreadPoolSimple_", 0).factory();
         for (int i = 0; i < 40; i++) {
             vts[i] = f.newThread(target);
         }
@@ -99,7 +99,7 @@ public class SimpleVT {
                 assertNotEquals(Thread.currentCarrierThread(), kernel);
             }
         };
-        Thread vt = Thread.builder().virtual(executor).name("park_thread").task(target).build();
+        Thread vt = Thread.ofVirtual().scheduler(executor).name("park_thread").unstarted(target);
         vt.start();
 
         System.out.println("after start " + Thread.currentThread().getName() + " " + Thread.currentCarrierThread().getName());
@@ -152,7 +152,7 @@ public class SimpleVT {
                 assertEquals(Thread.currentThread().getName(), "vt" + myIndex);
             }
         };
-        ThreadFactory f = Thread.builder().virtual(executor).name("vt", 0).factory();
+        ThreadFactory f = Thread.ofVirtual().scheduler(executor).name("vt", 0).factory();
         for (int i = 0; i < 10; i++) {
             vts[i] = f.newThread(target);
         }
@@ -193,7 +193,7 @@ public class SimpleVT {
                 assertEquals(Thread.currentThread().getName(), "vt" + myIndex);
             }
         };
-        ThreadFactory f = Thread.builder().virtual(executor).name("vt", 0).factory();
+        ThreadFactory f = Thread.ofVirtual().scheduler(executor).name("vt", 0).factory();
         for (int i = 0; i < 100; i++) {
             vts[i] = f.newThread(target);
         }

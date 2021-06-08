@@ -52,9 +52,9 @@ public class NettyClientDemo {
 
         ThreadFactory factory;
         if (useFiber == false) {
-            factory = Thread.builder().factory();
+            factory = Thread.ofPlatform().factory();
         } else {
-            factory = Thread.builder().virtual().name("Test-", 0).factory();
+            factory = Thread.ofVirtual().name("Test-", 0).factory();
         }
         ExecutorService e = Executors.newFixedThreadPool(threadCount, factory);
 

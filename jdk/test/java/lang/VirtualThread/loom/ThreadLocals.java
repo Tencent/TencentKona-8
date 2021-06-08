@@ -98,7 +98,7 @@ public class ThreadLocals {
     public void testInheritedThreadLocal1() throws Exception {
         assertTrue(INHERITED_LOCAL.get() == null);
         for (int i = 0; i < 10; i++) {
-            TestHelper.runInVirtualThread(Thread.INHERIT_THREAD_LOCALS, () -> {
+            TestHelper.runInVirtualThread(() -> {
                 assertTrue(INHERITED_LOCAL.get() == null);
                 Object obj = new Object();
                 INHERITED_LOCAL.set(obj);
@@ -114,7 +114,7 @@ public class ThreadLocals {
         Object obj = new Object();
         INHERITED_LOCAL.set(obj);
         try {
-            TestHelper.runInVirtualThread(Thread.INHERIT_THREAD_LOCALS, () -> {
+            TestHelper.runInVirtualThread(() -> {
                 assertTrue(INHERITED_LOCAL.get() == obj);
             });
         } finally {
@@ -128,7 +128,7 @@ public class ThreadLocals {
         TestHelper.runInVirtualThread(0, () -> {
             Object obj = new Object();
             INHERITED_LOCAL.set(obj);
-            TestHelper.runInVirtualThread(Thread.INHERIT_THREAD_LOCALS, () -> {
+            TestHelper.runInVirtualThread(() -> {
                 assertTrue(INHERITED_LOCAL.get() == obj);
             });
             assertTrue(INHERITED_LOCAL.get() == obj);
@@ -143,7 +143,8 @@ public class ThreadLocals {
         Object obj = new Object();
         INHERITED_LOCAL.set(obj);
         try {
-            TestHelper.runInVirtualThread(0, () -> {
+            int characteristics = TestHelper.NO_INHERIT_THREAD_LOCALS;
+            TestHelper.runInVirtualThread(characteristics, () -> {
                 assertTrue(INHERITED_LOCAL.get() == null);
             });
         } finally {
@@ -157,7 +158,8 @@ public class ThreadLocals {
         TestHelper.runInVirtualThread(0, () -> {
             Object obj = new Object();
             INHERITED_LOCAL.set(obj);
-            TestHelper.runInVirtualThread(0, () -> {
+            int characteristics = TestHelper.NO_INHERIT_THREAD_LOCALS;
+            TestHelper.runInVirtualThread(characteristics, () -> {
                 assertTrue(INHERITED_LOCAL.get() == null);
             });
             assertTrue(INHERITED_LOCAL.get() == obj);

@@ -52,7 +52,7 @@ public class ParkTimeout {
 				assertEquals((afterSecondPark - afterPark) < 1500, true);
             }
         };
-        Thread vt = Thread.builder().virtual().name("vt").task(target).build();
+        Thread vt = Thread.ofVirtual().name("vt").unstarted(target);
         vt.start();
 		Thread.sleep(10);
 		VirtualThreads.unpark(vt);

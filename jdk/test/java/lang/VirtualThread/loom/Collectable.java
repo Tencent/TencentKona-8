@@ -37,7 +37,7 @@ public class Collectable {
 
     // ensure that an unstarted virtual thread can be GC"ed
     public void testGC1() {
-        Thread thread = Thread.builder().virtual().task(() -> { }).build();
+        Thread thread = Thread.ofVirtual().unstarted(() -> { });
         WeakReference<Thread> ref = new WeakReference<>(thread);
         thread = null;
         waitUntilCleared(ref);

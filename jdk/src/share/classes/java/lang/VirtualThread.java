@@ -144,7 +144,7 @@ class VirtualThread extends Thread {
         if ((characteristics & NO_THREAD_LOCALS) != 0) {
             this.threadLocals = ThreadLocal.ThreadLocalMap.NOT_SUPPORTED;
             this.inheritableThreadLocals = ThreadLocal.ThreadLocalMap.NOT_SUPPORTED;
-        } else if ((characteristics & INHERIT_THREAD_LOCALS) != 0) {
+        } else if ((characteristics & NO_INHERIT_THREAD_LOCALS) == 0) {
             Thread parent = Thread.currentThread();
             ThreadLocal.ThreadLocalMap parentMap = parent.inheritableThreadLocals;
             if (parentMap != null
@@ -193,7 +193,8 @@ class VirtualThread extends Thread {
      * @param task the task to execute
      */
     VirtualThread(Executor scheduler, String name, int characteristics, Runnable task) {
-        super(name == null ? "<unnamed>" : name, characteristics);
+        /* virtual thread initialize thread local in function of initializeThreadLocal()*/
+        super(name == null ? "<unnamed>" : name, characteristics | NO_INHERIT_THREAD_LOCALS);
         initializeThreadLocal(characteristics);
 
         Objects.requireNonNull(task);

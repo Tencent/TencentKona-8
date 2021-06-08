@@ -29,6 +29,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 class TestHelper {
 
+    static final int NO_THREAD_LOCALS = 1 << 1;
+    static final int NO_INHERIT_THREAD_LOCALS = 1 << 2;
+
     interface ThrowingRunnable {
         void run() throws Exception;
     }
@@ -36,7 +39,6 @@ class TestHelper {
     private static void run(String name, int characteristics, ThrowingRunnable task)
         throws Exception
     {
-        characteristics |= Thread.VIRTUAL;
         AtomicReference<Exception> exc = new AtomicReference<>();
         Runnable target =  () -> {
             try {
@@ -47,14 +49,16 @@ class TestHelper {
                 exc.set(e);
             }
         };
-        Thread t;
-        if (name == null) {
-            t = Thread.newThread(characteristics, target);
-        } else {
-            t = Thread.newThread(name, characteristics, target);
-        }
-        t.start();
-        t.join();
+
+        Thread.Builder builder = Thread.ofVirtual();
+        if (name != null)
+            builder.name(name);
+        boolean allow = ((characteristics & NO_THREAD_LOCALS)  == 0);
+        builder.allowSetThreadLocals(allow);
+        boolean inherit = ((characteristics & NO_INHERIT_THREAD_LOCALS) == 0);
+        builder.inheritInheritableThreadLocals(inherit);
+        Thread thread = builder.start(target);
+        thread.join();
         Exception e = exc.get();
         if (e != null) {
             throw e;
