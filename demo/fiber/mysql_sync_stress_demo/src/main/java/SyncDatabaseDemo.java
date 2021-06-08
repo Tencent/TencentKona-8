@@ -191,9 +191,9 @@ public class SyncDatabaseDemo {
     public static void initExecutor() {
         ThreadFactory factory;
         if (testOption == useFiber) {
-            factory = Thread.builder().virtual().factory();
+            factory = Thread.ofVirtual().factory();
         } else {
-            factory = Thread.builder().factory();
+            factory = Thread.ofPlatform().factory();
         }
 
         if (testOption == useAsync) {

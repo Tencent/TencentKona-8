@@ -40,11 +40,11 @@ public class VTPinnedCallback {
         count = 0;
 
         Object o = new Object();
-        Thread vt = Thread.builder().virtual().task(()->{
+        Thread vt = Thread.ofVirtual().unstarted(()->{
             synchronized(o) {
                 Thread.yield(); //pinned, call PinnedAction
             }
-        }).build();
+        });
 
         VirtualThreads.setPinnedAction(vt, new Continuation.PinnedAction() {
             public void run(Continuation.Pinned reason) {

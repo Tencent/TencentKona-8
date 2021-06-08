@@ -46,7 +46,7 @@ public class DisableUseKonaFiber {
                     System.out.println("resume yield");
                 }
             };
-            Thread vt = Thread.builder().virtual(executor).name("foo_thread").task(target).build();
+            Thread vt = Thread.ofVirtual().scheduler(executor).name("foo_thread").unstarted(target);
             vt.start();
             vt.join();
             executor.shutdown();

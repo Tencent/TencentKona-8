@@ -134,16 +134,16 @@ public class Reflection {
         ExecutorService scheduler = Executors.newFixedThreadPool(1);
 
         try {
-            Thread vthread = Thread.builder().virtual(scheduler).task(() -> {
+            Thread vthread = Thread.ofVirtual().scheduler(scheduler).start(() -> {
                 try {
                     parkMethod.invoke(null);   // blocks
                 } catch (Exception e) { }
-            }).start();
+            });
 
             Thread.sleep(100); // give thread time to be scheduled
 
             // unpark with another virtual thread, runs on same carrier thread
-            Thread unparker = Thread.builder().virtual(scheduler).task(() -> LockSupport.unpark(vthread)).build();
+            Thread unparker = Thread.ofVirtual().scheduler(scheduler).unstarted(() -> LockSupport.unpark(vthread));
             unparker.start();
             unparker.join();
             vthread.join();
@@ -276,16 +276,16 @@ public class Reflection {
         Constructor<?> ctor = Parker.class.getDeclaredConstructor();
         ExecutorService scheduler = Executors.newFixedThreadPool(1);
         try {
-            Thread vthread = Thread.builder().virtual(scheduler).task(() -> {
+            Thread vthread = Thread.ofVirtual().scheduler(scheduler).start(() -> {
                 try {
                     ctor.newInstance();
                 } catch (Exception e) { }
-            }).start();
+            });
 
             Thread.sleep(100); // give thread time to be scheduled
 
             // unpark with another virtual thread, runs on same carrier thread
-            Thread unparker = Thread.builder().virtual(scheduler).task(() -> LockSupport.unpark(vthread)).build();
+            Thread unparker = Thread.ofVirtual().scheduler(scheduler).unstarted(() -> LockSupport.unpark(vthread));
             unparker.start();
             unparker.join();
             vthread.join();

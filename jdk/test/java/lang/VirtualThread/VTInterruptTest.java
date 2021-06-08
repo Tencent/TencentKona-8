@@ -52,7 +52,7 @@ public class VTInterruptTest {
         val = 0;
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        Thread vt = Thread.builder().virtual(executor).name("vt").task(() -> {
+        Thread vt = Thread.ofVirtual().scheduler(executor).name("vt").unstarted(() -> {
             try {
                 while (true) {
                     Thread.sleep(1000);
@@ -60,7 +60,7 @@ public class VTInterruptTest {
             } catch (InterruptedException e) {
                 val++;
             }
-        }).build();
+        });
 
         vt.start();
         while (vt.getState() != Thread.State.WAITING) {
@@ -104,7 +104,7 @@ public class VTInterruptTest {
         };
 
         Thread[] vts = new Thread[40];
-        ThreadFactory f = Thread.builder().virtual(executor).name("multipleSleepInterrupt_", 0).factory();
+        ThreadFactory f = Thread.ofVirtual().scheduler(executor).name("multipleSleepInterrupt_", 0).factory();
         for (int i = 0; i < 40; i+=2) {
             vts[i] = f.newThread(target1);
             vts[i+1] = f.newThread(target);
@@ -147,7 +147,7 @@ public class VTInterruptTest {
             }
         };
 
-        Thread vt = Thread.builder().virtual(executor).name("vt-0").task(target).build();
+        Thread vt = Thread.ofVirtual().scheduler(executor).name("vt-0").unstarted(target);
         lock.lock();
         vt.start();
         while (vt.getState() != Thread.State.WAITING) {
@@ -182,7 +182,7 @@ public class VTInterruptTest {
             }
         };
 
-        Thread vt = Thread.builder().virtual(executor).name("vt-0").task(target).build();
+        Thread vt = Thread.ofVirtual().scheduler(executor).name("vt-0").unstarted(target);
 
         lock.lock();
         vt.start();
@@ -225,7 +225,7 @@ public class VTInterruptTest {
             }
         };
 
-        Thread vt = Thread.builder().virtual(executor).name("vt-0").task(target).build(); 
+        Thread vt = Thread.ofVirtual().scheduler(executor).name("vt-0").unstarted(target); 
 
         vt.start();
         while (enter_lock == false) {
