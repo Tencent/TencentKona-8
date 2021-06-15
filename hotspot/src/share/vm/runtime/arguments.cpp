@@ -3882,10 +3882,7 @@ static char* get_shared_archive_path() {
   if (SharedArchiveFile == NULL) {
     shared_archive_path = Arguments::get_default_shared_archive_path();
   } else {
-    shared_archive_path = NEW_C_HEAP_ARRAY(char, strlen(SharedArchiveFile) + 1, mtInternal);
-    if (shared_archive_path != NULL) {
-      strncpy(shared_archive_path, SharedArchiveFile, strlen(SharedArchiveFile) + 1);
-    }
+    shared_archive_path = os::strdup(SharedArchiveFile, mtInternal);
   }
   return shared_archive_path;
 }
