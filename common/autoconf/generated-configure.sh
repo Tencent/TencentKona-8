@@ -20102,6 +20102,9 @@ fi
     JDK_VERSION="${JDK_MAJOR_VERSION}.${JDK_MINOR_VERSION}.${JDK_MICRO_VERSION}"
   fi
 
+  if test "x$ENABLE_KONA_FIBER" = xtrue; then
+    JDK_VERSION="${JDK_VERSION}_fiber"
+  fi
 
   # The cooked update version used to encode trailing letters in the update
   # version into a trailing number. That is no longer needed, but need to
