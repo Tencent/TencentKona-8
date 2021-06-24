@@ -673,6 +673,9 @@ JRT_ENTRY_NO_ASYNC(void, Runtime1::monitorenter(JavaThread* thread, oopDesc* obj
       ObjectSynchronizer::fast_enter(h_obj, lock->lock(), false, THREAD);
     }
   }
+#if INCLUDE_KONA_FIBER
+  thread->inc_locks_acquired();
+#endif
 JRT_END
 
 

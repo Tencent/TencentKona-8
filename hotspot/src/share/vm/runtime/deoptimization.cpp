@@ -1005,6 +1005,9 @@ void Deoptimization::relock_objects(GrowableArray<MonitorInfo*>* monitors, JavaT
         BasicLock* lock = mon_info->lock();
         ObjectSynchronizer::slow_enter(obj, lock, thread);
         assert(mon_info->owner()->is_locked(), "object must be locked now");
+#if INCLUDE_KONA_FIBER
+        thread->inc_locks_acquired();
+#endif
       }
     }
   }
@@ -1114,6 +1117,9 @@ void Deoptimization::pop_frames_failed_reallocs(JavaThread* thread, vframeArray*
         BasicObjectLock* src = monitors->at(j);
         if (src->obj() != NULL) {
           ObjectSynchronizer::fast_exit(src->obj(), src->lock(), thread);
+#if INCLUDE_KONA_FIBER
+          thread->dec_locks_acquired();
+#endif
         }
       }
       array->element(i)->free_monitors(thread);

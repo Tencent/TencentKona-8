@@ -2369,6 +2369,10 @@ void PhaseMacroExpand::expand_lock_node(LockNode *lock) {
   _igvn.replace_node(_fallthroughproj, region);
 
   Node *memproj = transform_later( new(C) ProjNode(call, TypeFunc::Memory) );
+  // In case of deoptimize, lock acauire counter is increased in
+  // OptoRuntime::complete_monitor_locking_Java.
+  // To minimize code change, insert lock acquire counter increment after all path.
+  // Need decrease counter when backing from OptoRuntime::complete_monitor_locking_Java.
 #if INCLUDE_KONA_FIBER
   if (UseKonaFiber) {
     memproj = updateLockCounter(slow_ctrl, memproj, false);
@@ -2444,12 +2448,6 @@ void PhaseMacroExpand::expand_unlock_node(UnlockNode *unlock) {
   _igvn.replace_node(_fallthroughproj, region);
 
   Node *memproj = transform_later( new(C) ProjNode(call, TypeFunc::Memory) );
-#if INCLUDE_KONA_FIBER
-  if (UseKonaFiber) {
-    memproj = updateLockCounter(slow_ctrl, memproj, true);
-  }
-#endif
-
   mem_phi->init_req(1, memproj );
   mem_phi->init_req(2, mem);
   transform_later(mem_phi);
