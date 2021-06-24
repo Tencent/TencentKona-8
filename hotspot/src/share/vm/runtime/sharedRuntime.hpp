@@ -335,6 +335,7 @@ class SharedRuntime: AllStatic {
   // Find the method that called us.
   static methodHandle find_callee_method(JavaThread* thread, TRAPS);
 
+  static void monitor_enter_helper(oopDesc* _obj, BasicLock* lock, JavaThread* thread);
 
  private:
   static Handle find_callee_info(JavaThread* thread,
@@ -496,6 +497,7 @@ class SharedRuntime: AllStatic {
 
   // Slow-path Locking and Unlocking
   static void complete_monitor_locking_C(oopDesc* obj, BasicLock* lock, JavaThread* thread);
+  static void complete_monitor_locking_C2(oopDesc* obj, BasicLock* lock, JavaThread* thread);
   static void complete_monitor_unlocking_C(oopDesc* obj, BasicLock* lock);
 
   // Resolving of calls

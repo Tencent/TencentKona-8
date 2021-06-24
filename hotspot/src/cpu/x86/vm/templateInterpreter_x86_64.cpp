@@ -551,6 +551,11 @@ void InterpreterGenerator::lock_method(void) {
   __ movptr(Address(rsp, BasicObjectLock::obj_offset_in_bytes()), rax);
   __ movptr(c_rarg1, rsp); // object address
   __ lock_object(c_rarg1);
+#if INCLUDE_KONA_FIBER
+  if (UseKonaFiber) {
+    LP64_ONLY(__ addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1));
+  }
+#endif
 }
 
 // Generate a fixed interpreter frame. This is identical setup for
@@ -1365,6 +1370,11 @@ address InterpreterGenerator::generate_native_entry(bool synchronized) {
 
       __ bind(unlock);
       __ unlock_object(c_rarg1);
+#if INCLUDE_KONA_FIBER
+      if (UseKonaFiber) {
+        LP64_ONLY(__ subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1));
+      }
+#endif
     }
     __ bind(L);
   }

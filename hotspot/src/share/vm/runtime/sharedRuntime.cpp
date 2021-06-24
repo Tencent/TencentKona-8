@@ -1859,12 +1859,12 @@ JRT_LEAF(void, SharedRuntime::reguard_yellow_pages())
   (void) JavaThread::current()->reguard_stack();
 JRT_END
 
-
 // Handles the uncommon case in locking, i.e., contention or an inflated lock.
 #ifndef PRODUCT
 int SharedRuntime::_monitor_enter_ctr=0;
 #endif
-JRT_ENTRY_NO_ASYNC(void, SharedRuntime::complete_monitor_locking_C(oopDesc* _obj, BasicLock* lock, JavaThread* thread))
+
+JRT_ENTRY_NO_ASYNC(void, SharedRuntime::monitor_enter_helper(oopDesc* _obj, BasicLock* lock, JavaThread* thread))
   oop obj(_obj);
 #ifndef PRODUCT
   _monitor_enter_ctr++;             // monitor enter slow
@@ -1880,6 +1880,15 @@ JRT_ENTRY_NO_ASYNC(void, SharedRuntime::complete_monitor_locking_C(oopDesc* _obj
     ObjectSynchronizer::slow_enter(h_obj, lock, CHECK);
   }
   assert(!HAS_PENDING_EXCEPTION, "Should have no exception here");
+JRT_END
+
+JRT_BLOCK_ENTRY(void, SharedRuntime::complete_monitor_locking_C(oopDesc* _obj, BasicLock* lock, JavaThread* thread))
+  SharedRuntime::monitor_enter_helper(_obj, lock, thread);
+JRT_END
+
+JRT_BLOCK_ENTRY(void, SharedRuntime::complete_monitor_locking_C2(oopDesc* _obj, BasicLock* lock, JavaThread* thread))
+  SharedRuntime::monitor_enter_helper(_obj, lock, thread);
+  thread->inc_locks_acquired();
 JRT_END
 
 #ifndef PRODUCT

@@ -304,7 +304,7 @@ class Thread: public ThreadShadow {
     if (UseKonaFiber) { locksAcquired++; assert(locksAcquired >= 1, "invalid state"); }
   }
   void dec_locks_acquired()                     {
-    if (UseKonaFiber) {locksAcquired--; assert(locksAcquired >= 0, "invalid state"); }
+    if (UseKonaFiber) { locksAcquired--; assert(locksAcquired >= 0, "invalid state"); }
   }
   void inc_cont_jni_frames()                    { contJniFrames++; }
   void dec_cont_jni_frames()                    { contJniFrames--; assert(contJniFrames >= 0, "invalid state"); }

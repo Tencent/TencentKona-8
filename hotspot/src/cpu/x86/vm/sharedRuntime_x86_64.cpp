@@ -2336,11 +2336,6 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     // Slow path will re-enter here
 
     __ bind(lock_done);
-#if INCLUDE_KONA_FIBER
-    if (UseKonaFiber) {
-      __ addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
-    }
-#endif
   }
 
 
@@ -2504,11 +2499,6 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     }
 
     __ bind(done);
-#if INCLUDE_KONA_FIBER
-    if (UseKonaFiber) {
-      __ subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
-    }
-#endif
   }
   {
     SkipIfEqual skip(masm, &DTraceMethodProbes, false);
@@ -2590,11 +2580,6 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     __ bind(L);
     }
 #endif
-#if INCLUDE_KONA_FIBER
-    if (UseKonaFiber) {
-      __ subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
-    }
-#endif
     __ jmp(lock_done);
 
     // END Slow path lock
@@ -2639,11 +2624,6 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     if (ret_type == T_FLOAT || ret_type == T_DOUBLE ) {
       restore_native_result(masm, ret_type, stack_slots);
     }
-#if INCLUDE_KONA_FIBER
-    if (UseKonaFiber) {
-      __ addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1);
-    }
-#endif
     __ jmp(unlock_done);
 
     // END Slow path unlock
