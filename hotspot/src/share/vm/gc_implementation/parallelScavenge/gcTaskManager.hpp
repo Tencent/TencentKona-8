@@ -797,7 +797,10 @@ public:
   }
 
   ~GCTaskManagerWithUpdatedActiveWorkers() {
-    _manager->set_active_workers(_old_active_workers);
+    // When using PS as GC, manager->active_workers() is initialized
+    // to zero and will be set to non-zero after GC happens.
+    // _old_active_workers is zero before any GC happens.
+    _manager->set_active_workers(MAX2(1U, _old_active_workers));
   }
 };
 
