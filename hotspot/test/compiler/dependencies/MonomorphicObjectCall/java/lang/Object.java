@@ -54,7 +54,19 @@ public class Object {
 
     public final native void notifyAll();
 
-    public final native void wait(long timeout) throws InterruptedException;
+    private final native void wait0(long timeout) throws InterruptedException;
+
+    public final void wait(long timeoutMillis) throws InterruptedException {
+        try {
+            wait0(timeoutMillis);
+        } catch (InterruptedException e) {
+            Thread thread = Thread.currentThread();
+            if (thread.isVirtual()) {
+                thread.getAndClearInterrupt();
+            }
+            throw e;
+        }
+    }
 
     public final void wait(long timeout, int nanos) throws InterruptedException {
         if (timeout < 0) {
