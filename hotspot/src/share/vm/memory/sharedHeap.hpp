@@ -200,6 +200,7 @@ public:
 
    public:
     StrongRootsScope(SharedHeap* heap, bool activate = true);
+    ~StrongRootsScope();
   };
   friend class StrongRootsScope;
 
