@@ -4293,6 +4293,19 @@ void Threads::oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) {
   VMThread::vm_thread()->oops_do(f, cld_f, cf);
 }
 
+#ifdef ASSERT
+void Threads::assert_all_threads_claimed() {
+  int _thread_claim_parity = SharedHeap::heap()->strong_roots_parity();
+  ALL_JAVA_THREADS(p) {
+    const int thread_parity = p->oops_do_parity();
+    assert((thread_parity == _thread_claim_parity), "Thread has incorrect parity");
+  }
+  VMThread* vmt = VMThread::vm_thread();
+  const int thread_parity = vmt->oops_do_parity();
+  assert((thread_parity == _thread_claim_parity), "VMThread has incorrect parity");
+}
+#endif // ASSERT
+
 void Threads::possibly_parallel_oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) {
   // Introduce a mechanism allowing parallel threads to claim threads as
   // root groups.  Overhead should be small enough to use all the time,

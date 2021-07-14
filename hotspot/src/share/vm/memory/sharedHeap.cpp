@@ -95,6 +95,10 @@ SharedHeap::StrongRootsScope::StrongRootsScope(SharedHeap* heap, bool activate)
   }
 }
 
+SharedHeap::StrongRootsScope::~StrongRootsScope(){
+  Threads::assert_all_threads_claimed();
+}
+
 void SharedHeap::set_barrier_set(BarrierSet* bs) {
   _barrier_set = bs;
   // Cached barrier set for fast access in oops

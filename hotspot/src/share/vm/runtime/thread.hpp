@@ -616,7 +616,7 @@ protected:
   Monitor* owned_locks() const                   { return _owned_locks;          }
   bool owns_locks() const                        { return owned_locks() != NULL; }
   bool owns_locks_but_compiled_lock() const;
-
+  int oops_do_parity() const                     { return(int)_oops_do_parity; }
   // Deadlock detection
   bool allow_allocation()                        { return _allow_allocation_count == 0; }
   ResourceMark* current_resource_mark()          { return _current_resource_mark; }
@@ -2019,7 +2019,7 @@ class Threads: AllStatic {
 
   // Garbage collection
   static void follow_other_roots(void f(oop*));
-
+  static void assert_all_threads_claimed() NOT_DEBUG_RETURN;
   // Apply "f->do_oop" to all root oops in all threads.
   // This version may only be called by sequential code.
   static void oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf);
