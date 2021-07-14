@@ -318,26 +318,7 @@ void ContContainer::print_stack_on(outputStream* st) {
 
 // count is same with real count in list
 // all elements in a bucket has correct hash code
-void ContContainer::verify() {
-  for (size_t i = 0; i < CONT_CONTAINER_SIZE; i++) {
-    ContBucket* bucket = ContContainer::bucket(i);
-    MutexLockerEx ml(bucket->lock(), Mutex::_no_safepoint_check_flag);
-    Coroutine* head = bucket->head();
-    if (head == NULL) {
-      guarantee(bucket->count() == 0, "mismatch count");
-      continue;
-    }
-
-    Coroutine* current = head;
-    int num = 0;
-    do {
-      guarantee(hash_code(current) == i, "invalid hash location");
-      num++;
-      current = current->next();
-    } while (current != head);
-    guarantee(num == bucket->count(), "mismatch count");
-  }
-}
+      
 
 void Coroutine::add_stack_frame(void* frames, int* depth, javaVFrame* jvf) {
   StackFrameInfo* frame = new StackFrameInfo(jvf, false);
