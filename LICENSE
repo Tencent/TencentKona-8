@@ -1,3 +1,15 @@
+Tencent is pleased to support the open source community by making Tencent Kona JDK8 available. 
+
+Copyright (C) 2021 THL A29 Limited, a Tencent company.  All rights reserved. 
+
+The below software in this distribution may have been modified by THL A29 Limited ("Tencent Modifications"). All Tencent Modifications are Copyright (C) 2021 THL A29 Limited.
+
+Tencent Kona JDK8 is licensed under the GNU General Public License Version 2 with "CLASSPATH" EXCEPTION.  
+
+Please kindly note Tencent Kona JDK8 is based on OpenJDK.  The source code of the OpenJDK can be obtained from https://github.com/openjdk/jdk8
+
+Terms of the GNU General Public License Version 2 with "CLASSPATH" EXCEPTION:
+---------------------------------------------------
 The GNU General Public License (GPL)
 
 Version 2, June 1991
