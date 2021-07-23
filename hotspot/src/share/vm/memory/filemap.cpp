@@ -451,7 +451,7 @@ bool FileMapInfo::validate_classpath_entry_table() {
     }
     // For -Xbootclasspath:a, the org_name doesn't contain jre
     if (!app_check && name[0] == '\0') {
-      strncpy(name, org_name, strlen(org_name) + 1);
+      strcpy(name, org_name);
     }
     if (TraceClassPaths || (TraceClassLoading && Verbose)) {
       tty->print_cr("[Checking shared classpath entry: %s]", UseAppCDS ? org_name : name);

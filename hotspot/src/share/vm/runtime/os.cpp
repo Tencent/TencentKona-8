@@ -1612,7 +1612,7 @@ bool os::replace_jh(char* path, const char* real_java_home, char* ret) {
       }
 
       if ((strncmp(q+1, "jre", 3)==0) && (q[4] == os::file_separator()[0])) {
-        strncat(ret, real_java_home, strlen(real_java_home));
+        strcat(ret, real_java_home);
         strncat(ret, q+4, strlen(q));
         break;
       } else {
@@ -1621,7 +1621,7 @@ bool os::replace_jh(char* path, const char* real_java_home, char* ret) {
     }
 
     if (p != NULL) {
-      strncat(ret, os::path_separator(), 1);
+      strcat(ret, os::path_separator());
       entry = ++p;
     } else {
       break;
