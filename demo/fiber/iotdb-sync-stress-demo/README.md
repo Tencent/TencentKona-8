@@ -1,5 +1,25 @@
 dependency:
-1. iotdb
+1. iotdb [v0.12.1](https://www.apache.org/dyn/closer.cgi/iotdb/0.12.1/apache-iotdb-0.12.1-server-bin.zip)
+
+2. start iotdb server
+```
+# Unix/OS X
+> nohup sbin/start-server.sh >/dev/null 2>&1 &
+or
+> nohup sbin/start-server.sh -c <conf_path> -rpc_port <rpc_port> >/dev/null 2>&1 &
+
+# Windows
+> sbin\start-server.bat -c <conf_path> -rpc_port <rpc_port>
+```
+3. start iotdb cli
+
+```
+# Unix/OS X
+> sbin/start-cli.sh -h 127.0.0.1 -p 6667 -u root -pw root
+
+# Windows
+> sbin\start-cli.bat -h 127.0.0.1 -p 6667 -u root -pw root
+```
 
 test steps:
 1. create DATABASE zm;(execute "SET STORAGE GROUP TO root.zm")
