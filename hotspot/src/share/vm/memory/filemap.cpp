@@ -446,7 +446,7 @@ bool FileMapInfo::validate_classpath_entry_table() {
     if (UseAppCDS && i >= start_app_index) {
       app_check = true;
     } else if (!os::correct_cds_path(org_name, name, JVM_MAXPATHLEN)) {
-      fail_continue("[Classpath is invalid", org_name);
+      fail_continue("[Classpath is invalid: %s", org_name);
       return false;
     }
     // For -Xbootclasspath:a, the org_name doesn't contain jre

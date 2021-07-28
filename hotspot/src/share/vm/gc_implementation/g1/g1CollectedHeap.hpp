@@ -237,7 +237,7 @@ private:
   // It keeps track of the humongous regions.
   HeapRegionSet _humongous_set;
 
-  int _reclaim_region_count;
+  size_t _reclaim_region_count;
 
   void eagerly_reclaim_humongous_regions();
 
