@@ -214,8 +214,8 @@ Java_java_io_UnixFileSystem_getLastModifiedTime(JNIEnv *env, jobject this,
 #else
             rv  = (jlong)sb.st_mtimespec.tv_sec * 1000;
             rv += (jlong)sb.st_mtimespec.tv_nsec / 1000000;
-#endif 
-	}
+#endif
+        }
     } END_PLATFORM_STRING(env, path);
     return rv;
 }
@@ -405,6 +405,7 @@ Java_java_io_UnixFileSystem_setLastModifiedTime(JNIEnv *env, jobject this,
             tv[0].tv_sec = sb.st_atimespec.tv_sec;
             tv[0].tv_usec = sb.st_atimespec.tv_nsec / 1000;
 #endif
+
             /* Change last-modified time */
             tv[1].tv_sec = time / 1000;
             tv[1].tv_usec = (time % 1000) * 1000;

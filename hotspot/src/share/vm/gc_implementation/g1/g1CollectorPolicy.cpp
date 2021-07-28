@@ -22,10 +22,6 @@
  *
  */
 
-#ifndef __clang_major__
-#define ATTRIBUTE_PRINTF(x,y) // FIXME, formats are a mess.
-#endif
-
 #include "precompiled.hpp"
 #include "gc_implementation/g1/concurrentG1Refine.hpp"
 #include "gc_implementation/g1/concurrentMark.hpp"
@@ -289,7 +285,7 @@ G1CollectorPolicy::G1CollectorPolicy() :
   if (confidence_perc > 100) {
     confidence_perc = 100;
     warning("G1ConfidencePercent is set to a value that is too large, "
-            "it's been updated to %u", confidence_perc);
+            "it's been updated to " UINTX_FORMAT, confidence_perc);
   }
   _sigma = (double) confidence_perc / 100.0;
 
@@ -311,7 +307,7 @@ G1CollectorPolicy::G1CollectorPolicy() :
   if (reserve_perc > 50) {
     reserve_perc = 50;
     warning("G1ReservePercent is set to a value that is too large, "
-            "it's been updated to %u", reserve_perc);
+            "it's been updated to " UINTX_FORMAT, reserve_perc);
   }
   _reserve_factor = (double) reserve_perc / 100.0;
   // This will be set when the heap is expanded
@@ -2337,7 +2333,7 @@ void TraceGen0TimeData::print_summary(const char* str,
 void TraceGen0TimeData::print_summary_sd(const char* str,
                                          const NumberSeq* seq) const {
   print_summary(str, seq);
-  gclog_or_tty->print_cr("%+45s = %5d, std dev = %8.2lf ms, max = %8.2lf ms)",
+  gclog_or_tty->print_cr("%45s = %5d, std dev = %8.2lf ms, max = %8.2lf ms)",
                 "(num", seq->num(), seq->sd(), seq->maximum());
 }
 
