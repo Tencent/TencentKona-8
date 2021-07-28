@@ -97,7 +97,7 @@ fi
 sh ./common/bin/hgforest.sh clone "$@" || exit $?
 
 # Pull all existing repositories from the latest ga tag
-sh ./common/bin/hgforest.sh pull -r jdk8u282-ga
+sh ./common/bin/hgforest.sh pull -r jdk8u302-ga
 
 # Update all existing repositories
 sh ./common/bin/hgforest.sh update
