@@ -63,7 +63,7 @@ public class VTInterruptTest {
         });
 
         vt.start();
-        while (vt.getState() != Thread.State.WAITING) {
+        while (vt.getState() != Thread.State.WAITING && vt.getState() != Thread.State.TIMED_WAITING) {
             Thread.sleep(100);
         }
         vt.interrupt();

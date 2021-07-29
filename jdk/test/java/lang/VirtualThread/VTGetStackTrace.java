@@ -27,7 +27,7 @@
  */
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
-import sun.misc.VirtualThreads;
+import java.util.concurrent.locks.LockSupport;
 import static org.testng.Assert.*;
 import org.testng.annotations.Test;
 
@@ -47,7 +47,7 @@ public class VTGetStackTrace {
     }
 
     public static void level2_unmounted() throws Exception {
-        VirtualThreads.park();
+        LockSupport.park();
     }
 
     public static void level1(boolean is_park) throws Exception {
@@ -126,7 +126,7 @@ public class VTGetStackTrace {
         }
 
         assertEquals(getStackTraceLevelNum(vt.getStackTrace()), 2);
-        VirtualThreads.unpark(vt);
+        LockSupport.unpark(vt);
         vt.join();
 
         executor.shutdown();

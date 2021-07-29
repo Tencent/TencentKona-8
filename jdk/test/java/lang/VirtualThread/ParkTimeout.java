@@ -23,11 +23,12 @@
 /*
  * @test
  * @run testng ParkTimeout
+ * @run testng/othervm -Djdk.internal.VirtualThread=off ParkTimeout
  * @summary test virtual thread park timeout
  */
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
-import sun.misc.VirtualThreads;
+import java.util.concurrent.locks.LockSupport;
 import static org.testng.Assert.*;
 import org.testng.annotations.Test;
 public class ParkTimeout {
@@ -41,11 +42,11 @@ public class ParkTimeout {
             public void run() {
                 System.out.println("first park");
 				long beforePark = System.currentTimeMillis();
-				VirtualThreads.park(nanosPerSecond * 1);
+				LockSupport.parkNanos(nanosPerSecond * 1);
 				long afterPark = System.currentTimeMillis();
 				//System.out.println(afterPark - beforePark);
 				assertEquals((afterPark - beforePark) < 100, true);
-				VirtualThreads.park(nanosPerSecond * 1);
+				LockSupport.parkNanos(nanosPerSecond * 1);
 				long afterSecondPark = System.currentTimeMillis();
                 //System.out.println("second park " + (afterSecondPark - afterPark));
 				assertEquals((afterSecondPark - afterPark) > 1000, true);
@@ -55,7 +56,7 @@ public class ParkTimeout {
         Thread vt = Thread.ofVirtual().name("vt").unstarted(target);
         vt.start();
 		Thread.sleep(10);
-		VirtualThreads.unpark(vt);
+		LockSupport.unpark(vt);
         vt.join();
     }
 }

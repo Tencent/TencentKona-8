@@ -24,6 +24,7 @@
 /**
  * @test
  * @run testng ThreadLocals
+ * @run testng/othervm -Djdk.internal.VirtualThread=off ThreadLocals
  * @summary Test Virtual threads using thread locals
  */
 
