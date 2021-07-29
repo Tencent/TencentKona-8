@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 import sun.misc.Unsafe;
+import sun.security.action.GetPropertyAction;
 
 /**
  * Defines static methods to create platform and virtual thread builders.
@@ -181,6 +182,9 @@ class ThreadBuilders {
 
         @Override
         public Thread unstarted(Runnable task) {
+            /* Not support create thread with characteristics now */
+            assert characteristics() == 0;
+
             Objects.requireNonNull(task);
             String name = nextThreadName();
             Thread thread = new Thread(group, task, name, stackSize);
@@ -210,12 +214,28 @@ class ThreadBuilders {
             extends BaseThreadBuilder<OfVirtual> implements OfVirtual {
         private Executor scheduler;
 
+        static final boolean ENABLE_VIRTUAL_THREAD = enableVirtualThread();
+
+        private static boolean enableVirtualThread() {
+            String propValue = GetPropertyAction.privilegedGetProperty("jdk.internal.VirtualThread");
+            if (propValue != null) {
+                if (propValue.length() == 0)
+                    return true;
+                if ("off".equalsIgnoreCase(propValue))
+                    return false;
+            }
+            return true;
+        }
+
         @Override
         public OfVirtual scheduler(Executor scheduler) {
             if (scheduler == null) {
                 this.scheduler = VirtualThread.defaultScheduler();
             } else {
                 this.scheduler = scheduler;
+                if (!ENABLE_VIRTUAL_THREAD) {
+                    System.out.println("[warning]: execute() can not be overwritten when disable virtual thread");
+                }
             }
             return this;
         }
@@ -223,7 +243,13 @@ class ThreadBuilders {
         @Override
         public Thread unstarted(Runnable task) {
             Objects.requireNonNull(task);
-            Thread thread = new VirtualThread(scheduler, nextThreadName(), characteristics(), task);
+
+            Thread thread;
+            if (ENABLE_VIRTUAL_THREAD)
+                thread = new VirtualThread(scheduler, nextThreadName(), characteristics(), task);
+            else
+                thread = new Thread(task, nextThreadName(), characteristics());
+
             UncaughtExceptionHandler uhe = uncaughtExceptionHandler();
             if (uhe != null)
                 thread.uncaughtExceptionHandler(uhe);
@@ -362,7 +388,11 @@ class ThreadBuilders {
         public Thread newThread(Runnable task) {
             Objects.requireNonNull(task);
             String name = nextThreadName();
-            Thread thread = new VirtualThread(scheduler, name, characteristics(), task);
+            Thread thread;
+            if (VirtualThreadBuilder.ENABLE_VIRTUAL_THREAD)
+                thread = new VirtualThread(scheduler, name, characteristics(), task);
+            else
+                thread = new Thread(task, name, characteristics());
             UncaughtExceptionHandler uhe = uncaughtExceptionHandler();
             if (uhe != null)
                 thread.uncaughtExceptionHandler(uhe);

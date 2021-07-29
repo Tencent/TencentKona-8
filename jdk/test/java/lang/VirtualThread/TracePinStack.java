@@ -29,7 +29,7 @@
 
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
-import sun.misc.VirtualThreads;
+import java.util.concurrent.locks.LockSupport;
 import jdk.testlibrary.OutputAnalyzer;
 import jdk.testlibrary.ProcessTools;
 
@@ -41,7 +41,7 @@ public class TracePinStack {
             Runnable target = new Runnable() {
                 public void run() {
                     synchronized(this) {
-                        VirtualThreads.park(1000);
+                        LockSupport.parkNanos(1000);
                     }
                 }
             };
