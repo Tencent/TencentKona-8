@@ -412,6 +412,9 @@ java/nio/file/WatchService/UpdateInterference.java           linux-all
 
 # These failed cases are also hanging on Openjdk-8u272
 java/security/cert/PolicyNode/GetPolicyQualifiers.java       linux-all
+
+# TODO: should delete after 8u312
+javax/management/remote/mandatory/connection/RMIConnector_NPETest.java    linux-all
 ############################################################################
 
 # 8141370
