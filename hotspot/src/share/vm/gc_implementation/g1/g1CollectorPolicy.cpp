@@ -1396,7 +1396,7 @@ G1CollectorPolicy::init_cset_region_lengths(uint eden_cset_region_length,
   _survivor_cset_region_length = survivor_cset_region_length;
 
   assert(young_cset_region_length() == _collection_set_cur_length,
-         err_msg("should match %u == %u", young_cset_region_length(), _collection_set_cur_length));
+         err_msg("should match %u == %lu", young_cset_region_length(), _collection_set_cur_length));
 
   _old_cset_region_length      = 0;
 }
@@ -1918,7 +1918,7 @@ public:
     assert(r->in_collection_set(), err_msg("Region %u should be in collection set", r->hrm_index()));
     _st->print_cr("  " HR_FORMAT ", P: " PTR_FORMAT ", N: " PTR_FORMAT ", age: %4d",
                   HR_FORMAT_PARAMS(r),
-                  r->prev_top_at_mark_start(), r->next_top_at_mark_start(),
+                  p2i(r->prev_top_at_mark_start()), p2i(r->next_top_at_mark_start()),
                   r->age_in_surv_rate_group_cond());
     return false;
   }
