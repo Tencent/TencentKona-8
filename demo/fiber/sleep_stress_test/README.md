@@ -1,5 +1,5 @@
 test steps:
-1. javac VTSleepStress
+1. javac VTSleepStress.java
 2. java VTSleepStress $thread_count $request_count $sleep_time $use_fiber
 
 test results(Comparing Kona fiber with different thread pool and Loom):
