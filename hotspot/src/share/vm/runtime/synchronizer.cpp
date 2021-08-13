@@ -296,8 +296,7 @@ intptr_t ObjectSynchronizer::complete_exit(Handle obj, TRAPS) {
                                                        obj(),
                                                        inflate_cause_vm_internal);
 
-  intptr_t recursive = monitor->complete_exit(THREAD);
-  return recursive;
+  return monitor->complete_exit(THREAD);
 }
 
 // NOTE: must use heavy weight monitor to handle complete_exit/reenter()
