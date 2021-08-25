@@ -39,6 +39,10 @@ import jdk.jfr.events.FileReadEvent;
 import jdk.jfr.events.FileWriteEvent;
 import jdk.jfr.events.SocketReadEvent;
 import jdk.jfr.events.SocketWriteEvent;
+import jdk.jfr.events.VirtualThreadStartEvent;
+import jdk.jfr.events.VirtualThreadEndEvent;
+import jdk.jfr.events.VirtualThreadPinnedEvent;
+import jdk.jfr.events.VirtualThreadSubmitFailedEvent;
 import jdk.jfr.internal.JVM;
 import jdk.jfr.internal.LogLevel;
 import jdk.jfr.internal.LogTag;
@@ -58,7 +62,11 @@ public final class JDKEvents {
         ExceptionStatisticsEvent.class,
         ErrorThrownEvent.class,
         ActiveSettingEvent.class,
-        ActiveRecordingEvent.class
+        ActiveRecordingEvent.class,
+        VirtualThreadStartEvent.class,
+        VirtualThreadEndEvent.class,
+        VirtualThreadPinnedEvent.class,
+        VirtualThreadSubmitFailedEvent.class
     };
 
     // This is a list of the classes with instrumentation code that should be applied.
