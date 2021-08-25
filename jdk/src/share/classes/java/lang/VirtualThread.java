@@ -1175,9 +1175,12 @@ class VirtualThread extends Thread {
                 carrier.setVirtualThread(null);
             }
         }
-        scheduler.execute(runContinuation);
-        if (vt != null) {
-            carrier.setVirtualThread(vt);
+        try {
+            scheduler.execute(runContinuation);
+        } finally {
+            if (vt != null) {
+                carrier.setVirtualThread(vt);
+            }
         }
     }
 }
