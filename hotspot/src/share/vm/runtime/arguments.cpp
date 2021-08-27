@@ -1416,12 +1416,6 @@ void Arguments::set_cms_and_parnew_gc_flags() {
   if (FLAG_IS_DEFAULT(GCDrainStackTargetSize)) {
     FLAG_SET_ERGO(uintx, GCDrainStackTargetSize, MIN2(GCDrainStackTargetSize, (uintx)TASKQUEUE_SIZE / 4));
   }
-
-  if (CMSParallelFullGC && ParallelGCThreads <= 1) {
-    // Disable CMSParallelFullGC if there is only one parallel
-    // GC thread.
-    CMSParallelFullGC = false;
-  }
 }
 #endif // INCLUDE_ALL_GCS
 
@@ -2440,21 +2434,6 @@ bool Arguments::check_vm_args_consistency() {
       if (CMSInitiatingOccupancyFraction < 0) {
         FLAG_SET_DEFAULT(CMSInitiatingOccupancyFraction, 1);
       }
-    }
-  }
-
-  if (CMSParallelFullGC) {
-    if (!UseConcMarkSweepGC) {
-      // The CMS collector (-XX:+UseConcMarkSweepGC) must be
-      // selected in order to use CMSParallelFullGC.
-      if (FLAG_IS_CMDLINE(CMSParallelFullGC)) {
-        jio_fprintf(defaultStream::error_stream(),
-                    "error:  invalid argument combination.\n"
-                    "The CMS collector (-XX:+UseConcMarkSweepGC) must be "
-                    "selected in order\nto use CMSParallelFullGC.\n");
-        status = false;
-      }
-      FLAG_SET_DEFAULT(CMSParallelFullGC, false);
     }
   }
 
