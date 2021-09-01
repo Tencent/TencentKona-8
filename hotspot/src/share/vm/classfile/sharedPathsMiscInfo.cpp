@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -140,9 +140,10 @@ bool SharedPathsMiscInfo::check(jint type, const char* path_to_check) {
         if (!read_time(&timestamp) || !read_long(&filesize)) {
           return fail("Corrupted archive file header");
         }
-        if (timestamp != st.st_mtime) {
-          return fail("Timestamp mismatch");
-        }
+        // default CDS can move meta_index into other folder, so the timestamp check is invalid.
+        // if (timestamp != st.st_mtime) {
+        //   return fail("Timestamp mismatch");
+        // }
         if (filesize != st.st_size) {
           return fail("File size mismatch");
         }
