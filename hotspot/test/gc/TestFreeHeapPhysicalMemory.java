@@ -38,9 +38,6 @@ import com.oracle.java.testlibrary.Asserts;
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn40m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn40m -XX:+UseLargePages -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms60m -Xmx100m -Xmn40m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC
- * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn40m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:+CMSParallelFullGC
- * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn40m -XX:+UseLargePages -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:+CMSParallelFullGC
- * @run main/othervm TestFreeHeapPhysicalMemory -Xms60m -Xmx100m -Xmn40m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:+CMSParallelFullGC
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn40m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseParallelGC
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn40m -XX:+UseLargePages -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseParallelGC
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms60m -Xmx100m -Xmn40m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseParallelGC
@@ -53,9 +50,6 @@ import com.oracle.java.testlibrary.Asserts;
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn10m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:PeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn10m -XX:+UseLargePages -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:PeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms60m -Xmx100m -Xmn10m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:PeriodicGCInterval=100
- * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn10m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:+CMSParallelFullGC -XX:PeriodicGCInterval=100
- * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn10m -XX:+UseLargePages -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:+CMSParallelFullGC -XX:PeriodicGCInterval=100
- * @run main/othervm TestFreeHeapPhysicalMemory -Xms60m -Xmx100m -Xmn10m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:+CMSParallelFullGC -XX:PeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn10m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseParallelGC -XX:PeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn10m -XX:+UseLargePages -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseParallelGC -XX:PeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms60m -Xmx100m -Xmn10m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseParallelGC -XX:PeriodicGCInterval=100
@@ -68,9 +62,6 @@ import com.oracle.java.testlibrary.Asserts;
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn40m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:ForcePeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn40m -XX:+UseLargePages -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:ForcePeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms60m -Xmx100m -Xmn40m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:ForcePeriodicGCInterval=100
- * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn40m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:+CMSParallelFullGC -XX:ForcePeriodicGCInterval=100
- * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn40m -XX:+UseLargePages -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:+CMSParallelFullGC -XX:ForcePeriodicGCInterval=100
- * @run main/othervm TestFreeHeapPhysicalMemory -Xms60m -Xmx100m -Xmn40m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:+CMSParallelFullGC -XX:ForcePeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn40m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseParallelGC -XX:ForcePeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn40m -XX:+UseLargePages -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseParallelGC -XX:ForcePeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms60m -Xmx100m -Xmn40m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseParallelGC -XX:ForcePeriodicGCInterval=100
@@ -83,9 +74,6 @@ import com.oracle.java.testlibrary.Asserts;
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn10m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:PeriodicGCInterval=100 -XX:ForcePeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn10m -XX:+UseLargePages -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:PeriodicGCInterval=100 -XX:ForcePeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms60m -Xmx100m -Xmn10m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:PeriodicGCInterval=100 -XX:ForcePeriodicGCInterval=100
- * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn10m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:+CMSParallelFullGC -XX:PeriodicGCInterval=100 -XX:ForcePeriodicGCInterval=100
- * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn10m -XX:+UseLargePages -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:+CMSParallelFullGC -XX:PeriodicGCInterval=100 -XX:ForcePeriodicGCInterval=100
- * @run main/othervm TestFreeHeapPhysicalMemory -Xms60m -Xmx100m -Xmn10m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseConcMarkSweepGC -XX:+CMSParallelFullGC -XX:PeriodicGCInterval=100 -XX:ForcePeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn10m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseParallelGC -XX:PeriodicGCInterval=100 -XX:ForcePeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms100m -Xmx100m -Xmn10m -XX:+UseLargePages -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseParallelGC -XX:PeriodicGCInterval=100 -XX:ForcePeriodicGCInterval=100
  * @run main/othervm TestFreeHeapPhysicalMemory -Xms60m -Xmx100m -Xmn10m -XX:MetaspaceSize=10m -XX:SurvivorRatio=4 -XX:+FreeHeapPhysicalMemory -XX:+UseParallelGC -XX:PeriodicGCInterval=100 -XX:ForcePeriodicGCInterval=100
