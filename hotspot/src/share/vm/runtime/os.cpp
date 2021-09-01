@@ -1638,15 +1638,15 @@ bool os::correct_cds_path(const char* origin_path, char* result, const int resul
     return false;
   }
 
-  int origin_length = strlen(origin_path);
+  int origin_length = (int)strlen(origin_path);
   if (origin_length==0 || origin_length > result_array_length) {
     return false;
   }
 
   assert(origin_length <= JVM_MAXPATHLEN, "Invalid path");
 
-  strncpy(tpath, origin_path, origin_length + 1);
-  strncpy(fake_jh, origin_path, origin_length + 1);
+  strcpy(tpath, origin_path);
+  strcpy(fake_jh, origin_path);
   char* p = strstr(fake_jh, os::path_separator());
   if (p != NULL) {
     *p = '\0';
@@ -1662,10 +1662,10 @@ bool os::correct_cds_path(const char* origin_path, char* result, const int resul
 
   if (strncmp(fake_jh, Arguments::get_java_home(), strlen(Arguments::get_java_home())) != 0) {
     if (!replace_jh(tpath, Arguments::get_java_home(), result)) {
-      strncpy(result, origin_path, origin_length + 1);
+      strcpy(result, origin_path);
     }
   } else {
-      strncpy(result, origin_path, origin_length + 1);
+      strcpy(result, origin_path);
   }
   return true;
 }

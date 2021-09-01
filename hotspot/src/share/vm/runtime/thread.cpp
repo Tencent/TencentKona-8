@@ -1231,7 +1231,6 @@ NamedThread::NamedThread() : Thread() {
   _processed_thread = NULL;
 
   _gc_id = GCId::undefined_id();
-  reset_pms_data();
 }
 
 NamedThread::~NamedThread() {

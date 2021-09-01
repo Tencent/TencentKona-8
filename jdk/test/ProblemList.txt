@@ -1,6 +1,6 @@
 ###########################################################################
 #
-# Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -418,6 +418,9 @@ javax/management/remote/mandatory/connection/RMIConnector_NPETest.java    linux-
 ############################################################################
 
 # 8141370
-com/sun/jndi/ldap/DeadSSLLdapTimeoutTest.java			linux-all,linux-i586,macosx-all
-sample/mergesort/MergeSortTest.java                             8178912 generic-all
-sample/chatserver/ChatTest.java                                 8178912 generic-all
+com/sun/jndi/ldap/DeadSSLLdapTimeoutTest.java			linux-all,macosx-all
+
+
+############################################################################
+sample/mergesort/MergeSortTest.java				8178912 generic-all
+sample/chatserver/ChatTest.java					8178912 generic-all
