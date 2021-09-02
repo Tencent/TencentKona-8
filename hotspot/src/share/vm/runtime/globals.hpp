@@ -3282,10 +3282,6 @@ class CommandLineFlags {
           " For most GCs this applies to the old generation. In G1 and"     \
           " ParallelGC it applies to the whole heap.")                      \
                                                                             \
-  manageable(intx, ArrayAllocationWarningSize, 512*M,                       \
-             "Desired size of array space allocation before "               \
-             "printing a warning")                                          \
-                                                                            \
   product(bool, FreeHeapPhysicalMemory, false,                              \
              "Free physical memory after fullgc or shrink operation")       \
                                                                             \
