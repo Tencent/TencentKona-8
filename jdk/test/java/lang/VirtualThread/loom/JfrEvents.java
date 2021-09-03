@@ -70,10 +70,10 @@ public class JfrEvents {
                 for (int i = 0; i < 100; i++) {
                     executor.submit(() -> { });
                 }
-                Thread.sleep(1000); // give time for thread end events to be recorded
             } finally {
                 executor.shutdown();
                 executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+                Thread.sleep(2000); // give time for after terimate call before recording stop
                 recording.stop();
             }
 
