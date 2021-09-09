@@ -742,6 +742,9 @@ class CommandLineFlags {
   product(bool, UseCRC32Intrinsics, false,                                  \
           "use intrinsics for java.util.zip.CRC32")                         \
                                                                             \
+  product(bool, UseUTF8UTF16Intrinsics, false,                              \
+          "Use intrinsics for UTF8 UTF16 conversion")                       \
+                                                                            \
   develop(bool, TraceCallFixup, false,                                      \
           "Trace all call fixups")                                          \
                                                                             \

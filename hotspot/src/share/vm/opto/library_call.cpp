@@ -313,6 +313,7 @@ class LibraryCallKit : public GraphKit {
   Node* get_key_start_from_aescrypt_object(Node* aescrypt_object);
   Node* get_original_key_start_from_aescrypt_object(Node* aescrypt_object);
   bool inline_ghash_processBlocks();
+  bool inline_UTF8_fast_decode();
   bool inline_sha_implCompress(vmIntrinsics::ID id);
   bool inline_digestBase_implCompressMB(int predicate);
   bool inline_sha_implCompressMB(Node* digestBaseObj, ciInstanceKlass* instklass_SHA,
@@ -574,6 +575,10 @@ CallGenerator* Compile::make_vm_intrinsic(ciMethod* m, bool is_virtual) {
 
   case vmIntrinsics::_ghash_processBlocks:
     if (!UseGHASHIntrinsics) return NULL;
+    break;
+
+  case vmIntrinsics::_UTF8FastDecode:
+    if (!UseUTF8UTF16Intrinsics) return NULL;
     break;
 
   case vmIntrinsics::_updateCRC32:
@@ -965,6 +970,9 @@ bool LibraryCallKit::try_to_inline(int predicate) {
 
   case vmIntrinsics::_ghash_processBlocks:
     return inline_ghash_processBlocks();
+
+  case vmIntrinsics::_UTF8FastDecode:
+    return inline_UTF8_fast_decode();
 
   case vmIntrinsics::_encodeISOArray:
     return inline_encodeISOArray();
@@ -6669,6 +6677,34 @@ bool LibraryCallKit::inline_ghash_processBlocks() {
                                   OptoRuntime::ghash_processBlocks_Type(),
                                   stubAddr, stubName, TypePtr::BOTTOM,
                                   state_start, subkeyH_start, data_start, len);
+  return true;
+}
+
+//------------------------------inline_ghash_processBlocks
+bool LibraryCallKit::inline_UTF8_fast_decode() {
+  address stubAddr;
+  const char *stubName;
+  assert(UseUTF8UTF16Intrinsics, "need SSE3 intrinsics support");
+
+  stubAddr = StubRoutines::utf8_to_utf16_decoder();
+  stubName = "utf8_to_utf16_decoder";
+
+  Node* sa         = argument(0);
+  Node* sp         = argument(1);
+  Node* sl         = argument(2);
+  Node* da         = argument(3);
+  Node* dp         = argument(4);
+
+  Node* sa_start  = array_element_address(sa, intcon(0), T_BYTE);
+  Node* da_start  = array_element_address(da, intcon(0), T_CHAR);
+
+  Node* decode = make_runtime_call(RC_LEAF|RC_NO_FP,
+                                   OptoRuntime::utf8_to_utf16_decode_Type(),
+                                   stubAddr, stubName, TypePtr::BOTTOM,
+                                   sa_start, sp, sl, da_start, dp);
+
+  Node* result = _gvn.transform(new (C) ProjNode(decode, TypeFunc::Parms));
+  set_result(result);
   return true;
 }
 
