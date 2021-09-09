@@ -3673,6 +3673,12 @@ bool GraphBuilder::try_inline_intrinsics(ciMethod* callee) {
     case vmIntrinsics::_fullFence :
       break;
 
+    case vmIntrinsics::_UTF8FastDecode:
+      if (!UseUTF8UTF16Intrinsics) return false;
+      cantrap = false;
+      preserves_state = false;
+      break;
+
     default                       : return false; // do not inline
   }
   // create intrinsic node

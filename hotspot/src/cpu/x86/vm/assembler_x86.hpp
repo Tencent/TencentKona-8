@@ -1488,6 +1488,10 @@ private:
   void pmovzxbw(XMMRegister dst, XMMRegister src);
   void pmovzxbw(XMMRegister dst, Address src);
 
+  // AVX packed move
+  void vpmovzxbw(XMMRegister dst, XMMRegister src);
+  void vpmovzxbw(XMMRegister dst, Address src);
+
 #ifndef _LP64 // no 32bit push/pop on amd64
   void popl(Address dst);
 #endif
