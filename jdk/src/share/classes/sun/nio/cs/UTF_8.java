@@ -216,6 +216,86 @@ class UTF_8 extends Unicode
                    ? CoderResult.UNDERFLOW : CoderResult.OVERFLOW;
         }
 
+        // fast path decode array loop, vectorize intrinsic
+        // return updated sp and dp in long
+        private static long decodeArrayLoopFast(byte[] sa, int sp, int sl, char[] da, int dp) {
+            while (sp < sl) {
+                int b1 = sa[sp];
+                if (b1 >= 0) {
+                    // 1 byte, 7 bits: 0xxxxxxx
+                    da[dp++] = (char) b1;
+                    sp++;
+                } else if ((b1 >> 5) == -2 && (b1 & 0x1e) != 0) {
+                    // 2 bytes, 11 bits: 110xxxxx 10xxxxxx
+                    //                   [C2..DF] [80..BF]
+                    if (sl - sp < 2)
+                        break;
+                    int b2 = sa[sp + 1];
+                    // Now we check the first byte of 2-byte sequence as
+                    //     if ((b1 >> 5) == -2 && (b1 & 0x1e) != 0)
+                    // no longer need to check b1 against c1 & c0 for
+                    // malformed as we did in previous version
+                    //   (b1 & 0x1e) == 0x0 || (b2 & 0xc0) != 0x80;
+                    // only need to check the second byte b2.
+                    if (isNotContinuation(b2))
+                        break;
+                    da[dp++] = (char) (((b1 << 6) ^ b2)
+                                       ^
+                                       (((byte) 0xC0 << 6) ^
+                                        ((byte) 0x80 << 0)));
+                    sp += 2;
+                } else if ((b1 >> 4) == -2) {
+                    // 3 bytes, 16 bits: 1110xxxx 10xxxxxx 10xxxxxx
+                    int srcRemaining = sl - sp;
+                    if (srcRemaining < 3) {
+                        break;
+                    }
+                    int b2 = sa[sp + 1];
+                    int b3 = sa[sp + 2];
+                    if (isMalformed3(b1, b2, b3))
+                        break;
+                    char c = (char)
+                        ((b1 << 12) ^
+                         (b2 <<  6) ^
+                         (b3 ^
+                          (((byte) 0xE0 << 12) ^
+                           ((byte) 0x80 <<  6) ^
+                           ((byte) 0x80 <<  0))));
+                    if (Character.isSurrogate(c))
+                        break;
+                    da[dp++] = c;
+                    sp += 3;
+                } else if ((b1 >> 3) == -2) {
+                    // 4 bytes, 21 bits: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+                    int srcRemaining = sl - sp;
+                    if (srcRemaining < 4) {
+                        break;
+                    }
+                    int b2 = sa[sp + 1];
+                    int b3 = sa[sp + 2];
+                    int b4 = sa[sp + 3];
+                    int uc = ((b1 << 18) ^
+                              (b2 << 12) ^
+                              (b3 <<  6) ^
+                              (b4 ^
+                               (((byte) 0xF0 << 18) ^
+                                ((byte) 0x80 << 12) ^
+                                ((byte) 0x80 <<  6) ^
+                                ((byte) 0x80 <<  0))));
+                    if (isMalformed4(b2, b3, b4) ||
+                        // shortest form check
+                        !Character.isSupplementaryCodePoint(uc)) {
+                        break;
+                    }
+                    da[dp++] = Character.highSurrogate(uc);
+                    da[dp++] = Character.lowSurrogate(uc);
+                    sp += 4;
+                } else
+                    break;
+            }
+            return (((long)dp) << 32 | sp);
+        }
+
         private CoderResult decodeArrayLoop(ByteBuffer src,
                                             CharBuffer dst)
         {
@@ -227,11 +307,11 @@ class UTF_8 extends Unicode
             char[] da = dst.array();
             int dp = dst.arrayOffset() + dst.position();
             int dl = dst.arrayOffset() + dst.limit();
-            int dlASCII = dp + Math.min(sl - sp, dl - dp);
-
-            // ASCII only loop
-            while (dp < dlASCII && sa[sp] >= 0)
-                da[dp++] = (char) sa[sp++];
+            if ((dl - dp) >= (sl - sp)) {
+                long p = decodeArrayLoopFast(sa, sp, sl, da, dp);
+                dp = (int)(p >> 32);
+                sp = (int)p;
+            }
             while (sp < sl) {
                 int b1 = sa[sp];
                 if (b1 >= 0) {

@@ -301,6 +301,7 @@ const char* Runtime1::name_for_address(address entry) {
   FUNCTION_CASE(entry, JFR_TIME_FUNCTION);
 #endif
   FUNCTION_CASE(entry, StubRoutines::updateBytesCRC32());
+  FUNCTION_CASE(entry, StubRoutines::utf8_to_utf16_decoder());
 
 #undef FUNCTION_CASE
 
