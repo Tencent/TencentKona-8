@@ -248,6 +248,7 @@ class gcLogFileStream : public fileStream {
   gcLogFileStream(const char* file_name);
   ~gcLogFileStream();
   virtual void write(const char* c, size_t len);
+  void write_blocking(const char* c, size_t len);
   virtual void rotate_log(bool force, outputStream* out = NULL);
   void dump_loggc_header();
 
@@ -257,6 +258,7 @@ class gcLogFileStream : public fileStream {
              ((GCLogFileSize != 0) && ((uintx)_bytes_written >= GCLogFileSize));
   }
 
+  virtual void flush();
 };
 
 #ifndef PRODUCT

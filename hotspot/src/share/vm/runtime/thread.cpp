@@ -57,6 +57,7 @@
 #include "runtime/java.hpp"
 #include "runtime/javaCalls.hpp"
 #include "runtime/jniPeriodicChecker.hpp"
+#include "runtime/logAsyncWriter.hpp"
 #include "runtime/memprofiler.hpp"
 #include "runtime/mutexLocker.hpp"
 #include "runtime/objectMonitor.hpp"
@@ -4415,6 +4416,12 @@ void Threads::print_on(outputStream* st, bool print_stacks,
     st->cr();
   }
   CompileBroker::print_compiler_threads_on(st);
+  if (UseAsyncGCLog) {
+    AsyncLogWriter* aio_writer = AsyncLogWriter::instance();
+    if (aio_writer != NULL) {
+      aio_writer->print_on(st);
+    }
+  }
   st->flush();
 }
 
@@ -4460,6 +4467,21 @@ void Threads::print_on_error(outputStream* st, Thread* current, char* buf, int b
     wt->print_on_error(st, buf, buflen);
     st->cr();
   }
+
+  if (UseAsyncGCLog) {
+    AsyncLogWriter* aio_writer = AsyncLogWriter::instance();
+    if (aio_writer != NULL) {
+      bool is_current = (current == aio_writer);
+      found_current = found_current || is_current;
+      st->print("%s", is_current ? "=>" : "  ");
+
+      st->print(PTR_FORMAT, aio_writer);
+      st->print(" ");
+      aio_writer->print_on_error(st, buf, buflen);
+      st->cr();
+    }
+  }
+
   if (!found_current) {
     st->cr();
     st->print("=>" PTR_FORMAT " (exited) ", current);
