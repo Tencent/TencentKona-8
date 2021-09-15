@@ -27,6 +27,7 @@
  * @summary test for gc log rotation via jcmd
  * @library /testlibrary
  * @run main/othervm -Xloggc:test.log -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=3 TestGCLogRotationViaJcmd
+ * @run main/othervm -Xloggc:test.log -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=3 -XX:+UseAsyncGCLog TestGCLogRotationViaJcmd
  *
  */
 import com.oracle.java.testlibrary.*;

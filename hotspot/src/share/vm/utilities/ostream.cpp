@@ -30,6 +30,7 @@
 #include "runtime/mutexLocker.hpp"
 #include "runtime/os.hpp"
 #include "runtime/vmThread.hpp"
+#include "runtime/logAsyncWriter.hpp"
 #include "utilities/defaultStream.hpp"
 #include "utilities/ostream.hpp"
 #include "utilities/top.hpp"
@@ -841,6 +842,17 @@ gcLogFileStream::gcLogFileStream(const char* file_name) : _file_lock(NULL) {
 }
 
 void gcLogFileStream::write(const char* s, size_t len) {
+  if (UseAsyncGCLog) {
+    AsyncLogWriter* aio_writer = AsyncLogWriter::instance();
+    if (aio_writer != NULL) {
+      aio_writer->enqueue(s);
+      return;
+    }
+  }
+  write_blocking(s, len);
+}
+
+void gcLogFileStream::write_blocking(const char* s, size_t len) {
   if (_file != NULL) {
     // we can't use Thread::current() here because thread may be NULL
     // in early stage(ostream_init_log)
@@ -1010,6 +1022,17 @@ void gcLogFileStream::rotate_log_impl(bool force, outputStream* out) {
     _need_close = false;
     FLAG_SET_DEFAULT(UseGCLogFileRotation, false);
   }
+}
+
+void gcLogFileStream::flush() {
+  if (UseAsyncGCLog) {
+    AsyncLogWriter* aio_writer = AsyncLogWriter::instance();
+    if (aio_writer != NULL) {
+      // do nothing
+      return;
+    }
+  }
+  fileStream::flush();
 }
 
 defaultStream* defaultStream::instance = NULL;
@@ -1411,6 +1434,9 @@ void ostream_exit() {
 
 // ostream_abort() is called by os::abort() when VM is about to die.
 void ostream_abort() {
+  if (UseAsyncGCLog) {
+    AsyncLogWriter::flush();
+  }
   // Here we can't delete gclog_or_tty and tty, just flush their output
   if (gclog_or_tty) gclog_or_tty->flush();
   if (tty) tty->flush();

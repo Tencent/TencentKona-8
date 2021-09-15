@@ -4081,6 +4081,15 @@ class CommandLineFlags {
                                                                             \
   JFR_ONLY(product(bool, LogJFR, false,                                     \
           "Enable JFR logging (consider +Verbose)"))                        \
+                                                                            \
+  product(bool, UseAsyncGCLog, false,                                       \
+          "Enable asynchronous GC logging")                                 \
+                                                                            \
+  product(uintx, AsyncLogBufferSize, 2*M,                                   \
+          "Memory budget (in bytes) for the buffer of Asynchronous")        \
+                                                                            \
+  diagnostic(bool, PrintAsyncGCLog, false,                                  \
+          "Print some information of Async GC Log")                         \
 
 /*
  *  Macros for factoring of globals
