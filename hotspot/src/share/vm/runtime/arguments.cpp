@@ -2147,6 +2147,16 @@ bool Arguments::verify_percentage(uintx value, const char* name) {
 // no gc log rotation when log file not supplied or
 // NumberOfGCLogFiles is 0
 void check_gclog_consistency() {
+  if (UseAsyncGCLog) {
+    if (Arguments::gc_log_filename() == NULL) {
+      jio_fprintf(defaultStream::output_stream(),
+                  "To enable Async GC log, use -Xloggc:<filename> -XX:+UseAsyncGCLog\n"
+                  "Async GC log is turned off\n");
+      UseAsyncGCLog = false;
+
+    }
+  }
+
   if (UseGCLogFileRotation) {
     if ((Arguments::gc_log_filename() == NULL) || (NumberOfGCLogFiles == 0)) {
       jio_fprintf(defaultStream::output_stream(),
