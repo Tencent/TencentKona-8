@@ -1151,17 +1151,8 @@ class VirtualThread extends Thread {
             assert !(Thread.currentThread() instanceof VirtualThread);
 
             System.out.println(Thread.currentThread());
-            StackTraceElement[] ste = virtualThreadStackTrace((new Exception()).getStackTrace());
-            boolean afterYield = false;
-
-            for (int i = 0; i < ste.length; i++) {
-                if (afterYield) {
-                    System.out.format("    %s%n", ste[i]);
-                } else if ("java.lang.Continuation".equals(ste[i].getClassName())
-                           && "yield".equals(ste[i].getMethodName())) {
-                    afterYield = true;
-                }
-            }
+            // virtual thread is cleared, print carrier thread which also VT
+            System.out.println(Thread.currentThread().GetPinStack());
         }
     }
 

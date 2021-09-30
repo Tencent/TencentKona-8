@@ -3157,6 +3157,27 @@ void JavaThread::print_stack_on(outputStream* st) {
   }
 }
 
+#if INCLUDE_KONA_FIBER
+void JavaThread::print_pin_stack_on(outputStream* st) {
+  if (!has_last_Java_frame()) return;
+
+  RegisterMap reg_map(this);
+  vframe* start_vf = last_java_vframe(&reg_map);
+  int count = 0;
+  for (vframe* f = start_vf; f; f = f->sender() ) {
+    if (count > 1 && f->is_java_frame()) {
+      javaVFrame* jvf = javaVFrame::cast(f);
+      GrowableArray<MonitorInfo*>* locked_monitors = jvf->locked_monitors();
+      if (!jvf->method()->is_native() && locked_monitors->length() == 0) {
+        locked_monitors = NULL;
+      }
+      java_lang_Throwable::print_stack_element(st, jvf->method(), jvf->bci(), true, locked_monitors);
+    }
+    count++;
+  }
+}
+#endif
+
 
 // JVMTI PopFrame support
 void JavaThread::popframe_preserve_args(ByteSize size_in_bytes, void* start) {

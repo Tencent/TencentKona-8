@@ -519,9 +519,18 @@ class java_lang_Throwable: AllStatic {
   static oop message(Handle throwable);
   static void set_message(oop throwable, oop value);
   static Symbol* detail_message(oop throwable);
+  static void print_stack_element_with_monitor(outputStream *st,
+                                               Handle mirror,
+                                               int method,
+                                               int version,
+                                               int bci,
+                                               int cpref,
+                                               GrowableArray<MonitorInfo*>* monitors);
   static void print_stack_element(outputStream *st, Handle mirror, int method,
                                   int version, int bci, int cpref);
-  static void print_stack_element(outputStream *st, methodHandle method, int bci);
+  static void print_stack_element(outputStream *st, methodHandle method, int bci,
+                                  bool print_monitor = false,
+                                  GrowableArray<MonitorInfo*>* monitors = NULL);
   static void print_stack_usage(Handle stream);
 
   // Allocate space for backtrace (created but stack trace not filled in)

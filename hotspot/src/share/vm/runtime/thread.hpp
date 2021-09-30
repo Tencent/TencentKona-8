@@ -1544,6 +1544,9 @@ public:
   // Print stack trace in external format
   void print_stack_on(outputStream* st);
   void print_stack() { print_stack_on(tty); }
+#if INCLUDE_KONA_FIBER
+  void print_pin_stack_on(outputStream* st);
+#endif
 
   // Print stack traces in various internal formats
   void trace_stack()                             PRODUCT_RETURN;

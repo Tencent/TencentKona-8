@@ -2253,6 +2253,7 @@ class Thread implements Runnable {
     private Continuation cont;
     private VirtualThread vthread;
 
+    protected native String GetPinStack();
     VirtualThread getVirtualThread() {
         return vthread;
     }

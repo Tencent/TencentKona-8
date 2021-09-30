@@ -45,7 +45,7 @@ public class PinTest {
                 System.out.println("critical_section_test_continuation is pinned expect true: " + Continuation.isPinned(scope));
                 assertEquals(Continuation.isPinned(scope), true);
                 System.out.println(e.toString());
-            } 
+            }
 
             Continuation.unpin();
             System.out.println("critical_section_test_continuation is pinned expect false: " + Continuation.isPinned(scope));

@@ -3526,6 +3526,25 @@ JVM_ENTRY(void, JVM_SetNativeThreadName(JNIEnv* env, jobject jthread, jstring na
   }
 JVM_END
 
+JVM_ENTRY(jstring, JVM_PrintPinStack(JNIEnv* env, jobject jthread))
+  JVMWrapper("JVM_PrintPinStack");
+#if INCLUDE_KONA_FIBER
+  oop java_thread = JNIHandles::resolve_non_null(jthread);
+  JavaThread* thr = java_lang_Thread::thread(JNIHandles::resolve_non_null(jthread));
+  if (thr != THREAD) {
+    fatal("GetPinStack can only print in its own thread");
+  }
+  ResourceMark rm;
+  HandleMark   hm;
+  stringStream ss;
+  thr->print_pin_stack_on(&ss);
+  Handle jstr = java_lang_String::create_from_str(ss.as_string(), THREAD);
+  return (jstring) JNIHandles::make_local(jstr());
+#else
+  return NULL;
+#endif
+JVM_END
+
 // java.lang.SecurityManager ///////////////////////////////////////////////////////////////////////
 
 static bool is_trusted_frame(JavaThread* jthread, vframeStream* vfst) {

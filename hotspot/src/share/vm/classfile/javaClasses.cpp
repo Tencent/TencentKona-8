@@ -1518,6 +1518,21 @@ char* java_lang_Throwable::print_stack_element_to_buffer(Handle mirror,
   return buf;
 }
 
+void java_lang_Throwable::print_stack_element_with_monitor(outputStream *st,
+                                                           Handle mirror,
+                                                           int method_id,
+                                                           int version,
+                                                           int bci,
+                                                           int cpref,
+                                                           GrowableArray<MonitorInfo*>* monitors) {
+  char* buf = print_stack_element_to_buffer(mirror, method_id, version, bci, cpref);
+  if (monitors == NULL) {
+    st->print_cr("%s", buf);
+  } else {
+    st->print_cr("%s <== monitors:%d", buf, monitors->length());
+  }
+}
+
 void java_lang_Throwable::print_stack_element(outputStream *st, Handle mirror,
                                               int method_id, int version, int bci, int cpref) {
   ResourceMark rm;
@@ -1525,12 +1540,18 @@ void java_lang_Throwable::print_stack_element(outputStream *st, Handle mirror,
   st->print_cr("%s", buf);
 }
 
-void java_lang_Throwable::print_stack_element(outputStream *st, methodHandle method, int bci) {
+void java_lang_Throwable::print_stack_element(outputStream *st, methodHandle method, int bci,
+                                              bool print_monitor,
+                                              GrowableArray<MonitorInfo*>* monitors) {
   Handle mirror = method->method_holder()->java_mirror();
   int method_id = method->orig_method_idnum();
   int version = method->constants()->version();
   int cpref = method->name_index();
-  print_stack_element(st, mirror, method_id, version, bci, cpref);
+  if (print_monitor) {
+    print_stack_element_with_monitor(st, mirror, method_id, version, bci, cpref, monitors);
+  } else {
+    print_stack_element(st, mirror, method_id, version, bci, cpref);
+  }
 }
 
 const char* java_lang_Throwable::no_stack_trace_message() {
