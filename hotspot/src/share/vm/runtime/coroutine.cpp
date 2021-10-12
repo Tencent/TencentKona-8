@@ -370,7 +370,9 @@ void Coroutine::TerminateCoroutineObj(jobject coroutine) {
   Coroutine* coro = (Coroutine*)java_lang_Continuation::data(old_oop);
   assert(coro != NULL, "NULL old coroutine in switchToAndTerminate");
   java_lang_Continuation::set_data(old_oop, 0);
-  coro->_continuation = NULL;
+  if (!coro->is_thread_coroutine()) {
+    coro->_continuation = NULL;
+  }
   TerminateCoroutine(coro);
 }
 
@@ -394,6 +396,9 @@ void Coroutine::cont_metadata_do(void f(Metadata*)) {
 Coroutine::Coroutine() {
   _has_javacall = false;
   _continuation = NULL;
+#ifdef CHECK_UNHANDLED_OOPS
+  _t = NULL;
+#endif
 }
 
 Coroutine::~Coroutine() {
@@ -477,6 +482,7 @@ Coroutine* Coroutine::create_thread_coroutine(JavaThread* thread) {
   coro->_thread = thread;
   coro->init_thread_stack(thread);
   coro->_has_javacall = true;
+  coro->_t = thread;
 #ifdef ASSERT
   coro->_java_call_counter = 0;
 #endif
@@ -665,8 +671,7 @@ static const char* virtual_thread_get_state_name(int state) {
 // 2. Get VT from continuation
 // 3. Print VT name and state
 void Coroutine::print_VT_info(outputStream* st) {
-  if (_continuation == NULL) {
-    guarantee(is_thread_coroutine(), "null continuation oop when print");
+  if (is_thread_coroutine()) {
     return;
   }
   Klass* k = _continuation->klass();

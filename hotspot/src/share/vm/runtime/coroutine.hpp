@@ -226,7 +226,14 @@ private:
   address         _stack_base;
   intptr_t        _stack_size;
   address         _last_sp;
-  oop             _continuation;
+#ifndef CHECK_UNHANDLED_OOPS
+  union {
+#endif
+    oop             _continuation;
+    JavaThread*     _t;
+#ifndef CHECK_UNHANDLED_OOPS
+  };
+#endif
 
   JavaThread*     _thread;
   CoroutineVerify* _verify_state;
@@ -277,7 +284,10 @@ public:
   JavaThread* thread() const        { return _thread; }
   void set_thread(JavaThread* x)    { _thread = x; }
 
-  void set_continuation(oop o)      { _continuation = o; }
+  void set_continuation(oop o)      {
+    assert(!is_thread_coroutine(), "could not be thread coroutine");
+    _continuation = o;
+  }
 
 #ifdef ASSERT
   int java_call_counter() const           { return _java_call_counter; }
