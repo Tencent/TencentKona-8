@@ -1495,6 +1495,7 @@ void JavaThread::initialize() {
   _pending_async_exception = NULL;
 #if INCLUDE_KONA_FIBER
   _current_coroutine = NULL;
+  _thread_coroutine = NULL;
   if (UseKonaFiber) {
     _coroutine_cache = NULL;
     _coroutine_cache_size = 0;
@@ -4922,7 +4923,7 @@ void Threads::verify() {
 void JavaThread::initialize_coroutine_support() {
   // no lock in thread initialization
   Coroutine* coro = Coroutine::create_thread_coroutine(this);
-  _current_coroutine = coro;
+  _thread_coroutine = _current_coroutine = coro;
   OrderAccess::release();
 }
 #endif

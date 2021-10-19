@@ -1481,10 +1481,12 @@ public:
 class java_lang_VT: AllStatic {
 private:
   static int _state_offset;
+  static int _cont_offset;
   static void compute_offsets();
 
 public:
   static int state(oop obj);
+  static oop Cont(oop obj);
   // Debugging
   friend class JavaClasses;
 };

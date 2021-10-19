@@ -24,6 +24,7 @@
  * @test
  * @library /lib/testlibrary
  * @run main/othervm DeadLockTest 1
+ * @run main/othervm DeadLockTest 0
  * @summary detect dead lock is detected in VT, with argumetns VT is convert to thread by
  * adding option -Djdk.internal.VirtualThread=off
  */
@@ -56,7 +57,12 @@ public class DeadLockTest {
             if (threadIds != null) {
                 System.out.println("Deadlock detected!");
                 ThreadInfo[] threadInfos = mbean.getThreadInfo(threadIds);
-                for (ThreadInfo threadInfo : threadInfos) {
+                for (int j = 0; j < threadInfos.length; j++) {
+                    ThreadInfo threadInfo = threadInfos[j];
+                    if (threadInfo == null) {
+                        System.out.println("ThreadID: " + threadIds[j] + ", has no thread info");
+                        continue;
+                    }
                     StackTraceElement[] stackTrace = threadInfo.getStackTrace();
                     System.err.println(threadInfo.toString().trim());
                     for (StackTraceElement ste : stackTrace) {
@@ -291,7 +297,8 @@ public class DeadLockTest {
 
     public static void main(String[] args) throws Throwable {
         String vm_arg = "-Djdk.internal.VirtualThread=on";
-        if (args.length > 0) {
+        if (Integer.parseInt(args[0]) == 1) {
+            System.out.println("disable virtual thread");
             vm_arg = "-Djdk.internal.VirtualThread=off";
         }
         runTest(vm_arg, DeadLockTest1.class.getName(), "1", "1");

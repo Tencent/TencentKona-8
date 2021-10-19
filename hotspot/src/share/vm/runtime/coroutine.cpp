@@ -623,6 +623,80 @@ bool Coroutine::is_disposable() {
 }
 
 
+ObjectMonitor* Coroutine::current_pending_monitor() {
+  // if coroutine is detached(_onstack), it doesn't pend on monitor
+  // if coroutine is attached(_current), its pending monitor is thread's pending monitor
+  if (_state == _onstack) {
+    return NULL;
+  } else {
+    assert(_state == _current, "unexpected");
+    return _thread->current_pending_monitor();
+  }
+}
+
+oop Coroutine::current_park_blocker() {
+  // get continuation_oop->virtualthread_oop->java_lang_Thread::park_blocker(virtualthread_oop)
+  if (_is_thread_coroutine) {
+    return _t->current_park_blocker();
+  }
+  if (_continuation == NULL) {
+    return NULL;
+  }
+  oop vt = java_lang_VTContinuation::VT(_continuation);
+  if (vt != NULL &&
+      JDK_Version::current().supports_thread_park_blocker()) {
+    return java_lang_Thread::park_blocker(vt);
+  }
+  return NULL;
+}
+
+oop Coroutine::threadObj() const {
+  if (_is_thread_coroutine) {
+    return _t->threadObj();
+  } else if (_continuation != NULL) {
+    oop vt = java_lang_VTContinuation::VT(_continuation);
+    return vt;
+  }
+  return NULL;
+}
+
+const char* Coroutine::get_thread_name() const {
+  if (_is_thread_coroutine) {
+    return _t->get_thread_name();
+  } else {
+    return get_vt_name_string();
+  }
+}
+
+const char* Coroutine::get_vt_name_string(char* buf, int buflen) const {
+  const char* name_str;
+  oop vt_obj = threadObj();
+  if (vt_obj != NULL) {
+    oop name = java_lang_Thread::name(vt_obj);
+    assert(name != NULL, "vt must have default name");
+    if (buf == NULL) {
+      name_str = java_lang_String::as_utf8_string(name);
+    }
+    else {
+      name_str = java_lang_String::as_utf8_string(name, buf, buflen);
+    }
+  } else {
+    name_str = "unknown_vt";
+  }
+  assert(name_str != NULL, "unexpected NULL thread name");
+  return name_str;
+}
+
+bool Coroutine::current_pending_monitor_is_from_java() {
+  // pending on monitor, must be _current coroutine
+  if (_state == _onstack) {
+    return true; // not in jni pending
+  } else {
+    assert(_state == _current, "unexpected");
+    return _thread->current_pending_monitor_is_from_java();
+  }
+}
+
 void Coroutine::init_thread_stack(JavaThread* thread) {
   _stack_base = thread->stack_base();
   _stack_size = thread->stack_size();
@@ -672,6 +746,7 @@ static const char* virtual_thread_get_state_name(int state) {
 // 3. Print VT name and state
 void Coroutine::print_VT_info(outputStream* st) {
   if (is_thread_coroutine()) {
+    st->print_cr("thread coroutine: %s", _t->get_thread_name());
     return;
   }
   Klass* k = _continuation->klass();

@@ -976,12 +976,13 @@ class JavaThread: public Thread {
   Coroutine*        _coroutine_cache;
   uintx             _coroutine_cache_size;
   Coroutine*        _current_coroutine;
+  Coroutine*        _thread_coroutine;
 
  public:
   Coroutine* current_coroutine() const           { return _current_coroutine;}
+  Coroutine* thread_coroutine() const            { return _thread_coroutine;}
   Coroutine*& coroutine_cache()                  { return _coroutine_cache; }
   uintx& coroutine_cache_size()                  { return _coroutine_cache_size; }
-  
   void initialize_coroutine_support();
 
  private:

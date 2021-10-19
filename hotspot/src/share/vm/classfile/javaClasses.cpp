@@ -3364,16 +3364,23 @@ oop java_lang_VTContinuation::VT(oop obj) {
 }
 
 int java_lang_VT::_state_offset = 0;
+int java_lang_VT::_cont_offset = 0;
 void java_lang_VT::compute_offsets() {
   Klass* k = SystemDictionary::VT_klass();
   if (k != NULL) {
     compute_offset(_state_offset, k, vmSymbols::state_name(), vmSymbols::int_signature());
+    compute_offset(_cont_offset, k, vmSymbols::cont_name(), vmSymbols::Cont_signature());
   }
 }
 
 int java_lang_VT::state(oop obj) {
   return obj->int_field(_state_offset);
 }
+
+oop java_lang_VT::Cont(oop obj) {
+  return obj->obj_field(_cont_offset);
+}
+
 #endif
 void java_util_concurrent_locks_AbstractOwnableSynchronizer::initialize(TRAPS) {
   if (_owner_offset != 0) return;

@@ -1900,7 +1900,7 @@ static Handle find_deadlocks(bool object_monitors_only, TRAPS) {
 
   int index = 0;
   for (cycle = deadlocks; cycle != NULL; cycle = cycle->next()) {
-    GrowableArray<JavaThread*>* deadlock_threads = cycle->threads();
+    GrowableArray<ExecutionType*>* deadlock_threads = cycle->threads();
     int len = deadlock_threads->length();
     for (int i = 0; i < len; i++) {
       threads_ah->obj_at_put(index, deadlock_threads->at(i)->threadObj());
