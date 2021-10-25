@@ -5399,6 +5399,9 @@ static jint attach_current_thread(JavaVM *vm, void **penv, void *_args, bool dae
   thread->record_stack_base_and_size();
 
   thread->initialize_thread_local_storage();
+#if INCLUDE_KONA_FIBER
+  thread->initialize_coroutine_support();
+#endif
 
   if (!os::create_attached_thread(thread)) {
     delete thread;
