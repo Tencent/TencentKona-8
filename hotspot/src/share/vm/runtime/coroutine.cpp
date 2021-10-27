@@ -676,8 +676,7 @@ const char* Coroutine::get_vt_name_string(char* buf, int buflen) const {
     assert(name != NULL, "vt must have default name");
     if (buf == NULL) {
       name_str = java_lang_String::as_utf8_string(name);
-    }
-    else {
+    } else {
       name_str = java_lang_String::as_utf8_string(name, buf, buflen);
     }
   } else {
@@ -746,6 +745,7 @@ static const char* virtual_thread_get_state_name(int state) {
 // 3. Print VT name and state
 void Coroutine::print_VT_info(outputStream* st) {
   if (is_thread_coroutine()) {
+    ResourceMark rm;
     st->print_cr("thread coroutine: %s", _t->get_thread_name());
     return;
   }
