@@ -413,8 +413,14 @@ java/nio/file/WatchService/UpdateInterference.java           linux-all
 # These failed cases are also hanging on Openjdk-8u272
 java/security/cert/PolicyNode/GetPolicyQualifiers.java       linux-all
 
-# TODO: should delete after 8u312
+# TODO: will fix after 8u322, see: https://bugs.openjdk.java.net/browse/JDK-8275136
 javax/management/remote/mandatory/connection/RMIConnector_NPETest.java    linux-all
+
+# TODO: will fix after 8u322, see: https://bugs.openjdk.java.net/browse/JDK-8183369
+java/net/HttpURLConnection/HttpURLConWithProxy.java          linux-all
+
+# This test could failed because of the hostname configuration
+sun/rmi/transport/tcp/DisableRMIOverHttp/DisableRMIOverHTTPTest.java      linux-all
 ############################################################################
 
 # 8141370
