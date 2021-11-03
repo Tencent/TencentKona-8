@@ -24,8 +24,8 @@
 /**
  * @test
  * @summary Basic test of debugging option to trace pinned threads
- * @run main/othervm -Djdk.tracePinnedThreads=full TracePinnedThreads
- * @run main/othervm -Djdk.tracePinnedThreads=short TracePinnedThreads
+ * @run main/othervm -XX:-YieldWithMonitor -Djdk.tracePinnedThreads=full TracePinnedThreads
+ * @run main/othervm -XX:-YieldWithMonitor -Djdk.tracePinnedThreads=short TracePinnedThreads
  */
 
 import java.io.ByteArrayOutputStream;

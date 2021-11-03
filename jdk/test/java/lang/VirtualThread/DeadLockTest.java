@@ -23,8 +23,10 @@
 /**
  * @test
  * @library /lib/testlibrary
- * @run main/othervm DeadLockTest 1
- * @run main/othervm DeadLockTest 0
+ * @run main/othervm DeadLockTest 1 1
+ * @run main/othervm DeadLockTest 1 0
+ * @run main/othervm DeadLockTest 0 1
+ * @run main/othervm DeadLockTest 0 0
  * @summary detect dead lock is detected in VT, with argumetns VT is convert to thread by
  * adding option -Djdk.internal.VirtualThread=off
  */
@@ -296,20 +298,27 @@ public class DeadLockTest {
     }
 
     public static void main(String[] args) throws Throwable {
-        String vm_arg = "-Djdk.internal.VirtualThread=on";
+        String vm_arg1 = "-Djdk.internal.VirtualThread=on";
         if (Integer.parseInt(args[0]) == 1) {
             System.out.println("disable virtual thread");
-            vm_arg = "-Djdk.internal.VirtualThread=off";
+            vm_arg1 = "-Djdk.internal.VirtualThread=off";
         }
-        runTest(vm_arg, DeadLockTest1.class.getName(), "1", "1");
-        runTest(vm_arg, DeadLockTest1.class.getName(), "0", "0");
-        runTest(vm_arg, DeadLockTest1.class.getName(), "0", "1");
-        runTest(vm_arg, DeadLockTest1.class.getName(), "1", "0");
 
-        runTest(vm_arg, DeadLockTest2.class.getName(), "0");
-        runTest(vm_arg, DeadLockTest2.class.getName(), "1");
+        String vm_arg2 = "-XX:+YieldWithMonitor";
+        if (Integer.parseInt(args[1]) == 1) {
+            System.out.println("disable yield with monitor");
+            vm_arg2 = "-XX:-YieldWithMonitor";
+        }
 
-        runTest(vm_arg, DeadLockTest3.class.getName(), "0");
-        runTest(vm_arg, DeadLockTest3.class.getName(), "1");
+        runTest(vm_arg1, vm_arg2, DeadLockTest1.class.getName(), "1", "1");
+        runTest(vm_arg1, vm_arg2, DeadLockTest1.class.getName(), "0", "0");
+        runTest(vm_arg1, vm_arg2, DeadLockTest1.class.getName(), "0", "1");
+        runTest(vm_arg1, vm_arg2, DeadLockTest1.class.getName(), "1", "0");
+
+        runTest(vm_arg1, vm_arg2,  DeadLockTest2.class.getName(), "0");
+        runTest(vm_arg1, vm_arg2,  DeadLockTest2.class.getName(), "1");
+
+        runTest(vm_arg1, vm_arg2, DeadLockTest3.class.getName(), "0");
+        runTest(vm_arg1, vm_arg2, DeadLockTest3.class.getName(), "1");
     }
 }

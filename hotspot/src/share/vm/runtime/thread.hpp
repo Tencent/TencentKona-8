@@ -301,10 +301,10 @@ class Thread: public ThreadShadow {
     uint64_t contAlignedLong;                       // make locksAcquired and contJniFrames in 8 bytes aligned space
   };
   void inc_locks_acquired()                     {
-    if (UseKonaFiber) { locksAcquired++; assert(locksAcquired >= 1, "invalid state"); }
+    if (!YieldWithMonitor) { locksAcquired++; assert(locksAcquired >= 1, "invalid state"); }
   }
   void dec_locks_acquired()                     {
-    if (UseKonaFiber) { locksAcquired--; assert(locksAcquired >= 0, "invalid state"); }
+    if (!YieldWithMonitor) { locksAcquired--; assert(locksAcquired >= 0, "invalid state"); }
   }
   void inc_cont_jni_frames()                    { contJniFrames++; }
   void dec_cont_jni_frames()                    { contJniFrames--; assert(contJniFrames >= 0, "invalid state"); }
@@ -1158,6 +1158,16 @@ class JavaThread: public Thread {
   // transition into thread_in_Java mode so that it can potentially
   // block.
   static void check_special_condition_for_native_trans_and_transition(JavaThread *thread);
+
+  void *get_cur_exec() {
+    assert(this->is_Java_thread(), "must be Java Thread");
+#if INCLUDE_KONA_FIBER
+    if (YieldWithMonitor) {
+      return _current_coroutine;
+    }
+#endif
+    return this;
+  }
 
   bool is_ext_suspend_completed(bool called_by_wait, int delay, uint32_t *bits);
   bool is_ext_suspend_completed_with_lock(uint32_t *bits) {

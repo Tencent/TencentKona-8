@@ -23,17 +23,18 @@
 #ifndef SHARE_VM_RUNTIME_EXECUTION_UNIT_HPP
 #define SHARE_VM_RUNTIME_EXECUTION_UNIT_HPP
 
-#include "runtime/coroutine.hpp"
 #if INCLUDE_KONA_FIBER
+class Coroutine;
 typedef Coroutine ExecutionType;
 #else
-#include "runtime/thread.hpp"
+class JavaThread;
 typedef JavaThread ExecutionType;
 #endif
 
 class ExecutionUnit: AllStatic {
 public:
   static ExecutionType* get_execution_unit(oop threadObj);
+  static ExecutionType* owning_thread_from_monitor_owner(address owner, bool doLock);
 };
 
 class ExecutionUnitsIterator VALUE_OBJ_CLASS_SPEC {

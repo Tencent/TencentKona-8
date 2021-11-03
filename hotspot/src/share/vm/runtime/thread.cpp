@@ -4484,6 +4484,15 @@ JavaThread *Threads::owning_thread_from_monitor_owner(address owner, bool doLock
     MutexLockerEx ml(doLock ? Threads_lock : NULL);
     ALL_JAVA_THREADS(p) {
       // first, see if owner is the address of a Java thread
+#if INCLUDE_KONA_FIBER
+      if (YieldWithMonitor) {
+        if (owner == (address)((JavaThread *)p)->current_coroutine()) {
+          return p;
+        } else {
+          continue;
+        }
+      }
+#endif
       if (owner == (address)p) return p;
     }
   }

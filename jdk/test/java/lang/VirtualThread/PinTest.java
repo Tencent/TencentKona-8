@@ -22,7 +22,7 @@
 
 /*
  * @test
- * @run testng PinTest
+ * @run testng/othervm -XX:-YieldWithMonitor PinTest
  * @summary Basic test for continuation, test create/run/yield/resume/stop
  */
 import java.util.concurrent.*;

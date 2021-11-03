@@ -22,7 +22,7 @@
 
 /*
  * @test
- * @run testng VTPinnedCallback
+ * @run testng/othervm -XX:-YieldWithMonitor VTPinnedCallback
  * @summary Basic test for add a callback of Continuation when Continuation is pinned.
  */
 import java.util.concurrent.*;

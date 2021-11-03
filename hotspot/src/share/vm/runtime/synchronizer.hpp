@@ -27,6 +27,7 @@
 
 #include "oops/markOop.hpp"
 #include "runtime/basicLock.hpp"
+#include "runtime/execution_unit.hpp"
 #include "runtime/handles.hpp"
 #include "runtime/perfData.hpp"
 #include "utilities/top.hpp"
@@ -116,7 +117,7 @@ class ObjectSynchronizer : AllStatic {
   static bool current_thread_holds_lock(JavaThread* thread, Handle h_obj);
   static LockOwnership query_lock_ownership(JavaThread * self, Handle h_obj);
 
-  static JavaThread* get_lock_owner(Handle h_obj, bool doLock);
+  static ExecutionType* get_lock_owner(Handle h_obj, bool doLock);
 
   // JNI detach support
   static void release_monitors_owned_by_thread(TRAPS);

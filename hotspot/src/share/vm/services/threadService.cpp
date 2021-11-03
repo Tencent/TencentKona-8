@@ -37,9 +37,7 @@
 #include "runtime/vmThread.hpp"
 #include "runtime/vm_operations.hpp"
 #include "services/threadService.hpp"
-#if INCLUDE_KONA_FIBER
 #include "runtime/coroutine.hpp"
-#endif
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
@@ -354,10 +352,9 @@ DeadlockCycle* ThreadService::find_deadlocks_at_safepoint(bool concurrent_locks)
       if (waitingToLockMonitor != NULL) {
         address currentOwner = (address)waitingToLockMonitor->owner();
         if (currentOwner != NULL) {
-          JavaThread* owning_t = Threads::owning_thread_from_monitor_owner(
-                            currentOwner,
-                            false /* no locking needed */);
-          currentThread = owning_t CORO_ONLY( == NULL ? NULL : owning_t->current_coroutine());
+          currentThread = ExecutionUnit::owning_thread_from_monitor_owner(
+                                currentOwner,
+                                false /* no locking needed */);
           if (currentThread == NULL) {
             // This function is called at a safepoint so the JavaThread
             // that owns waitingToLockMonitor should be findable, but
@@ -540,7 +537,7 @@ public:
     _stack_trace = st;
   }
   void do_monitor(ObjectMonitor* mid) {
-    if (mid->owner() == _thread) {
+    if (mid->owner() == ((JavaThread *)_thread)->get_cur_exec()) {
       oop object = (oop) mid->object();
       if (!_stack_trace->is_owned_monitor_on_stack(object)) {
         _stack_trace->add_jni_locked_monitor(object);
@@ -817,7 +814,7 @@ ThreadSnapshot::ThreadSnapshot(JavaThread* thread) {
       _thread_status = java_lang_Thread::RUNNABLE;
     } else {
       _blocker_object = obj();
-      JavaThread* owner = ObjectSynchronizer::get_lock_owner(obj, false);
+      ExecutionType* owner = ObjectSynchronizer::get_lock_owner(obj, false);
       if ((owner == NULL && _thread_status == java_lang_Thread::BLOCKED_ON_MONITOR_ENTER)
           || (owner != NULL && owner->is_attaching_via_jni())) {
         // ownership information of the monitor is not available
@@ -916,10 +913,9 @@ void DeadlockCycle::print_on(outputStream* st) const {
         // No Java object associated - a JVMTI raw monitor
         owner_desc = " (JVMTI raw monitor),\n  which is held by";
       }
-      JavaThread* owning_t = Threads::owning_thread_from_monitor_owner(
-                        (address)waitingToLockMonitor->owner(),
-                        false /* no locking needed */);
-      currentThread = owning_t CORO_ONLY( == NULL ? NULL : owning_t->current_coroutine());
+      currentThread = ExecutionUnit::owning_thread_from_monitor_owner(
+                            (address)waitingToLockMonitor->owner(),
+                            false /* no locking needed */);
       if (currentThread == NULL) {
         // The deadlock was detected at a safepoint so the JavaThread
         // that owns waitingToLockMonitor should be findable, but

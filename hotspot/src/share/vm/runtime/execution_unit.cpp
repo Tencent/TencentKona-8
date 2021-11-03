@@ -20,6 +20,7 @@
  *
  */
 
+#include "runtime/coroutine.hpp"
 #include "runtime/execution_unit.hpp"
 #include "classfile/systemDictionary.hpp"
 #include "classfile/javaClasses.hpp"
@@ -41,6 +42,23 @@ ExecutionType* ExecutionUnit::get_execution_unit(oop threadObj) {
   }
 #else
   return java_lang_Thread::thread(threadObj);
+#endif
+}
+
+ExecutionType* ExecutionUnit::owning_thread_from_monitor_owner(address owner, bool doLock) {
+#if INCLUDE_KONA_FIBER
+  if (YieldWithMonitor) {
+    return Coroutine::owning_coro_from_monitor_owner(owner, doLock);
+  } else {
+    JavaThread* t = Threads::owning_thread_from_monitor_owner(owner, doLock);
+    if (t == NULL) {
+      return NULL;
+    } else {
+      return t->current_coroutine();
+    }
+  }
+#else
+  return Threads::owning_thread_from_monitor_owner(owner, doLock);
 #endif
 }
 

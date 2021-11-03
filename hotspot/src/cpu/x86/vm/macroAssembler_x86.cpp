@@ -1975,12 +1975,26 @@ void MacroAssembler::fast_lock(Register objReg, Register boxReg, Register tmpReg
     movptr (tmpReg, Address(boxReg, ObjectMonitor::owner_offset_in_bytes()-2));
     testptr(tmpReg, tmpReg);
     jccb   (Assembler::notZero, DONE_LABEL);
+#if INCLUDE_KONA_FIBER
+    if (YieldWithMonitor) {
+        movptr (tmpReg, Address(r15_thread, JavaThread::current_coro_offset()));
+    }
+#endif
 
     // It's inflated and appears unlocked
     if (os::is_MP()) {
       lock();
     }
+#if INCLUDE_KONA_FIBER
+    if (YieldWithMonitor) {
+        cmpxchgptr(tmpReg, Address(boxReg, ObjectMonitor::owner_offset_in_bytes()-2));
+    } else {
+        cmpxchgptr(r15_thread, Address(boxReg, ObjectMonitor::owner_offset_in_bytes()-2));
+    }
+#else
     cmpxchgptr(r15_thread, Address(boxReg, ObjectMonitor::owner_offset_in_bytes()-2));
+#endif
+
     // Intentional fall-through into DONE_LABEL ...
 #endif // _LP64
 
@@ -2250,7 +2264,15 @@ void MacroAssembler::fast_unlock(Register objReg, Register boxReg, Register tmpR
 #else // _LP64
     // It's inflated
     movptr(boxReg, Address (tmpReg, ObjectMonitor::owner_offset_in_bytes()-2));
+#if INCLUDE_KONA_FIBER
+    if (YieldWithMonitor) {
+        xorptr(boxReg, Address(r15_thread, JavaThread::current_coro_offset()));
+    } else {
+        xorptr(boxReg, r15_thread);
+    }
+#else
     xorptr(boxReg, r15_thread);
+#endif
     orptr (boxReg, Address (tmpReg, ObjectMonitor::recursions_offset_in_bytes()-2));
     jccb  (Assembler::notZero, DONE_LABEL);
     movptr(boxReg, Address (tmpReg, ObjectMonitor::cxq_offset_in_bytes()-2));
@@ -2277,8 +2299,20 @@ void MacroAssembler::fast_unlock(Register objReg, Register boxReg, Register tmpR
       jccb  (Assembler::notZero, LSuccess);
 
       movptr (boxReg, (int32_t)NULL_WORD);                   // box is really EAX
+#if INCLUDE_KONA_FIBER
+      if (YieldWithMonitor) {
+           movptr (r15_thread, Address(r15_thread, JavaThread::current_coro_offset()));
+      }
+#endif
       if (os::is_MP()) { lock(); }
       cmpxchgptr(r15_thread, Address(tmpReg, ObjectMonitor::owner_offset_in_bytes()-2));
+
+#if INCLUDE_KONA_FIBER
+      if (YieldWithMonitor) {
+          movptr (r15_thread, Address(r15_thread, Coroutine::thread_offset()));
+      }
+#endif
+
       jccb  (Assembler::notEqual, LSuccess);
       // Intentional fall-through into slow-path
 

@@ -25,6 +25,7 @@
 #include "precompiled.hpp"
 #if INCLUDE_KONA_FIBER
 #include "runtime/coroutine.hpp"
+#include "runtime/execution_unit.hpp"
 #ifdef TARGET_ARCH_x86
 # include "vmreg_x86.inline.hpp"
 #endif
@@ -660,6 +661,14 @@ oop Coroutine::threadObj() const {
   return NULL;
 }
 
+bool Coroutine::is_attaching_via_jni() const {
+    if (_is_thread_coroutine) {
+      return _t->is_attaching_via_jni();
+    }
+
+    return false;
+  }
+
 const char* Coroutine::get_thread_name() const {
   if (_is_thread_coroutine) {
     return _t->get_thread_name();
@@ -694,6 +703,45 @@ bool Coroutine::current_pending_monitor_is_from_java() {
     assert(_state == _current, "unexpected");
     return _thread->current_pending_monitor_is_from_java();
   }
+}
+
+Coroutine* Coroutine::owning_coro_from_monitor_owner(address owner, bool doLock) {
+  assert(doLock ||
+         Threads_lock->owned_by_self() ||
+         SafepointSynchronize::is_at_safepoint(),
+         "must grab Threads_lock or be at safepoint");
+
+  // NULL owner means not locked so we can skip the search
+  if (owner == NULL) return NULL;
+
+  {
+    size_t i = ContContainer::hash_code((Coroutine*)owner);
+    ContBucket* bucket = ContContainer::bucket(i);
+    MutexLockerEx ml(doLock ? bucket->lock() : NULL, Mutex::_no_safepoint_check_flag);
+    if (bucket->head() != NULL) {
+      Coroutine* current = bucket->head();
+      do {
+        if (owner == (address)current) {
+          return current;
+        }
+        current = current->next();
+      } while (current != bucket->head());
+    }
+  }
+
+  // Cannot assert on lack of success here since this function may be
+  // used by code that is trying to report useful problem information
+  // like deadlock detection.
+  if (UseHeavyMonitors) return NULL;
+
+  Coroutine* the_owner = NULL;
+  ExecutionUnitsIterator iter;
+  for (Coroutine* c = iter.next(); c != NULL; c = iter.next()) {
+    if (c->is_lock_owned(owner)) {
+      return c;
+    }
+  }
+  return NULL;
 }
 
 void Coroutine::init_thread_stack(JavaThread* thread) {

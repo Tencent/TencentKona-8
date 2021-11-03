@@ -2374,14 +2374,14 @@ void PhaseMacroExpand::expand_lock_node(LockNode *lock) {
   // To minimize code change, insert lock acquire counter increment after all path.
   // Need decrease counter when backing from OptoRuntime::complete_monitor_locking_Java.
 #if INCLUDE_KONA_FIBER
-  if (UseKonaFiber) {
+  if (!YieldWithMonitor) {
     memproj = updateLockCounter(slow_ctrl, memproj, false);
   }
 #endif
   mem_phi->init_req(1, memproj );
   transform_later(mem_phi);
 #if INCLUDE_KONA_FIBER
-  if (UseKonaFiber) {
+  if (!YieldWithMonitor) {
     mem_phi = updateLockCounter(region, mem_phi, true);
   }
 #endif
@@ -2452,7 +2452,7 @@ void PhaseMacroExpand::expand_unlock_node(UnlockNode *unlock) {
   mem_phi->init_req(2, mem);
   transform_later(mem_phi);
 #if INCLUDE_KONA_FIBER
-  if (UseKonaFiber) {
+  if (!YieldWithMonitor) {
     mem_phi = updateLockCounter(region, mem_phi, false);
   }
 #endif

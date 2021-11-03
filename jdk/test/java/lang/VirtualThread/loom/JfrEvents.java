@@ -24,7 +24,7 @@
 /**
  * @test
  * @summary Basic test for JFR jdk.VirtualThreadXXX events.
- * @run testng/othervm JfrEvents
+ * @run testng/othervm -XX:-YieldWithMonitor JfrEvents
  */
 
 import java.io.File;

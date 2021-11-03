@@ -54,7 +54,7 @@ public class TracePinStack {
     }
 
     public static void main(String[] args) throws Throwable {
-        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder("-Djdk.tracePinnedThreads=full", TestParkWithMonitor.class.getName());
+        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder("-Djdk.tracePinnedThreads=full", "-XX:-YieldWithMonitor", TestParkWithMonitor.class.getName());
         OutputAnalyzer output = new OutputAnalyzer(pb.start());
         int exitValue = output.getExitValue();
         System.out.println(output.getOutput());
