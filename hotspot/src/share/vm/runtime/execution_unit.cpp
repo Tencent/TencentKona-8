@@ -21,6 +21,7 @@
  */
 
 #include "runtime/coroutine.hpp"
+#include "runtime/thread.hpp"
 #include "runtime/execution_unit.hpp"
 #include "classfile/systemDictionary.hpp"
 #include "classfile/javaClasses.hpp"
