@@ -927,6 +927,11 @@ void VM_Version::get_processor_features() {
     FLAG_SET_ERGO(bool, UseUTF8UTF16Intrinsics, true);
   }
 #endif
+#else
+  if (UseUTF8UTF16Intrinsics) {
+    warning("UTF8UTF16Intrinscs is not supported on Windows");
+    UseUTF8UTF16Intrinsics = false;
+  }
 #endif
 
   // Use count leading zeros count instruction if available.
