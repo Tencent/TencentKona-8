@@ -640,7 +640,8 @@ oop Coroutine::current_park_blocker() {
   if (_is_thread_coroutine) {
     return _t->current_park_blocker();
   }
-  if (_continuation == NULL) {
+  if (_continuation == NULL
+      || _continuation->klass() != SystemDictionary::VTcontinuation_klass()) {
     return NULL;
   }
   oop vt = java_lang_VTContinuation::VT(_continuation);
@@ -655,6 +656,9 @@ oop Coroutine::threadObj() const {
   if (_is_thread_coroutine) {
     return _t->threadObj();
   } else if (_continuation != NULL) {
+    if (_continuation->klass() != SystemDictionary::VTcontinuation_klass()) {
+      return NULL;
+    }
     oop vt = java_lang_VTContinuation::VT(_continuation);
     return vt;
   }
