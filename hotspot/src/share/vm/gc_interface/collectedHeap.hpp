@@ -339,6 +339,15 @@ class CollectedHeap : public CHeapObj<mtInternal> {
   // Number of threads currently working on GC tasks.
   uint n_par_threads() { return _n_par_threads; }
 
+  // May be overridden to set additional parallelism.
+  virtual void set_par_threads(uint t) { _n_par_threads = t; };
+
+  // General obj/array allocation facilities.
+  inline static oop obj_allocate(KlassHandle klass, int size, TRAPS);
+  inline static oop array_allocate(KlassHandle klass, int size, int length, TRAPS);
+  inline static oop array_allocate_nozero(KlassHandle klass, int size, int length, TRAPS);
+
+ public:
   void free_heap_physical_memory_after_fullgc(void* start, void* end);
 
   virtual void print_heap_physical_memory_free_info();
@@ -356,14 +365,6 @@ class CollectedHeap : public CHeapObj<mtInternal> {
   void check_for_periodic_gc(int);
 
   void update_minor_gc_frequency_histogram();
-
-  // May be overridden to set additional parallelism.
-  virtual void set_par_threads(uint t) { _n_par_threads = t; };
-
-  // General obj/array allocation facilities.
-  inline static oop obj_allocate(KlassHandle klass, int size, TRAPS);
-  inline static oop array_allocate(KlassHandle klass, int size, int length, TRAPS);
-  inline static oop array_allocate_nozero(KlassHandle klass, int size, int length, TRAPS);
 
   // Raw memory allocation facilities
   // The obj and array allocate methods are covers for these methods.
