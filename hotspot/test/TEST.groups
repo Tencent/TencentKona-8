@@ -101,7 +101,6 @@ needs_jdk = \
   serviceability/attach/AttachWithStalePidFile.java \
   serviceability/sa/jmap-hprof/JMapHProfLargeHeapTest.java \
   serviceability/dcmd/DynLibDcmdTest.java \
-  runtime/EnableTracing/TestEnableTracing.java \
   testlibrary_tests/
 
 hotspot_fail = \
