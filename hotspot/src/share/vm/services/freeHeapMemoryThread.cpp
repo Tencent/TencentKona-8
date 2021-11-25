@@ -51,7 +51,14 @@ void FreeHeapPhysicalMemoryThread::sleep_before_next_cycle(uintx waitms) {
 
 void FreeHeapPhysicalMemoryThread::run() {
   Task* task = 0;
-  const uintx waitms = 300000; // 5min
+  uintx waitms = FreeHeapPhysicalMemoryCheckInterval * 1000;
+  if (waitms < 1000) {
+    waitms = 300000; // default 5min
+    if (PrintGCDetails) {
+       gclog_or_tty->print_cr("illegal FreeHeapPhysicalMemoryCheckInterval " UINTX_FORMAT ", update interval to 5min",
+                              FreeHeapPhysicalMemoryCheckInterval);
+    }
+  }
   while (!_should_terminate) {
     sleep_before_next_cycle(waitms);
 

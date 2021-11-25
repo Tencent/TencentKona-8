@@ -605,7 +605,7 @@ void CollectedHeap::post_full_gc_dump(GCTimer* timer) {
   }
 }
 
-void CollectedHeap::check_for_periodic_gc(int interval) {
+void CollectedHeap::check_for_periodic_gc(uintx interval) {
   if (should_start_periodic_gc(interval)) {
     MutexLockerEx x(FreeHeapMemory_lock);
     PeriodicGCTask* task = new PeriodicGCTask(this);
@@ -626,7 +626,7 @@ void CollectedHeap::update_minor_gc_frequency_histogram() {
    }
 }
 
-bool CollectedHeap::should_start_periodic_gc(int interval) {
+bool CollectedHeap::should_start_periodic_gc(uintx interval) {
   // disable free physical memory when the system is idle and force periodic gc is closed
   if (0 == PeriodicGCInterval && 0 == ForcePeriodicGCInterval) {
     return false;
@@ -646,18 +646,32 @@ bool CollectedHeap::should_start_periodic_gc(int interval) {
   } else if (minor_gc_count > last_check_minor_gc_count) {
     minor_gc_frequency = 
       (now - last_check_time) / (minor_gc_count - last_check_minor_gc_count);
-    if (minor_gc_frequency > _minor_gc_frequency_histogram->percentile(99)) {
+    minor_gc_frequency = minor_gc_frequency * 1000; // to ms
+    double compare_value = _minor_gc_frequency_histogram->percentile(99);
+    if (minor_gc_frequency > compare_value) {
       ++_minor_gc_frequency_below_thresold_count;
+      if (PrintGCDetails) {
+        gclog_or_tty->print_cr("periodic: inc, minor_gc_frequency: %lfms, 99p %lfms", minor_gc_frequency, compare_value);
+      }
     } else {
       // reset it
       _minor_gc_frequency_below_thresold_count = 0;
+      if (PrintGCDetails) {
+        gclog_or_tty->print_cr("periodic: reset, minor_gc_frequency: %lfms, 99p %lfms", minor_gc_frequency, compare_value);
+      }
     }
     last_check_minor_gc_count = minor_gc_count;
-  } else if ((int)((now - _last_minor_gc_time) * 1000) > interval) {
+  } else if ((uintx)((now - _last_minor_gc_time) * 1000) > interval) {
     ++_minor_gc_frequency_below_thresold_count;
+    if (PrintGCDetails) {
+      gclog_or_tty->print_cr("periodic: inc, no gc");
+    }
   } else {
     // the interval is too short
     _minor_gc_frequency_below_thresold_count = 0;
+    if (PrintGCDetails) {
+      gclog_or_tty->print_cr("periodic: reset, short interval");
+    }
   }
 
   // update checktime
@@ -669,6 +683,11 @@ bool CollectedHeap::should_start_periodic_gc(int interval) {
           && (_minor_gc_frequency_below_thresold_count >= PeriodicGCLoadThreshold);
   bool should_start_enforced_gc = ForcePeriodicGCInterval != 0
           && (long)(((now - _last_full_gc_time) * 1000) > ForcePeriodicGCInterval);
+  if (PrintGCDetails) {
+    gclog_or_tty->print_cr("periodic: result %s %s",
+                           should_start_threshold_gc ? "should_start_threshold_gc" : "",
+                           should_start_enforced_gc ? "should_start_enforced_gc" : "");
+  }
   if (should_start_threshold_gc || should_start_enforced_gc) {
     _minor_gc_frequency_below_thresold_count = 0;
     return true;

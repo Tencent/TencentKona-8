@@ -360,9 +360,9 @@ class CollectedHeap : public CHeapObj<mtInternal> {
     return  _minor_gc_frequency_histogram;
   }
 
-  bool should_start_periodic_gc(int);
+  bool should_start_periodic_gc(uintx);
 
-  void check_for_periodic_gc(int);
+  void check_for_periodic_gc(uintx);
 
   void update_minor_gc_frequency_histogram();
 

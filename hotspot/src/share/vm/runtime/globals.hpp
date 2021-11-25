@@ -3294,6 +3294,9 @@ class CommandLineFlags {
   product(bool, FreeHeapPhysicalMemory, false,                              \
              "Free physical memory after fullgc or shrink operation")       \
                                                                             \
+  product(uintx, FreeHeapPhysicalMemoryCheckInterval, 300,                  \
+             "Free physical memory check interval in seconds")              \
+                                                                            \
   product(intx, PeriodicGCLoadThreshold, 3,                                 \
              "when PeriodicGCInterval > 0,jvm will check minor gc frequency"\
              "each 5 minutes, and if the frequency in this 5 minutes is"    \
