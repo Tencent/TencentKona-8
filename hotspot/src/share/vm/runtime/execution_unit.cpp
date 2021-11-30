@@ -20,6 +20,7 @@
  *
  */
 
+#include "precompiled.hpp"
 #include "runtime/coroutine.hpp"
 #include "runtime/thread.hpp"
 #include "runtime/execution_unit.hpp"
