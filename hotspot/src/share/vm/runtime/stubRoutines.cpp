@@ -143,6 +143,7 @@ address StubRoutines::_montgomeryMultiply = NULL;
 address StubRoutines::_montgomerySquare = NULL;
 
 address StubRoutines::_utf8_to_utf16_decoder = NULL;
+address StubRoutines::_utf16_to_utf8_encoder = NULL;
 
 double (* StubRoutines::_intrinsic_log   )(double) = NULL;
 double (* StubRoutines::_intrinsic_log10 )(double) = NULL;

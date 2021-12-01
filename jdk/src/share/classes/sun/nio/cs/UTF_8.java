@@ -658,6 +658,37 @@ class UTF_8 extends Unicode
             return CoderResult.OVERFLOW;
         }
 
+        // fast path decode array loop, vectorize intrinsic
+        // return updated sp and dp in long
+        private static long encodeArrayLoopFast(char[] sa, int sp, int sl, byte[] da, int dp, int dl) {
+            while (sp < sl) {
+                char c = sa[sp];
+                if (c < 0x80) {
+                    // Have at most seven bits
+                    if (dp >= dl)
+                        break;
+                    da[dp++] = (byte)c;
+                } else if (c < 0x800) {
+                    // 2 bytes, 11 bits
+                    if (dl - dp < 2)
+                        break;
+                    da[dp++] = (byte)(0xc0 | (c >> 6));
+                    da[dp++] = (byte)(0x80 | (c & 0x3f));
+                } else if (Character.isSurrogate(c)) {
+                    break;
+                } else {
+                    // 3 bytes, 16 bits
+                    if (dl - dp < 3)
+                        break;
+                    da[dp++] = (byte)(0xe0 | ((c >> 12)));
+                    da[dp++] = (byte)(0x80 | ((c >>  6) & 0x3f));
+                    da[dp++] = (byte)(0x80 | (c & 0x3f));
+                }
+                sp++;
+            }
+            return ((long)dp << 32 | sp);
+        }
+
         private Surrogate.Parser sgp;
         private CoderResult encodeArrayLoop(CharBuffer src,
                                             ByteBuffer dst)
@@ -669,11 +700,11 @@ class UTF_8 extends Unicode
             byte[] da = dst.array();
             int dp = dst.arrayOffset() + dst.position();
             int dl = dst.arrayOffset() + dst.limit();
-            int dlASCII = dp + Math.min(sl - sp, dl - dp);
 
-            // ASCII only loop
-            while (dp < dlASCII && sa[sp] < '\u0080')
-                da[dp++] = (byte) sa[sp++];
+            long p = encodeArrayLoopFast(sa, sp, sl, da, dp, dl);
+            dp = (int)(p >> 32);
+            sp = (int)p;
+
             while (sp < sl) {
                 char c = sa[sp];
                 if (c < 0x80) {
