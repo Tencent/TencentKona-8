@@ -1052,6 +1052,50 @@ void LIRGenerator::do_UTF8_UTF16_decode(Intrinsic* x) {
   __ move(result_reg, result);
 }
 
+void LIRGenerator::do_UTF8_UTF16_encode(Intrinsic* x) {
+  assert(x->number_of_arguments() == 6, "wrong type");
+
+  // Make all state_for calls early since they can emit code
+  CodeEmitInfo* info = state_for(x, x->state());
+
+  LIRItem sa(x->argument_at(0), this);
+  LIRItem sp(x->argument_at(1), this);
+  LIRItem sl(x->argument_at(2), this);
+  LIRItem da(x->argument_at(3), this);
+  LIRItem dp(x->argument_at(4), this);
+  LIRItem dl(x->argument_at(5), this);
+
+  BasicTypeList signature(5);
+  signature.append(T_ARRAY);
+  signature.append(T_INT);
+  signature.append(T_INT);
+  signature.append(T_ARRAY);
+  signature.append(T_INT);
+  signature.append(T_INT);
+  CallingConvention* cc = frame_map()->c_calling_convention(&signature);
+
+  LIR_Address* sa_elem_addr =
+    new LIR_Address(sa.result(),
+                    arrayOopDesc::base_offset_in_bytes(T_BYTE),
+                    T_BYTE);
+  LIR_Address* da_elem_addr =
+    new LIR_Address(da.result(),
+                    arrayOopDesc::base_offset_in_bytes(T_CHAR),
+                    T_CHAR);
+
+  __ leal(LIR_OprFact::address(sa_elem_addr), cc->at(0)); // rdi
+  sp.load_item_force(cc->at(1)); // rsi
+  sl.load_item_force(cc->at(2)); // rdx
+  __ leal(LIR_OprFact::address(da_elem_addr), cc->at(3)); // rcx
+  dp.load_item_force(cc->at(4)); // r8
+  dl.load_item_force(cc->at(5)); // r9
+
+  LIR_Opr result = rlock_result(x);
+  const LIR_Opr result_reg = result_register_for(x->type());
+  __ call_runtime_leaf(StubRoutines::utf16_to_utf8_encoder(), getThreadTemp(), result_reg, cc->args());
+  __ move(result_reg, result);
+}
+
 // _i2l, _i2f, _i2d, _l2i, _l2f, _l2d, _f2i, _f2l, _f2d, _d2i, _d2l, _d2f
 // _i2b, _i2c, _i2s
 LIR_Opr fixed_register_for(BasicType type) {

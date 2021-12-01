@@ -314,6 +314,7 @@ private:
   static const TypeFunc* ghash_processBlocks_Type();
 
   static const TypeFunc* utf8_to_utf16_decode_Type();
+  static const TypeFunc* utf16_to_utf8_encode_Type();
 
   static const TypeFunc* updateBytesCRC32_Type();
 

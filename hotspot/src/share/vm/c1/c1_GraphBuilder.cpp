@@ -3674,6 +3674,7 @@ bool GraphBuilder::try_inline_intrinsics(ciMethod* callee) {
       break;
 
     case vmIntrinsics::_UTF8FastDecode:
+    case vmIntrinsics::_UTF8FastEncode:
       if (!UseUTF8UTF16Intrinsics) return false;
       cantrap = false;
       preserves_state = false;

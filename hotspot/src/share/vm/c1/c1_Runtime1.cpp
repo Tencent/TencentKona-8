@@ -302,6 +302,7 @@ const char* Runtime1::name_for_address(address entry) {
 #endif
   FUNCTION_CASE(entry, StubRoutines::updateBytesCRC32());
   FUNCTION_CASE(entry, StubRoutines::utf8_to_utf16_decoder());
+  FUNCTION_CASE(entry, StubRoutines::utf16_to_utf8_encoder());
 
 #undef FUNCTION_CASE
 

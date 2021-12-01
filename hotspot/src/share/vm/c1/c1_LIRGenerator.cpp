@@ -3237,6 +3237,9 @@ void LIRGenerator::do_Intrinsic(Intrinsic* x) {
   case vmIntrinsics::_UTF8FastDecode:
     do_UTF8_UTF16_decode(x);
     break;
+  case vmIntrinsics::_UTF8FastEncode:
+    do_UTF8_UTF16_encode(x);
+    break;
 
   default: ShouldNotReachHere(); break;
   }

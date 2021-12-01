@@ -253,6 +253,7 @@ class LIRGenerator: public InstructionVisitor, public BlockClosure {
   void do_update_CRC32(Intrinsic* x);
 
   void do_UTF8_UTF16_decode(Intrinsic* x);
+  void do_UTF8_UTF16_encode(Intrinsic* x);
 
   void do_UnsafePrefetch(UnsafePrefetch* x, bool is_store);
 
