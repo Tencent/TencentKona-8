@@ -552,7 +552,7 @@ void InterpreterGenerator::lock_method(void) {
   __ movptr(c_rarg1, rsp); // object address
   __ lock_object(c_rarg1);
 #if INCLUDE_KONA_FIBER
-  if (UseKonaFiber) {
+  if (!YieldWithMonitor) {
     LP64_ONLY(__ addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1));
   }
 #endif
@@ -1371,7 +1371,7 @@ address InterpreterGenerator::generate_native_entry(bool synchronized) {
       __ bind(unlock);
       __ unlock_object(c_rarg1);
 #if INCLUDE_KONA_FIBER
-      if (UseKonaFiber) {
+      if (!YieldWithMonitor) {
         LP64_ONLY(__ subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1));
       }
 #endif

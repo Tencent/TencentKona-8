@@ -2147,6 +2147,16 @@ bool Arguments::verify_percentage(uintx value, const char* name) {
 // no gc log rotation when log file not supplied or
 // NumberOfGCLogFiles is 0
 void check_gclog_consistency() {
+  if (UseAsyncGCLog) {
+    if (Arguments::gc_log_filename() == NULL) {
+      jio_fprintf(defaultStream::output_stream(),
+                  "To enable Async GC log, use -Xloggc:<filename> -XX:+UseAsyncGCLog\n"
+                  "Async GC log is turned off\n");
+      UseAsyncGCLog = false;
+
+    }
+  }
+
   if (UseGCLogFileRotation) {
     if ((Arguments::gc_log_filename() == NULL) || (NumberOfGCLogFiles == 0)) {
       jio_fprintf(defaultStream::output_stream(),
@@ -3322,6 +3332,12 @@ jint Arguments::parse_each_vm_init_arg(const JavaVMInitArgs* args,
     } else if (match_option(option, "-XX:+DisplayVMOutputToStdout", &tail)) {
       FLAG_SET_CMDLINE(bool, DisplayVMOutputToStderr, false);
       FLAG_SET_CMDLINE(bool, DisplayVMOutputToStdout, true);
+    } else if (match_option(option, "-XX:+ErrorFileToStderr", &tail)) {
+      FLAG_SET_CMDLINE(bool, ErrorFileToStdout, false);
+      FLAG_SET_CMDLINE(bool, ErrorFileToStderr, true);
+    } else if (match_option(option, "-XX:+ErrorFileToStdout", &tail)) {
+      FLAG_SET_CMDLINE(bool, ErrorFileToStderr, false);
+      FLAG_SET_CMDLINE(bool, ErrorFileToStdout, true);
     } else if (match_option(option, "-XX:+ExtendedDTraceProbes", &tail)) {
 #if defined(DTRACE_ENABLED)
       FLAG_SET_CMDLINE(bool, ExtendedDTraceProbes, true);
@@ -4097,6 +4113,16 @@ jint Arguments::parse(const JavaVMInitArgs* args) {
       FLAG_SET_DEFAULT(PrintGCCause, false);
     }
   }
+
+#if INCLUDE_KONA_FIBER
+  if (YieldWithMonitor) {
+    if (UseBiasedLocking && FLAG_IS_CMDLINE(UseBiasedLocking)) {
+      warning("BiasedLocking is not supported while enable YieldWithMonitor"
+              "; ignoring UseBiasedLocking flag." );
+      UseBiasedLocking = false;
+    }
+  }
+#endif
 
   // Set object alignment values.
   set_object_alignment();

@@ -301,10 +301,10 @@ class Thread: public ThreadShadow {
     uint64_t contAlignedLong;                       // make locksAcquired and contJniFrames in 8 bytes aligned space
   };
   void inc_locks_acquired()                     {
-    if (UseKonaFiber) { locksAcquired++; assert(locksAcquired >= 1, "invalid state"); }
+    if (!YieldWithMonitor) { locksAcquired++; assert(locksAcquired >= 1, "invalid state"); }
   }
   void dec_locks_acquired()                     {
-    if (UseKonaFiber) { locksAcquired--; assert(locksAcquired >= 0, "invalid state"); }
+    if (!YieldWithMonitor) { locksAcquired--; assert(locksAcquired >= 0, "invalid state"); }
   }
   void inc_cont_jni_frames()                    { contJniFrames++; }
   void dec_cont_jni_frames()                    { contJniFrames--; assert(contJniFrames >= 0, "invalid state"); }
@@ -738,34 +738,6 @@ class NamedThread: public Thread {
   JavaThread *processed_thread() { return _processed_thread; }
   void set_processed_thread(JavaThread *thread) { _processed_thread = thread; }
 
-  // Support for parallel Mark Sweep
-  // Should be OopTaskQueue* but use void* to break the dependency cycle
-  void*                           _pms_task_queue;
-  void*                           _pms_objarray_task_queue;
-  // Should be Stack<markOop>* but use void* to break the dependency cycle
-  void*                           _pms_preserved_mark_stack;
-  // Should be Stack<oop>* but use void* to break the dependency cycle
-  void*                           _pms_preserved_oop_stack;
-  size_t                          _pms_preserved_count;
-  size_t                          _pms_preserved_count_max;
-  // Should be PreservedMark* but use void* to break the dependency cycle
-  void*                           _pms_preserved_marks;
-  // Should be Stack<Klass*>* but use void* to break the dependency cycle
-  void*                           _pms_revisit_klass_stack;
-  // Should be Stack<DataLayout*>* but use void* to break the dependency cycle
-  void*                           _pms_revisit_mdo_stack;
-
-  void reset_pms_data() {
-    _pms_task_queue = NULL;
-    _pms_objarray_task_queue = NULL;
-    _pms_preserved_mark_stack = NULL;
-    _pms_preserved_oop_stack = NULL;
-    _pms_preserved_count = 0;
-    _pms_preserved_count_max = 0;
-    _pms_preserved_marks = NULL;
-    _pms_revisit_klass_stack = NULL;
-    _pms_revisit_mdo_stack = NULL;
-  }
   void set_gc_id(uint gc_id) { _gc_id = gc_id; }
   uint gc_id() { return _gc_id; }
 };
@@ -1004,12 +976,13 @@ class JavaThread: public Thread {
   Coroutine*        _coroutine_cache;
   uintx             _coroutine_cache_size;
   Coroutine*        _current_coroutine;
+  Coroutine*        _thread_coroutine;
 
  public:
   Coroutine* current_coroutine() const           { return _current_coroutine;}
+  Coroutine* thread_coroutine() const            { return _thread_coroutine;}
   Coroutine*& coroutine_cache()                  { return _coroutine_cache; }
   uintx& coroutine_cache_size()                  { return _coroutine_cache_size; }
-  
   void initialize_coroutine_support();
 
  private:
@@ -1185,6 +1158,16 @@ class JavaThread: public Thread {
   // transition into thread_in_Java mode so that it can potentially
   // block.
   static void check_special_condition_for_native_trans_and_transition(JavaThread *thread);
+
+  void *get_cur_exec() {
+    assert(this->is_Java_thread(), "must be Java Thread");
+#if INCLUDE_KONA_FIBER
+    if (YieldWithMonitor) {
+      return _current_coroutine;
+    }
+#endif
+    return this;
+  }
 
   bool is_ext_suspend_completed(bool called_by_wait, int delay, uint32_t *bits);
   bool is_ext_suspend_completed_with_lock(uint32_t *bits) {
@@ -1572,6 +1555,9 @@ public:
   // Print stack trace in external format
   void print_stack_on(outputStream* st);
   void print_stack() { print_stack_on(tty); }
+#if INCLUDE_KONA_FIBER
+  void print_pin_stack_on(outputStream* st);
+#endif
 
   // Print stack traces in various internal formats
   void trace_stack()                             PRODUCT_RETURN;

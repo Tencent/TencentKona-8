@@ -33,6 +33,9 @@
 #include "runtime/javaFrameAnchor.hpp"
 #include "runtime/monitorChunk.hpp"
 
+#define CORO_ONLY(x) x
+#define CORO_NOT_ONLY(x)
+
 #ifdef DEBUG_COROUTINES
 #define DEBUG_CORO_ONLY(x) x
 #define DEBUG_CORO_PRINT(x) tty->print(x)
@@ -158,8 +161,8 @@ public:
 class ContContainer : AllStatic {
 private:
   static ContBucket* _buckets;
-  static size_t hash_code(Coroutine* cont);
 public:
+  static size_t hash_code(Coroutine* cont);
   static ContBucket* bucket(size_t index);
   static ContBucket* buckets() { return _buckets; };
   static void insert(Coroutine* cont);
@@ -221,15 +224,23 @@ private:
   CoroutineState  _state;
   bool            _is_thread_coroutine;
   //for javacall stack reclaim
-  bool             _has_javacall;
+  bool            _has_javacall;
 
   address         _stack_base;
   intptr_t        _stack_size;
   address         _last_sp;
-  oop             _continuation;
+#ifndef CHECK_UNHANDLED_OOPS
+  union {
+#endif
+    oop             _continuation;
+    JavaThread*     _t;
+#ifndef CHECK_UNHANDLED_OOPS
+  };
+#endif
 
   JavaThread*     _thread;
   CoroutineVerify* _verify_state;
+  int              _depth_first_number;
 
 #ifdef ASSERT
   int             _java_call_counter;
@@ -247,6 +258,7 @@ private:
 
   void add_stack_frame(void* frames, int* depth, javaVFrame* jvf);
   void print_stack_on(outputStream* st, void* frames, int* depth);
+  const char* get_vt_name_string(char* buf = NULL, int buflen = 0) const;
 
 public:
   virtual ~Coroutine();
@@ -277,7 +289,20 @@ public:
   JavaThread* thread() const        { return _thread; }
   void set_thread(JavaThread* x)    { _thread = x; }
 
-  void set_continuation(oop o)      { _continuation = o; }
+  void set_continuation(oop o)      {
+    assert(!is_thread_coroutine(), "could not be thread coroutine");
+    _continuation = o;
+  }
+
+  // For deadlock detection
+  int depth_first_number() { return _depth_first_number; }
+  void set_depth_first_number(int dfn) { _depth_first_number = dfn; }
+  ObjectMonitor* current_pending_monitor();
+  oop current_park_blocker();
+  oop threadObj() const;
+  const char* get_thread_name() const;
+  bool current_pending_monitor_is_from_java();
+  static Coroutine* owning_coro_from_monitor_owner(address owner, bool doLock);
 
 #ifdef ASSERT
   int java_call_counter() const           { return _java_call_counter; }
@@ -307,6 +332,12 @@ public:
   static ByteSize stack_base_offset()         { return byte_offset_of(Coroutine, _stack_base); }
   static ByteSize stack_size_offset()         { return byte_offset_of(Coroutine, _stack_size); }
   static ByteSize last_sp_offset()            { return byte_offset_of(Coroutine, _last_sp); }
+
+  bool is_lock_owned(address adr) const {
+    return _stack_base >= adr && adr > (_stack_base - _stack_size);
+  }
+
+  bool is_attaching_via_jni() const;
 
 #ifdef ASSERT
   static ByteSize java_call_counter_offset()  { return byte_offset_of(Coroutine, _java_call_counter); }
@@ -379,4 +410,7 @@ template<class T> void DoublyLinkedList<T>::insert_into_list(pointer& list) {
 
 void CONT_RegisterNativeMethods(JNIEnv *env, jclass cls, JavaThread* thread);
 #endif // SHARE_VM_RUNTIME_COROUTINE_HPP
+#else
+#define CORO_ONLY(x)
+#define CORO_NOT_ONLY(x) x
 #endif // INCLUDE_KONA_FIBER

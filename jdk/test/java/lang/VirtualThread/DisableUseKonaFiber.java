@@ -26,7 +26,7 @@
  * @build DisableUseKonaFiber
  * @summary Use interface of KonaFiber when disable KonaFiber will crash
  *          and show the crash reason to customs.
- * @run main/othervm DisableUseKonaFiber
+ * @run testng/othervm -XX:-YieldWithMonitor DisableUseKonaFiber
  */
 
 import java.util.concurrent.*;

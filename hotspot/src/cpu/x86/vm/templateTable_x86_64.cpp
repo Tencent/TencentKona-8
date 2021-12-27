@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2003, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -3780,7 +3780,7 @@ void TemplateTable::monitorenter() {
   __ generate_stack_overflow_check(0);
 
 #if INCLUDE_KONA_FIBER
-  if (UseKonaFiber) {
+  if (!YieldWithMonitor) {
     LP64_ONLY(__ addl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1));
   }
 #endif
@@ -3839,7 +3839,7 @@ void TemplateTable::monitorexit() {
   __ unlock_object(c_rarg1);
 
 #if INCLUDE_KONA_FIBER
-  if (UseKonaFiber) {
+  if (!YieldWithMonitor) {
     LP64_ONLY(__ subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1));
   }
 #endif

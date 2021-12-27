@@ -596,7 +596,7 @@ void InterpreterMacroAssembler::remove_activation(
   bind(unlock);
   unlock_object(c_rarg1);
 #if INCLUDE_KONA_FIBER
-  if (UseKonaFiber) {
+  if (!YieldWithMonitor) {
     LP64_ONLY(subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1));
   }
 #endif
@@ -643,7 +643,7 @@ void InterpreterMacroAssembler::remove_activation(
       push(state);
       unlock_object(c_rarg1);
 #if INCLUDE_KONA_FIBER
-      if (UseKonaFiber) {
+      if (!YieldWithMonitor) {
         LP64_ONLY(subl(Address(r15_thread, in_bytes(Thread::locksAcquired_offset())), 1));
       }
 #endif

@@ -25,6 +25,7 @@
 #include "precompiled.hpp"
 #if INCLUDE_KONA_FIBER
 #include "runtime/coroutine.hpp"
+#include "runtime/execution_unit.hpp"
 #ifdef TARGET_ARCH_x86
 # include "vmreg_x86.inline.hpp"
 #endif
@@ -370,7 +371,9 @@ void Coroutine::TerminateCoroutineObj(jobject coroutine) {
   Coroutine* coro = (Coroutine*)java_lang_Continuation::data(old_oop);
   assert(coro != NULL, "NULL old coroutine in switchToAndTerminate");
   java_lang_Continuation::set_data(old_oop, 0);
-  coro->_continuation = NULL;
+  if (!coro->is_thread_coroutine()) {
+    coro->_continuation = NULL;
+  }
   TerminateCoroutine(coro);
 }
 
@@ -394,6 +397,9 @@ void Coroutine::cont_metadata_do(void f(Metadata*)) {
 Coroutine::Coroutine() {
   _has_javacall = false;
   _continuation = NULL;
+#ifdef CHECK_UNHANDLED_OOPS
+  _t = NULL;
+#endif
 }
 
 Coroutine::~Coroutine() {
@@ -477,6 +483,7 @@ Coroutine* Coroutine::create_thread_coroutine(JavaThread* thread) {
   coro->_thread = thread;
   coro->init_thread_stack(thread);
   coro->_has_javacall = true;
+  coro->_t = thread;
 #ifdef ASSERT
   coro->_java_call_counter = 0;
 #endif
@@ -617,6 +624,130 @@ bool Coroutine::is_disposable() {
 }
 
 
+ObjectMonitor* Coroutine::current_pending_monitor() {
+  // if coroutine is detached(_onstack), it doesn't pend on monitor
+  // if coroutine is attached(_current), its pending monitor is thread's pending monitor
+  if (_state == _onstack) {
+    return NULL;
+  } else {
+    assert(_state == _current, "unexpected");
+    return _thread->current_pending_monitor();
+  }
+}
+
+oop Coroutine::current_park_blocker() {
+  // get continuation_oop->virtualthread_oop->java_lang_Thread::park_blocker(virtualthread_oop)
+  if (_is_thread_coroutine) {
+    return _t->current_park_blocker();
+  }
+  if (_continuation == NULL
+      || _continuation->klass() != SystemDictionary::VTcontinuation_klass()) {
+    return NULL;
+  }
+  oop vt = java_lang_VTContinuation::VT(_continuation);
+  if (vt != NULL &&
+      JDK_Version::current().supports_thread_park_blocker()) {
+    return java_lang_Thread::park_blocker(vt);
+  }
+  return NULL;
+}
+
+oop Coroutine::threadObj() const {
+  if (_is_thread_coroutine) {
+    return _t->threadObj();
+  } else if (_continuation != NULL) {
+    if (_continuation->klass() != SystemDictionary::VTcontinuation_klass()) {
+      return NULL;
+    }
+    oop vt = java_lang_VTContinuation::VT(_continuation);
+    return vt;
+  }
+  return NULL;
+}
+
+bool Coroutine::is_attaching_via_jni() const {
+    if (_is_thread_coroutine) {
+      return _t->is_attaching_via_jni();
+    }
+
+    return false;
+  }
+
+const char* Coroutine::get_thread_name() const {
+  if (_is_thread_coroutine) {
+    return _t->get_thread_name();
+  } else {
+    return get_vt_name_string();
+  }
+}
+
+const char* Coroutine::get_vt_name_string(char* buf, int buflen) const {
+  const char* name_str;
+  oop vt_obj = threadObj();
+  if (vt_obj != NULL) {
+    oop name = java_lang_Thread::name(vt_obj);
+    assert(name != NULL, "vt must have default name");
+    if (buf == NULL) {
+      name_str = java_lang_String::as_utf8_string(name);
+    } else {
+      name_str = java_lang_String::as_utf8_string(name, buf, buflen);
+    }
+  } else {
+    name_str = "unknown_vt";
+  }
+  assert(name_str != NULL, "unexpected NULL thread name");
+  return name_str;
+}
+
+bool Coroutine::current_pending_monitor_is_from_java() {
+  // pending on monitor, must be _current coroutine
+  if (_state == _onstack) {
+    return true; // not in jni pending
+  } else {
+    assert(_state == _current, "unexpected");
+    return _thread->current_pending_monitor_is_from_java();
+  }
+}
+
+Coroutine* Coroutine::owning_coro_from_monitor_owner(address owner, bool doLock) {
+  assert(doLock ||
+         Threads_lock->owned_by_self() ||
+         SafepointSynchronize::is_at_safepoint(),
+         "must grab Threads_lock or be at safepoint");
+
+  // NULL owner means not locked so we can skip the search
+  if (owner == NULL) return NULL;
+
+  {
+    size_t i = ContContainer::hash_code((Coroutine*)owner);
+    ContBucket* bucket = ContContainer::bucket(i);
+    MutexLockerEx ml(doLock ? bucket->lock() : NULL, Mutex::_no_safepoint_check_flag);
+    if (bucket->head() != NULL) {
+      Coroutine* current = bucket->head();
+      do {
+        if (owner == (address)current) {
+          return current;
+        }
+        current = current->next();
+      } while (current != bucket->head());
+    }
+  }
+
+  // Cannot assert on lack of success here since this function may be
+  // used by code that is trying to report useful problem information
+  // like deadlock detection.
+  if (UseHeavyMonitors) return NULL;
+
+  Coroutine* the_owner = NULL;
+  ExecutionUnitsIterator iter;
+  for (Coroutine* c = iter.next(); c != NULL; c = iter.next()) {
+    if (c->is_lock_owned(owner)) {
+      return c;
+    }
+  }
+  return NULL;
+}
+
 void Coroutine::init_thread_stack(JavaThread* thread) {
   _stack_base = thread->stack_base();
   _stack_size = thread->stack_size();
@@ -665,8 +796,9 @@ static const char* virtual_thread_get_state_name(int state) {
 // 2. Get VT from continuation
 // 3. Print VT name and state
 void Coroutine::print_VT_info(outputStream* st) {
-  if (_continuation == NULL) {
-    guarantee(is_thread_coroutine(), "null continuation oop when print");
+  if (is_thread_coroutine()) {
+    ResourceMark rm;
+    st->print_cr("thread coroutine: %s", _t->get_thread_name());
     return;
   }
   Klass* k = _continuation->klass();

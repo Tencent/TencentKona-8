@@ -616,8 +616,10 @@
   template(data_name,                                  "data")                                                    \
   template(state_name,                                 "state")                                                   \
   template(outer_instance_0,                           "this$0")                                                  \
+  template(cont_name,                                  "cont")                                                    \
   template(reflect_method_signature,                   "Ljava/lang/reflect/Method;")                              \
   template(VT_signature,                               "Ljava/lang/VirtualThread;")                               \
+  template(Cont_signature,                             "Ljava/lang/Continuation;")                                \
                                                                                                                   \
   /* jfr signatures */                                                                                            \
   JFR_TEMPLATES(template)                                                                                         \
@@ -886,6 +888,12 @@
   do_intrinsic(_ghash_processBlocks, com_sun_crypto_provider_ghash, processBlocks_name, ghash_processBlocks_signature, F_S) \
    do_name(processBlocks_name, "processBlocks")                                                                         \
    do_signature(ghash_processBlocks_signature, "([BII[J[J)V")                                                           \
+                                                                                                                        \
+  /* support for sun.nio.cs.UTF_8$Decoder */                                                                            \
+  do_class(UTF8_Decoder,           "sun/nio/cs/UTF_8$Decoder")                                                          \
+  do_intrinsic(_UTF8FastDecode,    UTF8_Decoder,   utf8_fast_decode_name, utf8_fast_decode_signature,               F_S)\
+   do_name(     utf8_fast_decode_name,    "decodeArrayLoopFast")                                                        \
+   do_signature(utf8_fast_decode_signature, "([BII[CI)J")                                                               \
                                                                                                                         \
   /* support for java.util.zip */                                                                                       \
   do_class(java_util_zip_CRC32,           "java/util/zip/CRC32")                                                        \

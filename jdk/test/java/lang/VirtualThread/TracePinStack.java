@@ -54,18 +54,17 @@ public class TracePinStack {
     }
 
     public static void main(String[] args) throws Throwable {
-        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder("-Djdk.tracePinnedThreads=full", TestParkWithMonitor.class.getName());
+        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder("-Djdk.tracePinnedThreads=full", "-XX:-YieldWithMonitor", TestParkWithMonitor.class.getName());
         OutputAnalyzer output = new OutputAnalyzer(pb.start());
         int exitValue = output.getExitValue();
+        System.out.println(output.getOutput());
         if (exitValue != 0) {
             //expecting a zero value
             throw new Error("Expected to get zero exit value");
         }
 
-        System.out.println(output.getOutput());
         output.shouldContain("sun.misc.VirtualThreads.park");
         output.shouldContain("TracePinStack$TestParkWithMonitor$1.run");
-        output.shouldNotContain("java.lang.Continuation.yield");
 
         System.out.println("PASSED");
     }

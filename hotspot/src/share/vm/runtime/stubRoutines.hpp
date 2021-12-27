@@ -220,6 +220,8 @@ class StubRoutines: AllStatic {
   static address _montgomeryMultiply;
   static address _montgomerySquare;
 
+  static address _utf8_to_utf16_decoder;
+
   // These are versions of the java.lang.Math methods which perform
   // the same operations as the intrinsic version.  They are used for
   // constant folding in the compiler to ensure equivalence.  If the
@@ -373,6 +375,8 @@ class StubRoutines: AllStatic {
   static address sha256_implCompressMB() { return _sha256_implCompressMB; }
   static address sha512_implCompress()   { return _sha512_implCompress; }
   static address sha512_implCompressMB() { return _sha512_implCompressMB; }
+
+  static address utf8_to_utf16_decoder() { return _utf8_to_utf16_decoder; }
 
   static address updateBytesCRC32()    { return _updateBytesCRC32; }
   static address crc_table_addr()      { return _crc_table_adr; }

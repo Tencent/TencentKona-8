@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,10 +45,10 @@ public class CompressedClassPointers {
         output.shouldHaveExitValue(0);
     }
 
-    public static void smallHeapTestWith3G() throws Exception {
+    public static void smallHeapTestWith1G() throws Exception {
         ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(
             "-XX:+UnlockDiagnosticVMOptions",
-            "-XX:CompressedClassSpaceSize=3g",
+            "-XX:CompressedClassSpaceSize=1g",
             "-Xmx128m",
             "-Xshare:off",
             "-XX:+PrintCompressedOopsMode",
@@ -130,7 +130,7 @@ public class CompressedClassPointers {
            }
       }
       smallHeapTest();
-      smallHeapTestWith3G();
+      smallHeapTestWith1G();
       largeHeapTest();
       largePagesTest();
       sharingTest();

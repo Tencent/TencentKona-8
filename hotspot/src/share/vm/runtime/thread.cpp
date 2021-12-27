@@ -60,6 +60,7 @@
 #include "runtime/java.hpp"
 #include "runtime/javaCalls.hpp"
 #include "runtime/jniPeriodicChecker.hpp"
+#include "runtime/logAsyncWriter.hpp"
 #include "runtime/memprofiler.hpp"
 #include "runtime/mutexLocker.hpp"
 #include "runtime/objectMonitor.hpp"
@@ -1238,7 +1239,6 @@ NamedThread::NamedThread() : Thread() {
   _processed_thread = NULL;
 
   _gc_id = GCId::undefined_id();
-  reset_pms_data();
 }
 
 NamedThread::~NamedThread() {
@@ -1495,6 +1495,7 @@ void JavaThread::initialize() {
   _pending_async_exception = NULL;
 #if INCLUDE_KONA_FIBER
   _current_coroutine = NULL;
+  _thread_coroutine = NULL;
   if (UseKonaFiber) {
     _coroutine_cache = NULL;
     _coroutine_cache_size = 0;
@@ -3157,6 +3158,27 @@ void JavaThread::print_stack_on(outputStream* st) {
   }
 }
 
+#if INCLUDE_KONA_FIBER
+void JavaThread::print_pin_stack_on(outputStream* st) {
+  if (!has_last_Java_frame()) return;
+
+  RegisterMap reg_map(this);
+  vframe* start_vf = last_java_vframe(&reg_map);
+  int count = 0;
+  for (vframe* f = start_vf; f; f = f->sender() ) {
+    if (count > 1 && f->is_java_frame()) {
+      javaVFrame* jvf = javaVFrame::cast(f);
+      GrowableArray<MonitorInfo*>* locked_monitors = jvf->locked_monitors();
+      if (!jvf->method()->is_native() && locked_monitors->length() == 0) {
+        locked_monitors = NULL;
+      }
+      java_lang_Throwable::print_stack_element(st, jvf->method(), jvf->bci(), true, locked_monitors);
+    }
+    count++;
+  }
+}
+#endif
+
 
 // JVMTI PopFrame support
 void JavaThread::popframe_preserve_args(ByteSize size_in_bytes, void* start) {
@@ -4462,6 +4484,15 @@ JavaThread *Threads::owning_thread_from_monitor_owner(address owner, bool doLock
     MutexLockerEx ml(doLock ? Threads_lock : NULL);
     ALL_JAVA_THREADS(p) {
       // first, see if owner is the address of a Java thread
+#if INCLUDE_KONA_FIBER
+      if (YieldWithMonitor) {
+        if (owner == (address)((JavaThread *)p)->current_coroutine()) {
+          return p;
+        } else {
+          continue;
+        }
+      }
+#endif
       if (owner == (address)p) return p;
     }
   }
@@ -4545,6 +4576,12 @@ void Threads::print_on(outputStream* st, bool print_stacks,
     st->cr();
   }
   CompileBroker::print_compiler_threads_on(st);
+  if (UseAsyncGCLog) {
+    AsyncLogWriter* aio_writer = AsyncLogWriter::instance();
+    if (aio_writer != NULL) {
+      aio_writer->print_on(st);
+    }
+  }
   st->flush();
 }
 
@@ -4590,6 +4627,21 @@ void Threads::print_on_error(outputStream* st, Thread* current, char* buf, int b
     wt->print_on_error(st, buf, buflen);
     st->cr();
   }
+
+  if (UseAsyncGCLog) {
+    AsyncLogWriter* aio_writer = AsyncLogWriter::instance();
+    if (aio_writer != NULL) {
+      bool is_current = (current == aio_writer);
+      found_current = found_current || is_current;
+      st->print("%s", is_current ? "=>" : "  ");
+
+      st->print(PTR_FORMAT, aio_writer);
+      st->print(" ");
+      aio_writer->print_on_error(st, buf, buflen);
+      st->cr();
+    }
+  }
+
   if (!found_current) {
     st->cr();
     st->print("=>" PTR_FORMAT " (exited) ", current);
@@ -4880,7 +4932,7 @@ void Threads::verify() {
 void JavaThread::initialize_coroutine_support() {
   // no lock in thread initialization
   Coroutine* coro = Coroutine::create_thread_coroutine(this);
-  _current_coroutine = coro;
+  _thread_coroutine = _current_coroutine = coro;
   OrderAccess::release();
 }
 #endif

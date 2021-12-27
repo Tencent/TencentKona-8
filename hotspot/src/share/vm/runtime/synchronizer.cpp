@@ -798,7 +798,7 @@ ObjectSynchronizer::LockOwnership ObjectSynchronizer::query_lock_ownership
   if (mark->has_monitor()) {
     void * owner = mark->monitor()->_owner ;
     if (owner == NULL) return owner_none ;
-    return (owner == self ||
+    return (owner == self->get_cur_exec() ||
             self->is_lock_owned((address)owner)) ? owner_self : owner_other;
   }
 
@@ -808,7 +808,7 @@ ObjectSynchronizer::LockOwnership ObjectSynchronizer::query_lock_ownership
 }
 
 // FIXME: jvmti should call this
-JavaThread* ObjectSynchronizer::get_lock_owner(Handle h_obj, bool doLock) {
+ExecutionType* ObjectSynchronizer::get_lock_owner(Handle h_obj, bool doLock) {
   if (UseBiasedLocking) {
     if (SafepointSynchronize::is_at_safepoint()) {
       BiasedLocking::revoke_at_safepoint(h_obj);
@@ -837,7 +837,7 @@ JavaThread* ObjectSynchronizer::get_lock_owner(Handle h_obj, bool doLock) {
 
   if (owner != NULL) {
     // owning_thread_from_monitor_owner() may also return NULL here
-    return Threads::owning_thread_from_monitor_owner(owner, doLock);
+    return ExecutionUnit::owning_thread_from_monitor_owner(owner, doLock);
   }
 
   // Unlocked case, header in place
@@ -1673,7 +1673,7 @@ private:
 public:
   ReleaseJavaMonitorsClosure(Thread* thread) : THREAD(thread) {}
   void do_monitor(ObjectMonitor* mid) {
-    if (mid->owner() == THREAD) {
+    if (mid->owner() == ((JavaThread *)THREAD)->get_cur_exec()) {
       (void)mid->complete_exit(CHECK);
     }
   }

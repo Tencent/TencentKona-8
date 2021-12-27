@@ -1443,9 +1443,9 @@ class BacktraceBuilder: public StackObj {
       method = mhandle();
     }
 
-    _methods->short_at_put(_index, method->orig_method_idnum());
+    _methods->ushort_at_put(_index, method->orig_method_idnum());
     _bcis->int_at_put(_index, merge_bci_and_version(bci, method->constants()->version()));
-    _cprefs->short_at_put(_index, method->name_index());
+    _cprefs->ushort_at_put(_index, method->name_index());
 
     // We need to save the mirrors in the backtrace to keep the class
     // from being unloaded while we still have this stack trace.
@@ -1518,6 +1518,21 @@ char* java_lang_Throwable::print_stack_element_to_buffer(Handle mirror,
   return buf;
 }
 
+void java_lang_Throwable::print_stack_element_with_monitor(outputStream *st,
+                                                           Handle mirror,
+                                                           int method_id,
+                                                           int version,
+                                                           int bci,
+                                                           int cpref,
+                                                           GrowableArray<MonitorInfo*>* monitors) {
+  char* buf = print_stack_element_to_buffer(mirror, method_id, version, bci, cpref);
+  if (monitors == NULL) {
+    st->print_cr("%s", buf);
+  } else {
+    st->print_cr("%s <== monitors:%d", buf, monitors->length());
+  }
+}
+
 void java_lang_Throwable::print_stack_element(outputStream *st, Handle mirror,
                                               int method_id, int version, int bci, int cpref) {
   ResourceMark rm;
@@ -1525,12 +1540,18 @@ void java_lang_Throwable::print_stack_element(outputStream *st, Handle mirror,
   st->print_cr("%s", buf);
 }
 
-void java_lang_Throwable::print_stack_element(outputStream *st, methodHandle method, int bci) {
+void java_lang_Throwable::print_stack_element(outputStream *st, methodHandle method, int bci,
+                                              bool print_monitor,
+                                              GrowableArray<MonitorInfo*>* monitors) {
   Handle mirror = method->method_holder()->java_mirror();
   int method_id = method->orig_method_idnum();
   int version = method->constants()->version();
   int cpref = method->name_index();
-  print_stack_element(st, mirror, method_id, version, bci, cpref);
+  if (print_monitor) {
+    print_stack_element_with_monitor(st, mirror, method_id, version, bci, cpref, monitors);
+  } else {
+    print_stack_element(st, mirror, method_id, version, bci, cpref);
+  }
 }
 
 const char* java_lang_Throwable::no_stack_trace_message() {
@@ -1562,10 +1583,10 @@ void java_lang_Throwable::print_stack_trace(oop throwable, outputStream* st) {
         Handle mirror(THREAD, mirrors->obj_at(index));
         // NULL mirror means end of stack trace
         if (mirror.is_null()) goto handle_cause;
-        int method = methods->short_at(index);
+        int method = methods->ushort_at(index);
         int version = version_at(bcis->int_at(index));
         int bci = bci_at(bcis->int_at(index));
-        int cpref = cprefs->short_at(index);
+        int cpref = cprefs->ushort_at(index);
         print_stack_element(st, mirror, method, version, bci, cpref);
       }
       result = objArrayHandle(THREAD, objArrayOop(result->obj_at(trace_next_offset)));
@@ -1858,10 +1879,10 @@ oop java_lang_Throwable::get_stack_trace_element(oop throwable, int index, TRAPS
 
   assert(methods != NULL && bcis != NULL && mirrors != NULL, "sanity check");
 
-  int method = methods->short_at(chunk_index);
+  int method = methods->ushort_at(chunk_index);
   int version = version_at(bcis->int_at(chunk_index));
   int bci = bci_at(bcis->int_at(chunk_index));
-  int cpref = cprefs->short_at(chunk_index);
+  int cpref = cprefs->ushort_at(chunk_index);
   Handle mirror(THREAD, mirrors->obj_at(chunk_index));
 
   // Chunk can be partial full
@@ -3343,16 +3364,23 @@ oop java_lang_VTContinuation::VT(oop obj) {
 }
 
 int java_lang_VT::_state_offset = 0;
+int java_lang_VT::_cont_offset = 0;
 void java_lang_VT::compute_offsets() {
   Klass* k = SystemDictionary::VT_klass();
   if (k != NULL) {
     compute_offset(_state_offset, k, vmSymbols::state_name(), vmSymbols::int_signature());
+    compute_offset(_cont_offset, k, vmSymbols::cont_name(), vmSymbols::Cont_signature());
   }
 }
 
 int java_lang_VT::state(oop obj) {
   return obj->int_field(_state_offset);
 }
+
+oop java_lang_VT::Cont(oop obj) {
+  return obj->obj_field(_cont_offset);
+}
+
 #endif
 void java_util_concurrent_locks_AbstractOwnableSynchronizer::initialize(TRAPS) {
   if (_owner_offset != 0) return;

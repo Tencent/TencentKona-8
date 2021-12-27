@@ -3868,7 +3868,7 @@ void TemplateTable::monitorenter()
   __ generate_stack_overflow_check(0);
 
 #if INCLUDE_KONA_FIBER
-  if (UseKonaFiber) {
+  if (!YieldWithMonitor) {
     __ ldrw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
     __ addw(rscratch1, rscratch1, 1);
     __ strw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
@@ -3930,7 +3930,7 @@ void TemplateTable::monitorexit()
   __ push_ptr(r0); // make sure object is on stack (contract with oopMaps)
   __ unlock_object(c_rarg1);
 #if INCLUDE_KONA_FIBER
-  if (UseKonaFiber) {
+  if (!YieldWithMonitor) {
     __ ldrw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
     __ subw(rscratch1, rscratch1, 1);
     __ strw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));

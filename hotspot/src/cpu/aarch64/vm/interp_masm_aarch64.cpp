@@ -545,7 +545,7 @@ void InterpreterMacroAssembler::remove_activation(
   bind(unlock);
   unlock_object(c_rarg1);
 #if INCLUDE_KONA_FIBER
-  if (UseKonaFiber) {
+  if (!YieldWithMonitor) {
     ldrw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
     subw(rscratch1, rscratch1, 1);
     strw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
@@ -594,7 +594,7 @@ void InterpreterMacroAssembler::remove_activation(
       push(state);
       unlock_object(c_rarg1);
 #if INCLUDE_KONA_FIBER
-      if (UseKonaFiber) {
+      if (!YieldWithMonitor) {
         ldrw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));
         subw(rscratch1, rscratch1, 1);
         strw(rscratch1, Address(rthread, in_bytes(Thread::locksAcquired_offset())));

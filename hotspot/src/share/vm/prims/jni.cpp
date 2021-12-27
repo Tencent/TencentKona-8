@@ -1454,7 +1454,7 @@ JNI_ENTRY(jobject, jni_NewObjectA(JNIEnv *env, jclass clazz, jmethodID methodID,
                                env, clazz, (uintptr_t) methodID);
 #endif /* USDT2 */
   jobject obj = NULL;
-  DT_RETURN_MARK(NewObjectA, jobject, (const jobject)obj);
+  DT_RETURN_MARK(NewObjectA, jobject, (const jobject&)obj);
 
   instanceOop i = alloc_object(clazz, CHECK_NULL);
   obj = JNIHandles::make_local(env, i);
@@ -5399,6 +5399,9 @@ static jint attach_current_thread(JavaVM *vm, void **penv, void *_args, bool dae
   thread->record_stack_base_and_size();
 
   thread->initialize_thread_local_storage();
+#if INCLUDE_KONA_FIBER
+  thread->initialize_coroutine_support();
+#endif
 
   if (!os::create_attached_thread(thread)) {
     delete thread;

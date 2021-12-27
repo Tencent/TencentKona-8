@@ -1781,6 +1781,18 @@ Klass* InstanceKlass::compute_enclosing_class_impl(instanceKlassHandle k,
         found = (k() == inner_klass);
         if (found && ooff != 0) {
           ok = i_cp->klass_at(ooff, CHECK_NULL);
+          if (!ok->oop_is_instance()) {
+            // If the outer class is not an instance klass then it cannot have
+            // declared any inner classes.
+            ResourceMark rm(THREAD);
+            Exceptions::fthrow(
+              THREAD_AND_LOCATION,
+              vmSymbols::java_lang_IncompatibleClassChangeError(),
+              "%s and %s disagree on InnerClasses attribute",
+              ok->external_name(),
+              k->external_name());
+            return NULL;
+          }
           outer_klass = instanceKlassHandle(thread, ok);
           *inner_is_member = true;
         }
@@ -3512,6 +3524,25 @@ JVM_ENTRY(void, JVM_SetNativeThreadName(JNIEnv* env, jobject jthread, jstring na
     const char *thread_name = java_lang_String::as_utf8_string(JNIHandles::resolve_non_null(name));
     os::set_native_thread_name(thread_name);
   }
+JVM_END
+
+JVM_ENTRY(jstring, JVM_PrintPinStack(JNIEnv* env, jobject jthread))
+  JVMWrapper("JVM_PrintPinStack");
+#if INCLUDE_KONA_FIBER
+  oop java_thread = JNIHandles::resolve_non_null(jthread);
+  JavaThread* thr = java_lang_Thread::thread(JNIHandles::resolve_non_null(jthread));
+  if (thr != THREAD) {
+    fatal("GetPinStack can only print in its own thread");
+  }
+  ResourceMark rm;
+  HandleMark   hm;
+  stringStream ss;
+  thr->print_pin_stack_on(&ss);
+  Handle jstr = java_lang_String::create_from_str(ss.as_string(), THREAD);
+  return (jstring) JNIHandles::make_local(jstr());
+#else
+  return NULL;
+#endif
 JVM_END
 
 // java.lang.SecurityManager ///////////////////////////////////////////////////////////////////////

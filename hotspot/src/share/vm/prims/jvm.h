@@ -314,6 +314,8 @@ JVM_SetNativeThreadName(JNIEnv *env, jobject jthread, jstring name);
 JNIEXPORT jobjectArray JNICALL
 JVM_DumpThreads(JNIEnv *env, jclass threadClass, jobjectArray threads);
 
+JNIEXPORT jstring JNICALL
+JVM_PrintPinStack(JNIEnv *env, jobject thread);
 /*
  * java.lang.Continuation
  */

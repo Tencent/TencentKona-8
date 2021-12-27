@@ -131,7 +131,7 @@ public class TestMemoryAwareness {
                 "--memory-swap", swapAllocation
             );
 
-	opts.addJavaOpts("-XX:+UseContainerSupport");
+        opts.addJavaOpts("-XX:+UseContainerSupport");
 
         OutputAnalyzer out = DockerTestUtils.dockerRunJava(opts);
             out.shouldHaveExitValue(0)

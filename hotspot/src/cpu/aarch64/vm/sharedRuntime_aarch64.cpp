@@ -3124,10 +3124,14 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
     __ mov(r0, zr);
     __ ret(lr);
     __ bind(pinSlowPath);
-    __ mov(r0, CONT_PIN_MONITOR);
-    __ mov(temp2, CONT_PIN_JNI);
-    __ tstw(temp, temp); // check lower 32 bits for moinitor pin
-    __ csel(r0, temp2, r0, Assembler::EQ);
+    if (YieldWithMonitor) {
+      __ mov(r0, CONT_PIN_JNI);
+    } else {
+      __ mov(r0, CONT_PIN_MONITOR);
+      __ mov(temp2, CONT_PIN_JNI);
+      __ tstw(temp, temp); // check lower 32 bits for moinitor pin
+      __ csel(r0, temp2, r0, Assembler::EQ);
+    }
     __ ret(lr);
   } else {
     if (j_rarg1 != old_coroutine_obj) {

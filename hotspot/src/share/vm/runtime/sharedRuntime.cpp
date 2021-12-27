@@ -1888,7 +1888,9 @@ JRT_END
 
 JRT_BLOCK_ENTRY(void, SharedRuntime::complete_monitor_locking_C2(oopDesc* _obj, BasicLock* lock, JavaThread* thread))
   SharedRuntime::monitor_enter_helper(_obj, lock, thread);
+#if INCLUDE_KONA_FIBER
   thread->inc_locks_acquired();
+#endif
 JRT_END
 
 #ifndef PRODUCT

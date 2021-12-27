@@ -742,6 +742,9 @@ class CommandLineFlags {
   product(bool, UseCRC32Intrinsics, false,                                  \
           "use intrinsics for java.util.zip.CRC32")                         \
                                                                             \
+  product(bool, UseUTF8UTF16Intrinsics, false,                              \
+          "Use intrinsics for UTF8 UTF16 conversion")                       \
+                                                                            \
   develop(bool, TraceCallFixup, false,                                      \
           "Trace all call fixups")                                          \
                                                                             \
@@ -1288,7 +1291,7 @@ class CommandLineFlags {
   product(bool, RestrictContended, true,                                    \
           "Restrict @Contended to trusted classes")                         \
                                                                             \
-  product(bool, UseBiasedLocking, true,                                     \
+  product(bool, UseBiasedLocking, false,                                    \
           "Enable biased locking in JVM")                                   \
                                                                             \
   product(intx, BiasedLockingStartupDelay, 4000,                            \
@@ -2713,6 +2716,12 @@ class CommandLineFlags {
   product(bool, DisplayVMOutputToStdout, false,                             \
           "If DisplayVMOutput is true, display all VM output to stdout")    \
                                                                             \
+  product(bool, ErrorFileToStderr, false,                                   \
+          "If true, error data is printed to stderr instead of a file")     \
+                                                                            \
+  product(bool, ErrorFileToStdout, false,                                   \
+          "If true, error data is printed to stdout instead of a file")     \
+                                                                            \
   product(bool, UseHeavyMonitors, false,                                    \
           "use heavyweight instead of lightweight Java monitors")           \
                                                                             \
@@ -4010,6 +4019,9 @@ class CommandLineFlags {
   product(bool, UseKonaFiber, true,                                         \
           "Enable Kona Fiber")                                              \
                                                                             \
+  product(bool, YieldWithMonitor, true,                                     \
+          "Enable Kona Fiber Yield With Monitor")                           \
+                                                                            \
   product(uintx, DefaultCoroutineStackSize, 4*8*8*K,                        \
         "Default size of the stack that is associated with new coroutines") \
                                                                             \
@@ -4087,6 +4099,15 @@ class CommandLineFlags {
                                                                             \
   JFR_ONLY(product(bool, LogJFR, false,                                     \
           "Enable JFR logging (consider +Verbose)"))                        \
+                                                                            \
+  product(bool, UseAsyncGCLog, false,                                       \
+          "Enable asynchronous GC logging")                                 \
+                                                                            \
+  product(uintx, AsyncLogBufferSize, 2*M,                                   \
+          "Memory budget (in bytes) for the buffer of Asynchronous")        \
+                                                                            \
+  diagnostic(bool, PrintAsyncGCLog, false,                                  \
+          "Print some information of Async GC Log")                         \
 
 /*
  *  Macros for factoring of globals

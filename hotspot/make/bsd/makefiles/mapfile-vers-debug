@@ -210,6 +210,7 @@
                 _JVM_NewMultiArray
                 _JVM_OnExit
                 _JVM_Open
+                _JVM_PrintPinStack
                 _JVM_RaiseSignal
                 _JVM_RawMonitorCreate
                 _JVM_RawMonitorDestroy
