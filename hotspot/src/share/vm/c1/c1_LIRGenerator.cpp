@@ -3234,6 +3234,10 @@ void LIRGenerator::do_Intrinsic(Intrinsic* x) {
     do_update_CRC32(x);
     break;
 
+  case vmIntrinsics::_UTF8FastDecode:
+    do_UTF8_UTF16_decode(x);
+    break;
+
   default: ShouldNotReachHere(); break;
   }
 }

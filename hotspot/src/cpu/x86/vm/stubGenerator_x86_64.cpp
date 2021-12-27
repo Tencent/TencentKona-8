@@ -3809,6 +3809,307 @@ class StubGenerator: public StubCodeGenerator {
   }
 
   /**
+   * Proto:
+   *   static long decodeArrayLoopFast(byte[] sa, int sp, int sl, char[] da, int dp)
+   *
+   * Arguments:
+   *
+   * Inputs:
+   *   c_rarg0   - byte* sa
+   *   c_rarg1   - int sp
+   *   c_rarg2   - int sl
+   *   c_rarg3   - char* da
+   *   c_rarg4   - int dp
+   *
+   * Ouput:
+   *   rax   - updated sp and dp (dp << 32 | sp)
+   */
+#ifndef _WIN64
+  address generate_utf8_to_utf16_decoder() {
+    assert(UseUTF8UTF16Intrinsics, "UseUTF8UTF16Intrinsics is off");
+
+    __ align(CodeEntryAlignment);
+    StubCodeMark mark(this, "StubRoutines", "UTF8FastDecode");
+
+    address start = __ pc();
+    // Unix:  rdi, rsi, rdx, rcx, r8, r9 (c_rarg0, c_rarg1, ...)
+    // rscratch1: r10
+    const Register sa    = c_rarg0;
+    const Register sp    = c_rarg1;
+    const Register sl    = c_rarg2;
+    const Register da    = c_rarg3;
+    const Register dp    = c_rarg4;
+    assert_different_registers(sa, sp, sl, da, dp, rscratch1, rscratch2, rax);
+
+    BLOCK_COMMENT("Entry:");
+    __ enter(); // required for proper stackwalking of RuntimeStub frame
+    // vector loop labels
+    Label vector_restart, vector_fail, copy_vector_loop;
+
+    // short/scalar loop labels
+    Label scalar_start, scalar_done;
+
+    // fail loop labels
+    Label f_scalar_loop_start;
+
+    // vector code
+    const Register back_vector_loop_index    = rax;
+    bool has_vector = UseAVX > 1 || UseSSE42Intrinsics;
+    int vector_len = UseAVX > 1 ? 16 : 8;
+    if (has_vector) {
+      __ movl(rscratch1, sl);
+      __ subl(rscratch1, vector_len);
+      __ cmpl(sp, rscratch1);
+      __ jcc(Assembler::greater, scalar_start);
+      __ movl(rscratch2, 0x00800080);
+      __ movdl(xmm1, rscratch2);
+
+      // diff part
+      if (UseAVX > 1) {
+        __ vpbroadcastd(xmm1, xmm1);
+        __ bind(copy_vector_loop);
+        __ vpmovzxbw(xmm0, Address(sa, sp, Address::times_1, 0));
+        __ vptest(xmm0, xmm1);
+        __ jcc(Assembler::notZero, vector_fail);
+        __ vmovdqu(Address(da, dp, Address::times_2, 0), xmm0);
+      } else {
+        assert(UseSSE42Intrinsics, "must be SSE");
+        __ pshufd(xmm1, xmm1, 0);
+        __ bind(copy_vector_loop);
+        __ pmovzxbw(xmm0, Address(sa, sp, Address::times_1, 0));
+        __ ptest(xmm0, xmm1);
+        __ jcc(Assembler::notZero, vector_fail);
+        __ movdqu(Address(da, dp, Address::times_2, 0), xmm0);
+      }
+      __ addl(sp, vector_len);
+      __ addl(dp, vector_len);
+      __ cmpl(sp, rscratch1);
+      __ jcc(Assembler::lessEqual, copy_vector_loop);
+    }
+
+    // ---------- start of short loop --------
+    {
+      Label scalar_loop_start, two_bytes, three_bytes;
+      __ bind(scalar_start);
+      __ cmpl(sp, sl); // check sp < sl
+      __ jcc(Assembler::greaterEqual, scalar_done);
+      // loop header
+      __ bind(scalar_loop_start);
+      // 1 byte 0xxxxxxx
+      __ movzbl(rscratch1, Address(sa, sp, Address::times_1, 0));
+      __ testb(rscratch1, 0x80);
+      __ jcc(Assembler::notZero, two_bytes);
+      __ movw(Address(da, dp, Address::times_2, 0), rscratch1);
+      __ addl(sp, 1);
+      __ addl(dp, 1);
+      __ cmpl(sp, sl);
+      __ jcc(Assembler::less, scalar_loop_start);
+      __ jmp(scalar_done);
+
+      __ bind(two_bytes);
+      // check b1 bits are 110xxxxx;
+      // (b1 ^ 0xc0) < 0x20
+      __ movl(rscratch2, rscratch1);
+      __ xorl(rscratch2, 0xc0); // rscratch2 keep 5 bits xxxxx
+      __ cmpl(rscratch2, 0x20);
+      __ jcc(Assembler::greaterEqual, three_bytes);
+      // check sl - sp < 2;
+      __ movl(rscratch2, sp);
+      __ addl(rscratch2, 1);
+      __ cmpl(rscratch2, sl);
+      __ jcc(Assembler::greaterEqual, scalar_done); // malformed
+      __ movzbl(rscratch2, Address(sa, sp, Address::times_1, 1));
+      // check (b2 & 0xc0) == 0x80;
+      __ xorl(rscratch2, 0x80);
+      __ cmpl(rscratch2, 0x40);
+      __ jcc(Assembler::greaterEqual, scalar_done); // malformed
+      // assembly UTF16 2 bytes, 11 bits: 110xxxxx 10xxxxxx
+      // (b1 & 0x1f) << 6 | (b2 & 0x3f)
+      __ andl(rscratch1, 0x1f);
+      __ cmpl(rscratch1, 0x2); // (b1 & 0x1e) != 0
+      __ jcc(Assembler::less, scalar_done); // malformed, combined value will be ascii
+      __ shll(rscratch1, 6);
+      __ orl(rscratch1, rscratch2);
+      __ movw(Address(da, dp, Address::times_2, 0), rscratch1);
+      __ addl(sp, 2);
+      __ addl(dp, 1);
+      __ cmpl(sp, sl);
+      __ jcc(Assembler::less, scalar_loop_start);
+      __ jmp(scalar_done);
+
+      __ bind(three_bytes);
+      // (b1 >> 4) == -2 0x1110xxxx 3 bytes, 16 bits: 1110xxxx 10xxxxxx 10xxxxxx
+      // rscratch1 is no longer needed
+      __ xorl(rscratch1, 0xe0);
+      __ cmpl(rscratch1, 0x10);
+      __ jcc(Assembler::greaterEqual, scalar_done); // 4 bytes or malformed
+      // check sl - sp < 3;
+      __ movl(rscratch2, sp);
+      __ addl(rscratch2, 2);
+      __ cmpl(rscratch2, sl);
+      __ jcc(Assembler::greaterEqual, scalar_done); // malformed
+      // b1 == (byte)0xe0 && (b2 & 0xe0) == 0x80); unecessary 3 bytes, 2 bytes is enough
+      // (b2 & 0xc0) != 0x80
+      // (b3 & 0xc0) != 0x80
+      // load b2 and check, combine b2 with b1
+      __ movzbl(rscratch2, Address(sa, sp, Address::times_1, 1));
+      __ xorl(rscratch2, 0x80);
+      __ cmpl(rscratch2, 0x40);
+      __ jcc(Assembler::greaterEqual, scalar_done); // malformed
+      __ shll(rscratch1, 12);
+      __ shll(rscratch2, 6);
+      __ orl(rscratch1, rscratch2);
+      __ cmpl(rscratch1, 0x800); // result is exceed 11 bits?
+      __ jcc(Assembler::less, scalar_done); // malformed
+      // load b3 and combine with b1/b2
+      __ movzbl(rscratch2, Address(sa, sp, Address::times_1, 2));
+      __ xorl(rscratch2, 0x80);
+      __ cmpl(rscratch2, 0x40);
+      __ jcc(Assembler::greaterEqual, scalar_done); // malformed
+      __ andl(rscratch2, 0x3f);
+      __ orl(rscratch1, rscratch2);
+      // result isSurrogate?
+      // ch >= MIN_SURROGATE && ch < (MAX_SURROGATE + 1)
+      // MIN_SURROGATE = '\uD800'
+      // MAX_SURROGATE = '\uDFFF'
+      __ movl(rscratch2, rscratch1);
+      __ subl(rscratch2, 0xd800);
+      __ cmpl(rscratch2, 0xdfff - 0xd800);
+      __ jcc(Assembler::belowEqual, scalar_done); // malformed
+      __ movw(Address(da, dp, Address::times_2, 0), rscratch1);
+      __ addl(sp, 3);
+      __ addl(dp, 1);
+      __ cmpl(sp, sl);
+      __ jcc(Assembler::less, scalar_loop_start);
+    }
+    __ bind(scalar_done);
+
+    // combine sp and dp
+    if (UseAVX > 1) {
+      __ vzeroupper();
+    }
+    __ shlq(dp, 32);
+    __ movq(rax, sp);
+    __ orq(rax, dp);
+    __ leave(); // required for proper stackwalking of RuntimeStub frame
+    __ ret(0);
+
+    // vector fail handling loop
+    // ascii processing: decrease ascii_to_have and check if backing to vector loop
+    // 2/3 bytes handling: reset ascii_to_have
+    if (has_vector) {
+      // restart vector
+      __ bind(vector_restart);
+      __ movl(rscratch1, sl);
+      __ subl(rscratch1, vector_len);
+      __ cmpl(sp, rscratch1);
+      __ jcc(Assembler::lessEqual, copy_vector_loop);
+      __ jmp(scalar_start);
+      
+      // not ascii case
+      __ bind(vector_fail);
+      __ movl(rscratch2, 2);
+      __ movl(back_vector_loop_index, sp);
+      __ addl(back_vector_loop_index, vector_len);
+      
+      Label f_two_bytes, f_three_bytes, extra_ascii_to_have;
+      __ bind(f_scalar_loop_start);
+      // 1 byte 0xxxxxxx
+      __ movzbl(rscratch1, Address(sa, sp, Address::times_1, 0));
+      __ testb(rscratch1, 0x80);
+      __ jcc(Assembler::notZero, f_two_bytes);
+      __ movw(Address(da, dp, Address::times_2, 0), rscratch1);
+      __ addl(sp, 1);
+      __ addl(dp, 1);
+      // extra logic for vector fail check
+      __ subl(rscratch2, 1);
+      __ jcc(Assembler::greater, extra_ascii_to_have);
+      __ cmpl(sp, back_vector_loop_index);
+      __ jcc(Assembler::greaterEqual, vector_restart);
+      __ bind(extra_ascii_to_have);
+      // end logic for vector fail check
+      __ cmpl(sp, sl);
+      __ jcc(Assembler::less, f_scalar_loop_start);
+      __ jmp(scalar_done);
+
+      __ bind(f_two_bytes);
+      // check b1 bits are 110xxxxx;
+      __ movl(rscratch2, rscratch1);
+      __ xorl(rscratch2, 0xc0);
+      __ cmpl(rscratch2, 0x20);
+      __ jcc(Assembler::greaterEqual, f_three_bytes);
+      __ movl(rscratch2, sp);
+      __ addl(rscratch2, 1);
+      __ cmpl(rscratch2, sl);
+      __ jcc(Assembler::greaterEqual, scalar_done); // malformed
+      __ movzbl(rscratch2, Address(sa, sp, Address::times_1, 1));
+      // check (b2 & 0xc0) == 0x80;
+      __ xorl(rscratch2, 0x80);
+      __ cmpl(rscratch2, 0x40);
+      __ jcc(Assembler::greaterEqual, scalar_done); // malformed
+      // assembly UTF16 2 bytes, 11 bits: 110xxxxx 10xxxxxx
+      // (b1 & 0x1f) << 6 | (b2 & 0x3f)
+      __ andl(rscratch1, 0x1f);
+      __ cmpl(rscratch1, 0x2); // (b1 & 0x1e) != 0
+      __ jcc(Assembler::less, scalar_done); // malformed, combined value will be ascii
+      __ shll(rscratch1, 6);
+      __ orl(rscratch1, rscratch2);
+      __ movw(Address(da, dp, Address::times_2, 0), rscratch1);
+      __ addl(sp, 2);
+      __ addl(dp, 1);
+      __ movl(rscratch2, 2);  // reset consecutive ascii count
+      __ cmpl(sp, sl);
+      __ jcc(Assembler::less, f_scalar_loop_start);
+      __ jmp(scalar_done);
+
+      __ bind(f_three_bytes);
+      __ xorl(rscratch1, 0xe0);
+      __ cmpl(rscratch1, 0x10);
+      __ jcc(Assembler::greaterEqual, scalar_done); // 4 bytes or malformed
+      // check sl - sp < 3;
+      __ movl(rscratch2, sp);
+      __ addl(rscratch2, 2);
+      __ cmpl(rscratch2, sl);
+      __ jcc(Assembler::greaterEqual, scalar_done); // malformed
+      __ movzbl(rscratch2, Address(sa, sp, Address::times_1, 1));
+      __ xorl(rscratch2, 0x80);
+      __ cmpl(rscratch2, 0x40);
+      __ jcc(Assembler::greaterEqual, scalar_done); // malformed
+      __ shll(rscratch1, 12);
+      __ shll(rscratch2, 6);
+      __ orl(rscratch1, rscratch2);
+      __ cmpl(rscratch1, 0x800); // result is exceed 11 bits?
+      __ jcc(Assembler::less, scalar_done); // malformed
+      // load b3 and combine with b1/b2
+      __ movzbl(rscratch2, Address(sa, sp, Address::times_1, 2));
+      __ xorl(rscratch2, 0x80);
+      __ cmpl(rscratch2, 0x40);
+      __ jcc(Assembler::greaterEqual, scalar_done); // malformed
+      __ andl(rscratch2, 0x3f);
+      __ orl(rscratch1, rscratch2);
+      __ movl(rscratch2, rscratch1);
+      __ subl(rscratch2, 0xd800);
+      __ cmpl(rscratch2, 0xdfff - 0xd800);
+      __ jcc(Assembler::belowEqual, scalar_done); // malformed
+      __ movw(Address(da, dp, Address::times_2, 0), rscratch1);
+      __ addl(sp, 3);
+      __ addl(dp, 1);
+      __ movl(rscratch2, 2);  // reset consecutive ascii count
+      __ cmpl(sp, sl);
+      __ jcc(Assembler::less, f_scalar_loop_start);
+      __ jmp(scalar_done);
+    }
+    
+    return start;
+  }
+#else
+  address generate_utf8_to_utf16_decoder() {
+    // Unsupported on windows.
+    return nullptr;
+  }
+#endif
+
+  /**
    *  Arguments:
    *
    * Inputs:
@@ -4244,6 +4545,10 @@ class StubGenerator: public StubCodeGenerator {
       StubRoutines::_aescrypt_decryptBlock = generate_aescrypt_decryptBlock();
       StubRoutines::_cipherBlockChaining_encryptAESCrypt = generate_cipherBlockChaining_encryptAESCrypt();
       StubRoutines::_cipherBlockChaining_decryptAESCrypt = generate_cipherBlockChaining_decryptAESCrypt_Parallel();
+    }
+
+    if (UseUTF8UTF16Intrinsics) {
+      StubRoutines::_utf8_to_utf16_decoder = generate_utf8_to_utf16_decoder();
     }
 
     // Generate GHASH intrinsics code

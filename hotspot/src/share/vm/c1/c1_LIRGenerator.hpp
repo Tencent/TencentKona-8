@@ -252,6 +252,8 @@ class LIRGenerator: public InstructionVisitor, public BlockClosure {
   void do_Reference_get(Intrinsic* x);
   void do_update_CRC32(Intrinsic* x);
 
+  void do_UTF8_UTF16_decode(Intrinsic* x);
+
   void do_UnsafePrefetch(UnsafePrefetch* x, bool is_store);
 
   LIR_Opr call_runtime(BasicTypeArray* signature, LIRItemList* args, address entry, ValueType* result_type, CodeEmitInfo* info);

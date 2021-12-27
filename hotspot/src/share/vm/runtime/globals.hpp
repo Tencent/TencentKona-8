@@ -742,6 +742,9 @@ class CommandLineFlags {
   product(bool, UseCRC32Intrinsics, false,                                  \
           "use intrinsics for java.util.zip.CRC32")                         \
                                                                             \
+  product(bool, UseUTF8UTF16Intrinsics, false,                              \
+          "Use intrinsics for UTF8 UTF16 conversion")                       \
+                                                                            \
   develop(bool, TraceCallFixup, false,                                      \
           "Trace all call fixups")                                          \
                                                                             \
@@ -2713,6 +2716,12 @@ class CommandLineFlags {
   product(bool, DisplayVMOutputToStdout, false,                             \
           "If DisplayVMOutput is true, display all VM output to stdout")    \
                                                                             \
+  product(bool, ErrorFileToStderr, false,                                   \
+          "If true, error data is printed to stderr instead of a file")     \
+                                                                            \
+  product(bool, ErrorFileToStdout, false,                                   \
+          "If true, error data is printed to stdout instead of a file")     \
+                                                                            \
   product(bool, UseHeavyMonitors, false,                                    \
           "use heavyweight instead of lightweight Java monitors")           \
                                                                             \
@@ -4087,6 +4096,15 @@ class CommandLineFlags {
                                                                             \
   JFR_ONLY(product(bool, LogJFR, false,                                     \
           "Enable JFR logging (consider +Verbose)"))                        \
+                                                                            \
+  product(bool, UseAsyncGCLog, false,                                       \
+          "Enable asynchronous GC logging")                                 \
+                                                                            \
+  product(uintx, AsyncLogBufferSize, 2*M,                                   \
+          "Memory budget (in bytes) for the buffer of Asynchronous")        \
+                                                                            \
+  diagnostic(bool, PrintAsyncGCLog, false,                                  \
+          "Print some information of Async GC Log")                         \
 
 /*
  *  Macros for factoring of globals
