@@ -73,7 +73,9 @@ public class JfrEvents {
             } finally {
                 executor.shutdown();
                 executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-                Thread.sleep(2000); // give time for after terimate call before recording stop
+                // carrier thread (trigger after termination) might run slower than main thread
+                // give time for carrier thread end events to be recorded
+                Thread.sleep(2000);
                 recording.stop();
             }
 
