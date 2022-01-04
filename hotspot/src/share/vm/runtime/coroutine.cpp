@@ -48,6 +48,60 @@ GrowableArray<address>* ContReservedStack::free_array = NULL;
 ContPreMappedStack* ContReservedStack::current_pre_mapped_stack = NULL;
 uintx ContReservedStack::stack_size = 0;
 int ContReservedStack::free_array_uncommit_index = 0;
+Method* Coroutine::_try_compensate_method = NULL;
+Method* Coroutine::_update_active_count_method = NULL;
+
+JavaThreadState Coroutine::update_thread_state(Thread *Self, JavaThreadState new_jts) {
+  JavaThreadState old_jts = ((JavaThread *)Self)->thread_state();
+  ThreadStateTransition::transition((JavaThread *)Self, old_jts, new_jts);
+
+  return old_jts;
+}
+
+void Coroutine::call_forkjoinpool_method(Thread* Self, Method* target_method, JavaCallArguments* args, JavaValue* result) {
+  JavaThreadState saved_jts = update_thread_state(Self, _thread_in_vm);
+
+  JavaCalls::call(result, methodHandle(target_method), args, (JavaThread *)Self);
+
+  update_thread_state(Self, saved_jts);
+}
+
+bool Coroutine::try_compensate(Thread* Self) {
+  if (!YieldWithMonitor || _try_compensate_method == NULL) {
+    return true;
+  }
+
+  JavaCallArguments args; // No arguments
+  JavaValue result(T_BOOLEAN);
+  call_forkjoinpool_method(Self, _try_compensate_method, &args, &result);
+
+  return result.get_jint();
+}
+
+void Coroutine::update_active_count(Thread* Self) {
+  if (!YieldWithMonitor || _update_active_count_method == NULL) {
+    return;
+  }
+
+  JavaCallArguments args; // No arguments
+  JavaValue result(T_VOID);
+
+  call_forkjoinpool_method(Self, _update_active_count_method, &args, &result);
+}
+
+void Coroutine::init_forkjoinpool_method(Method** init_method, Symbol* method_name, Symbol* signature) {
+  guarantee(*init_method == NULL, "java call method already initialized");
+
+  KlassHandle klass = KlassHandle(SystemDictionary::java_util_concurrent_ForkJoinPool_klass());
+
+  CallInfo callinfo;
+  LinkResolver::resolve_static_call(callinfo, klass, method_name, signature, klass, true, true, Thread::current());
+  methodHandle method = callinfo.selected_method();
+  assert(method.not_null(), "should have thrown exception");
+
+  *init_method = method();
+  guarantee(*init_method != NULL, "java call method not resolveds");
+}
 
 void ContReservedStack::init() {
   _lock = new Mutex(Mutex::leaf, "InitializedStack", false);
@@ -386,6 +440,13 @@ void Coroutine::Initialize() {
     klass, method_name, signature, klass, true);
   _continuation_start = method();
   guarantee(_continuation_start != NULL, "continuation start not resolveds");
+
+  if (YieldWithMonitor) {
+    init_forkjoinpool_method(&_try_compensate_method, 
+      vmSymbols::tryCompensate_name(), vmSymbols::void_boolean_signature());
+    init_forkjoinpool_method(&_update_active_count_method,
+      vmSymbols::updateActiveCount_name(), vmSymbols::void_method_signature());
+  }
 }
 
 void Coroutine::cont_metadata_do(void f(Metadata*)) {
@@ -1012,16 +1073,18 @@ void CONT_RegisterNativeMethods(JNIEnv *env, jclass cls, JavaThread* thread) {
       fatal("UseKonaFiber is off");
     }
     assert(thread->is_Java_thread(), "");
-    ThreadToNativeFromVM trans((JavaThread*)thread);
-    int status = env->RegisterNatives(cls, CONT_methods, sizeof(CONT_methods)/sizeof(JNINativeMethod));
-    guarantee(status == JNI_OK && !env->ExceptionOccurred(), "register java.lang.Continuation natives");
+    {
+      ThreadToNativeFromVM trans((JavaThread*)thread);
+      int status = env->RegisterNatives(cls, CONT_methods, sizeof(CONT_methods)/sizeof(JNINativeMethod));
+      guarantee(status == JNI_OK && !env->ExceptionOccurred(), "register java.lang.Continuation natives");
 #ifdef ASSERT
-    if (FLAG_IS_DEFAULT(VerifyCoroutineStateOnYield)) {
-      FLAG_SET_DEFAULT(VerifyCoroutineStateOnYield, true);
-    }
+      if (FLAG_IS_DEFAULT(VerifyCoroutineStateOnYield)) {
+        FLAG_SET_DEFAULT(VerifyCoroutineStateOnYield, true);
+      }
 #endif
-    initializeForceWrapper(env, cls, thread, switchToIndex);
-    initializeForceWrapper(env, cls, thread, switchToAndTerminateIndex);
+      initializeForceWrapper(env, cls, thread, switchToIndex);
+      initializeForceWrapper(env, cls, thread, switchToAndTerminateIndex);
+    }
     Coroutine::Initialize();
 }
 #endif// INCLUDE_KONA_FIBER

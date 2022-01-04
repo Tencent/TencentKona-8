@@ -279,6 +279,32 @@ class Thread implements Runnable {
     }
     public static native Thread currentThread0();
 
+   /**
+     * Added for ForkJoinPool(see tryCompensate)
+     *
+     * @return  current executing virtual thread
+     */
+    public static Thread getAndClearVT() {
+        Thread vt = Thread.currentThread();
+        if (vt.isVirtual()) {
+            Thread.currentCarrierThread().setVirtualThread(null);
+            return vt;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Added for ForkJoinPool(see tryCompensate)
+     *
+     * @param  vt
+     *         target virtual thread
+     */
+    public static void setVT(Thread vt) {
+        if (vt != null && !Thread.currentThread().isVirtual() && vt.isVirtual()) {
+            Thread.currentCarrierThread().setVirtualThread((VirtualThread)vt);
+        }
+    }
     /**
      * A hint to the scheduler that the current thread is willing to yield
      * its current use of a processor. The scheduler is free to ignore this

@@ -22,20 +22,20 @@
 
 /*
  * @test
- * @run testng VTCompensate
+ * @run testng/othervm -XX:-YieldWithMonitor VTCompensate
  * @summary Basic test for ForkJoinPool to compensate when all threads are pinned.
  */
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.locks.ReentrantLock;
 import static org.testng.Assert.*;
 import org.testng.annotations.Test;
 
 public class VTCompensate {
-    @Test
-    public static void test() throws Exception {
+    public static void pinCompensate(boolean needSleep) throws Exception {
         ExecutorService e = Executors.newWorkStealingPool(1);
         //Executors.newSingleThreadExecutor()
         ThreadFactory tf = Thread.ofVirtual().scheduler(e).name("vt", 0).factory();
@@ -78,6 +78,14 @@ public class VTCompensate {
                 break;
             }
         }
+        if (needSleep) {
+            System.out.println("test compensated thread exit");
+            while (((ForkJoinPool)e).getPoolSize() != 1) {
+                Thread.sleep(1000);
+            }
+        }
+        System.out.println("pool is " + (ForkJoinPool)e);
+
         lock.unlock();
         System.out.println("main release");
         vt0.join();
@@ -87,5 +95,14 @@ public class VTCompensate {
         assertEquals(vt1.getState(),  Thread.State.TERMINATED);
         System.out.println("finish vt1");
         e.shutdown();
+    }
+
+    @Test
+    public static void testPinCompensate() throws Exception {
+        // 1. needSleep is false to ensure compensate when pinned
+        // 2. needSleep is true, compensate thread which is create on pin
+        //    will exit. And a new thread will create when re-submit vt0.
+        pinCompensate(false);
+        pinCompensate(true);
     }
 }

@@ -200,6 +200,7 @@ class SymbolPropertyTable;
   do_klass(continuation_klass,                          java_lang_Continuation,                    Opt                 ) \
   do_klass(VTcontinuation_klass,                        java_lang_VTContinuation,                  Opt                 ) \
   do_klass(VT_klass,                                    java_lang_VT,                              Opt                 ) \
+  do_klass(java_util_concurrent_ForkJoinPool_klass,     java_util_concurrent_ForkJoinPool,         Opt                 ) \
   /*end*/
 
 

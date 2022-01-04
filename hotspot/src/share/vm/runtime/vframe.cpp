@@ -208,7 +208,8 @@ void javaVFrame::print_lock_info_on(outputStream* st, int frame_count) {
 
         markOop mark = NULL;
         const char *lock_state = "locked"; // assume we have the monitor locked
-        if (!found_first_monitor && frame_count == 0) {
+        // YieldWithMonitor added for invoke tryCompensate of vt.
+        if ((!found_first_monitor && frame_count == 0) || YieldWithMonitor) {
           mark = monitor->owner()->mark();
           if (mark->has_monitor() &&
               ( // we have marked ourself as pending on this monitor
