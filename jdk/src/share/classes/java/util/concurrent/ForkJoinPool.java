@@ -1630,7 +1630,8 @@ public class ForkJoinPool extends AbstractExecutorService {
         long c; int sp, i; WorkQueue v; Thread p;
         while ((c = ctl) < 0L) {                       // too few active
             if ((sp = (int)c) == 0) {                  // no idle workers
-                if ((c & ADD_WORKER) != 0L)            // too few workers
+                if ((c & ADD_WORKER) != 0L ||          // too few workers
+                    ((c >> AC_SHIFT) + (config & SMASK)) <= 0) // no active workers(added for vt)
                     tryAddWorker(c);
                 break;
             }
@@ -1810,7 +1811,9 @@ public class ForkJoinPool extends AbstractExecutorService {
                 if (ac <= 0 && ss == (int)c) {        // is last waiter
                     prevctl = (UC_MASK & (c + AC_UNIT)) | (SP_MASK & pred);
                     int t = (short)(c >>> TC_SHIFT);  // shrink excess spares
-                    if (t > 2 && U.compareAndSwapLong(this, CTL, c, prevctl))
+                    // pred != 0 added for vt, means have parked working thread,
+                    // current thread invoke parkNanos if no parked thread.
+                    if (t > 2 && pred != 0 && U.compareAndSwapLong(this, CTL, c, prevctl))
                         return false;                 // else use timed wait
                     parkTime = IDLE_TIMEOUT * ((t >= 0) ? 1 : 1 - t);
                     deadline = System.nanoTime() + parkTime - TIMEOUT_SLOP;
@@ -2021,6 +2024,47 @@ public class ForkJoinPool extends AbstractExecutorService {
             }
         }
         return canBlock;
+    }
+
+    /**
+     * Release or create a carrier thread, this function
+     * is called from native now.
+     *
+     *  @return true means have extra runnable worker thread
+     */
+    private static final boolean tryCompensate() {
+        ForkJoinPool p;
+        ForkJoinWorkerThread wt;
+        Thread t = Thread.currentCarrierThread();
+        boolean canBlock = true;
+        Thread vt = null;
+        if (Thread.currentThread().isVirtual() &&
+            (t instanceof ForkJoinWorkerThread) &&
+            (p = (wt = (ForkJoinWorkerThread)t).pool) != null) {
+            try {
+                vt = Thread.getAndClearVT();
+                canBlock = p.tryCompensate(wt.workQueue);
+            } finally {
+                Thread.setVT(vt);
+            }
+        }
+
+        return canBlock;
+    }
+
+    /**
+     * Update active count, this function is called from native.
+     */ 
+    private static final void updateActiveCount() {
+        ForkJoinPool p;
+        Thread t = Thread.currentCarrierThread();
+        if (!Thread.currentThread().isVirtual() ||
+            !(t instanceof ForkJoinWorkerThread) ||
+            (p = ((ForkJoinWorkerThread)t).pool) == null) {
+            return;
+        }
+
+        U.getAndAddLong(p, CTL, AC_UNIT);
     }
 
     /**
