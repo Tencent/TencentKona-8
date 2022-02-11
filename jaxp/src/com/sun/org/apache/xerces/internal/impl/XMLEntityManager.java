@@ -80,7 +80,7 @@ import javax.xml.stream.XMLInputFactory;
  * @author K.Venugopal SUN Microsystems
  * @author Neeraj Bajaj SUN Microsystems
  * @author Sunitha Reddy SUN Microsystems
- * @version $Id: XMLEntityManager.java,v 1.17 2010-11-01 04:39:41 joehw Exp $
+ * @LastModified: Aug 2021
  */
 public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
 
@@ -1006,12 +1006,14 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
         }
 
         // do default resolution
-        //this works for both stax & Xerces, if staxInputSource is null, it means parser need to revert to default resolution
+        //this works for both stax & Xerces, if staxInputSource is null,
+        //it means parser need to revert to default resolution
         if (staxInputSource == null) {
             // REVISIT: when systemId is null, I think we should return null.
             //          is this the right solution? -SG
             //if (systemId != null)
-            staxInputSource = new StaxXMLInputSource(new XMLInputSource(publicId, literalSystemId, baseSystemId));
+            staxInputSource = new StaxXMLInputSource(
+                    new XMLInputSource(publicId, literalSystemId, baseSystemId), false);
         }else if(staxInputSource.hasXMLStreamOrXMLEventReader()){
             //Waiting for the clarification from EG. - nb
         }
@@ -1140,7 +1142,7 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
             externalEntity = (Entity.ExternalEntity)entity;
             extLitSysId = (externalEntity.entityLocation != null ? externalEntity.entityLocation.getLiteralSystemId() : null);
             extBaseSysId = (externalEntity.entityLocation != null ? externalEntity.entityLocation.getBaseSystemId() : null);
-            expandedSystemId = expandSystemId(extLitSysId, extBaseSysId);
+            expandedSystemId = expandSystemId(extLitSysId, extBaseSysId, fStrictURI);
             boolean unparsed = entity.isUnparsed();
             boolean parameter = entityName.startsWith("%");
             boolean general = !parameter;
@@ -1217,15 +1219,13 @@ public class XMLEntityManager implements XMLComponent, XMLEntityResolver {
              */
             xmlInputSource = staxInputSource.getXMLInputSource() ;
             if (!fISCreatedByResolver) {
-                //let the not-LoadExternalDTD or not-SupportDTD process to handle the situation
-                if (fLoadExternalDTD) {
-                    String accessError = SecuritySupport.checkAccess(expandedSystemId, fAccessExternalDTD, Constants.ACCESS_EXTERNAL_ALL);
-                    if (accessError != null) {
-                        fErrorReporter.reportError(this.getEntityScanner(),XMLMessageFormatter.XML_DOMAIN,
-                                "AccessExternalEntity",
-                                new Object[] { SecuritySupport.sanitizePath(expandedSystemId), accessError },
-                                XMLErrorReporter.SEVERITY_FATAL_ERROR);
-                    }
+                String accessError = SecuritySupport.checkAccess(expandedSystemId,
+                        fAccessExternalDTD, Constants.ACCESS_EXTERNAL_ALL);
+                if (accessError != null) {
+                    fErrorReporter.reportError(this.getEntityScanner(),XMLMessageFormatter.XML_DOMAIN,
+                            "AccessExternalEntity",
+                            new Object[] { SecuritySupport.sanitizePath(expandedSystemId), accessError },
+                            XMLErrorReporter.SEVERITY_FATAL_ERROR);
                 }
             }
         }

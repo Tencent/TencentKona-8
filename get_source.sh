@@ -96,8 +96,5 @@ fi
 # Get clones of all absent nested repositories (harmless if already exist)
 sh ./common/bin/hgforest.sh clone "$@" || exit $?
 
-# Pull all existing repositories from the latest ga tag
-sh ./common/bin/hgforest.sh pull -r jdk8u312-ga
-
-# Update all existing repositories
-sh ./common/bin/hgforest.sh update
+# Update all existing repositories to the latest sources
+sh ./common/bin/hgforest.sh pull -u
