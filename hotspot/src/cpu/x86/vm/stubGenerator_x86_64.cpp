@@ -3808,6 +3808,337 @@ class StubGenerator: public StubCodeGenerator {
     return start;
   }
 
+#ifndef _WIN64
+  void generate_utf16_encoder_scalar(Label& begin, Label* begin_nocheck, Label& done, Label* vector_restart) {
+    const Register sa     = c_rarg0;
+    const Register sp     = c_rarg1;
+    const Register sl     = c_rarg2;
+    const Register da     = c_rarg3;
+    const Register dp     = c_rarg4;
+    const Register dl     = c_rarg5;
+    const Register vindex = rax;
+
+    int vector_len_half = (UseAVX >= 2) ? 16 : 8;
+    bool may_be_vector = (vector_restart != NULL);
+    const Register cur_char = rscratch1;
+    Label two_bytes, three_bytes, check_surrogate;
+    Label scalar_loop;
+
+    __ bind(begin);
+    if (!may_be_vector) {
+      // fast path for ASCII chars, codes are:
+      // while (dp < dlASCII && sa[sp] < '\u0080')
+      //     da[dp++] = (byte)sa[sp++];
+      const Register remaining_chars = rscratch2; // should be same as that used in generate_utf16_to_utf8_encoder
+      const Register dest_buffer_len = rscratch1;
+      const Register src_limit_pos   = rscratch1;
+      const Register dst_limit_pos   = rax;
+      const Register cur_char        = sp;
+      Label cont, fix_pos, copy_scalar;
+
+      __ mov(remaining_chars, sl);
+      __ subl(remaining_chars, sp);
+      __ jcc(Assembler::lessEqual, done);
+      __ bind(*begin_nocheck);
+      __ mov(dest_buffer_len, dl);
+      __ subl(dest_buffer_len, dp);
+      __ cmpl(remaining_chars, dest_buffer_len);
+      __ jccb(Assembler::greater, cont);
+
+      __ addl(dp, remaining_chars);
+      __ negq(remaining_chars);
+      __ leaq(src_limit_pos, Address(sa, sl, Address::times_2));
+      __ leaq(dst_limit_pos, Address(da, dp, Address::times_1));
+
+      __ bind(copy_scalar);
+      __ movzwl(cur_char, Address(src_limit_pos, remaining_chars, Address::times_2, 0));
+      __ cmpl(cur_char, 0x80);
+      __ jccb(Assembler::greaterEqual, fix_pos);
+      __ movb(Address(dst_limit_pos, remaining_chars, Address::times_1, 0), cur_char);
+      __ incq(remaining_chars);
+      __ jccb(Assembler::less, copy_scalar);
+
+      __ bind(fix_pos);
+      __ movl(sp, sl); // sp is destroyed by cur_char.
+      __ addl(sp, remaining_chars);
+      __ addl(dp, remaining_chars);
+
+      __ bind(cont);
+    } else {
+      // initialization for back to vector checking.
+      __ movl(vindex, sp);
+      __ addl(vindex, vector_len_half);
+      __ movl(rscratch2, 2);
+    }
+
+    __ bind(scalar_loop);
+    __ cmpl(sp, sl);
+    __ jcc(Assembler::greaterEqual, done);
+    __ movzwl(cur_char, Address(sa, sp, Address::times_2, 0));
+    // is 1 bytes?
+    __ cmpl(cur_char, 0x80);
+    __ jccb(Assembler::greaterEqual, two_bytes);
+    __ cmpl(dp, dl);
+    __ jcc(Assembler::greaterEqual, done);
+    // da[dp++] = (byte)c;
+    __ movb(Address(da, dp, Address::times_1, 0), cur_char);
+    __ incl(dp);
+    __ incl(sp);
+    if (may_be_vector) {
+      __ decl(rscratch2);
+      __ jccb(Assembler::greater, scalar_loop);
+      __ cmpl(sp, vindex);
+      __ jcc(Assembler::greaterEqual, *vector_restart);
+    }
+    __ jmp(scalar_loop);
+    // is 2 bytes?
+    __ bind(two_bytes);
+    __ cmpl(cur_char, 0x800);
+    __ jccb(Assembler::greaterEqual, check_surrogate);
+    __ movl(rscratch2, dp);
+    __ addl(rscratch2, 2);
+    __ cmpl(rscratch2, dl);
+    __ jcc(Assembler::greater, done);
+    // da[dp++] = (byte)(0xc0 | (c >> 6));
+    // da[dp++] = (byte)(0x80 | (c & 0x3f));
+    __ movl(rscratch2, cur_char);
+    __ shrl(cur_char, 6);
+    __ andl(rscratch2, 0x3F);
+    __ orl(cur_char, 0xC0);
+    __ orl(rscratch2, 0x80);
+    __ movb(Address(da, dp, Address::times_1, 0), cur_char);
+    __ movb(Address(da, dp, Address::times_1, 1), rscratch2);
+    __ addl(dp, 2);
+    __ incl(sp);
+    if (may_be_vector) {
+      __ movl(rscratch2, 2);
+    }
+    __ jmpb(scalar_loop);
+    // is surrogate ?
+    __ bind(check_surrogate);
+    __ movl(rscratch2, cur_char);
+    __ subl(rscratch2, 0xD800);
+    __ cmpl(rscratch2, 0xDFFF - 0xD800);
+    __ jcc(Assembler::belowEqual, done);
+    // is 3 bytes
+    __ bind(three_bytes);
+    __ movl(rscratch2, dp);
+    __ addl(rscratch2, 3);
+    __ cmpl(rscratch2, dl);
+    __ jcc(Assembler::greater, done);
+    // da[dp++] = (byte)(0xe0 | ((c >> 12)));
+    // da[dp++] = (byte)(0x80 | ((c >>  6) & 0x3f));
+    // da[dp++] = (byte)(0x80 | (c & 0x3f));
+    __ movl(rscratch2, cur_char);
+    __ shrl(rscratch2, 12);
+    __ orl(rscratch2, 0xE0);
+    __ movb(Address(da, dp, Address::times_1, 0), rscratch2);
+    __ mov(rscratch2, cur_char);
+    __ shrl(cur_char, 6);
+    __ andl(rscratch2, 0x3F);
+    __ andl(cur_char, 0x3F);
+    __ orl(rscratch2, 0x80);
+    __ orl(cur_char, 0x80);
+    __ movb(Address(da, dp, Address::times_1, 1), cur_char);
+    __ movb(Address(da, dp, Address::times_1, 2), rscratch2);
+    __ addl(dp, 3);
+    __ incl(sp);
+    if (may_be_vector) {
+      __ movl(rscratch2, 2);
+    }
+    __ jmp(scalar_loop);
+  }
+
+/**
+ * Proto:
+ *   static long encodeArrayLoopFast(byte[] sa, int sp, int sl, char[] da, int dp)
+ *
+ * Arguments:
+ *
+ * Inputs:
+ *   c_rarg0   - byte* sa
+ *   c_rarg1   - int sp
+ *   c_rarg2   - int sl
+ *   c_rarg3   - char* da
+ *   c_rarg4   - int dp
+ *   c_rarg5   - int dl
+ *
+ * Ouput:
+ *   rax   - updated sp and dp (dp << 32 | sp)
+ */
+  address generate_utf16_to_utf8_encoder() {
+    assert(UseUTF8UTF16Intrinsics, "UseUTF8UTF16Intrinsics is off");
+
+    __ align(CodeEntryAlignment);
+    StubCodeMark mark(this, "StubRoutines", "UTF8FastEncode");
+
+    address start = __ pc();
+    // Unix:  rdi, rsi, rdx, rcx, r8, r9 (c_rarg0, c_rarg1, ...)
+    // rscratch1: r10
+    // rscratch2: r11
+    const Register sa      = c_rarg0;
+    const Register sp      = c_rarg1;
+    const Register sl      = c_rarg2;
+    const Register da      = c_rarg3;
+    const Register dp      = c_rarg4;
+    const Register dl      = c_rarg5;
+    const Register mask    = rax;
+    const Register src_len = rscratch2;  // should be same as that used in generate_utf16_encoder_scarlar
+    const Register dst_len = rax; // life cycle don't overlap with mask.
+    assert_different_registers(sa, sp, sl, da, dp, dl, rscratch1, rscratch2, rax);
+
+    BLOCK_COMMENT("Entry:");
+    __ enter(); // required for proper stackwalking of RuntimeStub frame
+
+    Label vector_start, do_vector, vector_fail;
+    Label scalar_start, scalar_start_nocheck, done;
+
+    // vector code
+    bool has_vector = (UseSSE >= 2);
+    bool has_AVX2 = (UseAVX >= 2);
+    int vector_len = has_AVX2 ? 32 : 16;
+    int vector_len_half = has_AVX2 ? 16 : 8;
+
+    if (has_vector) {
+      __ bind(vector_start);
+      __ movl(src_len, sl);
+      __ subl(src_len, sp);
+      __ jcc(Assembler::lessEqual, done);
+      __ cmpl(src_len, vector_len_half);
+      __ jcc(Assembler::greaterEqual, do_vector);
+      // skip duplicate checking in scalar processing.
+      __ jmp(scalar_start_nocheck);
+    }
+
+    // put scalar processing here to improve performance of char array those can't be vectorized.
+    generate_utf16_encoder_scalar(scalar_start, &scalar_start_nocheck, done, NULL);
+
+    if (has_vector) {
+      Label has_vector_half, copy_vector_loop;
+      const Register src_loop_limit = rscratch1;
+      const XMMRegister ascii_mask  = xmm0;
+      const XMMRegister src_low     = xmm1;
+      const XMMRegister src_high    = xmm2;
+      const XMMRegister temp_xmm    = xmm3;
+
+      __ bind(do_vector);
+      // skip cases those (dl - dp) > (sl - sp).
+      __ movl(dst_len, dl);
+      __ subl(dst_len, dp);
+      __ cmpl(src_len, dst_len);
+      __ jcc(Assembler::greater, done);
+
+      // all ASCII in range [0x00, 0x7F]. Preparing ASCII mask.
+      __ movl(mask, 0xFF80FF80);
+      __ movdl(ascii_mask, mask);
+      if (has_AVX2) {
+        __ vpbroadcastd(ascii_mask, ascii_mask);
+      } else {
+        __ pshufd(ascii_mask, ascii_mask, 0);
+      }
+
+      __ movl(src_loop_limit, sl);
+      __ subl(src_loop_limit, vector_len);
+      __ cmpl(sp, src_loop_limit);
+      __ jccb(Assembler::greater, has_vector_half);
+
+      if (has_AVX2) {
+        __ bind(copy_vector_loop);
+        // 32 chars once.
+        __ vmovdqu(src_low, Address(sa, sp, Address::times_2, 0));
+        __ vmovdqu(src_high, Address(sa, sp, Address::times_2, vector_len_half * 2));
+        __ vpor(temp_xmm, src_low, src_high, true);
+        __ vptest(temp_xmm, ascii_mask);
+        __ jcc(Assembler::notZero, vector_fail);
+        __ vpackuswb(src_low, src_low, src_high, true);
+        // the result of vpackuswb is src1_low + src2_low + src1_high + src2_high, need to be permuted.
+        __ vpermq(src_low, src_low, 0xD8, true);
+        __ vmovdqu(Address(da, dp, Address::times_1, 0), src_low);
+
+        __ addl(sp, vector_len);
+        __ addl(dp, vector_len);
+        __ cmpl(sp, src_loop_limit);
+        __ jccb(Assembler::lessEqual, copy_vector_loop);
+
+        __ bind(has_vector_half);
+        __ movl(src_loop_limit, sl);
+        __ subl(src_loop_limit, vector_len_half);
+        __ cmpl(sp, src_loop_limit);
+        __ jcc(Assembler::greater, scalar_start);
+
+        // 16 chars once.
+        __ vmovdqu(src_low, Address(sa, sp, Address::times_2, 0));
+        __ vptest(src_low, ascii_mask);
+        __ jcc(Assembler::notZero, scalar_start);
+        __ vpackuswb(src_low, src_low, src_high, true);
+        __ vpermq(src_low, src_low, 0xD8, true);
+        __ movdqu(Address(da, dp, Address::times_1, 0), src_low);
+        __ addl(sp, vector_len_half);
+        __ addl(dp, vector_len_half);
+        // scalar start
+      } else {
+        __ bind(copy_vector_loop);
+        // 16 chars once.
+        __ movdqu(src_low, Address(sa, sp, Address::times_2, 0));
+        __ movdqu(src_high, Address(sa, sp, Address::times_2, vector_len_half * 2));
+        // por only has 2 operands, a extra movdqa is needed. 
+        // The performance of por + ptest is a bit less than the follow implementation.
+        __ ptest(src_low, ascii_mask);
+        __ jcc(Assembler::notZero, vector_fail);
+        __ ptest(src_high, ascii_mask);
+        __ jcc(Assembler::notZero, vector_fail);
+        __ packuswb(src_low, src_high);
+        __ movdqu(Address(da, dp, Address::times_1, 0), src_low);
+
+        __ addl(sp, vector_len);
+        __ addl(dp, vector_len);
+        __ cmpl(sp, src_loop_limit);
+        __ jccb(Assembler::lessEqual, copy_vector_loop);
+
+        __ bind(has_vector_half);
+        __ movl(src_loop_limit, sl);
+        __ subl(src_loop_limit, vector_len_half);
+        __ cmpl(sp, src_loop_limit);
+        __ jcc(Assembler::greater, scalar_start);
+
+        // 8 chars once.
+        __ movdqu(src_low, Address(sa, sp, Address::times_2, 0));
+        __ ptest(src_low, ascii_mask);
+        __ jcc(Assembler::notZero, scalar_start);
+        __ packuswb(src_low, src_high);
+        __ movq(Address(da, dp, Address::times_1, 0), src_low);
+        __ addl(sp, vector_len_half);
+        __ addl(dp, vector_len_half);
+        // scalar start
+      }
+      __ jmp(scalar_start);
+    }
+
+    __ bind(done);
+    if (has_AVX2) {
+      __ vzeroupper();
+    }
+    // combine sp and dp
+    __ shlq(dp, 32);
+    __ movq(rax, sp);
+    __ orq(rax, dp);
+    __ leave(); // required for proper stackwalking of RuntimeStub frame
+    __ ret(0);
+
+    if (has_vector) {
+      // processing chars and may go back to vector codes.
+      generate_utf16_encoder_scalar(vector_fail, NULL, done, &vector_start);
+    }
+
+    return start;
+  }
+#else
+  address generate_utf16_to_utf8_encoder() {
+    // Unsupported on windows.
+    return nullptr;
+  }
+#endif
+
   /**
    * Proto:
    *   static long decodeArrayLoopFast(byte[] sa, int sp, int sl, char[] da, int dp)
@@ -4549,6 +4880,7 @@ class StubGenerator: public StubCodeGenerator {
 
     if (UseUTF8UTF16Intrinsics) {
       StubRoutines::_utf8_to_utf16_decoder = generate_utf8_to_utf16_decoder();
+      StubRoutines::_utf16_to_utf8_encoder = generate_utf16_to_utf8_encoder();
     }
 
     // Generate GHASH intrinsics code

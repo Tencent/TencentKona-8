@@ -881,6 +881,12 @@
    do_name(     utf8_fast_decode_name,    "decodeArrayLoopFast")                                                        \
    do_signature(utf8_fast_decode_signature, "([BII[CI)J")                                                               \
                                                                                                                         \
+  /* support for sun.nio.cs.UTF_8$Decoder */                                                                            \
+  do_class(UTF8_Encoder,           "sun/nio/cs/UTF_8$Encoder")                                                          \
+  do_intrinsic(_UTF8FastEncode,    UTF8_Encoder,   utf8_fast_encode_name, utf8_fast_encode_signature,               F_S)\
+   do_name(     utf8_fast_encode_name,    "encodeArrayLoopFast")                                                        \
+   do_signature(utf8_fast_encode_signature, "([CII[BII)J")                                                              \
+                                                                                                                        \
   /* support for java.util.zip */                                                                                       \
   do_class(java_util_zip_CRC32,           "java/util/zip/CRC32")                                                        \
   do_intrinsic(_updateCRC32,               java_util_zip_CRC32,   update_name, int2_int_signature,               F_SN)  \
