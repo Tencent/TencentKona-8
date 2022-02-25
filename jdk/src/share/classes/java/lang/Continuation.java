@@ -287,16 +287,22 @@ public class Continuation {
         }*/
         Continuation target = cont.parent;
         if (target == null) {
+            // only for continuation launched with "yieldTo" instead of "run"
             Thread t = currentCarrierThread();
             target = t.getThreadContinuation();
             cont.unmount();
             t.setContinuation(null);
         }
-        boolean result = cont.yield0(target);
-        if (result == false && cont.parent == null) {
-            Thread t = currentCarrierThread();
-            cont.unmount();
-            t.setContinuation(cont);
+        boolean result = false;
+        try {
+            result = cont.yield0(target);
+        } finally {
+            // only for continuation launched with "yieldTo" instead of "run"
+            if (result == false && cont.parent == null) {
+                Thread t = currentCarrierThread();
+                cont.mount();
+                t.setContinuation(cont);
+            }
         }
         return result;
     }
@@ -309,6 +315,8 @@ public class Continuation {
      * @throws IllegalStateException if current continuation is started by Run
      *
      * Yield from current continuation to target.
+     * If current continuation is started with run (has parent), it must yield
+     * back to its parent.
      */
     public static boolean yieldTo(Continuation target) {
         Continuation current = currentCarrierThread().getContinuation();
@@ -326,20 +334,25 @@ public class Continuation {
         if (target.data == 0) {
             target.data = target.createContinuation(target, 0);
         }
-        if (current.yield0(target) == false) {
-            // restore
-            target.unmount();
-            if (current != t.getThreadContinuation()) {
-                current.mount();
-                t.setContinuation(current);
-            } else {
-                t.setContinuation(null);
+        boolean result = false;
+        try {
+            result = current.yield0(target);
+        } finally {
+            // exception might happen in onPin handling
+            // resotre mount and continuation status
+            if (result == false) {
+                target.unmount();
+                if (current != t.getThreadContinuation()) {
+                    current.mount();
+                    t.setContinuation(current);
+                } else {
+                    t.setContinuation(null);
+                }
             }
-            return false;
         }
-        return true;
+        return result;
     }
- 
+
     private void onPinned0(int reason) {
         if (TRACE) System.out.println("PINNED " + this + " reason: " + reason);
         onPinned(pinnedReason(reason));
