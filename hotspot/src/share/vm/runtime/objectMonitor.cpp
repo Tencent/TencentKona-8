@@ -1604,10 +1604,10 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
          } else {
             ret = Self->_ParkEvent->park (millis) ;
          }
-#if INCLUDE_KONA_FIBER
-         Coroutine::update_active_count(Self);
-#endif
        }
+#if INCLUDE_KONA_FIBER
+       Coroutine::update_active_count(Self);
+#endif
        // were we externally suspended while we were waiting?
        if (ExitSuspendEquivalent (jt)) {
           // TODO-FIXME: add -- if succ == Self then succ = null.
