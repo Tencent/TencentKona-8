@@ -58,7 +58,7 @@ const int CONT_PIN_JNI                   = 2;
 const int CONT_PIN_MONITOR               = 3;
 
 /* Mapping numbers of stacks and set its permission as PROT_READ | PROT_WRITE */
-class ContPreMappedStack : public CHeapObj<mtThread> {
+class ContPreMappedStack : public CHeapObj<mtCoroutine> {
 private:
   ReservedSpace _reserved_space;
   VirtualSpace _virtual_space;
@@ -121,7 +121,7 @@ public:
   static void insert_stack(address node);
 };
 
-class ContBucket : public CHeapObj<mtThread> {
+class ContBucket : public CHeapObj<mtCoroutine> {
 private:
   Mutex      _lock;
   Coroutine* _head;
@@ -202,7 +202,7 @@ public:
   virtual void frames_do(frame* fr, RegisterMap* map) = 0;
 };
 
-class CoroutineVerify: public CHeapObj<mtThread> {
+class CoroutineVerify: public CHeapObj<mtCoroutine> {
 public:
   // for verify check
   JNIHandleBlock* saved_active_handles;
@@ -211,7 +211,7 @@ public:
   char* saved_resource_area_hwm;
 };
 
-class Coroutine: public CHeapObj<mtThread>, public DoublyLinkedList<Coroutine> {
+class Coroutine: public CHeapObj<mtCoroutine>, public DoublyLinkedList<Coroutine> {
 public:
   enum CoroutineState {
     _onstack    = 0x00000001,
