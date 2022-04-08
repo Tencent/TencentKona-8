@@ -229,6 +229,9 @@ private:
   // NOTE: See BlockOffsetArrayUseUnallocatedBlock flag.
   HeapWord* _unallocated_block;
 
+  // Indicates if an object can span into this G1BlockOffsetArrayContigSpace
+  debug_only(bool _object_can_span;)
+
   // Sets the entries
   // corresponding to the cards starting at "start" and ending at "end"
   // to point back to the card before "start": the interval [start, end)
@@ -368,6 +371,7 @@ class G1BlockOffsetArrayContigSpace: public G1BlockOffsetArray {
   HeapWord* block_start_unsafe_const(const void* addr) const;
 
   void set_for_starts_humongous(HeapWord* new_top);
+  void set_object_can_span(bool can_span) NOT_DEBUG_RETURN;
 
   virtual void print_on(outputStream* out) PRODUCT_RETURN;
 };

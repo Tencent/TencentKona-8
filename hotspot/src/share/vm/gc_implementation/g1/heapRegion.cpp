@@ -262,6 +262,7 @@ void HeapRegion::set_continuesHumongous(HeapRegion* first_hr) {
   report_region_type_change(G1HeapRegionTraceType::ContinuesHumongous);
   _type.set_continues_humongous();
   _humongous_start_region = first_hr;
+  _offsets.set_object_can_span(true);
 }
 
 void HeapRegion::clear_humongous() {
@@ -281,6 +282,7 @@ void HeapRegion::clear_humongous() {
 
   assert(capacity() == HeapRegion::GrainBytes, "pre-condition");
   _humongous_start_region = NULL;
+  _offsets.set_object_can_span(false);
 }
 
 bool HeapRegion::claimHeapRegion(jint claimValue) {
