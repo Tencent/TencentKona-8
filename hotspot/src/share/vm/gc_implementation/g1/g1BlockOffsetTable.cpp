@@ -75,6 +75,7 @@ G1BlockOffsetArray::G1BlockOffsetArray(G1BlockOffsetSharedArray* array,
   _unallocated_block(_bottom),
   _array(array), _gsp(NULL) {
   assert(_bottom <= _end, "arguments out of order");
+  debug_only(_object_can_span = false;)
 }
 
 void G1BlockOffsetArray::set_space(G1OffsetTableContigSpace* sp) {
@@ -445,6 +446,12 @@ G1BlockOffsetArrayContigSpace(G1BlockOffsetSharedArray* array,
   _next_offset_threshold = NULL;
   _next_offset_index = 0;
 }
+
+#ifdef ASSERT
+void G1BlockOffsetArrayContigSpace::set_object_can_span(bool can_span) {
+  _object_can_span = can_span;
+}
+#endif
 
 HeapWord* G1BlockOffsetArrayContigSpace::initialize_threshold_raw() {
   _next_offset_index = _array->index_for_raw(_bottom);

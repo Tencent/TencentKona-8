@@ -134,7 +134,9 @@ inline HeapWord*
 G1BlockOffsetArray::block_at_or_preceding(const void* addr,
                                           bool has_max_index,
                                           size_t max_index) const {
-  assert(_array->offset_array(0) == 0, "objects can't cross covered areas");
+  assert(_object_can_span || _array->offset_array(_array->index_for(_gsp->bottom())) == 0,
+         err_msg("Object crossed region boundary, found offset %u instead of 0",
+         (uint) _array->offset_array(_array->index_for(_gsp->bottom()))));
   size_t index = _array->index_for(addr);
   // We must make sure that the offset table entry we use is valid.  If
   // "addr" is past the end, start at the last known one and go forward.
