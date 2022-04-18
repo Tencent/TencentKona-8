@@ -75,7 +75,7 @@ bool Coroutine::try_compensate(Thread* Self) {
   JavaValue result(T_BOOLEAN);
   call_forkjoinpool_method(Self, _try_compensate_method, &args, &result);
 
-  return result.get_jint();
+  return (result.get_jboolean() != JNI_FALSE);
 }
 
 void Coroutine::update_active_count(Thread* Self) {
