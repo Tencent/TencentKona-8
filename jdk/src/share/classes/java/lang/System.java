@@ -28,6 +28,7 @@ import java.io.*;
 import java.lang.reflect.Executable;
 import java.lang.annotation.Annotation;
 import java.security.AccessControlContext;
+import java.util.concurrent.Callable;
 import java.util.Properties;
 import java.util.PropertyPermission;
 import java.util.StringTokenizer;
@@ -1278,6 +1279,21 @@ public final class System {
 
             public <T> T getCarrierThreadLocal(ThreadLocal<T> local) {
                 return local.getCarrierThreadLocal();
+            }
+
+            public <V> V executeOnCarrierThread(Callable<V> task) throws Exception {
+                Thread thread = Thread.currentThread();
+                if (thread.isVirtual()) {
+                    Thread carrier = Thread.currentCarrierThread();
+                    carrier.setVirtualThread(null);
+                    try {
+                        return task.call();
+                    } finally {
+                        carrier.setVirtualThread((VirtualThread)thread);
+                    }
+                } else {
+                    return task.call();
+                }
             }
 
             public <T> void setCarrierThreadLocal(ThreadLocal<T> local, T value) {

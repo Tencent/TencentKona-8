@@ -28,6 +28,7 @@ package sun.misc;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Executable;
 import java.security.AccessControlContext;
+import java.util.concurrent.Callable;
 import java.util.Map;
 
 import sun.reflect.ConstantPool;
@@ -140,6 +141,11 @@ public interface JavaLangAccess {
      * @return carrier Thread object
      */
     Thread currentCarrierThread();
+
+    /**
+     * Executes the given value returning task on the current carrier thread.
+     */
+    <V> V executeOnCarrierThread(Callable<V> task) throws Exception;
 
     /**
      * Returns the value of the current carrier thread's copy of a thread-local.
