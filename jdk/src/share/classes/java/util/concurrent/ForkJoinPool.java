@@ -53,6 +53,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.security.AccessControlContext;
 import java.security.ProtectionDomain;
 import java.security.Permissions;
+import sun.misc.SharedSecrets;
 
 /**
  * An {@link ExecutorService} for running {@link ForkJoinTask}s.
@@ -2037,15 +2038,15 @@ public class ForkJoinPool extends AbstractExecutorService {
         ForkJoinWorkerThread wt;
         Thread t = Thread.currentCarrierThread();
         boolean canBlock = true;
-        Thread vt = null;
         if (Thread.currentThread().isVirtual() &&
             (t instanceof ForkJoinWorkerThread) &&
             (p = (wt = (ForkJoinWorkerThread)t).pool) != null) {
             try {
-                vt = Thread.getAndClearVT();
-                canBlock = p.tryCompensate(wt.workQueue);
-            } finally {
-                Thread.setVT(vt);
+                canBlock = SharedSecrets.getJavaLangAccess().executeOnCarrierThread(() ->
+                    p.tryCompensate(wt.workQueue)
+                );
+            } catch (Exception e) {
+                throw new InternalError(e);
             }
         }
 
