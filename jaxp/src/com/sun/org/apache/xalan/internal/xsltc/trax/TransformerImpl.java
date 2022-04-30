@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2022, Oracle and/or its affiliates. All rights reserved.
  */
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -24,7 +24,6 @@
 package com.sun.org.apache.xalan.internal.xsltc.trax;
 
 import com.sun.org.apache.xalan.internal.XalanConstants;
-import com.sun.org.apache.xalan.internal.utils.XMLSecurityManager;
 import com.sun.org.apache.xalan.internal.utils.SecuritySupport;
 import com.sun.org.apache.xalan.internal.xsltc.DOM;
 import com.sun.org.apache.xalan.internal.xsltc.DOMCache;
@@ -53,12 +52,12 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownServiceException;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.StringTokenizer;
-import java.util.Vector;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -80,6 +79,7 @@ import javax.xml.transform.stax.StAXResult;
 import javax.xml.transform.stax.StAXSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
+import jdk.xml.internal.XMLSecurityManager;
 import jdk.xml.internal.JdkXmlUtils;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.InputSource;
@@ -1046,7 +1046,7 @@ public final class TransformerImpl extends Transformer
             else if (name.equals(OutputKeys.CDATA_SECTION_ELEMENTS)) {
                 if (value != null) {
                     StringTokenizer e = new StringTokenizer(value);
-                    Vector uriAndLocalNames = null;
+                    ArrayList<String> uriAndLocalNames = null;
                     while (e.hasMoreTokens()) {
                         final String token = e.nextToken();
 
@@ -1066,11 +1066,11 @@ public final class TransformerImpl extends Transformer
                         }
 
                         if (uriAndLocalNames == null) {
-                            uriAndLocalNames = new Vector();
+                            uriAndLocalNames = new ArrayList<>();
                         }
                         // add the uri/localName as a pair, in that order
-                        uriAndLocalNames.addElement(uri);
-                        uriAndLocalNames.addElement(localName);
+                        uriAndLocalNames.add(uri);
+                        uriAndLocalNames.add(localName);
                     }
                     handler.setCdataSectionElements(uriAndLocalNames);
                 }
