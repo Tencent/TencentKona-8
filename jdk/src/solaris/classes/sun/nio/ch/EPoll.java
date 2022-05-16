@@ -59,6 +59,10 @@ class EPoll {
     static final int EPOLL_CTL_DEL  = 2;
     static final int EPOLL_CTL_MOD  = 3;
 
+    // events
+    static final int EPOLLIN   = 0x1;
+    static final int EPOLLOUT  = 0x4;
+
     // flags
     static final int EPOLLONESHOT   = (1 << 30);
 

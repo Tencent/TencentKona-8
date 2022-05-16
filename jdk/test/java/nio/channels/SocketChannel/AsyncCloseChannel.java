@@ -25,6 +25,7 @@
  * @bug 6285901 6501089
  * @summary Check no data is written to wrong socket channel during async closing.
  * @author Xueming Shen
+ * @run main/othervm AsyncCloseChannel
  */
 
 import java.io.*;

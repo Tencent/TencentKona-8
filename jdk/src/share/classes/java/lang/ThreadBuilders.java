@@ -215,9 +215,21 @@ class ThreadBuilders {
         private Executor scheduler;
 
         static final boolean ENABLE_VIRTUAL_THREAD = enableVirtualThread();
+        static final boolean ENABLE_VT_SOCKET = enableVTSocket();
 
         private static boolean enableVirtualThread() {
             String propValue = GetPropertyAction.privilegedGetProperty("jdk.internal.VirtualThread");
+            if (propValue != null) {
+                if (propValue.length() == 0)
+                    return true;
+                if ("off".equalsIgnoreCase(propValue))
+                    return false;
+            }
+            return true;
+        }
+
+        private static boolean enableVTSocket() {
+            String propValue = GetPropertyAction.privilegedGetProperty("jdk.internal.VTSocket");
             if (propValue != null) {
                 if (propValue.length() == 0)
                     return true;

@@ -32,7 +32,9 @@ import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 
 import sun.security.util.SecurityConstants;
-
+import sun.misc.JavaLangAccess;
+import sun.misc.SharedSecrets;
+import sun.nio.ch.VTSocketImpl;
 /**
  * This class implements server sockets. A server socket waits for
  * requests to come in over the network. It performs some operation
@@ -52,6 +54,8 @@ import sun.security.util.SecurityConstants;
  */
 public
 class ServerSocket implements java.io.Closeable {
+    private static final JavaLangAccess JLA = SharedSecrets.getJavaLangAccess();
+
     /**
      * Various states of this socket.
      */
@@ -300,7 +304,7 @@ class ServerSocket implements java.io.Closeable {
         } else {
             // No need to do a checkOldImpl() here, we know it's an up to date
             // SocketImpl!
-            impl = new SocksSocketImpl();
+            impl = JLA.isVTSocketEnabled() ? new VTSocketImpl(true, true) : new SocksSocketImpl();
         }
         if (impl != null)
             impl.setServerSocket(this);
