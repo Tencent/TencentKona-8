@@ -1277,6 +1277,10 @@ public final class System {
                 return Thread.currentCarrierThread();
             }
 
+            public boolean isVTSocketEnabled() {
+                return ThreadBuilders.VirtualThreadBuilder.ENABLE_VT_SOCKET;
+            }
+
             public <T> T getCarrierThreadLocal(ThreadLocal<T> local) {
                 return local.getCarrierThreadLocal();
             }

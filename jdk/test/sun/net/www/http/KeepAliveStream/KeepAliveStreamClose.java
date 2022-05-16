@@ -25,7 +25,7 @@
  * @test
  * @bug 4392195
  * @summary Infinite loop in sun.net.www.http.KeepAliveStream [due to skip()]
- * @run main/othervm/timeout=30 KeepAliveStreamClose
+ * @run main/othervm/timeout=30 -Djdk.internal.VTSocket=off KeepAliveStreamClose
  */
 
 import java.net.*;

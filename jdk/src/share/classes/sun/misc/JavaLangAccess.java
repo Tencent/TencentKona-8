@@ -148,6 +148,13 @@ public interface JavaLangAccess {
     <V> V executeOnCarrierThread(Callable<V> task) throws Exception;
 
     /**
+     * Returns whether socket of virtual thread is enabled.
+     *
+     * @return true if socket of virtual thread is enabled, otherwise false
+     */
+    boolean isVTSocketEnabled();
+
+    /**
      * Returns the value of the current carrier thread's copy of a thread-local.
      */
     <T> T getCarrierThreadLocal(ThreadLocal<T> local);

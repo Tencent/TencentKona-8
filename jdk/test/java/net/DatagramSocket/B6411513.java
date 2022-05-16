@@ -24,6 +24,7 @@
 /*
  * @test
  * @bug 6411513
+ * @run main/othervm -Djdk.internal.VTSocket=off B6411513
  * @summary java.net.DatagramSocket.receive: packet isn't received
  */
 

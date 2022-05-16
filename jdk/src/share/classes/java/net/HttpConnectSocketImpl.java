@@ -117,7 +117,7 @@ import java.util.Set;
         close();
 
         // update the Sockets impl to the impl from the http Socket
-        AbstractPlainSocketImpl psi = (AbstractPlainSocketImpl) httpSocket.impl;
+        SocketImpl psi = httpSocket.impl;
         this.getSocket().impl = psi;
 
         // best effort is made to try and reset options previously set

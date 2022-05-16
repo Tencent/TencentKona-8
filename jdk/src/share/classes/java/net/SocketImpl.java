@@ -356,7 +356,7 @@ public abstract class SocketImpl implements SocketOptions {
         /* Not implemented yet */
     }
 
-    <T> void setOption(SocketOption<T> name, T value) throws IOException {
+    protected <T> void setOption(SocketOption<T> name, T value) throws IOException {
         if (name == StandardSocketOptions.SO_KEEPALIVE) {
             setOption(SocketOptions.SO_KEEPALIVE, value);
         } else if (name == StandardSocketOptions.SO_SNDBUF) {
@@ -376,7 +376,7 @@ public abstract class SocketImpl implements SocketOptions {
         }
     }
 
-    <T> T getOption(SocketOption<T> name) throws IOException {
+    protected <T> T getOption(SocketOption<T> name) throws IOException {
         if (name == StandardSocketOptions.SO_KEEPALIVE) {
             return (T)getOption(SocketOptions.SO_KEEPALIVE);
         } else if (name == StandardSocketOptions.SO_SNDBUF) {

@@ -25,6 +25,7 @@
  * @test
  * @bug 4636628
  * @summary HttpURLConnection duplicates HTTP GET requests when used with multiple threads
+ * @run main/othervm MultiThreadTest
 */
 
 /*
