@@ -229,6 +229,9 @@ class ThreadBuilders {
         }
 
         private static boolean enableVTSocket() {
+            if (!GetPropertyAction.privilegedGetProperty("os.name").startsWith("Linux")) {
+                return false;
+            }
             String propValue = GetPropertyAction.privilegedGetProperty("jdk.internal.VTSocket");
             if (propValue != null) {
                 if (propValue.length() == 0)
