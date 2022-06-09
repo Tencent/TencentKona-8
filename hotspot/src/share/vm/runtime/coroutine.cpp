@@ -107,13 +107,13 @@ void ContReservedStack::init() {
   _lock = new Mutex(Mutex::leaf, "InitializedStack", false);
 
   free_array = new (ResourceObj::C_HEAP, mtCoroutine)GrowableArray<address>(CONT_RESERVED_PHYSICAL_MEM_MAX, true);
-  uint reserved_pages = StackShadowPages + StackRedPages + StackYellowPages;
-  stack_size = DefaultCoroutineStackSize + (reserved_pages * os::vm_page_size());
+  uint reserved_size = (StackShadowPages + StackYellowPages + StackRedPages) * os::vm_page_size();
+  stack_size = align_size_up(DefaultCoroutineStackSize + reserved_size, os::vm_page_size());
 }
 
 bool ContReservedStack::add_pre_mapped_stack() {
   uintx alloc_real_stack_size = stack_size * CONT_PREMAPPED_STACK_NUM;
-  uintx reserved_size = align_size_up(stack_size * CONT_PREMAPPED_STACK_NUM, os::vm_allocation_granularity());
+  uintx reserved_size = align_size_up(alloc_real_stack_size, os::vm_allocation_granularity());
 
   ContPreMappedStack* node = new ContPreMappedStack(reserved_size, current_pre_mapped_stack);
   if (node == NULL) {
@@ -459,6 +459,9 @@ void Coroutine::cont_metadata_do(void f(Metadata*)) {
 Coroutine::Coroutine() {
   _has_javacall = false;
   _continuation = NULL;
+#if defined(_WINDOWS)
+  _guaranteed_stack_bytes = 0;
+#endif
 #ifdef CHECK_UNHANDLED_OOPS
   _t = NULL;
 #endif
@@ -511,6 +514,10 @@ void Coroutine::yield_verify(Coroutine* from, Coroutine* to, bool terminate) {
     to->_verify_state->saved_resource_area_hwm = thread->resource_area()->hwm();
     to->_verify_state->saved_handle_area_hwm = thread->handle_area()->hwm();
   }
+#if defined(_WINDOWS)
+  guarantee(from->get_guaranteed_stack_bytes() == 0, "guaranteed stack bytes of old coroutine should be zero");
+  guarantee(to->get_guaranteed_stack_bytes() == 0, "guaranteed stack bytes of target coroutine should be zero");
+#endif
 }
 
 void Coroutine::print_stack_on(void* frames, int* depth) {
