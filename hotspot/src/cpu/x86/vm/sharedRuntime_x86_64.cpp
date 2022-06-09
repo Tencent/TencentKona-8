@@ -4417,6 +4417,16 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
   __ movptr(target_coroutine, Address(target_coroutine_obj, java_lang_Continuation::get_data_offset()));
   __ movptr(old_coroutine, Address(old_coroutine_obj, java_lang_Continuation::get_data_offset()));
   if (VerifyCoroutineStateOnYield) {
+#if defined(_WINDOWS)
+    // get the linear address of the TIB (thread info block)
+    Register tib = rax;
+    __ emit_int8(Assembler::GS_segment);
+    __ movptr(tib, Address(noreg, 0x30));
+
+    // Guarantee guaranteed_stack_bytes is 0 while enable VerifyCoroutineStateOnYield
+    __ movptr(temp, Address(tib, 0x1748));
+    __ movptr(Address(old_coroutine, Coroutine::guaranteed_stack_bytes_offset()), temp);
+#endif
     __ VerifyCoroutineState(old_coroutine, target_coroutine, terminate);
   }
 
@@ -4452,11 +4462,14 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
       __ emit_int8(Assembler::GS_segment);
       __ movptr(tib, Address(noreg, 0x30));
 
-      // update the TIB stack base and top
+      /* update the TIB stack base, stack top and deallocation stack.See "Win32 Thread
+       * Information Block"(https://www.wikiwand.com/en/Win32_Thread_Information_Block)
+       */
       __ movptr(temp, Address(target_coroutine, Coroutine::stack_base_offset()));
       __ movptr(Address(tib, 0x8), temp);
       __ subptr(temp, Address(target_coroutine, Coroutine::stack_size_offset()));
       __ movptr(Address(tib, 0x10), temp);
+      __ movptr(Address(tib, 0x1478), temp);
     }
 #endif
   __ pop(rbp);
