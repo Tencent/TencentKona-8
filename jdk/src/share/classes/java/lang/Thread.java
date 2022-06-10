@@ -46,6 +46,7 @@ import sun.reflect.CallerSensitive;
 import sun.reflect.Reflection;
 import sun.security.util.SecurityConstants;
 import sun.misc.Unsafe;
+import sun.misc.VM;
 
 /**
  * A <i>thread</i> is a thread of execution in a program. The Java
@@ -555,7 +556,7 @@ class Thread implements Runnable {
      * This is not a public constructor.
      */
     public Thread(Runnable target, String name, int characteristics) {
-        this.name = (name != null) ? name : "<unnamed>";
+        this.name = (name != null) ? name : "";
 
         if (ThreadBuilders.VirtualThreadBuilder.ENABLE_VIRTUAL_THREAD) {
             this.tid = nextThreadID();
@@ -583,9 +584,15 @@ class Thread implements Runnable {
                 this.inheritableThreadLocals = ThreadLocal.createInheritedMap(parentMap);
             }
             ClassLoader parentLoader = parent.getContextClassLoader();
-            if (parentLoader != ClassLoaders.NOT_SUPPORTED) {
+            if (VM.isBooted() && parentLoader == ClassLoaders.NOT_SUPPORTED) {
+                //parent does not support thread locals so no CCL to inherit
+                this.contextClassLoader = ClassLoader.getSystemClassLoader();
+            } else {
                 this.contextClassLoader = parentLoader;
             }
+        } else if (VM.isBooted()) {
+            //default CCL to the system class loader when not inheriting
+            this.contextClassLoader = ClassLoader.getSystemClassLoader();
         }
     }
 
@@ -1485,13 +1492,13 @@ class Thread implements Runnable {
      */
     public final void setDaemon(boolean on) {
         checkAccess();
+        if (isVirtual() && !on)
+            throw new IllegalArgumentException("'false' not legal for virtual threads");
         if (isAlive()) {
             throw new IllegalThreadStateException();
         }
-        if (isVirtual()) {
-            return;
-        }
-        daemon = on;
+        if (!isVirtual())
+            daemon = on;
     }
 
     /**
@@ -2076,8 +2083,12 @@ class Thread implements Runnable {
      * @return the uncaught exception handler for this thread
      */
     public UncaughtExceptionHandler getUncaughtExceptionHandler() {
-        return uncaughtExceptionHandler != null ?
-            uncaughtExceptionHandler : getThreadGroup();
+        if (isVirtual() && getState() == State.TERMINATED) {
+            return null;
+        } else {
+            return uncaughtExceptionHandler != null ?
+                uncaughtExceptionHandler : getThreadGroup();
+        }
     }
 
     /**
