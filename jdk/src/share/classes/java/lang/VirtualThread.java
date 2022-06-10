@@ -176,7 +176,7 @@ class VirtualThread extends Thread {
      * @param task the task to execute
      */
     VirtualThread(Executor scheduler, String name, int characteristics, Runnable task) {
-        super(null, name == null ? "<unnamed>" : name, characteristics);
+        super(null, name, characteristics);
 
         Objects.requireNonNull(task);
         Runnable target = () -> {
@@ -1074,14 +1074,6 @@ class VirtualThread extends Thread {
             UNSAFE.putObject(this, CONTEXTCLASSLOADER, ClassLoader.getSystemClassLoader());
             UNSAFE.putObject(this, INHERITABLETHREADLOCALS, null);
             UNSAFE.putObject(this, INHERITEDACCESSCONTROLCONTEXT, INNOCUOUS_ACC);
-        }
-
-        @Override
-        public void setUncaughtExceptionHandler(UncaughtExceptionHandler ueh) { }
-
-        @Override
-        public void setContextClassLoader(ClassLoader cl) {
-            throw new SecurityException("setContextClassLoader");
         }
 
         /**
