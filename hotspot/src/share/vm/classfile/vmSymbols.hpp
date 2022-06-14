@@ -362,7 +362,7 @@
   template(isPrivileged_name,                         "isPrivileged")                             \
   template(isAuthorized_name,                         "isAuthorized")                             \
   template(getClassContext_name,                      "getClassContext")                          \
-  template(wait_name,                                 "wait")                                     \
+  template(wait_name,                                 "wait0")                                    \
   template(checkPackageAccess_name,                   "checkPackageAccess")                       \
   template(stackSize_name,                            "stackSize")                                \
   template(thread_id_name,                            "tid")                                      \
