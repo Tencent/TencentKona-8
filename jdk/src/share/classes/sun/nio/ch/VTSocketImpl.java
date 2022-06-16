@@ -63,6 +63,9 @@ public class VTSocketImpl extends SocketImpl {
     protected SocketChannelImpl sc = null;
     protected ServerSocketChannelImpl ssc = null;
 
+    /* indicates connection reset state */
+    private boolean connectionReset;
+
     public VTSocketImpl(boolean isServerSocket, boolean isSocksSocket) {
         this.isServerSocket = isServerSocket;
         this.isSocksSocket = isSocksSocket;
@@ -230,8 +233,6 @@ public class VTSocketImpl extends SocketImpl {
                                 private byte[] bs = null;
                                 private byte[] b1 = null;
 
-                                private ByteBuffer readAhead = null;
-
                                 @Override
                                 public int read() throws IOException {
                                     if (b1 == null) {
@@ -268,6 +269,13 @@ public class VTSocketImpl extends SocketImpl {
                                         return read0(bb);
                                     } catch (ClosedChannelException x) {
                                         throw new SocketException("Socket closed");
+                                    } catch (IOException e) {
+                                        if (e.getLocalizedMessage().startsWith("Connection reset by peer")) {
+                                            connectionReset = true;
+                                            throw new SocketException("Connection reset");
+                                        } else {
+                                            throw e;
+                                        }
                                     } finally {
                                         readLock.unlock();
                                     }
@@ -276,18 +284,9 @@ public class VTSocketImpl extends SocketImpl {
                                 private int read0(ByteBuffer bb)
                                         throws IOException {
                                     int n;
-                                    if (readAhead != null && readAhead.hasRemaining()) {
-                                        if (bb.remaining() >= readAhead.remaining()) {
-                                            n = readAhead.remaining();
-                                            bb.put(readAhead);
-                                        } else {
-                                            n = bb.remaining();
-                                            for (int i = 0; i < n; i++) {
-                                                bb.put(readAhead.get());
-                                            }
-                                        }
-                                        return n;
-                                    }
+
+                                    if (connectionReset)
+                                        throw new SocketException("Connection reset");
 
                                     if ((n = ch.read(bb)) != 0) {
                                         return n;
@@ -309,17 +308,7 @@ public class VTSocketImpl extends SocketImpl {
 
                                 @Override
                                 public int available() throws IOException {
-                                    if (readAhead == null) {
-                                        readAhead = ByteBuffer.allocate(4096);
-                                    } else if (readAhead.hasRemaining()) {
-                                        return readAhead.remaining();
-                                    }
-
-                                    readAhead.clear();
-                                    ch.read(readAhead);
-                                    readAhead.flip();
-
-                                    return readAhead.remaining();
+                                    return VTSocketImpl.this.available();
                                 }
 
                                 @Override
@@ -334,6 +323,22 @@ public class VTSocketImpl extends SocketImpl {
             }
         }
         return socketInputStream;
+    }
+
+    @Override
+    protected int available() throws IOException {
+        stateLock.lock();
+        try {
+            if (!getSocketChannelImpl().isOpen())
+                throw new ClosedChannelException();
+            if (isInputClosed) {
+                return 0;
+            } else {
+                return Net.available(getSocketChannelImpl().getFD());
+            }
+        } finally {
+            stateLock.unlock();
+        }
     }
 
     @Override
@@ -496,10 +501,6 @@ public class VTSocketImpl extends SocketImpl {
         int n = getSocketChannelImpl().sendOutOfBandData((byte) data);
         if (n == 0)
             throw new IOException("Socket buffer full");
-    }
-
-    protected int available() throws IOException {
-        return 0;
     }
 
     public void setSocketChannel(SocketChannel target) {
