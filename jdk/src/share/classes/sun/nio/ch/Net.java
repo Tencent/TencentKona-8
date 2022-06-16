@@ -530,8 +530,12 @@ public class Net {
     static native int poll(FileDescriptor fd, int events, long timeout)
         throws IOException;
 
-    // -- Multicast support --
+    /**
+     * Return the number of bytes in the socket input buffer.
+     */
+    static native int available(FileDescriptor fd) throws IOException;
 
+    // -- Multicast support --
 
     /**
      * Join IPv4 multicast group
