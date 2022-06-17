@@ -1157,7 +1157,7 @@ class StubGenerator: public StubCodeGenerator {
     Label copy4, copy8, copy16, copy32, copy80, copy128, copy_big, finish;
     const Register t2 = r5, t3 = r6, t4 = r7, t5 = r8;
     const Register t6 = r9, t7 = r10, t8 = r11, t9 = r12;
-    const Register send = r17, dend = r18;
+    const Register send = r17, dend = r16;
 
     if (PrefetchCopyIntervalInBytes > 0)
       __ prfm(Address(s, 0), PLDL1KEEP);
@@ -1347,10 +1347,13 @@ class StubGenerator: public StubCodeGenerator {
 
   void clobber_registers() {
 #ifdef ASSERT
+    RegSet clobbered
+      = MacroAssembler::call_clobbered_registers() - rscratch1;
     __ mov(rscratch1, (uint64_t)0xdeadbeef);
     __ orr(rscratch1, rscratch1, rscratch1, Assembler::LSL, 32);
-    for (Register r = r3; r <= r18; r++)
-      if (r != rscratch1) __ mov(r, rscratch1);
+    for (RegSetIterator it = clobbered.begin(); *it != noreg; ++it) {
+      __ mov(*it, rscratch1);
+    }
 #endif
   }
 
@@ -1752,10 +1755,10 @@ class StubGenerator: public StubCodeGenerator {
     const Register ckoff       = c_rarg3;   // super_check_offset
     const Register ckval       = c_rarg4;   // super_klass
 
-    // Registers used as temps (r18, r19, r20 are save-on-entry)
+    // Registers used as temps (r19, r20, r21, r22 are save-on-entry)
+    const Register copied_oop  = r22;       // actual oop copied
     const Register count_save  = r21;       // orig elementscount
     const Register start_to    = r20;       // destination array start address
-    const Register copied_oop  = r18;       // actual oop copied
     const Register r19_klass   = r19;       // oop._klass
 
     //---------------------------------------------------------------
@@ -1793,7 +1796,7 @@ class StubGenerator: public StubCodeGenerator {
      // Empty array:  Nothing to do.
     __ cbz(count, L_done);
 
-    __ push(RegSet::of(r18, r19, r20, r21), sp);
+    __ push(RegSet::of(r19, r20, r21, r22), sp);
 
 #ifdef ASSERT
     BLOCK_COMMENT("assert consistent ckoff/ckval");
@@ -1856,7 +1859,7 @@ class StubGenerator: public StubCodeGenerator {
     gen_write_ref_array_post_barrier(start_to, to, rscratch1);
 
     __ bind(L_done_pop);
-    __ pop(RegSet::of(r18, r19, r20, r21), sp);
+    __ pop(RegSet::of(r19, r20, r21, r22), sp);
     inc_counter_np(SharedRuntime::_checkcast_array_copy_ctr);
 
     __ bind(L_done);
@@ -2177,7 +2180,7 @@ class StubGenerator: public StubCodeGenerator {
     // registers used as temp
     const Register scratch_length    = r16; // elements count to copy
     const Register scratch_src_klass = r17; // array klass
-    const Register lh                = r18; // layout helper
+    const Register lh                = r15; // layout helper
 
     //  if (length < 0) return -1;
     __ movw(scratch_length, length);        // length (elements count, 32-bits value)
@@ -2248,7 +2251,7 @@ class StubGenerator: public StubCodeGenerator {
     //
 
     const Register rscratch1_offset = rscratch1;    // array offset
-    const Register r18_elsize = lh; // element size
+    const Register r15_elsize = lh; // element size
 
     __ ubfx(rscratch1_offset, lh, Klass::_lh_header_size_shift,
            exact_log2(Klass::_lh_header_size_mask+1));   // array_offset
@@ -2269,8 +2272,8 @@ class StubGenerator: public StubCodeGenerator {
     // The possible values of elsize are 0-3, i.e. exact_log2(element
     // size in bytes).  We do a simple bitwise binary search.
   __ BIND(L_copy_bytes);
-    __ tbnz(r18_elsize, 1, L_copy_ints);
-    __ tbnz(r18_elsize, 0, L_copy_shorts);
+    __ tbnz(r15_elsize, 1, L_copy_ints);
+    __ tbnz(r15_elsize, 0, L_copy_shorts);
     __ lea(from, Address(src, src_pos));// src_addr
     __ lea(to,   Address(dst, dst_pos));// dst_addr
     __ movw(count, scratch_length); // length
@@ -2283,7 +2286,7 @@ class StubGenerator: public StubCodeGenerator {
     __ b(RuntimeAddress(short_copy_entry));
 
   __ BIND(L_copy_ints);
-    __ tbnz(r18_elsize, 0, L_copy_longs);
+    __ tbnz(r15_elsize, 0, L_copy_longs);
     __ lea(from, Address(src, src_pos, Address::lsl(2)));// src_addr
     __ lea(to,   Address(dst, dst_pos, Address::lsl(2)));// dst_addr
     __ movw(count, scratch_length); // length
@@ -2294,8 +2297,8 @@ class StubGenerator: public StubCodeGenerator {
     {
       BLOCK_COMMENT("assert long copy {");
       Label L;
-      __ andw(lh, lh, Klass::_lh_log2_element_size_mask); // lh -> r18_elsize
-      __ cmpw(r18_elsize, LogBytesPerLong);
+      __ andw(lh, lh, Klass::_lh_log2_element_size_mask); // lh -> r15_elsize
+      __ cmpw(r15_elsize, LogBytesPerLong);
       __ br(Assembler::EQ, L);
       __ stop("must be long copy, but elsize is wrong");
       __ bind(L);
@@ -2313,8 +2316,8 @@ class StubGenerator: public StubCodeGenerator {
 
     Label L_plain_copy, L_checkcast_copy;
     //  test array classes for subtyping
-    __ load_klass(r18, dst);
-    __ cmp(scratch_src_klass, r18); // usual case is exact equality
+    __ load_klass(r15, dst);
+    __ cmp(scratch_src_klass, r15); // usual case is exact equality
     __ br(Assembler::NE, L_checkcast_copy);
 
     // Identically typed arrays can be copied without element-wise checks.
@@ -2330,17 +2333,17 @@ class StubGenerator: public StubCodeGenerator {
     __ b(RuntimeAddress(oop_copy_entry));
 
   __ BIND(L_checkcast_copy);
-    // live at this point:  scratch_src_klass, scratch_length, r18 (dst_klass)
+    // live at this point:  scratch_src_klass, scratch_length, r15 (dst_klass)
     {
       // Before looking at dst.length, make sure dst is also an objArray.
-      __ ldrw(rscratch1, Address(r18, lh_offset));
+      __ ldrw(rscratch1, Address(r15, lh_offset));
       __ movw(rscratch2, objArray_lh);
       __ eorw(rscratch1, rscratch1, rscratch2);
       __ cbnzw(rscratch1, L_failed);
 
       // It is safe to examine both src.length and dst.length.
       arraycopy_range_checks(src, src_pos, dst, dst_pos, scratch_length,
-                             r18, L_failed);
+                             r15, L_failed);
 
       const Register rscratch2_dst_klass = rscratch2;
       __ load_klass(rscratch2_dst_klass, dst); // reload
@@ -3515,42 +3518,42 @@ class StubGenerator: public StubCodeGenerator {
 
       // Register allocation
 
-      Register reg = c_rarg0;
-      Pa_base = reg;       // Argument registers
+      RegSetIterator regs = (RegSet::range(r0, r26) - r18_tls).begin();
+      Pa_base = *regs;       // Argument registers
       if (squaring)
         Pb_base = Pa_base;
       else
-        Pb_base = ++reg;
-      Pn_base = ++reg;
-      Rlen= ++reg;
-      inv = ++reg;
-      Pm_base = ++reg;
+        Pb_base = *++regs;
+      Pn_base = *++regs;
+      Rlen= *++regs;
+      inv = *++regs;
+      Pm_base = *++regs;
 
                           // Working registers:
-      Ra =  ++reg;        // The current digit of a, b, n, and m.
-      Rb =  ++reg;
-      Rm =  ++reg;
-      Rn =  ++reg;
+      Ra =  *++regs;        // The current digit of a, b, n, and m.
+      Rb =  *++regs;
+      Rm =  *++regs;
+      Rn =  *++regs;
 
-      Pa =  ++reg;        // Pointers to the current/next digit of a, b, n, and m.
-      Pb =  ++reg;
-      Pm =  ++reg;
-      Pn =  ++reg;
+      Pa =  *++regs;        // Pointers to the current/next digit of a, b, n, and m.
+      Pb =  *++regs;
+      Pm =  *++regs;
+      Pn =  *++regs;
 
-      t0 =  ++reg;        // Three registers which form a
-      t1 =  ++reg;        // triple-precision accumuator.
-      t2 =  ++reg;
+      t0 =  *++regs;        // Three registers which form a
+      t1 =  *++regs;        // triple-precision accumuator.
+      t2 =  *++regs;
 
-      Ri =  ++reg;        // Inner and outer loop indexes.
-      Rj =  ++reg;
+      Ri =  *++regs;        // Inner and outer loop indexes.
+      Rj =  *++regs;
 
-      Rhi_ab = ++reg;     // Product registers: low and high parts
-      Rlo_ab = ++reg;     // of a*b and m*n.
-      Rhi_mn = ++reg;
-      Rlo_mn = ++reg;
+      Rhi_ab = *++regs;     // Product registers: low and high parts
+      Rlo_ab = *++regs;     // of a*b and m*n.
+      Rhi_mn = *++regs;
+      Rlo_mn = *++regs;
 
       // r19 and up are callee-saved.
-      _toSave = RegSet::range(r19, reg) + Pm_base;
+      _toSave = RegSet::range(r19, *regs) + Pm_base;
     }
 
   private:
