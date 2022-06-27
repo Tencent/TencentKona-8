@@ -1473,8 +1473,12 @@ bool os::create_stack_guard_pages(char* addr, size_t bytes) {
   return os::pd_create_stack_guard_pages(addr, bytes);
 }
 
-char* os::reserve_memory(size_t bytes, char* addr, size_t alignment_hint) {
-  char* result = pd_reserve_memory(bytes, addr, alignment_hint);
+MACOS_ONLY(char* os::reserve_memory(size_t bytes, char* addr, size_t alignment_hint, bool executable))
+NOT_MACOS(char* os::reserve_memory(size_t bytes, char* addr, size_t alignment_hint)) {
+  char* result = NULL;
+  result = MACOS_ONLY(pd_reserve_memory(bytes, addr, alignment_hint, executable))
+           NOT_MACOS(pd_reserve_memory(bytes, addr, alignment_hint));
+
   if (result != NULL) {
     MemTracker::record_virtual_memory_reserve((address)result, bytes, CALLER_PC);
   }
@@ -1535,16 +1539,19 @@ void os::commit_memory_or_exit(char* addr, size_t size, size_t alignment_hint,
   MemTracker::record_virtual_memory_commit((address)addr, size, CALLER_PC);
 }
 
-bool os::uncommit_memory(char* addr, size_t bytes) {
+MACOS_ONLY(bool os::uncommit_memory(char* addr, size_t bytes, bool executable))
+NOT_MACOS(bool os::uncommit_memory(char* addr, size_t bytes)) {
   bool res;
   if (MemTracker::tracking_level() > NMT_minimal) {
     Tracker tkr = MemTracker::get_virtual_memory_uncommit_tracker();
-    res = pd_uncommit_memory(addr, bytes);
+    res = MACOS_ONLY(pd_uncommit_memory(addr, bytes, executable))
+          NOT_MACOS(pd_uncommit_memory(addr, bytes));
     if (res) {
       tkr.record((address)addr, bytes);
     }
   } else {
-    res = pd_uncommit_memory(addr, bytes);
+    res = MACOS_ONLY(pd_uncommit_memory(addr, bytes, executable))
+          NOT_MACOS(pd_uncommit_memory(addr, bytes));
   }
   return res;
 }
