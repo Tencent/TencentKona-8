@@ -327,6 +327,7 @@ void Thread::record_stack_base_and_size() {
   set_stack_size(os::current_stack_size());
   if (is_Java_thread()) {
     ((JavaThread*) this)->set_stack_overflow_limit();
+    ((JavaThread*) this)->set_shadow_zone_limits();
   }
   // CR 7190089: on Solaris, primordial thread's stack is adjusted
   // in initialize_thread(). Without the adjustment, stack size is
@@ -1475,6 +1476,9 @@ void JavaThread::initialize() {
   _suspend_equivalent = false;
   _in_deopt_handler = 0;
   _doing_unsafe_access = false;
+  _shadow_zone_safe_limit = NULL;
+  _shadow_zone_growth_watermark = NULL;
+  _shadow_zone_growth_native_watermark = NULL;
   _stack_guard_state = stack_guard_unused;
   (void)const_cast<oop&>(_exception_oop = oop(NULL));
   _exception_pc  = 0;
