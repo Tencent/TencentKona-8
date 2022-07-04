@@ -142,8 +142,8 @@ void AbstractInterpreterGenerator::bang_stack_shadow_pages(bool native_call) {
   const int page_size = os::vm_page_size();
   const int n_shadow_pages = shadow_zone_size / page_size;
   const int start_page = native_call ? n_shadow_pages : 1;
-  const int watermark_offset = native_call ? JavaThread::shadow_zone_growth_native_watermark_offset() :
-                                             JavaThread::shadow_zone_growth_watermark_offset();
+  const ByteSize watermark_offset = native_call ? JavaThread::shadow_zone_growth_native_watermark_offset() :
+                                                  JavaThread::shadow_zone_growth_watermark_offset();
 
   const Register thread = NOT_LP64(rsi) LP64_ONLY(r15_thread);
  #ifndef _LP64
