@@ -2367,9 +2367,16 @@ void MacroAssembler::debug64(char* msg, int64_t pc, int64_t regs[])
   }
 }
 
-void MacroAssembler::push_call_clobbered_registers() {
-  push(RegSet::range(r0, r18) - RegSet::of(rscratch1, rscratch2), sp);
+RegSet MacroAssembler::call_clobbered_registers() {
+  RegSet regs = RegSet::range(r0, r17) - RegSet::of(rscratch1, rscratch2);
+#ifndef R18_RESERVED
+  regs += r18_tls;
+#endif
+  return regs;
+}
 
+void MacroAssembler::push_call_clobbered_registers() {
+  push(call_clobbered_registers(), sp);
   // Push v0-v7, v16-v31.
   for (int i = 30; i >= 0; i -= 2) {
     if (i <= v7->encoding() || i >= v16->encoding()) {
@@ -2388,7 +2395,7 @@ void MacroAssembler::pop_call_clobbered_registers() {
     }
   }
 
-  pop(RegSet::range(r0, r18) - RegSet::of(rscratch1, rscratch2), sp);
+  pop(call_clobbered_registers(), sp);
 }
 
 void MacroAssembler::push_CPU_state(bool save_vectors) {

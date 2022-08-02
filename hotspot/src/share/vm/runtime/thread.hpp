@@ -560,6 +560,7 @@ protected:
   void    set_stack_base(address base) { _stack_base = base; }
   size_t  stack_size() const           { return _stack_size; }
   void    set_stack_size(size_t size)  { _stack_size = size; }
+  address stack_end()  const           { return stack_base() - stack_size(); }
   void    record_stack_base_and_size();
 
   bool    on_local_stack(address adr) const {
@@ -926,6 +927,9 @@ class JavaThread: public Thread {
   // We load it from here to simplify the stack overflow check in assembly.
   address          _stack_overflow_limit;
 
+  address          _shadow_zone_safe_limit;
+  address          _shadow_zone_growth_watermark;
+  address          _shadow_zone_growth_native_watermark;
   // Compiler exception handling (NOTE: The _exception_oop is *NOT* the same as _pending_exception. It is
   // used to temp. parsing values into and out of the runtime system during exception handling for compiled
   // code)
@@ -1313,7 +1317,13 @@ class JavaThread: public Thread {
     { return (a <= stack_yellow_zone_base()) && (a >= stack_red_zone_base()); }
   bool in_stack_red_zone(address a)
     { return (a <= stack_red_zone_base()) && (a >= (address)((intptr_t)stack_base() - stack_size())); }
+  static size_t stack_shadow_zone_size()
+    { return StackShadowPages * os::vm_page_size(); }
 
+  address shadow_zone_safe_limit() const {
+    assert(_shadow_zone_safe_limit != NULL, "Don't call this before the field is initialized.");
+    return _shadow_zone_safe_limit;
+  }
   void create_stack_guard_pages();
   void remove_stack_guard_pages();
 
@@ -1345,6 +1355,12 @@ class JavaThread: public Thread {
                               StackRedPages) * os::vm_page_size());
   }
 
+ void set_shadow_zone_limits() {
+  _shadow_zone_safe_limit =
+     Thread::stack_end() + JavaThread::stack_red_zone_size() + JavaThread::stack_yellow_zone_size() + JavaThread::stack_shadow_zone_size();
+  _shadow_zone_growth_watermark = JavaThread::stack_base();
+  _shadow_zone_growth_native_watermark = JavaThread::stack_base();
+ }
   // Misc. accessors/mutators
   void set_do_not_unlock(void)                   { _do_not_unlock_if_synchronized = true; }
   void clr_do_not_unlock(void)                   { _do_not_unlock_if_synchronized = false; }
@@ -1382,6 +1398,9 @@ class JavaThread: public Thread {
   static ByteSize stack_overflow_limit_offset()  { return byte_offset_of(JavaThread, _stack_overflow_limit); }
   static ByteSize is_method_handle_return_offset() { return byte_offset_of(JavaThread, _is_method_handle_return); }
   static ByteSize stack_guard_state_offset()     { return byte_offset_of(JavaThread, _stack_guard_state   ); }
+  static ByteSize shadow_zone_safe_limit_offset() { return byte_offset_of(JavaThread, _shadow_zone_safe_limit);}
+  static ByteSize shadow_zone_growth_watermark_offset() { return byte_offset_of(JavaThread, _shadow_zone_growth_watermark);}
+  static ByteSize shadow_zone_growth_native_watermark_offset() { return byte_offset_of(JavaThread, _shadow_zone_growth_native_watermark);}
   static ByteSize suspend_flags_offset()         { return byte_offset_of(JavaThread, _suspend_flags       ); }
 
   static ByteSize do_not_unlock_if_synchronized_offset() { return byte_offset_of(JavaThread, _do_not_unlock_if_synchronized); }

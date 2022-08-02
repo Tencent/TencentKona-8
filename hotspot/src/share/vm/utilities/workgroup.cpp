@@ -363,14 +363,6 @@ const char* AbstractWorkGang::name() const {
   return _name;
 }
 
-#ifndef PRODUCT
-
-const char* AbstractGangTask::name() const {
-  return _name;
-}
-
-#endif /* PRODUCT */
-
 // FlexibleWorkGang
 
 

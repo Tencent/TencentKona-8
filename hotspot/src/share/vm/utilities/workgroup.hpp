@@ -67,7 +67,7 @@ public:
   virtual void set_for_termination(int active_workers) {};
 
   // Debugging accessor for the name.
-  const char* name() const PRODUCT_RETURN_(return NULL;);
+  const char* name() const { return _name; }
   int counter() { return _counter; }
   void set_counter(int value) { _counter = value; }
   int *address_of_counter() { return &_counter; }
@@ -78,7 +78,7 @@ public:
   })
 
 private:
-  NOT_PRODUCT(const char* _name;)
+  const char* _name;
   // ??? Should a task have a priority associated with it?
   // ??? Or can the run method adjust priority as needed?
   int _counter;
@@ -87,7 +87,7 @@ protected:
   // Constructor and desctructor: only construct subclasses.
   AbstractGangTask(const char* name)
   {
-    NOT_PRODUCT(_name = name);
+    _name = name;
     _counter = 0;
   }
   ~AbstractGangTask() { }

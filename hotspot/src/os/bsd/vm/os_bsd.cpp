@@ -22,6 +22,16 @@
  *
  */
 
+/*
+ * On macOS MAP_JIT cannot be used in conjunction with MAP_FIXED when mapping
+ * a page for codecache. Therefore our traditional technique of doing commit
+ * and uncommit - replacing a mapping with another one at the same address
+ * range but swapped MAP_NORESERVE - does not work.
+ * The "exec" flag basically means "its code cache" and it should be used
+ * consistently for the same mapping (reserve-commit-uncommit etc)
+ * This affects pd_reserve_memory, pd_commit_memory, pd_uncommit_memory functions
+ */
+
 // no precompiled headers
 #include "classfile/classLoader.hpp"
 #include "classfile/systemDictionary.hpp"
@@ -2216,10 +2226,23 @@ static void warn_fail_commit_memory(char* addr, size_t size, bool exec,
 //       problem.
 bool os::pd_commit_memory(char* addr, size_t size, bool exec) {
   int prot = exec ? PROT_READ|PROT_WRITE|PROT_EXEC : PROT_READ|PROT_WRITE;
-#ifdef __OpenBSD__
+#if defined(__OpenBSD__)
   // XXX: Work-around mmap/MAP_FIXED bug temporarily on OpenBSD
   if (::mprotect(addr, size, prot) == 0) {
     return true;
+  }
+#elif defined(__APPLE__)
+  if (exec) {
+    // Do not replace MAP_JIT mappings, see JDK-8234930
+    if (::mprotect(addr, size, prot) == 0) {
+      return true;
+    }
+  } else {
+    uintptr_t res = (uintptr_t) ::mmap(addr, size, prot,
+                                       MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0);
+    if (res != (uintptr_t) MAP_FAILED) {
+      return true;
+    }
   }
 #else
   uintptr_t res = (uintptr_t) ::mmap(addr, size, prot,
@@ -2302,10 +2325,22 @@ char *os::scan_pages(char *start, char* end, page_info* page_expected, page_info
 }
 
 
-bool os::pd_uncommit_memory(char* addr, size_t size) {
-#ifdef __OpenBSD__
+MACOS_ONLY(bool os::pd_uncommit_memory(char* addr, size_t size, bool executable))
+NOT_MACOS(bool os::pd_uncommit_memory(char* addr, size_t size)) {
+#if defined(__OpenBSD__)
   // XXX: Work-around mmap/MAP_FIXED bug temporarily on OpenBSD
   return ::mprotect(addr, size, PROT_NONE) == 0;
+#elif defined(__APPLE__)
+  if (executable) {
+    if (::madvise(addr, size, MADV_FREE) != 0) {
+      return false;
+    }
+    return ::mprotect(addr, size, PROT_NONE) == 0;
+  } else {
+    uintptr_t res = (uintptr_t) ::mmap(addr, size, PROT_NONE,
+                  MAP_PRIVATE|MAP_FIXED|MAP_NORESERVE|MAP_ANONYMOUS, -1, 0);
+    return res  != (uintptr_t) MAP_FAILED;
+  }
 #else
   uintptr_t res = (uintptr_t) ::mmap(addr, size, PROT_NONE,
                 MAP_PRIVATE|MAP_FIXED|MAP_NORESERVE|MAP_ANONYMOUS, -1, 0);
@@ -2331,11 +2366,17 @@ static address _highest_vm_reserved_address = NULL;
 // 'requested_addr' is only treated as a hint, the return value may or
 // may not start from the requested address. Unlike Bsd mmap(), this
 // function returns NULL to indicate failure.
-static char* anon_mmap(char* requested_addr, size_t bytes, bool fixed) {
+static char* anon_mmap(char* requested_addr, size_t bytes, bool fixed, bool executable = false) {
   char * addr;
   int flags;
 
   flags = MAP_PRIVATE | MAP_NORESERVE | MAP_ANONYMOUS;
+#ifdef __APPLE__
+  if (executable) {
+    guarantee(!fixed, "MAP_JIT (for execute) is incompatible with MAP_FIXED");
+    flags |= MAP_JIT;
+  }
+#endif
   if (fixed) {
     assert((uintptr_t)requested_addr % os::Bsd::page_size() == 0, "unaligned address");
     flags |= MAP_FIXED;
@@ -2368,10 +2409,18 @@ static int anon_munmap(char * addr, size_t size) {
   return ::munmap(addr, size) == 0;
 }
 
+#if defined(__APPLE__)
 char* os::pd_reserve_memory(size_t bytes, char* requested_addr,
-                         size_t alignment_hint) {
+                            size_t alignment_hint,
+                            bool executable) {
+  return anon_mmap(requested_addr, bytes, (requested_addr != NULL), executable);
+}
+#else
+char* os::pd_reserve_memory(size_t bytes, char* requested_addr,
+                            size_t alignment_hint) {
   return anon_mmap(requested_addr, bytes, (requested_addr != NULL));
 }
+#endif
 
 bool os::pd_release_memory(char* addr, size_t size) {
   return anon_munmap(addr, size);
@@ -3671,15 +3720,6 @@ void os::init(void) {
   Bsd::clock_init();
   initial_time_count = javaTimeNanos();
 
-#ifdef __APPLE__
-  // XXXDARWIN
-  // Work around the unaligned VM callbacks in hotspot's
-  // sharedRuntime. The callbacks don't use SSE2 instructions, and work on
-  // Linux, Solaris, and FreeBSD. On Mac OS X, dyld (rightly so) enforces
-  // alignment when doing symbol lookup. To work around this, we force early
-  // binding of all symbols now, thus binding when alignment is known-good.
-  _dyld_bind_fully_image_containing_address((const void *) &os::init);
-#endif
 }
 
 // To install functions for atexit system call
