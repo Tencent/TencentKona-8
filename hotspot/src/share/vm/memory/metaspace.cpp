@@ -3320,8 +3320,8 @@ void Metaspace::global_initialize() {
     // If using shared space, open the file that contains the shared space
     // and map in the memory before initializing the rest of metaspace (so
     // the addresses don't conflict)
+    address cds_address = NULL;
     if (UseSharedSpaces) {
-      address cds_address = NULL;
       FileMapInfo* mapinfo = new FileMapInfo();
 
       if (JvmtiExport::should_post_class_file_load_hook()) {
@@ -3342,22 +3342,23 @@ void Metaspace::global_initialize() {
           assert(!mapinfo->is_open() && !UseSharedSpaces,
                  "archive file not closed or shared spaces not disabled.");
         }
-#ifdef _LP64
-        if (using_class_space()) {
-          char* cds_end = (char*)(cds_address + cds_total);
-          cds_end = (char *)align_ptr_up(cds_end, _reserve_alignment);
-          allocate_metaspace_compressed_klass_ptrs(cds_end, cds_address);
-        }
-#endif // _LP64
       }
     }
 #endif // INCLUDE_CDS
 #ifdef _LP64
     // If UseCompressedClassPointers is set then allocate the metaspace area
     // above the heap and above the CDS area (if it exists).
-    if (using_class_space() && !UseSharedSpaces) {
-      char* base = (char*)align_ptr_up(Universe::heap()->reserved_region().end(), _reserve_alignment);
-      allocate_metaspace_compressed_klass_ptrs(base, 0);
+    if (using_class_space()) {
+      if (UseSharedSpaces) {
+#if INCLUDE_CDS
+        char* cds_end = (char*)(cds_address + cds_total);
+        cds_end = (char *)align_ptr_up(cds_end, _reserve_alignment);
+        allocate_metaspace_compressed_klass_ptrs(cds_end, cds_address);
+#endif
+      } else {
+        char* base = (char*)align_ptr_up(Universe::heap()->reserved_region().end(), _reserve_alignment);
+        allocate_metaspace_compressed_klass_ptrs(base, 0);
+      }
     }
 #endif // _LP64
 

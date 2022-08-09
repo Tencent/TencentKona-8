@@ -1331,10 +1331,10 @@ class G1UpdateRemSetTrackingBeforeRebuild : public HeapRegionClosure {
 
     bool selected_for_rebuild;
     if (hr->isHumongous()) {
-      bool const is_live = _cm->liveness(hr->humongous_start_region()->hrm_index()) > 0;
+      bool const is_live = _cm->live_words(hr->humongous_start_region()->hrm_index()) > 0;
       selected_for_rebuild = tracking_policy->update_humongous_before_rebuild(hr, is_live);
     } else {
-      size_t const live_bytes = _cm->liveness(hr->hrm_index());
+      size_t const live_bytes = _cm->live_bytes(hr->hrm_index());
       selected_for_rebuild = tracking_policy->update_before_rebuild(hr, live_bytes);
     }
     if (selected_for_rebuild) {

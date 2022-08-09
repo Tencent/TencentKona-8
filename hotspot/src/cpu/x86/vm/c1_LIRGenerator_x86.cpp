@@ -166,8 +166,32 @@ LIR_Address* LIRGenerator::emit_array_address(LIR_Opr array_opr, LIR_Opr index_o
   LIR_Address* addr;
   if (index_opr->is_constant()) {
     int elem_size = type2aelembytes(type);
-    addr = new LIR_Address(array_opr,
-                           offset_in_bytes + index_opr->as_jint() * elem_size, type);
+#ifdef _LP64
+    jint index = index_opr->as_jint();
+    jlong disp = offset_in_bytes + (jlong)(index) * elem_size;
+    if (disp > max_jint) {
+      // Displacement overflow. Cannot directly use instruction with 32-bit displacement for 64-bit addresses.
+      // Convert array index to long to do array offset computation with 64-bit values.
+      index_opr = new_register(T_LONG);
+      __ move(LIR_OprFact::longConst(index), index_opr);
+      addr = new LIR_Address(array_opr, index_opr, LIR_Address::scale(type), offset_in_bytes, type);
+    } else {
+      addr = new LIR_Address(array_opr, disp, type);
+    }
+#else
+    // A displacement overflow can also occur for x86 but that is not a problem due to the 32-bit address range!
+    // Let's assume an array 'a' and an access with displacement 'disp'. When disp overflows, then "a + disp" will
+    // always be negative (i.e. underflows the 32-bit address range):
+    // Let N = 2^32: a + signed_overflow(disp) = a + disp - N.
+    // "a + disp" is always smaller than N. If an index was chosen which would point to an address beyond N, then
+    // range checks would catch that and throw an exception. Thus, a + disp < 0 holds which means that it always
+    // underflows the 32-bit address range:
+    // unsigned_underflow(a + signed_overflow(disp)) = unsigned_underflow(a + disp - N)
+    //                                              = (a + disp - N) + N = a + disp
+    // This shows that we still end up at the correct address with a displacement overflow due to the 32-bit address
+    // range limitation. This overflow only needs to be handled if addresses can be larger as on 64-bit platforms.
+    addr = new LIR_Address(array_opr, offset_in_bytes + index_opr->as_jint() * elem_size, type);
+#endif // _LP64
   } else {
 #ifdef _LP64
     if (index_opr->type() == T_INT) {
@@ -1049,6 +1073,50 @@ void LIRGenerator::do_UTF8_UTF16_decode(Intrinsic* x) {
   LIR_Opr result = rlock_result(x);
   const LIR_Opr result_reg = result_register_for(x->type());
   __ call_runtime_leaf(StubRoutines::utf8_to_utf16_decoder(), getThreadTemp(), result_reg, cc->args());
+  __ move(result_reg, result);
+}
+
+void LIRGenerator::do_UTF8_UTF16_encode(Intrinsic* x) {
+  assert(x->number_of_arguments() == 6, "wrong type");
+
+  // Make all state_for calls early since they can emit code
+  CodeEmitInfo* info = state_for(x, x->state());
+
+  LIRItem sa(x->argument_at(0), this);
+  LIRItem sp(x->argument_at(1), this);
+  LIRItem sl(x->argument_at(2), this);
+  LIRItem da(x->argument_at(3), this);
+  LIRItem dp(x->argument_at(4), this);
+  LIRItem dl(x->argument_at(5), this);
+
+  BasicTypeList signature(5);
+  signature.append(T_ARRAY);
+  signature.append(T_INT);
+  signature.append(T_INT);
+  signature.append(T_ARRAY);
+  signature.append(T_INT);
+  signature.append(T_INT);
+  CallingConvention* cc = frame_map()->c_calling_convention(&signature);
+
+  LIR_Address* sa_elem_addr =
+    new LIR_Address(sa.result(),
+                    arrayOopDesc::base_offset_in_bytes(T_BYTE),
+                    T_BYTE);
+  LIR_Address* da_elem_addr =
+    new LIR_Address(da.result(),
+                    arrayOopDesc::base_offset_in_bytes(T_CHAR),
+                    T_CHAR);
+
+  __ leal(LIR_OprFact::address(sa_elem_addr), cc->at(0)); // rdi
+  sp.load_item_force(cc->at(1)); // rsi
+  sl.load_item_force(cc->at(2)); // rdx
+  __ leal(LIR_OprFact::address(da_elem_addr), cc->at(3)); // rcx
+  dp.load_item_force(cc->at(4)); // r8
+  dl.load_item_force(cc->at(5)); // r9
+
+  LIR_Opr result = rlock_result(x);
+  const LIR_Opr result_reg = result_register_for(x->type());
+  __ call_runtime_leaf(StubRoutines::utf16_to_utf8_encoder(), getThreadTemp(), result_reg, cc->args());
   __ move(result_reg, result);
 }
 
