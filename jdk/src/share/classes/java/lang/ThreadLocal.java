@@ -24,6 +24,8 @@
  */
 
 package java.lang;
+import jdk.internal.misc.TerminatingThreadLocal;
+
 import java.lang.ref.*;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -184,6 +186,19 @@ public class ThreadLocal<T> {
     }
 
     /**
+     * Returns {@code true} if there is a value in the current thread's copy of
+     * this thread-local variable, even if that values is {@code null}.
+     *
+     * @return {@code true} if current thread has associated value in this
+     *         thread-local variable; {@code false} if not
+     */
+    boolean isPresent() {
+        Thread t = Thread.currentThread();
+        ThreadLocalMap map = getMap(t);
+        return map != null && map.getEntry(this) != null;
+    }
+
+    /**
      * Variant of set() to establish initialValue. Used instead
      * of set() in case user has overridden the set() method.
      *
@@ -197,10 +212,14 @@ public class ThreadLocal<T> {
             return value;
         }
 
-        if (map != null)
+        if (map != null) {
             map.set(this, value);
-        else
+        } else {
             createMap(t, value);
+        }
+        if (this instanceof TerminatingThreadLocal) {
+            TerminatingThreadLocal.register((TerminatingThreadLocal<?>) this);
+        }
         return value;
     }
 
@@ -228,10 +247,11 @@ public class ThreadLocal<T> {
         if (map == ThreadLocalMap.NOT_SUPPORTED) {
             throw new UnsupportedOperationException();
         }
-        if (map != null)
+        if (map != null) {
             map.set(this, value);
-        else
+        } else {
             createMap(t, value);
+        }
     }
 
     /**
@@ -247,8 +267,9 @@ public class ThreadLocal<T> {
      */
      public void remove() {
          ThreadLocalMap m = getMap(Thread.currentThread());
-         if (m != null && m != ThreadLocalMap.NOT_SUPPORTED)
+         if (m != null && m != ThreadLocalMap.NOT_SUPPORTED) {
              m.remove(this);
+         }
      }
 
     /**

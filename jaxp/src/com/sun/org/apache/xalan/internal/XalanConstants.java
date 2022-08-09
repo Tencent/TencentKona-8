@@ -32,7 +32,6 @@ import com.sun.org.apache.xalan.internal.utils.SecuritySupport;
  *
  * @author Huizhe Wang, Oracle
  *
- * @version $Id: Constants.java,v 1.14 2011-06-07 04:39:40 joehw Exp $
  */
 public final class XalanConstants {
 
@@ -175,6 +174,21 @@ public final class XalanConstants {
      * for extension functions loading during translation process
      */
     public static final String JDK_EXTENSION_CLASSLOADER = "jdk.xml.transform.extensionClassLoader";
+
+    /**
+     * JDK XPath Expression group limit
+     */
+    public static final String XPATH_GROUP_LIMIT = "jdk.xml.xpathExprGrpLimit";
+
+    /**
+     * JDK XPath Expression operators limit
+     */
+    public static final String XPATH_OP_LIMIT = "jdk.xml.xpathExprOpLimit";
+
+    /**
+     * JDK XSL XPath limit or Total Number of Operators Permitted in an XSL Stylesheet
+     */
+    public static final String XPATH_TOTALOP_LIMIT = "jdk.xml.xpathTotalOpLimit";
 
     //legacy System Properties
     public final static String ENTITY_EXPANSION_LIMIT = "entityExpansionLimit";
