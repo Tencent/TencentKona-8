@@ -4440,6 +4440,10 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
   }
   __ movl(Address(old_coroutine, Coroutine::state_offset()) , Coroutine::_onstack);
   __ movptr(Address(old_coroutine, Coroutine::last_sp_offset()), rsp);
+  __ movptr(temp, Address(thread, JavaThread::shadow_zone_growth_watermark_offset()));
+  __ movptr(Address(old_coroutine, Coroutine::shadow_zone_growth_watermark_offset()), temp);
+  __ movptr(temp, Address(thread, JavaThread::shadow_zone_growth_native_watermark_offset()));
+  __ movptr(Address(old_coroutine, Coroutine::shadow_zone_growth_native_watermark_offset()), temp);
 
   // load target continuation context
 #ifdef ASSERT
@@ -4453,6 +4457,14 @@ void continuation_switchTo_contents(MacroAssembler *masm, int start, OopMapSet* 
   __ movptr(Address(thread, JavaThread::stack_base_offset()), temp);
   __ movl(temp, Address(target_coroutine, Coroutine::stack_size_offset()));
   __ movl(Address(thread, JavaThread::stack_size_offset()), temp);
+
+  __ movptr(temp, Address(target_coroutine, Coroutine::shadow_zone_safe_limit_offset()));
+  __ movptr(Address(thread, JavaThread::shadow_zone_safe_limit_offset()), temp);
+  __ movptr(temp, Address(target_coroutine, Coroutine::shadow_zone_growth_watermark_offset()));
+  __ movptr(Address(thread, JavaThread::shadow_zone_growth_watermark_offset()), temp);
+  __ movptr(temp, Address(target_coroutine, Coroutine::shadow_zone_growth_native_watermark_offset()));
+  __ movptr(Address(thread, JavaThread::shadow_zone_growth_native_watermark_offset()), temp);
+
   __ movptr(rsp, Address(target_coroutine, Coroutine::last_sp_offset()));
 #if defined(_WINDOWS)
     {

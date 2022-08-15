@@ -1390,6 +1390,15 @@ class JavaThread: public Thread {
     assert(_shadow_zone_safe_limit != NULL, "Don't call this before the field is initialized.");
     return _shadow_zone_safe_limit;
   }
+
+  address shadow_zone_growth_watermark() const {
+    return _shadow_zone_growth_watermark;
+  }
+
+  address shadow_zone_growth_native_watermark() const {
+    return _shadow_zone_growth_native_watermark;
+  }
+
   void create_stack_guard_pages();
   void remove_stack_guard_pages();
 

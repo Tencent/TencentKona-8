@@ -820,6 +820,7 @@ Coroutine* Coroutine::owning_coro_from_monitor_owner(address owner, bool doLock)
 void Coroutine::init_thread_stack(JavaThread* thread) {
   _stack_base = thread->stack_base();
   _stack_size = thread->stack_size();
+  _shadow_zone_safe_limit = thread->shadow_zone_safe_limit();
   _last_sp = NULL;
 }
 
@@ -829,6 +830,9 @@ bool Coroutine::init_stack(JavaThread* thread) {
     return false;
   }
   _stack_size = ContReservedStack::stack_size;
+  _shadow_zone_safe_limit = _stack_base - _stack_size + (StackRedPages + StackYellowPages + StackShadowPages) * os::vm_page_size();
+  _shadow_zone_growth_watermark = _stack_base;
+  _shadow_zone_growth_native_watermark = _stack_base;
   _last_sp = NULL;
 
   DEBUG_CORO_ONLY(tty->print("created coroutine stack at %08x with real size: %i\n", _stack_base, _stack_size));

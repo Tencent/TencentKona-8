@@ -234,6 +234,9 @@ private:
   intptr_t        _guaranteed_stack_bytes;
 #endif
   address         _last_sp;
+  address         _shadow_zone_safe_limit;
+  address         _shadow_zone_growth_watermark;
+  address         _shadow_zone_growth_native_watermark;
 #ifndef CHECK_UNHANDLED_OOPS
   union {
 #endif
@@ -348,7 +351,10 @@ public:
   static ByteSize guaranteed_stack_bytes_offset() { return byte_offset_of(Coroutine, _guaranteed_stack_bytes); }
 #endif
 
-  static ByteSize last_sp_offset()            { return byte_offset_of(Coroutine, _last_sp); }
+  static ByteSize last_sp_offset()                             { return byte_offset_of(Coroutine, _last_sp); }
+  static ByteSize shadow_zone_safe_limit_offset()              { return byte_offset_of(Coroutine, _shadow_zone_safe_limit); }
+  static ByteSize shadow_zone_growth_watermark_offset()        { return byte_offset_of(Coroutine, _shadow_zone_growth_watermark); }
+  static ByteSize shadow_zone_growth_native_watermark_offset() { return byte_offset_of(Coroutine, _shadow_zone_growth_native_watermark); }
 
   bool is_lock_owned(address adr) const {
     return _stack_base >= adr && adr > (_stack_base - _stack_size);
