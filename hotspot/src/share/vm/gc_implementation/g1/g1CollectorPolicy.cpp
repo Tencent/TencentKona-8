@@ -1396,7 +1396,7 @@ G1CollectorPolicy::init_cset_region_lengths(uint eden_cset_region_length,
   _survivor_cset_region_length = survivor_cset_region_length;
 
   assert(young_cset_region_length() == _collection_set_cur_length,
-         err_msg("should match %u == %lu", young_cset_region_length(), _collection_set_cur_length));
+         err_msg("should match %u == " SIZE_FORMAT, young_cset_region_length(), _collection_set_cur_length));
 
   _old_cset_region_length      = 0;
 }
