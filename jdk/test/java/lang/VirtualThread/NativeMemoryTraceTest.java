@@ -64,7 +64,6 @@ public class NativeMemoryTraceTest {
         OutputAnalyzer output = new OutputAnalyzer(outputPb.start());
         output.shouldContain("CoroutineStack");
         output.shouldContain("Coroutine");
-        output.shouldNotContain("Unknown");
         latch.countDown();
     }
 
