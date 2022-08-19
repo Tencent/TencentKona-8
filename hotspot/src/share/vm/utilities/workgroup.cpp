@@ -245,6 +245,7 @@ void GangWorker::run() {
 void GangWorker::initialize() {
   this->initialize_thread_local_storage();
   this->record_stack_base_and_size();
+  MACOS_AARCH64_ONLY(thread->init_wx());
   assert(_gang != NULL, "No gang to run in");
   os::set_priority(this, NearMaxPriority);
   if (TraceWorkGang) {

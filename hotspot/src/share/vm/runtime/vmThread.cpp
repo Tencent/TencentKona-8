@@ -251,6 +251,7 @@ void VMThread::destroy() {
 }
 
 void VMThread::run() {
+  MACOS_AARCH64_ONLY(this->init_wx());
   assert(this == vm_thread(), "check");
 
   this->initialize_thread_local_storage();
