@@ -4120,7 +4120,7 @@ jint Arguments::parse(const JavaVMInitArgs* args) {
 #if !INCLUDE_ALL_GCS
   force_serial_gc();
 #endif // INCLUDE_ALL_GCS
-#if !INCLUDE_CDS
+#if !INCLUDE_CDS || (defined(AARCH64) && defined(__APPLE__))
   if (DumpSharedSpaces || RequireSharedSpaces) {
     jio_fprintf(defaultStream::error_stream(),
       "Shared spaces are not supported in this VM\n");
