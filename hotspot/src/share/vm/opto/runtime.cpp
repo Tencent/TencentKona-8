@@ -84,6 +84,9 @@
 # include "adfiles/ad_ppc_64.hpp"
 #endif
 
+// CodeRevive
+#include "cr/codeReviveVMGlobals.hpp"
+#include "cr/revive.hpp"
 
 // For debugging purposes:
 //  To force FullGCALot inside a runtime function, add the following two lines
@@ -184,6 +187,10 @@ bool OptoRuntime::generate(ciEnv* env) {
   gen(env, _zap_dead_Java_locals_Java      , zap_dead_locals_Type         , zap_dead_Java_locals_C          ,    0 , false, true , false );
   gen(env, _zap_dead_native_locals_Java    , zap_dead_locals_Type         , zap_dead_native_locals_C        ,    0 , false, true , false );
 # endif
+  if (CodeRevive::is_on()) {
+    CodeRevive::vm_globals()->add_opto_runtime();
+    CodeRevive::set_prepare_done();
+  }
   return true;
 }
 

@@ -35,6 +35,9 @@
 #include "opto/stringopts.hpp"
 #include "opto/subnode.hpp"
 
+// CodeRevive
+#include "cr/revive.hpp"
+
 #define __ kit.
 
 class StringConcat : public ResourceObj {
@@ -1106,7 +1109,7 @@ Node* PhaseStringOpts::fetch_static_field(GraphKit& kit, ciField* field) {
   if( bt == T_OBJECT ) {
     if (!field->type()->is_loaded()) {
       type = TypeInstPtr::BOTTOM;
-    } else if (field->is_constant()) {
+    } else if (field->is_constant() && !CodeRevive::is_save()) {
       // This can happen if the constant oop is non-perm.
       ciObject* con = field->constant_value().as_object();
       // Do not "join" in the previous type; it doesn't add value,

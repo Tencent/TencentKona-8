@@ -119,6 +119,10 @@
 #include "jfr/jfr.hpp"
 #endif
 
+// CodeRevive
+#include "cr/codeReviveMerge.hpp"
+#include "cr/revive.hpp"
+
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
 #ifdef DTRACE_ENABLED
@@ -3691,6 +3695,8 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   // Notify JVMTI agents that VM initialization is complete - nop if no agents.
   JvmtiExport::post_vm_initialized();
 
+  CodeRevive::on_vm_start();
+
   JFR_ONLY(Jfr::on_vm_start();)
 
   if (CleanChunkPoolAsync) {
@@ -3770,6 +3776,15 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
 #ifdef ASSERT
   _vm_complete = true;
 #endif
+  if (CodeRevive::is_merge()) {
+    CodeReviveMerge::merge_and_dump(CHECK_0);
+    ShouldNotReachHere();
+  }
+  if (CodeRevive::is_restore()) {
+    // code restore needs global oop of ArrayIndexOutOfBoundsException in ciEnv
+    initialize_class(vmSymbols::java_lang_ArrayIndexOutOfBoundsException(), CHECK_0);
+  }
+
   return JNI_OK;
 }
 

@@ -112,6 +112,9 @@ class ImplicitExceptionTable;
 class AbstractCompiler;
 class xmlStream;
 
+// CodeRevive
+class CodeReviveOptRecords;
+
 class nmethod : public CodeBlob {
   friend class VMStructs;
   friend class NMethodSweeper;
@@ -287,6 +290,7 @@ class nmethod : public CodeBlob {
           int orig_pc_offset,
           DebugInformationRecorder *recorder,
           Dependencies* dependencies,
+          CodeReviveOptRecords* opt_records,
           CodeBuffer *code_buffer,
           int frame_size,
           OopMapSet* oop_maps,
@@ -323,6 +327,7 @@ class nmethod : public CodeBlob {
                               int orig_pc_offset,
                               DebugInformationRecorder* recorder,
                               Dependencies* dependencies,
+                              CodeReviveOptRecords* opt_records,
                               CodeBuffer *code_buffer,
                               int frame_size,
                               OopMapSet* oop_maps,
@@ -393,7 +398,7 @@ class nmethod : public CodeBlob {
   PcDesc* scopes_pcs_begin      () const          { return (PcDesc*)(header_begin() + _scopes_pcs_offset   ); }
   PcDesc* scopes_pcs_end        () const          { return (PcDesc*)(header_begin() + _dependencies_offset) ; }
   address dependencies_begin    () const          { return           header_begin() + _dependencies_offset  ; }
-  address dependencies_end      () const          { return           header_begin() + _handler_table_offset ; }
+  address dependencies_end      () const          { return           header_begin() + _opt_records_offset ; }
   address handler_table_begin   () const          { return           header_begin() + _handler_table_offset ; }
   address handler_table_end     () const          { return           header_begin() + _nul_chk_table_offset ; }
   address nul_chk_table_begin   () const          { return           header_begin() + _nul_chk_table_offset ; }
@@ -777,6 +782,34 @@ public:
     nm->metadata_do(Metadata::mark_on_stack);
   }
   void metadata_do(void f(Metadata*));
+
+  // CodeRevive
+  friend class CodeReviveCodeBlob;
+ private:
+  int _opt_records_offset;
+
+  unsigned int _has_call_site_target_value:1;// Has call site dependence
+  unsigned int _load_from_aot:1;             // Load the method from AOT
+
+  nmethod();
+  static void post_test_revive_replace(nmethod* new_nm);
+
+ public:
+  static nmethod* new_nmethod(int size);
+
+  address opt_records_begin     () const          { return           header_begin() + _opt_records_offset; }
+  address opt_records_end       () const          { return           header_begin() + _handler_table_offset ; }
+
+  int opt_records_size  () const                  { return           opt_records_end () - opt_records_begin(); }
+
+  bool  has_call_site_target_value() const        { return _has_call_site_target_value; }
+  void  set_has_call_site_target_value()          { _has_call_site_target_value = true; }
+
+  bool  load_from_aot() const                     { return _load_from_aot; }
+  void  set_load_from_aot()                       { _load_from_aot = true; }
+
+  void print_opt_records()                        PRODUCT_RETURN;
+  void print_oops_metadatas()                     PRODUCT_RETURN;
 };
 
 // Locks an nmethod so its code will not get removed and it will not

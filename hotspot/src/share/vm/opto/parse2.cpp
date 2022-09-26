@@ -1146,6 +1146,10 @@ void Parse::do_if(BoolTest::mask btest, Node* c) {
       adjust_map_after_if(taken_btest, c, prob, branch_block, next_block);
       if (!stopped()) {
         merge(target_bci);
+      } else {
+        if (CodeRevive::is_save() && !C->is_osr_compilation()) {
+          env()->opt_records()->add_ProfiledUnstableIf(method(), bci(), true);
+        }
       }
     }
   }
@@ -1164,6 +1168,11 @@ void Parse::do_if(BoolTest::mask btest, Node* c) {
     profile_not_taken_branch();
     adjust_map_after_if(untaken_btest, c, untaken_prob,
                         next_block, branch_block);
+    if (stopped()) {
+      if (CodeRevive::is_save() && !C->is_osr_compilation()) {
+        env()->opt_records()->add_ProfiledUnstableIf(method(), bci(), false);
+      }
+    }
   }
 }
 

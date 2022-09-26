@@ -1317,12 +1317,16 @@ class poll_Relocation : public Relocation {
   bool          is_data()                      { return true; }
   relocInfo::relocType type() { return relocInfo::poll_type; }
   void     fix_relocation_after_move(const CodeBuffer* src, CodeBuffer* dest);
+  // CodeRevive:
+  void     set_value(address x) { pd_set_data_value(x, 0); }
 };
 
 class poll_return_Relocation : public Relocation {
   bool          is_data()                      { return true; }
   relocInfo::relocType type() { return relocInfo::poll_return_type; }
   void     fix_relocation_after_move(const CodeBuffer* src, CodeBuffer* dest);
+  // CodeRevive:
+  void     set_value(address x) { pd_set_data_value(x, 0); }
 };
 
 // We know all the xxx_Relocation classes, so now we can define these:

@@ -337,6 +337,13 @@ template <MEMFLAGS F> void BasicHashtable<F>::copy_buckets(char** top, char* end
 
 
 #ifndef PRODUCT
+template <class T> void print_literal(T l) {
+  l->print();
+}
+
+static void print_literal(const char* l) {
+  tty->print("%s", l);
+}
 
 template <class T, MEMFLAGS F> void Hashtable<T, F>::print() {
   ResourceMark rm;
@@ -345,7 +352,7 @@ template <class T, MEMFLAGS F> void Hashtable<T, F>::print() {
     HashtableEntry<T, F>* entry = bucket(i);
     while(entry != NULL) {
       tty->print("%d : ", i);
-      entry->literal()->print();
+      print_literal(entry->literal());
       tty->cr();
       entry = entry->next();
     }
@@ -397,9 +404,11 @@ template class RehashableHashtable<oop, mtSymbol>;
 #endif // SOLARIS || CHECK_UNHANDLED_OOPS
 template class Hashtable<oopDesc*, mtSymbol>;
 template class Hashtable<Symbol*, mtClass>;
+template class Hashtable<const char*, mtInternal>;
 template class HashtableEntry<Symbol*, mtSymbol>;
 template class HashtableEntry<Symbol*, mtClass>;
 template class HashtableEntry<oop, mtSymbol>;
+template class HashtableEntry<const char*, mtInternal>;
 template class BasicHashtableEntry<mtSymbol>;
 template class BasicHashtableEntry<mtCode>;
 template class BasicHashtable<mtClass>;

@@ -56,6 +56,10 @@
 #include "shark/sharkCompiler.hpp"
 #endif
 
+// CodeRevive
+#include "cr/codeReviveFile.hpp"
+#include "cr/codeReviveAuxInfo.hpp"
+
 #ifdef DTRACE_ENABLED
 
 // Only bother with this argument setup if dtrace is available
@@ -156,6 +160,10 @@ PerfCounter* CompileBroker::_perf_sum_osr_bytes_compiled = NULL;
 PerfCounter* CompileBroker::_perf_sum_standard_bytes_compiled = NULL;
 PerfCounter* CompileBroker::_perf_sum_nmethod_size = NULL;
 PerfCounter* CompileBroker::_perf_sum_nmethod_code_size = NULL;
+
+// CodeRevive
+PerfCounter* CompileBroker::_perf_aot_compilation = NULL;
+PerfCounter* CompileBroker::_perf_total_aot_compile_count = NULL;
 
 PerfStringVariable* CompileBroker::_perf_last_method = NULL;
 PerfStringVariable* CompileBroker::_perf_last_failed_method = NULL;
@@ -970,6 +978,15 @@ void CompileBroker::compilation_init() {
     _perf_sum_nmethod_code_size =
                  PerfDataManager::create_counter(SUN_CI, "nmethodCodeSize",
                                                  PerfData::U_Bytes, CHECK);
+
+    // CodeRevive
+    _perf_aot_compilation =
+                 PerfDataManager::create_counter(SUN_CI, "aotTime",
+                                                 PerfData::U_Ticks, CHECK);
+
+    _perf_total_aot_compile_count =
+                 PerfDataManager::create_counter(SUN_CI, "aotCompiles",
+                                                 PerfData::U_Events, CHECK);
 
     _perf_last_method =
                  PerfDataManager::create_string_variable(SUN_CI, "lastMethod",
@@ -1926,6 +1943,45 @@ static void post_compilation_event(EventCompilation* event, CompileTask* task) {
   event->commit();
 }
 
+// CodeRevive: find and register aot saved methods.
+bool CompileBroker::revive_aot_method(ciEnv* ci_env, ciMethod* target, AbstractCompiler* comp, CompileTask* task) {
+  int osr_bci     = task->osr_bci();
+  int task_level  = task->comp_level();
+  bool is_success = false;
+  if (osr_bci == InvocationEntryBci && !CodeRevive::is_unsupported(ci_env) &&
+    CodeRevive::is_revive_candidate(target->get_Method(), task_level)) {
+    ResourceMark rm;
+    elapsedTimer t1;
+    if (CodeRevive::perf_enable()) {
+      t1.start();
+    }
+    char* revive_start = NULL;
+    {
+      TraceTime t("Lookup AOT method", CodeRevive::get_aot_timer(CodeRevive::T_LOOKUP_METHOD),
+                   CodeRevive::perf_enable());
+      revive_start = CodeRevive::find_revive_code(target->get_Method());
+    }
+    if (revive_start != NULL) {
+      ci_env->register_aot_method(target, osr_bci, revive_start, comp, task_level);
+      if (!ci_env->failing()) {
+        is_success = true;
+      }
+    }
+    if (!is_success) {
+      // clean up failure on env
+      ci_env->reset_revive_failure();
+    }
+    if (CodeRevive::perf_enable()) {
+      t1.stop();
+      CodeRevive::collect_statistics(t1, is_success);
+    }
+    if (PrintCompilation) {
+      task->print_compilation(tty, is_success ? "aot revive success" : "aot no candidate");
+    }
+  }
+  return is_success;
+}
+
 // ------------------------------------------------------------------
 // CompileBroker::invoke_compiler_on_method
 //
@@ -2008,8 +2064,16 @@ void CompileBroker::invoke_compiler_on_method(CompileTask* task) {
     AbstractCompiler *comp = compiler(task_level);
     if (comp == NULL) {
       ci_env.record_method_not_compilable("no compiler", !TieredCompilation);
-    } else {
+    } else if (!CodeRevive::is_restore()) {
       comp->compile_method(&ci_env, target, osr_bci);
+    } else {
+      // CodeRevive: find and register aot saved methods.
+      bool load_aot = revive_aot_method(&ci_env, target, comp, task);
+
+      // failed to revive aot method
+      if (!load_aot) {
+        comp->compile_method(&ci_env, target, osr_bci);
+      }
     }
 
     if (!ci_env.failing() && task->code() == NULL) {
@@ -2342,6 +2406,10 @@ void CompileBroker::collect_statistics(CompilerThread* thread, elapsedTimer time
         _perf_standard_compilation->inc(time.ticks());
         _perf_sum_standard_bytes_compiled->inc(method->code_size() + task->num_inlined_bytecodes());
       }
+      if (code->load_from_aot()) {
+        _perf_aot_compilation->inc(time.ticks());
+        _perf_total_aot_compile_count->inc();
+      }
     }
 
     if (CITimeEach) {
@@ -2379,6 +2447,20 @@ const char* CompileBroker::compiler_name(int comp_level) {
     return "no compiler";
   } else {
     return (comp->name());
+  }
+}
+
+// CodeRevive: print compilation info
+void CompileBroker::print_aot_times(outputStream* output) {
+  if (UsePerfData) {
+    output->print_cr("    Standard Compilation info");
+    output->print_cr("      Total compile method count   : %ld ", CompileBroker::_perf_total_standard_compile_count->get_value());
+    output->print_cr("      Total compile method time    : %6.3f ms", 
+                     ((double)CompileBroker::_perf_standard_compilation->get_value() / os::elapsed_frequency() * (double)1000.0));
+    output->print_cr("    Accumulated AOT restore info");
+    output->print_cr("      Total restore method count   : %ld ", CompileBroker::_perf_total_aot_compile_count->get_value());
+    output->print_cr("      Total restore method time    : %6.3f ms", 
+                     ((double)CompileBroker::_perf_aot_compilation->get_value() / os::elapsed_frequency() * (double)1000.0));
   }
 }
 

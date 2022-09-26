@@ -90,6 +90,9 @@ public:
     }
     return call;
   }
+
+  // CodeRevive
+  void print_on(outputStream* out);
 };
 
 #endif // SHARE_VM_CI_CICALLPROFILE_HPP

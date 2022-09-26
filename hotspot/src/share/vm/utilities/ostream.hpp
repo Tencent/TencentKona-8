@@ -271,6 +271,7 @@ void ostream_init();
 void ostream_init_log();
 void ostream_exit();
 void ostream_abort();
+const char* make_log_name(const char* log_name, const char* force_directory);
 
 // staticBufferStream uses a user-supplied buffer for all formatting.
 // Used for safe formatting during fatal error handling.  Not MT safe.

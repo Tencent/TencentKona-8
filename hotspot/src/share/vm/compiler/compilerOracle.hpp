@@ -78,6 +78,13 @@ class CompilerOracle : AllStatic {
   // For updating the oracle file
   static void append_comment_to_file(const char* message);
   static void append_exclude_to_file(methodHandle method);
+
+  // CodeRevive
+ public:
+  // Tells wheter we to revive a method
+  static bool should_revive(methodHandle method);
+
+  static void parse_revive_only(char* line);
 };
 
 #endif // SHARE_VM_COMPILER_COMPILERORACLE_HPP

@@ -924,6 +924,79 @@ class Method : public Metadata {
   // Inlined elements
   address* native_function_addr() const          { assert(is_native(), "must be native"); return (address*) (this+1); }
   address* signature_handler_addr() const        { return native_function_addr() + 1; }
+
+  // CodeRevive
+ private:
+  const static uint32_t _aot_max_versions = 25;
+  enum {
+    aot_revived_bits     = 1,
+    aot_disabled_bits    = 1,
+    aot_usable_bits      = _aot_max_versions,
+    aot_version_bits     = 5,
+  };
+  enum {
+    aot_revived_shift    = 0,
+    aot_disabled_shift   = aot_revived_shift + aot_revived_bits,
+    aot_usable_shift     = aot_disabled_shift + aot_disabled_bits,
+    aot_version_shift    = aot_usable_shift + aot_usable_bits,
+    aot_info_max_bits    = aot_version_shift + aot_version_bits,
+  };
+  enum {
+    aot_revived_mask     = right_n_bits(aot_revived_bits) << aot_revived_shift,
+    aot_disabled_mask    = right_n_bits(aot_disabled_bits) << aot_disabled_shift,
+    aot_usable_mask      = right_n_bits(aot_usable_bits) << aot_usable_shift,
+    aot_version_mask     = right_n_bits(aot_version_bits) << aot_version_shift,
+  };
+  // _aot_info: auxiliary information for AOT. Current format is:
+  // |---------------------|----------|-------------------|--------|--------|
+  // 31                    22         18                  2        1        0
+  // un-used               version    version-usable      disabled is-revived
+  // 
+  // If some AOT version of this method is made not entrant, zombine or unloaded,
+  // the current version which stored in 'version' will be set to 1 in bitmap 'version-usable'.
+  // If all versions are set 'version-usable', 'disabled' will be set to 1.
+  //
+  // If some version of this method is revived successfully, is-revived will be set to 1.
+  uint32_t          _aot_info;
+  int               _csa_meta_index;
+
+ public:
+  virtual int  csa_meta_index() const { return _csa_meta_index; }
+  virtual void set_csa_meta_index(int index) { _csa_meta_index = index; }
+  bool has_revived() const { return ((_aot_info & aot_revived_mask) >> aot_revived_shift) == 1; }
+  void set_revived() { _aot_info |= 1 << aot_revived_shift; }
+  void clear_revived() { _aot_info &= ~(1 << aot_revived_shift); }
+  bool aot_disabled() const { return ((_aot_info & aot_disabled_mask) >> aot_disabled_shift) == 1; }
+  void set_aot_disabled() { _aot_info |= 1 << aot_disabled_shift; }
+  void set_aot_version(uint32_t version) {
+    guarantee(version < _aot_max_versions, "should be");
+    _aot_info |= version << aot_version_shift;
+    set_revived();
+  }
+  uint32_t aot_version() const {
+    return (_aot_info & aot_version_mask ) >> aot_version_shift;
+  }
+  bool is_aot_version_usable(uint32_t version) const {
+    guarantee(version < _aot_max_versions, "should be");
+    return (_aot_info & (1 << (aot_usable_shift + version))) == 0;
+  }
+  void set_aot_version_unusable(uint32_t version) {
+    guarantee(version < _aot_max_versions, "should be");
+    _aot_info |= (1 << (aot_usable_shift + version));
+  }
+  // called when nmethod is made not_entrant, zombie or unloaded.
+  void clear_aot_code() {
+    if (!has_revived()) {
+      return;
+    }
+    clear_revived();
+    set_aot_version_unusable(aot_version());
+  }
+
+  static uint32_t aot_max_versions() { return _aot_max_versions; }
+
+  // above method print klass external name
+  static char* name_and_sig_as_C_string_all(Klass* klass, Symbol* method_name, Symbol* signature);
 };
 
 

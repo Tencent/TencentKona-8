@@ -36,6 +36,8 @@
 #include "runtime/thread.inline.hpp"
 #include "utilities/copy.hpp"
 
+// CodeRevive
+#include "cr/codeReviveDependencies.hpp"
 
 #ifdef ASSERT
 static bool must_be_in_vm() {
@@ -125,6 +127,15 @@ void Dependencies::assert_has_no_finalizable_subclasses(ciKlass* ctxk) {
 void Dependencies::assert_call_site_target_value(ciCallSite* call_site, ciMethodHandle* method_handle) {
   check_ctxk(call_site->klass());
   assert_common_2(call_site_target_value, call_site, method_handle);
+}
+
+// CodeRevive
+bool Dependencies::has_call_site_target_value() const {
+  if (_deps == NULL) {
+    return false;
+  }
+  GrowableArray<ciBaseObject*>* deps = _deps[call_site_target_value];
+  return deps->length() != 0;
 }
 
 // Helper function.  If we are adding a new dep. under ctxk2,
@@ -550,10 +561,13 @@ void Dependencies::write_dependency_to(xmlStream* xtty,
 }
 
 void Dependencies::print_dependency(DepType dept, GrowableArray<DepArgument>* args,
-                                    Klass* witness) {
+                                    Klass* witness, outputStream* out) {
   ResourceMark rm;
   ttyLocker ttyl;   // keep the following output all in one block
-  tty->print_cr("%s of type %s",
+  if (out == NULL) {
+    out = tty;
+  }
+  out->print_cr("%s of type %s",
                 (witness == NULL)? "Dependency": "Failed dependency",
                 dep_name(dept));
   // print arguments
@@ -575,18 +589,18 @@ void Dependencies::print_dependency(DepType dept, GrowableArray<DepArgument>* ar
     } else {
       what = "object ";
     }
-    tty->print("  %s = %s", what, (put_star? "*": ""));
+    out->print("  %s = %s", what, (put_star? "*": ""));
     if (arg.is_klass())
-      tty->print("%s", ((Klass*)arg.metadata_value())->external_name());
+      out->print("%s", ((Klass*)arg.metadata_value())->external_name());
     else if (arg.is_method())
       ((Method*)arg.metadata_value())->print_value();
     else
       ShouldNotReachHere(); // Provide impl for this type.
-    tty->cr();
+    out->cr();
   }
   if (witness != NULL) {
     bool put_star = !Dependencies::is_concrete_klass(witness);
-    tty->print_cr("  witness = %s%s",
+    out->print_cr("  witness = %s%s",
                   (put_star? "*": ""),
                   witness->external_name());
   }
@@ -613,20 +627,23 @@ void Dependencies::DepStream::log_dependency(Klass* witness) {
   guarantee(argslen == args->length(), "args array cannot grow inside nested ResoureMark scope");
 }
 
-void Dependencies::DepStream::print_dependency(Klass* witness, bool verbose) {
+void Dependencies::DepStream::print_dependency(Klass* witness, bool verbose, outputStream* out) {
   ResourceMark rm;
+  if (out == NULL) {
+    out = tty;
+  }
   int nargs = argument_count();
   GrowableArray<DepArgument>* args = new GrowableArray<DepArgument>(nargs);
   for (int j = 0; j < nargs; j++) {
     args->push(argument(j));
   }
   int argslen = args->length();
-  Dependencies::print_dependency(type(), args, witness);
+  Dependencies::print_dependency(type(), args, witness, out);
   if (verbose) {
     if (_code != NULL) {
-      tty->print("  code: ");
-      _code->print_value_on(tty);
-      tty->cr();
+      out->print("  code: ");
+      _code->print_value_on(out);
+      out->cr();
     }
   }
   guarantee(argslen == args->length(), "args array cannot grow inside nested ResoureMark scope");
@@ -640,9 +657,18 @@ void Dependencies::DepStream::initial_asserts(size_t byte_limit) {
   assert(must_be_in_vm(), "raw oops here");
   _byte_limit = byte_limit;
   _type       = (DepType)(end_marker-1);  // defeat "already at end" assert
-  assert((_code!=NULL) + (_deps!=NULL) == 1, "one or t'other");
+  assert((_code!=NULL) + (_deps!=NULL) + (_revive_deps!=NULL) == 1, "one or t'other");
 }
 #endif //ASSERT
+
+// CodeRevive: use revive_deps to build DepStream
+Dependencies::DepStream::DepStream(ReviveDependencies* revive_deps) :
+  _deps(NULL),
+  _code(NULL),
+  _revive_deps(revive_deps),
+  _bytes((address)revive_deps->dependencies_begin()) {
+  initial_asserts(revive_deps->dependencies_size());
+}
 
 bool Dependencies::DepStream::next() {
   assert(_type != end_marker, "already at end");
@@ -680,16 +706,22 @@ inline Metadata* Dependencies::DepStream::recorded_metadata_at(int i) {
   Metadata* o = NULL;
   if (_code != NULL) {
     o = _code->metadata_at(i);
-  } else {
+  } else if (_deps != NULL) {
     o = _deps->oop_recorder()->metadata_at(i);
+  } else { // CodeRevive
+    o = _revive_deps->metadata_at(i);
   }
   return o;
 }
 
 inline oop Dependencies::DepStream::recorded_oop_at(int i) {
-  return (_code != NULL)
-         ? _code->oop_at(i)
-    : JNIHandles::resolve(_deps->oop_recorder()->oop_at(i));
+  if (_code != NULL) {
+    return _code->oop_at(i);
+  } else if (_deps != NULL) {
+    return JNIHandles::resolve(_deps->oop_recorder()->oop_at(i));
+  } else { // CodeRevive
+    return _revive_deps->oop_at(i);
+  }
 }
 
 Metadata* Dependencies::DepStream::argument(int i) {

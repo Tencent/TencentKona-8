@@ -261,7 +261,8 @@ void GraphKit::gen_stub(address C_function,
   Node* if_not_null = _gvn.transform( new (C) IfTrueNode(iff)  );
 
   assert (StubRoutines::forward_exception_entry() != NULL, "must be generated before");
-  Node *exc_target = makecon(TypeRawPtr::make( StubRoutines::forward_exception_entry() ));
+  // CodeRevive: generate stub code, doesn't need relocate
+  Node *exc_target = makecon(TypeRawPtr::make( StubRoutines::forward_exception_entry(), false));
   Node *to_exc = new (C) TailCallNode(if_not_null,
                                       i_o(),
                                       exit_memory,

@@ -96,6 +96,10 @@ Method::Method(ConstMethod* xconst, AccessFlags access_flags, int size) {
   clear_method_counters();
   set_vtable_index(Method::garbage_vtable_index);
 
+  // CodeRevive
+  _aot_info = 0;
+  _csa_meta_index = -1;
+
   // Fix and bury in Method*
   set_interpreter_entry(NULL); // sets i2i entry and from_int
   set_adapter_entry(NULL);
@@ -175,6 +179,21 @@ char* Method::name_and_sig_as_C_string(Klass* klass, Symbol* method_name, Symbol
   }
 
   return buf;
+}
+
+// CodeRevive: get name and signature with klass name, not klass external name. 
+char* Method::name_and_sig_as_C_string_all(Klass* klass, Symbol* method_name, Symbol* signature) {
+  const char* klass_name = klass->name()->as_C_string();
+  int klass_name_len  = (int)strlen(klass_name);
+  int method_name_len = method_name->utf8_length();
+  int len             = klass_name_len + 1 + method_name_len + signature->utf8_length();
+  char* dest          = NEW_RESOURCE_ARRAY(char, len + 1);
+  strcpy(dest, klass_name);
+  dest[klass_name_len] = '.';
+  strcpy(&dest[klass_name_len + 1], method_name->as_C_string());
+  strcpy(&dest[klass_name_len + 1 + method_name_len], signature->as_C_string());
+  dest[len] = 0;
+  return dest;
 }
 
 int Method::fast_exception_handler_bci_for(methodHandle mh, KlassHandle ex_klass, int throw_bci, TRAPS) {
@@ -860,6 +879,9 @@ void Method::clear_code(bool acquire_lock /* = true */) {
   _from_interpreted_entry = _i2i_entry;
   OrderAccess::storestore();
   _code = NULL;
+
+  // CodeRevive
+  clear_aot_code();
 }
 
 // Called by class data sharing to remove any entry points (which are not shared)

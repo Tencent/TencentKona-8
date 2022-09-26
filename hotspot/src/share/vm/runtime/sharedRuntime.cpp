@@ -2223,6 +2223,15 @@ class AdapterFingerPrint : public CHeapObj<mtCode> {
     }
     return true;
   }
+
+  // CodeRevive
+  int* value_array() const {
+    if (_length <= 0) {
+      return (int*)_value._compact;
+    } else {
+      return _value._fingerprint;
+    }
+  }
 };
 
 
@@ -2999,6 +3008,24 @@ bool AdapterHandlerLibrary::contains(CodeBlob* b) {
     if ( b == CodeCache::find_blob(a->get_i2c_entry()) ) return true;
   }
   return false;
+}
+
+// CodeRevive: find c2i adatper by addr
+int* AdapterHandlerLibrary::find_c2i_adapter(address addr, bool* verified_entry, int* length) {
+  AdapterHandlerTableIterator iter(_adapters);
+  while (iter.has_next()) {
+    AdapterHandlerEntry* a = iter.next();
+    if (a->get_c2i_entry() == addr) {
+      *verified_entry = true;
+      *length = a->fingerprint()->length();
+      return a->fingerprint()->value_array();
+    } else if (a->get_c2i_unverified_entry() == addr) {
+      *verified_entry = false;
+      *length = a->fingerprint()->length();
+      return a->fingerprint()->value_array();
+    }
+  }
+  return NULL;
 }
 
 void AdapterHandlerLibrary::print_handler_on(outputStream* st, CodeBlob* b) {

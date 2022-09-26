@@ -27,6 +27,7 @@
 #include "classfile/javaAssertions.hpp"
 #include "classfile/symbolTable.hpp"
 #include "compiler/compilerOracle.hpp"
+#include "cr/revive.hpp"
 #include "memory/allocation.inline.hpp"
 #include "memory/cardTableRS.hpp"
 #include "memory/genCollectedHeap.hpp"
@@ -4280,7 +4281,48 @@ jint Arguments::apply_ergo() {
     UseOptoBiasInlining = false;
   }
 #endif
+  if (CodeReviveOptionsFile != NULL) {
+    // parse option file and set CodeReviveOptions
+    CodeRevive::parse_option_file();
+  }
 
+  if (CodeReviveOptions != NULL) {
+    if (VerifyOops) {
+      FLAG_SET_ERGO(bool, VerifyOops, false);
+    }
+#ifdef ASSERT
+    // skip different messages for CheckCompressedOops
+    if (CheckCompressedOops) {
+      FLAG_SET_ERGO(bool, CheckCompressedOops, false);
+    }
+#endif
+#if INCLUDE_RTM_OPT
+    if (UseRTMDeopt) {
+      FLAG_SET_ERGO(bool, UseRTMDeopt, false);
+    }
+    if (UseRTMForStackLocks) {
+      FLAG_SET_ERGO(bool, UseRTMForStackLocks, false);
+    }
+#endif
+#ifndef ZERO
+    // Code Revive isn't support in ZERO build, ignore the set for ZERO 
+    if (PrintBiasedLockingStatistics) {
+      FLAG_SET_ERGO(bool, PrintBiasedLockingStatistics, false);
+    }
+    if (PrintPreciseBiasedLockingStatistics) {
+      FLAG_SET_ERGO(bool, PrintPreciseBiasedLockingStatistics, false);
+    }
+    if (PrintPreciseRTMLockingStatistics) {
+      FLAG_SET_ERGO(bool, PrintPreciseRTMLockingStatistics, false);
+    }
+    if (VerifyAdapterCalls) {
+      FLAG_SET_ERGO(bool, VerifyAdapterCalls, false);
+    }
+    if (VerifyAdapterSharing) {
+      FLAG_SET_ERGO(bool, VerifyAdapterSharing, false);
+    }
+#endif
+  }
   // set PauseAtExit if the gamma launcher was used and a debugger is attached
   // but only if not already set on the commandline
   if (Arguments::created_by_gamma_launcher() && os::is_debugger_attached()) {

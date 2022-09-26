@@ -1082,7 +1082,7 @@ void PhaseMacroExpand::set_eden_pointers(Node* &eden_top_adr, Node* &eden_end_ad
     CollectedHeap* ch = Universe::heap();
     address top_adr = (address)ch->top_addr();
     address end_adr = (address)ch->end_addr();
-    eden_top_adr = makecon(TypeRawPtr::make(top_adr));
+    eden_top_adr = makecon(TypeRawPtr::make(top_adr, true));
     eden_end_adr = basic_plus_adr(eden_top_adr, end_adr - top_adr);
   }
 }
@@ -1639,7 +1639,7 @@ PhaseMacroExpand::initialize_object(AllocateNode* alloc,
   if (UseBiasedLocking && (length == NULL)) {
     mark_node = make_load(control, rawmem, klass_node, in_bytes(Klass::prototype_header_offset()), TypeRawPtr::BOTTOM, T_ADDRESS);
   } else {
-    mark_node = makecon(TypeRawPtr::make((address)markOopDesc::prototype()));
+    mark_node = makecon(TypeRawPtr::make((address)markOopDesc::prototype(), false));
   }
   rawmem = make_store(control, rawmem, object, oopDesc::mark_offset_in_bytes(), mark_node, T_ADDRESS);
 

@@ -36,6 +36,10 @@
 
 class CompileTask;
 
+// CodeRevive
+#include "cr/codeReviveOptRecords.hpp"
+class CodeReviveMetaSpace;
+
 // ciEnv
 //
 // This class is the top level broker for requests from the compiler
@@ -463,6 +467,26 @@ public:
   void dump_replay_data(outputStream* out);
   void dump_replay_data_unsafe(outputStream* out);
   void dump_compile_data(outputStream* out);
+
+  // CodeRevive
+private:
+  CodeReviveOptRecords*     _opt_records;
+
+public:
+  CodeReviveOptRecords* opt_records() { return _opt_records; }
+  void set_opt_records(CodeReviveOptRecords* r) { _opt_records = r; }
+  void reset_revive_failure() { _failure_reason = NULL; }
+  void register_aot_method(ciMethod*            target,
+                           int                  entry_bci,
+                           char*                start,
+                           AbstractCompiler*    compiler,
+                           int                  comp_level);
+  nmethod* get_method_from_revive_code(ciMethod* target,
+                                       int entry_bci,
+                                       char* start,
+                                       AbstractCompiler* compiler,
+                                       int comp_level,
+                                       CodeReviveMetaSpace* meta_space);
 };
 
 #endif // SHARE_VM_CI_CIENV_HPP

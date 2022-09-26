@@ -711,6 +711,13 @@ protected:
 
   static bool _has_loadClassInternal;
   static bool _has_checkPackageAccess;
+
+  // CodeRevive
+public:
+  static oop ext_loader();
+
+protected:
+  static oop  _ext_loader;
 };
 
 #endif // SHARE_VM_CLASSFILE_SYSTEMDICTIONARY_HPP

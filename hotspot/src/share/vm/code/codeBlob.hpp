@@ -62,6 +62,7 @@ class CodeBlob VALUE_OBJ_CLASS_SPEC {
   friend class VMStructs;
 
  private:
+  // CodeReive: first field _name can not be moved
   const char* _name;
   int        _size;                              // total size of CodeBlob in bytes
   int        _header_size;                       // size of header (depends on subclass)
@@ -205,6 +206,19 @@ class CodeBlob VALUE_OBJ_CLASS_SPEC {
   void set_strings(CodeStrings& strings) {
     _strings.assign(strings);
   }
+
+  // CodeRevive:
+  friend class CodeReviveCodeBlob;
+
+protected:
+  CodeBlob() {}
+
+public:
+  static ByteSize name_offset()                  { return byte_offset_of(CodeBlob, _name);               }
+  static ByteSize code_offset_offset()           { return byte_offset_of(CodeBlob, _code_offset);        }
+  static ByteSize data_offset_offset()           { return byte_offset_of(CodeBlob, _data_offset);        }
+  static address raw_code_begin(CodeBlob* cb)    { return ((address)cb) + *(int*)(((char*)cb) + in_bytes(code_offset_offset())); }
+  static address raw_code_end(CodeBlob* cb)      { return ((address)cb) + *(int*)(((char*)cb) + in_bytes(data_offset_offset())); }
 };
 
 
