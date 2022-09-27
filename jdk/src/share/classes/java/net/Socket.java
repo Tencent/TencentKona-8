@@ -35,6 +35,8 @@ import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 import java.security.PrivilegedAction;
 
+import sun.security.action.GetPropertyAction;
+
 /**
  * This class implements client sockets (also called just
  * "sockets"). A socket is an endpoint for communication
@@ -173,6 +175,14 @@ class Socket implements java.io.Closeable {
         if (impl != null) {
             checkOldImpl();
             this.impl.setSocket(this);
+            String tos = java.security.AccessController.doPrivileged(new GetPropertyAction("kona.socket.tos.value"));
+            if (tos != null) {
+                try {
+                    impl.setOption(StandardSocketOptions.IP_TOS, Integer.valueOf(tos).intValue());
+                } catch (IOException ioe) {
+                    // do nothing
+                }
+            }
         }
     }
 
@@ -473,6 +483,14 @@ class Socket implements java.io.Closeable {
             setImpl();
         try {
             impl.create(stream);
+            String tos = java.security.AccessController.doPrivileged(new GetPropertyAction("kona.socket.tos.value"));
+            if (tos != null ) {
+                try {
+                    impl.setOption(StandardSocketOptions.IP_TOS, Integer.valueOf(tos).intValue());
+                } catch (IOException ioe) {
+                    // do nothing
+                }
+            }
             created = true;
         } catch (IOException e) {
             throw new SocketException(e.getMessage());
@@ -520,8 +538,17 @@ class Socket implements java.io.Closeable {
             // SocketImpl!
             impl = new SocksSocketImpl();
         }
-        if (impl != null)
+        if (impl != null) {
             impl.setSocket(this);
+            String tos = java.security.AccessController.doPrivileged(new GetPropertyAction("kona.socket.tos.value"));
+            if (tos != null) {
+                try {
+                    impl.setOption(StandardSocketOptions.IP_TOS, Integer.valueOf(tos).intValue());
+                } catch (IOException ioe) {
+                    // do nothing
+                }
+            }
+        }
     }
 
 

@@ -30,6 +30,8 @@ import java.nio.channels.DatagramChannel;
 import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 
+import sun.security.action.GetPropertyAction;
+
 /**
  * This class represents a socket for sending and receiving datagram packets.
  *
@@ -209,6 +211,14 @@ class DatagramSocket implements java.io.Closeable {
             throw new NullPointerException();
         this.impl = impl;
         checkOldImpl();
+        String tos = java.security.AccessController.doPrivileged(new GetPropertyAction("kona.socket.tos.value"));
+        if (tos != null) {
+            try {
+                impl.setOption(StandardSocketOptions.IP_TOS, Integer.valueOf(tos).intValue());
+            } catch (IOException ioe) {
+                // do nothing
+            }
+        }
     }
 
     /**
@@ -336,6 +346,14 @@ class DatagramSocket implements java.io.Closeable {
         // creates a udp socket
         impl.create();
         impl.setDatagramSocket(this);
+        String tos = java.security.AccessController.doPrivileged(new GetPropertyAction("kona.socket.tos.value"));
+        if (tos != null) {
+            try {
+                impl.setOption(StandardSocketOptions.IP_TOS, Integer.valueOf(tos).intValue());
+            } catch (IOException ioe) {
+                // do nothing
+            }
+        }
         created = true;
     }
 
