@@ -81,6 +81,8 @@
 # include "os_bsd.inline.hpp"
 #endif
 
+// CodeRevive
+#include "cr/classPathEntryTable.hpp"
 
 // Entry points in zip.dll for loading zip/jar file entries
 
@@ -315,6 +317,7 @@ ClassPathZipEntry::ClassPathZipEntry(jzfile* zip, const char* zip_name) : ClassP
   strcpy(copy, zip_name);
   _zip_name = copy;
   _from_class_path_attr = false;
+  _from_wildcard_dir = false;
 }
 
 ClassPathZipEntry::~ClassPathZipEntry() {
@@ -635,9 +638,165 @@ void ClassLoader::check_shared_classpath(const char *path) {
   }
 }
 
-void ClassLoader::setup_app_search_path(const char *class_path) {
+class WildcardIterator : public StackObj {
+  GrowableArray<WildcardEntryInfo*>* _merged_cp_array;
+  WildcardEntryInfo* _wildcard_entry;
+  int _cur_wildcard_entry;
+  int _num_of_jar;
 
+public:
+  WildcardIterator(GrowableArray<WildcardEntryInfo*>* merged_cp_array) {
+    _merged_cp_array = merged_cp_array;
+    _cur_wildcard_entry = -1;
+    _num_of_jar = 0;
+    _wildcard_entry = NULL;
+    // if merged_cp_array is null, num_of_jar is -1
+    if (_merged_cp_array == NULL) {
+      _num_of_jar = -1;
+    }
+  }
+
+  WildcardEntryInfo* get_next_entry();
+};
+
+WildcardEntryInfo* WildcardIterator::get_next_entry() {
+  if (_num_of_jar == -1) {
+    return NULL;
+  }
+  // the jar files in the previous entry has been checked, and try to get the next entry
+  if (_num_of_jar == 0) {
+    _cur_wildcard_entry++;
+    if (_cur_wildcard_entry < _merged_cp_array->length()) {
+      _wildcard_entry = _merged_cp_array->at(_cur_wildcard_entry);
+      _num_of_jar = _wildcard_entry->num_of_jar();
+    } else {
+      _wildcard_entry = NULL;
+      _num_of_jar = -1;
+    }
+  }
+  if (_wildcard_entry != NULL) {
+    _num_of_jar--;
+    return _wildcard_entry;
+  }
+  return NULL;
+}
+
+
+/*
+ * Record the wildcard information in classpath entry
+ * In java.c, the classpath: a.jar:dir1/*:dir2/*:b.jar is converted to
+ * a.jar:dir1/1.jar:dir1/2.jar:dir1/3.jar:dir2/4.jar:dir2/5.jar:b.jar
+ *
+ * Use RecordClasspathForCDSDump to pass the origin classpath
+ * use ClassPathEntryTable::create_merged_path_array to parse the classpath:
+ * WildcardEntryInfo
+ * path_name  number_of_jar
+ * a.jar      1
+ * dir1       3
+ * dir2       2
+ * b.jar      1
+ *
+ * the information in classpath entry
+ * path_name    from_wildcar_directory
+ * a.jar        no
+ * dir1/1.jar   yes
+ * dir1/2.jar   yes
+ * dir1/3.jar   yes
+ * dir2/4.jar   yes
+ * dir2/5.jar   yes
+ * b.jar        no
+ *
+ * During the setup, check whether the order of jar files with RecordClasspathForCDSDump 
+ * is the same as the jar files in classpath
+ * a.jar, b.jar must be the same
+ * jar files in dir1,dir2 must have the same directory
+ *
+ */
+bool ClassLoader::setup_app_search_path_with_wildcard(const char *class_path) {
+  // create path array with the classpath with wildcard information
+  // ignore the directory and non exist jar file
+  // create_merged_path_array can return NULL
+  GrowableArray<WildcardEntryInfo*>* merged_cp_array = ClassPathEntryTable::create_merged_path_array(RecordClasspathForCDSDump,
+                                                                                                     NULL, RelaxCheckForAppCDS);
+  if (merged_cp_array == NULL) {
+    return false;
+  }
+  Thread* THREAD = Thread::current();
+  ResourceMark rm(THREAD);
+
+  WildcardIterator wildcardIterator(merged_cp_array);
+
+  int len = (int)strlen(class_path);
+  int end = 0;
+  bool saved = LazyBootClassLoader;
+  LazyBootClassLoader = false;
+
+  // Iterate over class path entries
+  for (int start = 0; start < len; start = end) {
+    while (class_path[end] && class_path[end] != os::path_separator()[0]) {
+      end++;
+    }
+    EXCEPTION_MARK;
+    char* path = NEW_RESOURCE_ARRAY(char, end - start + 1);
+    strncpy(path, &class_path[start], end - start);
+    path[end - start] = '\0';
+
+    struct stat st;
+    if (os::stat(path, &st) == 0) {
+      // File or directory found
+      ClassPathEntry* new_entry = NULL;
+      // load the jar file and create entry
+      new_entry = create_class_path_entry(path, &st, false, true, CHECK_(true));
+      if (new_entry != NULL) {
+        // only check the entry with jar file, and mark whether the entry is in the directory with wildcard
+        if (new_entry->is_jar_file()) {
+          WildcardEntryInfo* wildcard_entry = wildcardIterator.get_next_entry();
+          if (wildcard_entry != NULL) {
+            char* wildcard_path_name = wildcard_entry->path_name();
+            char* canonical_path = NEW_RESOURCE_ARRAY(char, JVM_MAXPATHLEN + 1);
+            char* new_path = path; 
+            if (get_canonical_path(path, canonical_path, JVM_MAXPATHLEN)) {
+              new_path = canonical_path;
+            }
+            // the entry is under dir/*
+            if (wildcard_entry->is_wildcard()) {
+              if (strncmp(new_path, wildcard_path_name, strlen(wildcard_path_name)) != 0) {
+                // The directory where the jar file is located does not match the directory with wildcard
+                exit_with_path_failure("The classpath isn't the same as the path which is specified by RecordClasspathForCDSDump",
+                                       "the directory of the jar file isn't the same as the directory with wildcard");
+              }
+              new_entry->set_from_wildcard_directory();
+            } else {
+              // check whether the jar file is the same as the file in the classpath with wildcard
+              if (strcmp(new_path, wildcard_path_name) != 0) {
+                exit_with_path_failure("The classpath isn't the same as the path which is specified by RecordClasspathForCDSDump", 
+                                       "jar file isn't the same as the file in the classpath with wildcard");
+              } 
+            }
+          }
+        }
+        add_to_app_classpath_entries(path, new_entry, false);
+      }
+    } else {
+      _shared_paths_misc_info->add_nonexist_path(path);
+    }
+
+    while (class_path[end] == os::path_separator()[0]) {
+      end++;
+    }
+  }
+  LazyBootClassLoader = saved;
+  return true;
+}
+
+void ClassLoader::setup_app_search_path(const char *class_path) {
   assert(DumpSharedSpaces, "Sanity");
+  // if wildcard path is specified -XX:RecordClasspathForCDSDump=<classpath> and -XX:+RelaxCheckForAppCDS
+  if (RelaxCheckForAppCDS && RecordClasspathForCDSDump != NULL) {
+    if (setup_app_search_path_with_wildcard(class_path)) {
+      return;
+    }
+  }
 
   Thread* THREAD = Thread::current();
   int len = (int)strlen(class_path);

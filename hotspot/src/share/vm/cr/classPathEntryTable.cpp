@@ -420,7 +420,9 @@ static int compute_number_of_jar_in_dir(const char* name, GrowableArray<const ch
   while((dp = os::readdir(dir))) {
     if (is_jar_file_name(dp->d_name)) {
       new_path = wildcard_concat(name, dp->d_name);
-      jar_files->append(new_path);
+      if (jar_files != NULL) {
+        jar_files->append(new_path);
+      }
       number_of_jar++;
     }
   }
@@ -429,8 +431,8 @@ static int compute_number_of_jar_in_dir(const char* name, GrowableArray<const ch
   return number_of_jar;
 }
 
-GrowableArray<WildcardEntryInfo*>* ClassPathEntryTable::create_merged_path_array(const char* paths,
-                                                                                 GrowableArray<const char*>* jar_files) {
+GrowableArray<WildcardEntryInfo*>* ClassPathEntryTable::create_merged_path_array(const char* paths, GrowableArray<const char*>* jar_files,
+                                                                                 bool allow_dir) {
   GrowableArray<WildcardEntryInfo*>* path_array = new GrowableArray<WildcardEntryInfo*>(10);
   char buffer[MAX_BUFFER_SIZE];
   char* new_path = NULL;
@@ -461,7 +463,7 @@ GrowableArray<WildcardEntryInfo*>* ClassPathEntryTable::create_merged_path_array
     } else {
       struct stat st;
       if (os::stat(path, &st) == 0) {
-        if ((st.st_mode & S_IFMT) == S_IFDIR) {
+        if (((st.st_mode & S_IFMT) == S_IFDIR) && !allow_dir) {
           CR_LOG(cr_merge, cr_fail,
                  "The class path can't have directory at merge time: %s\n", paths);
           return NULL;
@@ -474,7 +476,9 @@ GrowableArray<WildcardEntryInfo*>* ClassPathEntryTable::create_merged_path_array
       }
     }
   }
-  jar_files->sort(compare_jarfile_name);
+  if (jar_files != NULL) {
+    jar_files->sort(compare_jarfile_name);
+  }
   return path_array;
 }
 
@@ -509,7 +513,7 @@ bool ClassPathEntryTable::validate_app_class_paths_for_merge(int csa_app_paths_l
 }
 
 // check whether the jar files in wildcard directory are the same as the jar files in class path
-static bool compare_jar_array(GrowableArray<const char*>* csa_jarfiles, GrowableArray<const char*>* cp_jarfiles) {
+bool ClassPathEntryTable::compare_jar_array(GrowableArray<const char*>* csa_jarfiles, GrowableArray<const char*>* cp_jarfiles) {
   csa_jarfiles->sort(compare_jarfile_name);
   cp_jarfiles->sort(compare_jarfile_name);
   for (int i = 0; i < csa_jarfiles->length(); i++) {

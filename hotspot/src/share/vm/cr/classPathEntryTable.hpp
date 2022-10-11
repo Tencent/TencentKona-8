@@ -67,7 +67,8 @@ class ClassPathEntryTable : public CHeapObj<mtInternal> {
   bool   setup_merged_classpath_entry_table();
   bool   validate();
   static GrowableArray<const char*>* create_path_array(const char* paths, int max_size);
-  static GrowableArray<WildcardEntryInfo*>* create_merged_path_array(const char* paths, GrowableArray<const char*>* jar_files);
+  static GrowableArray<WildcardEntryInfo*>* create_merged_path_array(const char* paths, GrowableArray<const char*>* jar_files,
+                                                                     bool allow_dir = false);
   // uttilities
   size_t size();
   void   print_on(outputStream* out);
@@ -85,6 +86,7 @@ class ClassPathEntryTable : public CHeapObj<mtInternal> {
     size_t _classpath_size;                // Arguments::get_appclasspath() size
     size_t _classpath_offset;              // Arguments::get_appclasspath() offset from ClassPathEntry array start
   };
+  static bool compare_jar_array(GrowableArray<const char*>* csa_jarfiles, GrowableArray<const char*>* cp_jarfiles);
 
  private:
   char*  _start;                           // mapped or write memory start for ClassPathEntryTable

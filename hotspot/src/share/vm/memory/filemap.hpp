@@ -59,13 +59,13 @@ public:
   const char *_name;
   u1     _type;
   bool   _from_class_path_attr;
-  time_t _timestamp;          // jar timestamp,  0 if is directory
+  time_t _timestamp;          // jar timestamp,  0 if is directory or in wildcard 
   long   _filesize;           // jar file size, -1 if is directory
   char*  _manifest;
   bool is_dir() {
     return _filesize == -1;
   }
-  void init(ClassPathEntry *cpe, const char* name);
+  void init(ClassPathEntry *cpe, const char* name, bool set_timestamp = true);
   bool validate();
   // The _timestamp only gets set for jar files.
   bool has_timestamp() {

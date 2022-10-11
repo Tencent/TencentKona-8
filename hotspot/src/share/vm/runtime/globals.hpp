@@ -4050,6 +4050,9 @@ class CommandLineFlags {
   product(bool, RelaxCheckForAppCDS, false,                                 \
           "Relax the check for AppCDS")                                     \
                                                                             \
+  product(ccstr, RecordClasspathForCDSDump, NULL,                           \
+          "Specify the classpath with wildcard during dump shared archive") \
+                                                                            \
   experimental(uintx, ArrayAllocatorMallocLimit,                            \
           SOLARIS_ONLY(64*K) NOT_SOLARIS(max_uintx),                        \
           "Allocation less than this value will be allocated "              \
