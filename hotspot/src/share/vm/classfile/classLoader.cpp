@@ -638,50 +638,6 @@ void ClassLoader::check_shared_classpath(const char *path) {
   }
 }
 
-class WildcardIterator : public StackObj {
-  GrowableArray<WildcardEntryInfo*>* _merged_cp_array;
-  WildcardEntryInfo* _wildcard_entry;
-  int _cur_wildcard_entry;
-  int _num_of_jar;
-
-public:
-  WildcardIterator(GrowableArray<WildcardEntryInfo*>* merged_cp_array) {
-    _merged_cp_array = merged_cp_array;
-    _cur_wildcard_entry = -1;
-    _num_of_jar = 0;
-    _wildcard_entry = NULL;
-    // if merged_cp_array is null, num_of_jar is -1
-    if (_merged_cp_array == NULL) {
-      _num_of_jar = -1;
-    }
-  }
-
-  WildcardEntryInfo* get_next_entry();
-};
-
-WildcardEntryInfo* WildcardIterator::get_next_entry() {
-  if (_num_of_jar == -1) {
-    return NULL;
-  }
-  // the jar files in the previous entry has been checked, and try to get the next entry
-  if (_num_of_jar == 0) {
-    _cur_wildcard_entry++;
-    if (_cur_wildcard_entry < _merged_cp_array->length()) {
-      _wildcard_entry = _merged_cp_array->at(_cur_wildcard_entry);
-      _num_of_jar = _wildcard_entry->num_of_jar();
-    } else {
-      _wildcard_entry = NULL;
-      _num_of_jar = -1;
-    }
-  }
-  if (_wildcard_entry != NULL) {
-    _num_of_jar--;
-    return _wildcard_entry;
-  }
-  return NULL;
-}
-
-
 /*
  * Record the wildcard information in classpath entry
  * In java.c, the classpath: a.jar:dir1/*:dir2/*:b.jar is converted to

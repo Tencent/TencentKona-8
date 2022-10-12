@@ -40,6 +40,28 @@ class WildcardEntryInfo : public ResourceObj {
   char*   path_name()                    { return _path_name; }
   
 };
+
+class WildcardIterator : public StackObj {
+  GrowableArray<WildcardEntryInfo*>* _merged_cp_array;
+  WildcardEntryInfo* _wildcard_entry;
+  int _cur_wildcard_entry;
+  int _num_of_jar;
+
+public:
+  WildcardIterator(GrowableArray<WildcardEntryInfo*>* merged_cp_array) {
+    _merged_cp_array = merged_cp_array;
+    _cur_wildcard_entry = -1;
+    _num_of_jar = 0;
+    _wildcard_entry = NULL;
+    // if merged_cp_array is null, num_of_jar is -1
+    if (_merged_cp_array == NULL) {
+      _num_of_jar = -1;
+    }
+  }
+
+  WildcardEntryInfo* get_next_entry();
+};
+
 /*
  * ClassPathEntryTable
  * -- ClassPathEntryTableHeader

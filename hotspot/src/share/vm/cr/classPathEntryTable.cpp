@@ -155,13 +155,9 @@ bool ClassPathEntryTable::setup_merged_classpath_entry_table() {
   strptr = _cur_pos + num_app_classpath_entries * class_path_entry_size;
   char buffer[MAX_BUFFER_SIZE];
 
-  int cur_wildcard_entry = 0;
-  int num_of_jar = 0;
+  WildcardIterator wildcardIterator(merged_cp_array);
+
   WildcardEntryInfo* wildcard_entry = NULL;
-  if (merged_cp_array != NULL) {
-    wildcard_entry = merged_cp_array->at(cur_wildcard_entry);
-    num_of_jar = wildcard_entry->num_of_jar();
-  } 
 
   for (int i = 0; i < classpath_array->length(); i++) {
     const char* name = classpath_array->at(i);
@@ -181,17 +177,7 @@ bool ClassPathEntryTable::setup_merged_classpath_entry_table() {
 
     // the merge wildcard classpath in revive option is specified
     if (merged_cp_array != NULL) {
-      // num_of_jar = 0 means that the current entry has been checked, and need the next entry
-      if (num_of_jar == 0) {
-        cur_wildcard_entry++;
-        if (cur_wildcard_entry < merged_cp_array->length()) {
-          wildcard_entry = merged_cp_array->at(cur_wildcard_entry);
-          num_of_jar = wildcard_entry->num_of_jar();
-        } else {
-          wildcard_entry = NULL;
-          num_of_jar = -1;
-        }
-      }
+      wildcard_entry = wildcardIterator.get_next_entry();
       // the entry is under dir/*
       if (wildcard_entry != NULL && wildcard_entry->is_wildcard()) {
         if (strncmp(name, wildcard_entry->path_name(), strlen(wildcard_entry->path_name())) != 0) {
@@ -203,7 +189,6 @@ bool ClassPathEntryTable::setup_merged_classpath_entry_table() {
       } else {
         ent->_timestamp = st.st_mtime;
       }
-      num_of_jar--;
     } else {
       ent->_timestamp = st.st_mtime;
     }
@@ -608,9 +593,8 @@ bool ClassPathEntryTable::check_paths(int num_paths, GrowableArray<const char*>*
 bool ClassPathEntryTable::check_paths_with_wildcard(int num_paths, GrowableArray<const char*>* sorted_jars_in_wildcards, 
                                                     GrowableArray<WildcardEntryInfo*>* merged_cp_array) {
   int i = 0;
-  int cur_wildcard_entry = 0;
-  WildcardEntryInfo* wildcard_entry = merged_cp_array->at(cur_wildcard_entry);
-  int num_of_jar = wildcard_entry->num_of_jar();
+  WildcardIterator wildcardIterator(merged_cp_array);
+  WildcardEntryInfo* wildcard_entry = NULL;
   bool mismatch = false;
   GrowableArray<const char*>* csa_jarfiles = new GrowableArray<const char*>();
   while (i < num_paths && !mismatch) {
@@ -619,31 +603,29 @@ bool ClassPathEntryTable::check_paths_with_wildcard(int num_paths, GrowableArray
     }
     ClassPathEntry* ent = shared_classpath(_classpath_entry_table, i);
     char* save_name = _classpath_entry_table + ent->_name_offset;
-    if (wildcard_entry != NULL && num_of_jar == 0) {
-      cur_wildcard_entry++;
-      wildcard_entry = merged_cp_array->at(cur_wildcard_entry);
-      num_of_jar = wildcard_entry->num_of_jar();
-    }
-    char* path_name = wildcard_entry->path_name();
-    // need to check the order in class path
-    if (!wildcard_entry->is_wildcard()) {
-      // check whether the name of jar is the same
-      if (strcmp(save_name, path_name) != 0) {
-        CR_LOG(CodeRevive::log_kind(), cr_fail, "APP classpath mismatch: file in csa = %s, file in classpath = %s\n", save_name, path_name);
-        mismatch = true;
-        break;
+    wildcard_entry = wildcardIterator.get_next_entry();
+    if (wildcard_entry != NULL) {
+      char* path_name = wildcard_entry->path_name();
+      // need to check the order in class path
+      if (!wildcard_entry->is_wildcard()) {
+        // check whether the name of jar is the same
+        if (strcmp(save_name, path_name) != 0) {
+          CR_LOG(CodeRevive::log_kind(), cr_fail, "APP classpath mismatch: file in csa = %s, file in classpath = %s\n", save_name, path_name);
+          mismatch = true;
+          break;
+        }
+      } else {
+        // compare whether the directory is the same
+        char* save_ptr = strrchr(save_name, '/');
+        size_t save_dir_len = save_ptr != NULL ? save_ptr - save_name : 0;
+        size_t app_dir_len = strlen(path_name);
+        if (save_dir_len != app_dir_len || strncmp(save_name, path_name, save_dir_len) != 0) {
+          CR_LOG(CodeRevive::log_kind(), cr_fail, "APP classpath mismatch: file in csa = %s, path in classpath = %s\n", save_name, path_name);
+          mismatch = true;
+          break;
+        }
+        csa_jarfiles->append(save_name);
       }
-    } else {
-      // compare whether the directory is the same
-      char* save_ptr = strrchr(save_name, '/');
-      size_t save_dir_len = save_ptr - save_name;
-      size_t app_dir_len = strlen(path_name);
-      if (save_dir_len != app_dir_len || strncmp(save_name, path_name, save_dir_len) != 0) {
-        CR_LOG(CodeRevive::log_kind(), cr_fail, "APP classpath mismatch: file in csa = %s, path in classpath = %s\n", save_name, path_name);
-        mismatch = true;
-        break;
-      }
-      csa_jarfiles->append(save_name);
     }
 
     if (!validate_file(ent, save_name, false)) {
@@ -651,7 +633,6 @@ bool ClassPathEntryTable::check_paths_with_wildcard(int num_paths, GrowableArray
       mismatch = true;
     }  
     i++;
-    num_of_jar--;
   }
   if (!mismatch) {
     csa_jarfiles->sort(compare_jarfile_name);
@@ -683,3 +664,26 @@ void ClassPathEntryTable::print_on(outputStream* out) {
     out->print_cr("\t%3d %s %d", i, name, (int)ent->_filesize);
   }
 }
+
+WildcardEntryInfo* WildcardIterator::get_next_entry() {
+  if (_num_of_jar == -1) {
+    return NULL;
+  }
+  // the jar files in the previous entry has been checked, and try to get the next entry
+  if (_num_of_jar == 0) {
+    _cur_wildcard_entry++;
+    if (_cur_wildcard_entry < _merged_cp_array->length()) {
+      _wildcard_entry = _merged_cp_array->at(_cur_wildcard_entry);
+      _num_of_jar = _wildcard_entry->num_of_jar();
+    } else {
+      _wildcard_entry = NULL;
+      _num_of_jar = -1;
+    }
+  }
+  if (_wildcard_entry != NULL) {
+    _num_of_jar--;
+    return _wildcard_entry;
+  }
+  return NULL;
+}
+
