@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020, These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "prims/jni.h"
 #include "runtime/interfaceSupport.hpp"
@@ -534,6 +540,15 @@ static SAFEBUF int __ieee754_rem_pio2(double x, double *y) {
  *         then                   3    2
  *              sin(x) = x + (S1*x + (x *(r-y/2)+y))
  */
+#if defined(MIPS) || defined(LOONGARCH)
+// TODO: LA
+#undef S1
+#undef S2
+#undef S3
+#undef S4
+#undef S5
+#undef S6
+#endif
 
 static const double
 S1  = -1.66666666666666324348e-01, /* 0xBFC55555, 0x55555549 */

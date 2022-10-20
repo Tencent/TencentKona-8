@@ -1117,7 +1117,8 @@ bool os::is_first_C_frame(frame* fr) {
 
   uintptr_t old_fp = (uintptr_t)fr->link();
   if ((old_fp & fp_align_mask) != 0) return true;
-  if (old_fp == 0 || old_fp == (uintptr_t)-1 || old_fp == ufp) return true;
+  // The check for old_fp and ufp is harmful on MIPS due to its special ABI.
+  if (old_fp == 0 || old_fp == (uintptr_t)-1 NOT_MIPS64(|| old_fp == ufp)) return true;
 
   // stack grows downwards; if old_fp is below current fp or if the stack
   // frame is too large, either the stack is corrupted or fp is not saved

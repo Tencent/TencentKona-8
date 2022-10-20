@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_RUNTIME_OS_HPP
 #define SHARE_VM_RUNTIME_OS_HPP
 
@@ -856,6 +862,12 @@ class os: AllStatic {
 #endif
 #ifdef TARGET_OS_ARCH_linux_x86
 # include "os_linux_x86.hpp"
+#endif
+#ifdef TARGET_OS_ARCH_linux_mips
+# include "os_linux_mips.hpp"
+#endif
+#ifdef TARGET_OS_ARCH_linux_loongarch
+# include "os_linux_loongarch.hpp"
 #endif
 #ifdef TARGET_OS_ARCH_linux_aarch64
 # include "os_linux_aarch64.hpp"

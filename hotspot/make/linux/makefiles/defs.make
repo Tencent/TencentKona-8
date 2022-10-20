@@ -22,6 +22,12 @@
 #
 #
 
+#
+# This file has been modified by Loongson Technology in 2020. These
+# modifications are Copyright (c) 2018, 2020, Loongson Technology, and are made
+# available on the same license terms set forth above.
+#
+
 # The common definitions for hotspot linux builds.
 # Include the top level defs.make under make directory instead of this one.
 # This file is included into make/defs.make.
@@ -38,6 +44,18 @@ ifndef ARCH
   ifeq ($(ARCH),ppc64le)
     ARCH := ppc64
   endif
+endif
+ifeq ($(ARCH), mips64el)
+  ARCH=mips64
+endif
+ifeq ($(LP64), 1)
+  ifeq ($(ARCH), mips)
+    ARCH=mips64
+  endif
+endif
+
+ifeq ($(ARCH), loongarch)
+  ARCH=loongarch64
 endif
 
 PATH_SEP ?= :
@@ -81,6 +99,36 @@ ifneq (,$(findstring $(ARCH), sparc))
     VM_PLATFORM      = linux_sparc
   endif
   HS_ARCH            = sparc
+endif
+
+# mips
+ifeq ($(ARCH), mips64)
+  ifeq ($(ARCH_DATA_MODEL), 64)
+    ARCH_DATA_MODEL  = 64
+    MAKE_ARGS        += LP64=1
+    PLATFORM         = linux-mips64
+    VM_PLATFORM      = linux_mips64
+  else
+    ARCH_DATA_MODEL  = 32
+    PLATFORM         = linux-mips32
+    VM_PLATFORM      = linux_mips32
+  endif
+  HS_ARCH          = mips
+endif
+
+# loongarch
+ifeq ($(ARCH), loongarch64)
+  ifeq ($(ARCH_DATA_MODEL), 64)
+    ARCH_DATA_MODEL  = 64
+    MAKE_ARGS        += LP64=1
+    PLATFORM         = linux-loongarch64
+    VM_PLATFORM      = linux_loongarch64
+  else
+    ARCH_DATA_MODEL  = 32
+    PLATFORM         = linux-loongarch32
+    VM_PLATFORM      = linux_loongarch32
+  endif
+  HS_ARCH          = loongarch
 endif
 
 # i686/i586 and amd64/x86_64
@@ -311,16 +359,24 @@ ADD_SA_BINARIES/sparc = $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.$(LIBRARY_SUFFIX) \
                         $(EXPORT_LIB_DIR)/sa-jdi.jar
 ADD_SA_BINARIES/aarch64 = $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.$(LIBRARY_SUFFIX) \
                         $(EXPORT_LIB_DIR)/sa-jdi.jar
+ADD_SA_BINARIES/mips  = $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.$(LIBRARY_SUFFIX) \
+                        $(EXPORT_LIB_DIR)/sa-jdi.jar
+ADD_SA_BINARIES/loongarch  = $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.$(LIBRARY_SUFFIX) \
+                        $(EXPORT_LIB_DIR)/sa-jdi.jar
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
   ifneq ($(STRIP_POLICY),no_strip)
     ifeq ($(ZIP_DEBUGINFO_FILES),1)
       ADD_SA_BINARIES/x86     += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.diz
       ADD_SA_BINARIES/sparc   += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.diz
       ADD_SA_BINARIES/aarch64 += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.diz
+      ADD_SA_BINARIES/mips    += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.diz
+      ADD_SA_BINARIES/loongarch  += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.diz
     else
       ADD_SA_BINARIES/x86     += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.debuginfo
       ADD_SA_BINARIES/sparc   += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.debuginfo
       ADD_SA_BINARIES/aarch64 += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.debuginfo
+      ADD_SA_BINARIES/mips    += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.debuginfo
+      ADD_SA_BINARIES/loongarch  += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.debuginfo
     endif
   endif
 endif

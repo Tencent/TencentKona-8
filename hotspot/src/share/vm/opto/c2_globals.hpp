@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_OPTO_C2_GLOBALS_HPP
 #define SHARE_VM_OPTO_C2_GLOBALS_HPP
 
@@ -34,6 +40,12 @@
 #endif
 #ifdef TARGET_ARCH_sparc
 # include "c2_globals_sparc.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "c2_globals_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "c2_globals_loongarch.hpp"
 #endif
 #ifdef TARGET_ARCH_arm
 # include "c2_globals_arm.hpp"

@@ -121,7 +121,14 @@ public:
 
   void inline_write_ref_field_gc(void* field, oop new_val) {
     jbyte* byte = _ct_bs->byte_for(field);
-    *byte = youngergen_card;
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+    if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
+   *byte = youngergen_card;
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+   if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
+
   }
   void write_ref_field_gc_work(void* field, oop new_val) {
     inline_write_ref_field_gc(field, new_val);

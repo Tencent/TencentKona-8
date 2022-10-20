@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2015. These
+ * modifications are Copyright (c) 2015 Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_C1_C1_LIRGENERATOR_HPP
 #define SHARE_VM_C1_C1_LIRGENERATOR_HPP
 
@@ -245,6 +251,9 @@ class LIRGenerator: public InstructionVisitor, public BlockClosure {
   void do_getClass(Intrinsic* x);
   void do_currentThread(Intrinsic* x);
   void do_MathIntrinsic(Intrinsic* x);
+#if defined(LOONGARCH64)
+  void do_LibmIntrinsic(Intrinsic* x);
+#endif
   void do_ArrayCopy(Intrinsic* x);
   void do_CompareAndSwap(Intrinsic* x, ValueType* type);
   void do_NIOCheckIndex(Intrinsic* x);
@@ -334,8 +343,10 @@ class LIRGenerator: public InstructionVisitor, public BlockClosure {
   void new_instance    (LIR_Opr  dst, ciInstanceKlass* klass, bool is_unresolved, LIR_Opr  scratch1, LIR_Opr  scratch2, LIR_Opr  scratch3,  LIR_Opr scratch4, LIR_Opr  klass_reg, CodeEmitInfo* info);
 
   // machine dependent
-  void cmp_mem_int(LIR_Condition condition, LIR_Opr base, int disp, int c, CodeEmitInfo* info);
-  void cmp_reg_mem(LIR_Condition condition, LIR_Opr reg, LIR_Opr base, int disp, BasicType type, CodeEmitInfo* info);
+  template<typename T>
+  void cmp_mem_int_branch(LIR_Condition condition, LIR_Opr base, int disp, int c, T tgt, CodeEmitInfo* info);
+  template<typename T>
+  void cmp_reg_mem_branch(LIR_Condition condition, LIR_Opr reg, LIR_Opr base, int disp, BasicType type, T tgt, CodeEmitInfo* info);
   void cmp_reg_mem(LIR_Condition condition, LIR_Opr reg, LIR_Opr base, LIR_Opr disp, BasicType type, CodeEmitInfo* info);
 
   void arraycopy_helper(Intrinsic* x, int* flags, ciArrayKlass** expected_type);
@@ -363,7 +374,7 @@ class LIRGenerator: public InstructionVisitor, public BlockClosure {
 
   LIR_Opr safepoint_poll_register();
 
-  void profile_branch(If* if_instr, If::Condition cond);
+  void profile_branch(If* if_instr, If::Condition cond, LIR_Opr left = LIR_OprFact::illegalOpr, LIR_Opr right = LIR_OprFact::illegalOpr);
   void increment_event_counter_impl(CodeEmitInfo* info,
                                     ciMethod *method, int frequency,
                                     int bci, bool backedge, bool notify);

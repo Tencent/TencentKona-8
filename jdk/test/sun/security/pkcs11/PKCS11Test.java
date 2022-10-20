@@ -21,6 +21,11 @@
  * questions.
  */
 
+ /*
+  * This file has been modified by Loongson Technology in 2022, These
+  * modifications are Copyright (c) 2022, Loongson Technology, and are made
+  * available on the same license terms set forth above.
+  */
 
 // common infrastructure for SunPKCS11 tests
 
@@ -589,6 +594,9 @@ public abstract class PKCS11Test {
             "/usr/lib64/"});
         osMap.put("Linux-ppc64-64", new String[]{"/usr/lib64/"});
         osMap.put("Linux-ppc64le-64", new String[]{"/usr/lib64/"});
+        osMap.put("Linux-mips64el-64", new String[]{"/usr/lib64/"});
+        osMap.put("Linux-loongarch64-64", new String[]{"/usr/lib/loongarch64-linux-gnu/",
+                "/usr/lib64/" });
         osMap.put("Windows-x86-32", new String[]{
             PKCS11_BASE + "/nss/lib/windows-i586/".replace('/', SEP)});
         osMap.put("Windows-amd64-64", new String[]{

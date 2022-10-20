@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "runtime/stackValueCollection.hpp"
 #ifdef TARGET_ARCH_x86
@@ -41,6 +47,12 @@
 #endif
 #ifdef TARGET_ARCH_ppc
 # include "jniTypes_ppc.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "jniTypes_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "jniTypes_loongarch.hpp"
 #endif
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC

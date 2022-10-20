@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_UTILITIES_MACROS_HPP
 #define SHARE_VM_UTILITIES_MACROS_HPP
 
@@ -368,6 +374,30 @@
 #else
 #define SPARC_ONLY(code)
 #define NOT_SPARC(code) code
+#endif
+
+#ifdef MIPS64
+#ifndef MIPS
+#define MIPS
+#endif
+#define MIPS64_ONLY(code) code
+#define NOT_MIPS64(code)
+#else
+#undef MIPS
+#define MIPS64_ONLY(code)
+#define NOT_MIPS64(code) code
+#endif
+
+#ifdef LOONGARCH64
+#ifndef LOONGARCH
+#define LOONGARCH
+#endif
+#define LOONGARCH64_ONLY(code) code
+#define NOT_LOONGARCH64(code)
+#else
+#undef LOONGARCH
+#define LOONGARCH64_ONLY(code)
+#define NOT_LOONGARCH64(code) code
 #endif
 
 #if defined(PPC32) || defined(PPC64)

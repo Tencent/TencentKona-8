@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2021. These
+ * modifications are Copyright (c) 2018, 2021, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "asm/assembler.inline.hpp"
 #include "code/compiledIC.hpp"
@@ -844,6 +850,27 @@ void Compile::Process_OopMap_Node(MachNode *mach, int current_offset) {
   // Add the safepoint in the DebugInfoRecorder
   if( !mach->is_MachCall() ) {
     mcall = NULL;
+#if defined(MIPS) || defined(LOONGARCH)
+    // safepoint_pc_offset should point to tha last instruction in safePoint.
+    // In X86 and sparc, their safePoints only contain one instruction.
+    // However, we should add current_offset with the size of safePoint in MIPS.
+    // 0x2d6ff22c: lw s2, 0x14(s2)
+    // last_pd->pc_offset()=308, pc_offset=304, bci=64
+    // last_pd->pc_offset()=312, pc_offset=312, bci=64
+    // src/hotspot/share/code/debugInfoRec.cpp:295, assert(last_pd->pc_offset() == pc_offset, "must be last pc")
+    //
+    // ;; Safepoint:
+    // ---> pc_offset=304
+    // 0x2d6ff230: lui at, 0x2b7a            ; OopMap{s2=Oop s5=Oop t4=Oop off=308}
+    //                                       ;*goto
+    //                                       ; - java.util.Hashtable::get@64 (line 353)
+    // ---> last_pd(308)
+    // 0x2d6ff234: lw at, 0xffffc100(at)     ;*goto
+    //                                       ; - java.util.Hashtable::get@64 (line 353)
+    //                                       ;   {poll}
+    // 0x2d6ff238: addiu s0, zero, 0x0
+    safepoint_pc_offset += sfn->size(_regalloc) - 4;
+#endif
     debug_info()->add_safepoint(safepoint_pc_offset, sfn->_oop_map);
   } else {
     mcall = mach->as_MachCall();
@@ -1502,6 +1529,22 @@ void Compile::fill_buffer(CodeBuffer* cb, uint* blk_starts) {
       DEBUG_ONLY( uint instr_offset = cb->insts_size(); )
       n->emit(*cb, _regalloc);
       current_offset  = cb->insts_size();
+#if defined(MIPS) || defined(LOONGARCH)
+      if (!n->is_Proj() && (cb->insts()->end() != badAddress)) {
+        // For MIPS, the first instruction of the previous node (usually a instruction sequence) sometime
+        // is not the instruction which access memory. adjust is needed. previous_offset points to the
+        // instruction which access memory. Instruction size is 4. cb->insts_size() and
+        // cb->insts()->end() are the location of current instruction.
+        int adjust = 4;
+        NativeInstruction* inst = (NativeInstruction*) (cb->insts()->end() - 4);
+        if (inst->is_sync()) {
+          // a sync may be the last instruction, see store_B_immI_enc_sync
+          adjust += 4;
+          inst = (NativeInstruction*) (cb->insts()->end() - 8);
+        }
+        previous_offset = current_offset - adjust;
+      }
+#endif
 
       // Above we only verified that there is enough space in the instruction section.
       // However, the instruction may emit stubs that cause code buffer expansion.

@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022. These
+ * modifications are Copyright (c) 2015, 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_C1_C1_LINEARSCAN_HPP
 #define SHARE_VM_C1_C1_LINEARSCAN_HPP
 
@@ -975,6 +981,9 @@ class LinearScanTimers : public StackObj {
 // Pick up platform-dependent implementation details
 #ifdef TARGET_ARCH_x86
 # include "c1_LinearScan_x86.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "c1_LinearScan_loongarch.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "c1_LinearScan_aarch64.hpp"

@@ -23,6 +23,13 @@
  * questions.
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2018. These
+ * modifications are Copyright (c) 2018 Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
+
 package sun.misc;
 import java.io.PrintStream;
 
@@ -43,6 +50,9 @@ public class Version {
 
     private static final String java_runtime_version =
         "@@java_runtime_version@@";
+
+    private static final String loongson_runtime_name =
+        "@@loongson_runtime_name@@";
 
     static {
         init();
@@ -103,7 +113,11 @@ public class Version {
 
         /* Second line: runtime version (ie, libraries). */
 
-        ps.print(java_runtime_name + " (build " + java_runtime_version);
+        ps.print(java_runtime_name);
+        if (loongson_runtime_name.length() > 0) {
+            ps.print(" ("+ loongson_runtime_name +")");
+        }
+        ps.print(" (build " + java_runtime_version);
 
         if (java_profile_name.length() > 0) {
             // profile name

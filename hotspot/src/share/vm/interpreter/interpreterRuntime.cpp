@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "classfile/systemDictionary.hpp"
 #include "classfile/vmSymbols.hpp"
@@ -58,6 +64,12 @@
 #include "utilities/events.hpp"
 #ifdef TARGET_ARCH_x86
 # include "vm_version_x86.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "vm_version_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "vm_version_loongarch.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "vm_version_aarch64.hpp"
@@ -1290,7 +1302,7 @@ IRT_ENTRY(void, InterpreterRuntime::prepare_native_call(JavaThread* thread, Meth
   // preparing the same method will be sure to see non-null entry & mirror.
 IRT_END
 
-#if defined(IA32) || defined(AMD64) || defined(ARM) || defined(AARCH64)
+#if defined(IA32) || defined(AMD64) || defined(ARM) || defined(AARCH64) || defined(MIPS) || defined(LOONGARCH)
 IRT_LEAF(void, InterpreterRuntime::popframe_move_outgoing_args(JavaThread* thread, void* src_address, void* dest_address))
   if (src_address == dest_address) {
     return;

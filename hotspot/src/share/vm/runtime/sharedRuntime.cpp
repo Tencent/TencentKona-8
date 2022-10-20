@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "classfile/systemDictionary.hpp"
 #include "classfile/vmSymbols.hpp"
@@ -82,6 +88,15 @@
 # include "nativeInst_ppc.hpp"
 # include "vmreg_ppc.inline.hpp"
 #endif
+#ifdef TARGET_ARCH_mips
+# include "nativeInst_mips.hpp"
+# include "vmreg_mips.inline.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "nativeInst_loongarch.hpp"
+# include "vmreg_loongarch.inline.hpp"
+#endif
+
 #ifdef COMPILER1
 #include "c1/c1_Runtime1.hpp"
 #endif
@@ -220,7 +235,6 @@ void SharedRuntime::print_ic_miss_histogram() {
   }
 }
 #endif // PRODUCT
-
 #if INCLUDE_ALL_GCS
 
 // G1 write-barrier pre: executed before a pointer store.

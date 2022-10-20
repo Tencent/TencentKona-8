@@ -121,11 +121,22 @@ protected:
     Age(const Age& age)          { _data = age._data; }
     Age(idx_t top, idx_t tag)    { _fields._top = top; _fields._tag = tag; }
 
+#if !defined MIPS && !defined LOONGARCH
     Age   get()        const volatile { return _data; }
     void  set(Age age) volatile       { _data = age._data; }
 
     idx_t top()        const volatile { return _fields._top; }
     idx_t tag()        const volatile { return _fields._tag; }
+#else
+    Age   get()        const volatile {
+      size_t res = OrderAccess::load_ptr_acquire((volatile intptr_t*) &_data);
+      return *(Age*)(&res);
+    }
+    void  set(Age age) volatile       { OrderAccess::release_store_ptr((volatile intptr_t*) &_data, *(size_t*)(&age._data)); }
+
+    idx_t top()        const volatile { return OrderAccess::load_acquire((volatile idx_t*) &(_fields._top)); }
+    idx_t tag()        const volatile { return OrderAccess::load_acquire((volatile idx_t*) &(_fields._tag)); }
+#endif
 
     // Increment top; if it wraps, increment tag also.
     void increment() {
@@ -195,23 +206,50 @@ protected:
 public:
   TaskQueueSuper() : _bottom(0), _age() {}
 
+#if defined MIPS || defined LOONGARCH
+  inline uint get_bottom() const {
+    return OrderAccess::load_acquire((volatile juint*)&_bottom);
+  }
+
+  inline void set_bottom(uint new_bottom) {
+    OrderAccess::release_store(&_bottom, new_bottom);
+  }
+#endif
   // Return true if the TaskQueue contains/does not contain any tasks.
-  bool peek()     const { return _bottom != _age.top(); }
+  bool peek()     const {
+#if defined MIPS || defined LOONGARCH
+    return get_bottom() != _age.top();
+#else
+    return _bottom != _age.top();
+#endif
+  }
   bool is_empty() const { return size() == 0; }
 
   // Return an estimate of the number of elements in the queue.
   // The "careful" version admits the possibility of pop_local/pop_global
   // races.
   uint size() const {
+#if defined MIPS || defined LOONGARCH
+    return size(get_bottom(), _age.top());
+#else
     return size(_bottom, _age.top());
+#endif
   }
 
   uint dirty_size() const {
+#if defined MIPS || defined LOONGARCH
+    return dirty_size(get_bottom(), _age.top());
+#else
     return dirty_size(_bottom, _age.top());
+#endif
   }
 
   void set_empty() {
+#if defined MIPS || defined LOONGARCH
+    set_bottom(0);
+#else
     _bottom = 0;
+#endif
     _age.set(0);
   }
 
@@ -263,7 +301,9 @@ protected:
   typedef typename TaskQueueSuper<N, F>::Age Age;
   typedef typename TaskQueueSuper<N, F>::idx_t idx_t;
 
+#if !defined MIPS && !defined LOONGARCH
   using TaskQueueSuper<N, F>::_bottom;
+#endif
   using TaskQueueSuper<N, F>::_age;
   using TaskQueueSuper<N, F>::increment_index;
   using TaskQueueSuper<N, F>::decrement_index;
@@ -327,7 +367,11 @@ template<class E, MEMFLAGS F, unsigned int N>
 void GenericTaskQueue<E, F, N>::oops_do(OopClosure* f) {
   // tty->print_cr("START OopTaskQueue::oops_do");
   uint iters = size();
+#if defined MIPS || defined LOONGARCH
+  uint index = this->get_bottom();
+#else
   uint index = _bottom;
+#endif
   for (uint i = 0; i < iters; ++i) {
     index = decrement_index(index);
     // tty->print_cr("  doing entry %d," INTPTR_T " -> " INTPTR_T,
@@ -345,14 +389,22 @@ template<class E, MEMFLAGS F, unsigned int N>
 bool GenericTaskQueue<E, F, N>::push_slow(E t, uint dirty_n_elems) {
   if (dirty_n_elems == N - 1) {
     // Actually means 0, so do the push.
+#if defined MIPS || defined LOONGARCH
+    uint localBot = this->get_bottom();
+#else
     uint localBot = _bottom;
+#endif
     // g++ complains if the volatile result of the assignment is
     // unused, so we cast the volatile away.  We cannot cast directly
     // to void, because gcc treats that as not using the result of the
     // assignment.  However, casting to E& means that we trigger an
     // unused-value warning.  So, we cast the E& to void.
     (void)const_cast<E&>(_elems[localBot] = t);
+#if defined MIPS || defined LOONGARCH
+    this->set_bottom(increment_index(localBot));
+#else
     OrderAccess::release_store(&_bottom, increment_index(localBot));
+#endif
     TASKQUEUE_STATS_ONLY(stats.record_push());
     return true;
   }
@@ -407,7 +459,11 @@ bool GenericTaskQueue<E, F, N>::pop_global(volatile E& t) {
 #if !(defined SPARC || defined IA32 || defined AMD64)
   OrderAccess::fence();
 #endif
+#if defined MIPS || defined LOONGARCH
+  uint localBot = this->get_bottom();
+#else
   uint localBot = OrderAccess::load_acquire((volatile juint*)&_bottom);
+#endif
   uint n_elems = size(localBot, oldAge.top());
   if (n_elems == 0) {
     return false;
@@ -662,7 +718,11 @@ public:
 
 template<class E, MEMFLAGS F, unsigned int N> inline bool
 GenericTaskQueue<E, F, N>::push(E t) {
+#if defined MIPS || defined LOONGARCH
+  uint localBot = this->get_bottom();
+#else
   uint localBot = _bottom;
+#endif
   assert(localBot < N, "_bottom out of range.");
   idx_t top = _age.top();
   uint dirty_n_elems = dirty_size(localBot, top);
@@ -674,7 +734,11 @@ GenericTaskQueue<E, F, N>::push(E t) {
     // assignment.  However, casting to E& means that we trigger an
     // unused-value warning.  So, we cast the E& to void.
     (void) const_cast<E&>(_elems[localBot] = t);
+#if defined MIPS || defined LOONGARCH
+    this->set_bottom(increment_index(localBot));
+#else
     OrderAccess::release_store(&_bottom, increment_index(localBot));
+#endif
     TASKQUEUE_STATS_ONLY(stats.record_push());
     return true;
   } else {
@@ -684,7 +748,11 @@ GenericTaskQueue<E, F, N>::push(E t) {
 
 template<class E, MEMFLAGS F, unsigned int N> inline bool
 GenericTaskQueue<E, F, N>::pop_local(volatile E& t) {
+#if defined MIPS || defined LOONGARCH
+  uint localBot = this->get_bottom();
+#else
   uint localBot = _bottom;
+#endif
   // This value cannot be N-1.  That can only occur as a result of
   // the assignment to bottom in this method.  If it does, this method
   // resets the size to 0 before the next call (which is sequential,
@@ -693,7 +761,11 @@ GenericTaskQueue<E, F, N>::pop_local(volatile E& t) {
   assert(dirty_n_elems != N - 1, "Shouldn't be possible...");
   if (dirty_n_elems == 0) return false;
   localBot = decrement_index(localBot);
+#if defined MIPS || defined LOONGARCH
+  this->set_bottom(localBot);
+#else
   _bottom = localBot;
+#endif
   // This is necessary to prevent any read below from being reordered
   // before the store just above.
   OrderAccess::fence();

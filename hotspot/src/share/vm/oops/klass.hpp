@@ -32,6 +32,9 @@
 #include "oops/klassPS.hpp"
 #include "oops/metadata.hpp"
 #include "oops/oop.hpp"
+#if defined MIPS || defined LOONGARCH
+#include "runtime/orderAccess.hpp"
+#endif
 #include "utilities/accessFlags.hpp"
 #include "utilities/macros.hpp"
 #if INCLUDE_ALL_GCS
@@ -289,8 +292,18 @@ protected:
   // The Klasses are not placed in the Heap, so the Card Table or
   // the Mod Union Table can't be used to mark when klasses have modified oops.
   // The CT and MUT bits saves this information for the individual Klasses.
-  void record_modified_oops()            { _modified_oops = 1; }
-  void clear_modified_oops()             { _modified_oops = 0; }
+  void record_modified_oops()            {
+    _modified_oops = 1;
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+    if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
+  }
+  void clear_modified_oops()             {
+    _modified_oops = 0;
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+    if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
+  }
   bool has_modified_oops()               { return _modified_oops == 1; }
 
   void accumulate_modified_oops()        { if (has_modified_oops()) _accumulated_modified_oops = 1; }

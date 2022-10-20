@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_PRIMS_METHODHANDLES_HPP
 #define SHARE_VM_PRIMS_METHODHANDLES_HPP
 
@@ -198,6 +204,13 @@ public:
 #ifdef TARGET_ARCH_ppc
 # include "methodHandles_ppc.hpp"
 #endif
+#ifdef TARGET_ARCH_mips
+# include "methodHandles_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "methodHandles_loongarch.hpp"
+#endif
+
 
   // Tracing
   static void trace_method_handle(MacroAssembler* _masm, const char* adaptername) PRODUCT_RETURN;

@@ -1513,6 +1513,10 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
   }
 }
 
+void LIR_Assembler::emit_opCmpBranch(LIR_OpCmpBranch* op) {
+  ShouldNotReachHere();
+}
+
 void LIR_Assembler::emit_opConvert(LIR_OpConvert* op) {
   LIR_Opr src  = op->in_opr();
   LIR_Opr dest = op->result_opr();
@@ -2099,6 +2103,12 @@ void LIR_Assembler::cmove(LIR_Condition condition, LIR_Opr opr1, LIR_Opr opr2, L
     }
     __ bind(skip);
   }
+}
+
+
+void LIR_Assembler::cmp_cmove(LIR_Condition condition, LIR_Opr left, LIR_Opr right,
+                              LIR_Opr src1, LIR_Opr src2, LIR_Opr result, BasicType type) {
+  ShouldNotReachHere();
 }
 
 

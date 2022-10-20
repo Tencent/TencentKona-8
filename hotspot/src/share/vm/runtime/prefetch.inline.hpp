@@ -46,6 +46,12 @@
 #ifdef TARGET_OS_ARCH_linux_ppc
 # include "prefetch_linux_ppc.inline.hpp"
 #endif
+#ifdef TARGET_OS_ARCH_linux_mips
+# include "prefetch_linux_mips.inline.hpp"
+#endif
+#ifdef TARGET_OS_ARCH_linux_loongarch
+# include "prefetch_linux_loongarch.inline.hpp"
+#endif
 
 // Solaris
 #ifdef TARGET_OS_ARCH_solaris_x86

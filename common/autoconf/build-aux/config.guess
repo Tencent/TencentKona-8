@@ -86,4 +86,15 @@ if [ "x$OUT" = x ]; then
   fi
 fi
 
+# Test and fix little endian MIPS.
+if [ "x$OUT" = x ]; then
+  if [ `uname -s` = Linux ]; then
+    if [ `uname -m` = mipsel ]; then
+      OUT=mipsel-unknown-linux-gnu
+    elif [ `uname -m` = mips64el ]; then
+      OUT=mips64el-unknown-linux-gnu
+    fi
+  fi
+fi
+
 echo $OUT

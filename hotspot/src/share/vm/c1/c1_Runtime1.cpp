@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022. These
+ * modifications are Copyright (c) 2015, 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "asm/codeBuffer.hpp"
 #include "c1/c1_CodeStubs.hpp"
@@ -710,6 +716,7 @@ JRT_ENTRY(void, Runtime1::deoptimize(JavaThread* thread))
   // Return to the now deoptimized frame.
 JRT_END
 
+#ifndef LOONGARCH
 
 static Klass* resolve_field_return_klass(methodHandle caller, int bci, TRAPS) {
   Bytecode_field field_access(caller, bci);
@@ -1185,6 +1192,47 @@ JRT_ENTRY(void, Runtime1::patch_code(JavaThread* thread, Runtime1::StubID stub_i
     Universe::heap()->register_nmethod(nm);
   }
 JRT_END
+
+#else
+
+JRT_ENTRY(void, Runtime1::patch_code(JavaThread* thread, Runtime1::StubID stub_id ))
+{
+  RegisterMap reg_map(thread, false);
+
+  NOT_PRODUCT(_patch_code_slowcase_cnt++;)
+  // According to the LoongArch, "Concurrent modification and
+  // execution of instructions can lead to the resulting instruction
+  // performing any behavior that can be achieved by executing any
+  // sequence of instructions that can be executed from the same
+  // Exception level, except where the instruction before
+  // modification and the instruction after modification is a B, BL,
+  // NOP, BRK instruction."
+  //
+  // This effectively makes the games we play when patching
+  // impossible, so when we come across an access that needs
+  // patching we must deoptimize.
+
+  if (TracePatching) {
+    tty->print_cr("Deoptimizing because patch is needed");
+  }
+
+  frame runtime_frame = thread->last_frame();
+  frame caller_frame = runtime_frame.sender(&reg_map);
+
+  // It's possible the nmethod was invalidated in the last
+  // safepoint, but if it's still alive then make it not_entrant.
+  nmethod* nm = CodeCache::find_nmethod(caller_frame.pc());
+  if (nm != NULL) {
+    nm->make_not_entrant();
+  }
+
+  Deoptimization::deoptimize_frame(thread, caller_frame.id());
+
+  // Return to the now deoptimized frame.
+}
+JRT_END
+
+#endif
 
 //
 // Entry point for compiled code. We want to patch a nmethod.

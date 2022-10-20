@@ -21,6 +21,13 @@
  * questions.
  *
  */
+
+/*
+ * This file has been modified by Loongson Technology in 2021. These
+ * modifications are Copyright (c) 2021 Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "gc_interface/collectedHeap.hpp"
 #include "memory/allocation.hpp"
@@ -3065,12 +3072,12 @@ void Metaspace::allocate_metaspace_compressed_klass_ptrs(char* requested_addr, a
   // Don't use large pages for the class space.
   bool large_pages = false;
 
-#ifndef AARCH64
+#if !defined(AARCH64) && !defined(MIPS64) && !defined(LOONGARCH)
   ReservedSpace metaspace_rs = ReservedSpace(compressed_class_space_size(),
                                              _reserve_alignment,
                                              large_pages,
                                              requested_addr, 0);
-#else // AARCH64
+#else // defined(AARCH64) || defined(MIPS64) || defined(LOONGARCH)
   ReservedSpace metaspace_rs;
 
   // Our compressed klass pointers may fit nicely into the lower 32
@@ -3107,7 +3114,7 @@ void Metaspace::allocate_metaspace_compressed_klass_ptrs(char* requested_addr, a
     }
   }
 
-#endif // AARCH64
+#endif // defined(AARCH64) || defined(MIPS64) || defined(LOONGARCH)
 
   if (!metaspace_rs.is_reserved()) {
 #if INCLUDE_CDS
@@ -3937,11 +3944,13 @@ class TestVirtualSpaceNodeTest {
       assert(cm.sum_free_chunks() == 2*MediumChunk, "sizes should add up");
     }
 
-    { // 4 pages of VSN is committed, some is used by chunks
+    const size_t page_chunks = 4 * (size_t)os::vm_page_size() / BytesPerWord;
+    // This doesn't work for systems with vm_page_size >= 16K.
+    if (page_chunks < MediumChunk) {
+      // 4 pages of VSN is committed, some is used by chunks
       ChunkManager cm(SpecializedChunk, SmallChunk, MediumChunk);
       VirtualSpaceNode vsn(vsn_test_size_bytes);
-      const size_t page_chunks = 4 * (size_t)os::vm_page_size() / BytesPerWord;
-      assert(page_chunks < MediumChunk, "Test expects medium chunks to be at least 4*page_size");
+
       vsn.initialize();
       vsn.expand_by(page_chunks, page_chunks);
       vsn.get_chunk_vs(SmallChunk);

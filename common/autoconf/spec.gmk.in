@@ -23,6 +23,12 @@
 # questions.
 #
 
+#
+# This file has been modified by Loongson Technology in 2022. These
+# modifications are Copyright (c) 2018, 2022, Loongson Technology, and are made
+# available on the same license terms set forth above.
+#
+
 # Configured @DATE_WHEN_CONFIGURED@ to build
 # for target system @OPENJDK_TARGET_OS@-@OPENJDK_TARGET_CPU@
 #   (called @OPENJDK_TARGET_AUTOCONF_NAME@ by autoconf)
@@ -218,6 +224,23 @@ else
   FULL_VERSION=$(RELEASE)-$(JDK_BUILD_NUMBER)
 endif
 JRE_RELEASE_VERSION:=$(FULL_VERSION)
+
+# Build OS and host values for use in Loongson OpenJDK release
+BUILDER_ID:=@BUILDER_ID@
+BUILDER_NAME:=@BUILDER_NAME@
+HOST_NAME:=@HOST_NAME@
+
+# Loongson OpenJDK Version info
+VER=8.1.12
+ifeq ($(HOST_NAME), )
+  HOST_NAME=unknown
+endif
+ifeq ($(BUILDER_NAME), )
+  BUILDER_NAME=unknown
+endif
+HOST_NAME_STRING=-$(HOST_NAME)
+BUILDER_NAME_STRING=-$(BUILDER_NAME)
+LOONGSON_RUNTIME_NAME=Loongson $(VER)$(HOST_NAME_STRING)$(BUILDER_NAME_STRING)
 
 # How to compile the code: release, fastdebug or slowdebug
 DEBUG_LEVEL:=@DEBUG_LEVEL@

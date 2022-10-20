@@ -22,6 +22,12 @@
 #  
 #
 
+#
+# This file has been modified by Loongson Technology in 2020. These
+# modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+# available on the same license terms set forth above.
+#
+
 #------------------------------------------------------------------------
 # CC, CXX & AS
 
@@ -177,6 +183,9 @@ ARCHFLAG/aarch64 =
 ARCHFLAG/ia64    =
 ARCHFLAG/sparc   = -m32 -mcpu=v9
 ARCHFLAG/sparcv9 = -m64 -mcpu=v9
+ARCHFLAG/mips64  = -mabi=64
+#ARCHFLAG/loongarch64  = -lp64
+ARCHFLAG/loongarch64  =
 ARCHFLAG/zero    = $(ZERO_ARCHFLAG)
 ARCHFLAG/ppc64   =  -m64
 
@@ -202,7 +211,7 @@ else
 endif
 
 # Compiler warnings are treated as errors
-WARNINGS_ARE_ERRORS = -Werror
+#WARNINGS_ARE_ERRORS = -Werror
 
 ifeq ($(USE_CLANG), true)
   # However we need to clean the code up before we can unrestrictedly enable this option with Clang

@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022. These
+ * modifications are Copyright (c) 2015, 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_C1_C1_LIRASSEMBLER_HPP
 #define SHARE_VM_C1_C1_LIRASSEMBLER_HPP
 
@@ -195,7 +201,9 @@ class LIR_Assembler: public CompilationResourceObj {
   void emit_op1(LIR_Op1* op);
   void emit_op2(LIR_Op2* op);
   void emit_op3(LIR_Op3* op);
+  void emit_op4(LIR_Op4* op);
   void emit_opBranch(LIR_OpBranch* op);
+  void emit_opCmpBranch(LIR_OpCmpBranch* op);
   void emit_opLabel(LIR_OpLabel* op);
   void emit_arraycopy(LIR_OpArrayCopy* op);
   void emit_updatecrc32(LIR_OpUpdateCRC32* op);
@@ -227,6 +235,7 @@ class LIR_Assembler: public CompilationResourceObj {
   void volatile_move_op(LIR_Opr src, LIR_Opr result, BasicType type, CodeEmitInfo* info);
   void comp_mem_op(LIR_Opr src, LIR_Opr result, BasicType type, CodeEmitInfo* info);  // info set for null exceptions
   void comp_fl2i(LIR_Code code, LIR_Opr left, LIR_Opr right, LIR_Opr result, LIR_Op2* op);
+  void cmp_cmove(LIR_Condition code, LIR_Opr left, LIR_Opr right, LIR_Opr src1, LIR_Opr src2, LIR_Opr result, BasicType type);
   void cmove(LIR_Condition code, LIR_Opr left, LIR_Opr right, LIR_Opr result, BasicType type);
 
   void call(        LIR_OpJavaCall* op, relocInfo::relocType rtype);
@@ -264,6 +273,9 @@ class LIR_Assembler: public CompilationResourceObj {
 
 #ifdef TARGET_ARCH_x86
 # include "c1_LIRAssembler_x86.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "c1_LIRAssembler_loongarch.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "c1_LIRAssembler_aarch64.hpp"

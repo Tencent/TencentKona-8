@@ -499,6 +499,9 @@ void ParallelCompactData::add_obj(HeapWord* addr, size_t len)
   if (beg_region == end_region) {
     // All in one region.
     _region_data[beg_region].add_live_obj(len);
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+    if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
     return;
   }
 
@@ -517,6 +520,9 @@ void ParallelCompactData::add_obj(HeapWord* addr, size_t len)
   const size_t end_ofs = region_offset(addr + len - 1);
   _region_data[end_region].set_partial_obj_size(end_ofs + 1);
   _region_data[end_region].set_partial_obj_addr(addr);
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+    if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
 }
 
 void
@@ -3229,6 +3235,9 @@ void PSParallelCompact::fill_blocks(size_t region_idx)
     if (new_block != cur_block) {
       cur_block = new_block;
       sd.block(cur_block)->set_offset(bitmap->bits_to_words(live_bits));
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+      if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
     }
 
     const size_t end_bit = bitmap->find_obj_end(beg_bit, range_end);

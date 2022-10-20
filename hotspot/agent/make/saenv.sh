@@ -23,6 +23,12 @@
 #  
 #
 
+#
+# This file has been modified by Loongson Technology in 2020. These
+# modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+# available on the same license terms set forth above.
+#
+
 # This file sets common environment variables for all SA scripts
 
 OS=`uname`
@@ -42,6 +48,14 @@ if [ "$OS" = "Linux" ]; then
      SA_LIBPATH=$STARTDIR/../src/os/linux/amd64:$STARTDIR/linux/amd64
      OPTIONS="-Dsa.library.path=$SA_LIBPATH"
      CPU=amd64
+   elif [ "$ARCH" = "mips64" ] ; then
+     SA_LIBPATH=$STARTDIR/../src/os/linux/mips:$STARTDIR/linux/mips
+     OPTIONS="-Dsa.library.path=$SA_LIBPATH"
+     CPU=mips
+   elif [ "$ARCH" = "loongarch64" ] ; then
+     SA_LIBPATH=$STARTDIR/../src/os/linux/loongarch64:$STARTDIR/linux/loongarch64
+     OPTIONS="-Dsa.library.path=$SA_LIBPATH"
+     CPU=loongarch64
    else
      SA_LIBPATH=$STARTDIR/../src/os/linux/i386:$STARTDIR/linux/i386
      OPTIONS="-Dsa.library.path=$SA_LIBPATH"

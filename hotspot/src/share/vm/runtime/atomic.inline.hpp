@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_RUNTIME_ATOMIC_INLINE_HPP
 #define SHARE_VM_RUNTIME_ATOMIC_INLINE_HPP
 
@@ -30,6 +36,12 @@
 // Linux
 #ifdef TARGET_OS_ARCH_linux_x86
 # include "atomic_linux_x86.inline.hpp"
+#endif
+#ifdef TARGET_OS_ARCH_linux_mips
+# include "atomic_linux_mips.inline.hpp"
+#endif
+#ifdef TARGET_OS_ARCH_linux_loongarch
+# include "atomic_linux_loongarch.inline.hpp"
 #endif
 #ifdef TARGET_OS_ARCH_linux_sparc
 # include "atomic_linux_sparc.inline.hpp"

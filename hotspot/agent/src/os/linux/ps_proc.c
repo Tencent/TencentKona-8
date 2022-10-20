@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022, These
+ * modifications are Copyright (c) 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -141,7 +147,7 @@ static bool process_get_lwp_regs(struct ps_prochandle* ph, pid_t pid, struct use
 #define PTRACE_GETREGS_REQ PT_GETREGS
 #endif
 
-#ifdef PTRACE_GETREGS_REQ
+#if defined(PTRACE_GETREGS_REQ) && !defined(loongarch64)
  if (ptrace_getregs(PTRACE_GETREGS_REQ, pid, user, NULL) < 0) {
    print_debug("ptrace(PTRACE_GETREGS, ...) failed for lwp %d\n", pid);
    return false;

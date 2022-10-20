@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_INTERPRETER_INTERPRETERRUNTIME_HPP
 #define SHARE_VM_INTERPRETER_INTERPRETERRUNTIME_HPP
 
@@ -156,7 +162,7 @@ class InterpreterRuntime: AllStatic {
                                         Method* method,
                                         intptr_t* from, intptr_t* to);
 
-#if defined(IA32) || defined(AMD64) || defined(ARM) || defined(AARCH64)
+#if defined(IA32) || defined(AMD64) || defined(ARM) || defined(AARCH64) || defined(MIPS) || defined(LOONGARCH)
   // Popframe support (only needed on x86, AMD64 and ARM)
   static void popframe_move_outgoing_args(JavaThread* thread, void* src_address, void* dest_address);
 #endif
@@ -164,6 +170,12 @@ class InterpreterRuntime: AllStatic {
   // Platform dependent stuff
 #ifdef TARGET_ARCH_x86
 # include "interpreterRT_x86.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "interpreterRT_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "interpreterRT_loongarch.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "interpreterRT_aarch64.hpp"

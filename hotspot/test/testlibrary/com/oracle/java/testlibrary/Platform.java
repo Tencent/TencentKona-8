@@ -126,6 +126,10 @@ public class Platform {
         return isArch("aarch64");
     }
 
+    public static boolean isLoongArch64() {
+        return isArch("loongarch64");
+    }
+
     private static boolean isArch(String archnameRE) {
         return Pattern.compile(archnameRE, Pattern.CASE_INSENSITIVE)
             .matcher(osArch)
@@ -134,6 +138,10 @@ public class Platform {
 
     public static String getOsArch() {
         return osArch;
+    }
+
+    public static boolean isMIPS() {
+        return isArch("mips.*");
     }
 
     /**

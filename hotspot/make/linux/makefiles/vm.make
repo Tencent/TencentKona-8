@@ -22,6 +22,12 @@
 #
 #
 
+#
+# This file has been modified by Loongson Technology in 2020. These
+# modifications are Copyright (c) 2018, 2020, Loongson Technology, and are made
+# available on the same license terms set forth above.
+#
+
 # Rules to build JVM and related libraries, included from vm.make in the build
 # directory.
 
@@ -99,9 +105,22 @@ CXXFLAGS =           \
   ${HS_LIB_ARCH}     \
   ${VM_DISTRO}
 
+ifeq ($(MIPS_ABI),n32)
+  CXXFLAGS +=   -DN32 
+else
+  ifeq ($(MIPS_ABI),n64)
+    CXXFLAGS +=   -DN64
+  endif
+endif
 # This is VERY important! The version define must only be supplied to vm_version.o
 # If not, ccache will not re-use the cache at all, since the version string might contain
 # a time and date.
+ifdef LOONGSON_RUNTIME_NAME
+  LOONGSON_VM_INFO = -DLOONGSON_RUNTIME_NAME="\"$(LOONGSON_RUNTIME_NAME)\""
+else
+  LOONGSON_VM_INFO = -DLOONGSON_RUNTIME_NAME="\"\""
+endif
+CXXFLAGS/vmError.o += ${LOONGSON_VM_INFO}
 CXXFLAGS/vm_version.o += ${JRE_VERSION} ${VERSION_CFLAGS}
 CXXFLAGS/arguments.o += ${VERSION_CFLAGS}
 
@@ -210,6 +229,15 @@ Src_Files_EXCLUDE += \*x86_64\*
 endif
 ifeq ($(Platform_arch_model), x86_64)
 Src_Files_EXCLUDE += \*x86_32\*
+endif
+ifeq ($(Platform_arch_model), mips_32)
+Src_Files_EXCLUDE += \*mips_64\*
+endif
+ifeq ($(Platform_arch_model), mips_64)
+Src_Files_EXCLUDE += \*mips_32\*
+endif
+ifeq ($(Platform_arch_model), loongarch_64)
+Src_Files_EXCLUDE += \*loongarch_32\*
 endif
 
 # Alternate vm.make

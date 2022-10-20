@@ -22,6 +22,13 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022. These
+ * modifications are Copyright (c) 2015, 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ *
+ */
+
 #include <jni.h>
 #include "libproc.h"
 
@@ -49,8 +56,16 @@
 #include "sun_jvm_hotspot_debugger_sparc_SPARCThreadContext.h"
 #endif
 
+#if defined(mips64el) || defined(mips64)
+#include "sun_jvm_hotspot_debugger_mips64_MIPS64ThreadContext.h"
+#endif
+
 #ifdef aarch64
 #include "sun_jvm_hotspot_debugger_aarch64_AARCH64ThreadContext.h"
+#endif
+
+#ifdef loongarch64
+#include "sun_jvm_hotspot_debugger_loongarch64_LOONGARCH64ThreadContext.h"
 #endif
 
 static jfieldID p_ps_prochandle_ID = 0;
@@ -337,7 +352,7 @@ JNIEXPORT jbyteArray JNICALL Java_sun_jvm_hotspot_debugger_linux_LinuxDebuggerLo
   return (err == PS_OK)? array : 0;
 }
 
-#if defined(i386) || defined(amd64) || defined(sparc) || defined(sparcv9) || defined(aarch64)
+#if defined(i386) || defined(amd64) || defined(sparc) || defined(sparcv9) || defined(aarch64) || defined(loongarch64)
 JNIEXPORT jlongArray JNICALL Java_sun_jvm_hotspot_debugger_linux_LinuxDebuggerLocal_getThreadIntegerRegisterSet0
   (JNIEnv *env, jobject this_obj, jint lwp_id) {
 
@@ -364,6 +379,12 @@ JNIEXPORT jlongArray JNICALL Java_sun_jvm_hotspot_debugger_linux_LinuxDebuggerLo
 #endif
 #if defined(sparc) || defined(sparcv9)
 #define NPRGREG sun_jvm_hotspot_debugger_sparc_SPARCThreadContext_NPRGREG
+#endif
+#ifdef loongarch64
+#define NPRGREG sun_jvm_hotspot_debugger_loongarch64_LOONGARCH64ThreadContext_NPRGREG
+#endif
+#if defined(mips64) || defined(mips64el)
+#define NPRGREG sun_jvm_hotspot_debugger_mips64_MIPS64ThreadContext_NPRGREG
 #endif
 
   array = (*env)->NewLongArray(env, NPRGREG);
@@ -470,6 +491,55 @@ JNIEXPORT jlongArray JNICALL Java_sun_jvm_hotspot_debugger_linux_LinuxDebuggerLo
   }
 #endif /* aarch64 */
 
+#if defined(loongarch64)
+
+#define REG_INDEX(reg) sun_jvm_hotspot_debugger_loongarch64_LOONGARCH64ThreadContext_##reg
+
+  {
+    int i;
+    for (i = 0; i < 31; i++)
+      regs[i] = gregs.regs[i];
+    regs[REG_INDEX(PC)] = gregs.csr_era;
+  }
+#endif /* loongarch64 */
+#if defined(mips64) || defined(mips64el)
+
+#define REG_INDEX(reg) sun_jvm_hotspot_debugger_mips64_MIPS64ThreadContext_##reg
+
+  regs[REG_INDEX(ZERO)]  = gregs.regs[0];
+  regs[REG_INDEX(AT)]  = gregs.regs[1];
+  regs[REG_INDEX(V0)]  = gregs.regs[2];
+  regs[REG_INDEX(V1)]  = gregs.regs[3];
+  regs[REG_INDEX(A0)]  = gregs.regs[4];
+  regs[REG_INDEX(A1)]  = gregs.regs[5];
+  regs[REG_INDEX(A2)]  = gregs.regs[6];
+  regs[REG_INDEX(A3)]  = gregs.regs[7];
+  regs[REG_INDEX(T0)]  = gregs.regs[8];
+  regs[REG_INDEX(T1)]  = gregs.regs[9];
+  regs[REG_INDEX(T2)]  = gregs.regs[10];
+  regs[REG_INDEX(T3)]  = gregs.regs[11];
+  regs[REG_INDEX(T4)]  = gregs.regs[12];
+  regs[REG_INDEX(T5)]  = gregs.regs[13];
+  regs[REG_INDEX(T6)]  = gregs.regs[14];
+  regs[REG_INDEX(T7)]  = gregs.regs[15];
+  regs[REG_INDEX(S0)]  = gregs.regs[16];
+  regs[REG_INDEX(S1)]  = gregs.regs[17];
+  regs[REG_INDEX(S2)]  = gregs.regs[18];
+  regs[REG_INDEX(S3)]  = gregs.regs[19];
+  regs[REG_INDEX(S4)]  = gregs.regs[20];
+  regs[REG_INDEX(S5)]  = gregs.regs[21];
+  regs[REG_INDEX(S6)]  = gregs.regs[22];
+  regs[REG_INDEX(S7)]  = gregs.regs[23];
+  regs[REG_INDEX(T8)]  = gregs.regs[24];
+  regs[REG_INDEX(T9)]  = gregs.regs[25];
+  regs[REG_INDEX(K0)]  = gregs.regs[26];
+  regs[REG_INDEX(K1)]  = gregs.regs[27];
+  regs[REG_INDEX(GP)]  = gregs.regs[28];
+  regs[REG_INDEX(SP)]  = gregs.regs[29];
+  regs[REG_INDEX(FP)]  = gregs.regs[30];
+  regs[REG_INDEX(S8)]  = gregs.regs[30];
+  regs[REG_INDEX(RA)]  = gregs.regs[31];
+#endif /* mips64 */
 
   (*env)->ReleaseLongArrayElements(env, array, regs, JNI_COMMIT);
   return array;

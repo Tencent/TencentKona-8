@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022. These
+ * modifications are Copyright (c) 2021, 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 // no precompiled headers
 #include "classfile/classLoader.hpp"
 #include "classfile/systemDictionary.hpp"
@@ -1973,7 +1979,11 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen)
     {EM_ALPHA,       EM_ALPHA,   ELFCLASS64, ELFDATA2LSB, (char*)"Alpha"},
     {EM_MIPS_RS3_LE, EM_MIPS_RS3_LE, ELFCLASS32, ELFDATA2LSB, (char*)"MIPSel"},
     {EM_MIPS,        EM_MIPS,    ELFCLASS32, ELFDATA2MSB, (char*)"MIPS"},
+    {EM_MIPS,        EM_MIPS,    ELFCLASS64, ELFDATA2LSB, (char*)"MIPS64 LE"},
     {EM_PARISC,      EM_PARISC,  ELFCLASS32, ELFDATA2MSB, (char*)"PARISC"},
+#if  defined (LOONGARCH64)
+    {EM_LOONGARCH,   EM_LOONGARCH,    ELFCLASS64, ELFDATA2LSB, (char*)"LOONGARCH64"},
+#endif
     {EM_68K,         EM_68K,     ELFCLASS32, ELFDATA2MSB, (char*)"M68k"},
     {EM_AARCH64,     EM_AARCH64, ELFCLASS64, ELFDATA2LSB, (char*)"AARCH64"},
   };
@@ -1988,6 +1998,8 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen)
     static  Elf32_Half running_arch_code=EM_SPARCV9;
   #elif  (defined __sparc) && (!defined _LP64)
     static  Elf32_Half running_arch_code=EM_SPARC;
+  #elif  (defined MIPS64)
+    static  Elf32_Half running_arch_code=EM_MIPS;
   #elif  (defined __powerpc64__)
     static  Elf32_Half running_arch_code=EM_PPC64;
   #elif  (defined __powerpc__)
@@ -2008,9 +2020,11 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen)
     static  Elf32_Half running_arch_code=EM_68K;
   #elif  (defined AARCH64)
     static  Elf32_Half running_arch_code=EM_AARCH64;
+  #elif  (defined LOONGARCH64)
+    static  Elf32_Half running_arch_code=EM_LOONGARCH;
   #else
     #error Method os::dll_load requires that one of following is defined:\
-         IA32, AMD64, IA64, __sparc, __powerpc__, ARM, S390, ALPHA, MIPS, MIPSEL, PARISC, M68K, AARCH64
+         IA32, AMD64, IA64, __sparc, __powerpc__, ARM, S390, ALPHA, MIPS, MIPSEL, __mips64, PARISC, M68K, AARCH64
   #endif
 
   // Identify compatability class for VM's architecture and library's architecture
@@ -3517,7 +3531,7 @@ size_t os::Linux::find_large_page_size() {
 
 #ifndef ZERO
   large_page_size = IA32_ONLY(4 * M) AMD64_ONLY(2 * M) IA64_ONLY(256 * M) SPARC_ONLY(4 * M)
-                     ARM_ONLY(2 * M) PPC_ONLY(4 * M) AARCH64_ONLY(2 * M);
+                     ARM_ONLY(2 * M) PPC_ONLY(4 * M) AARCH64_ONLY(2 * M) MIPS64_ONLY(4 * M) LOONGARCH64_ONLY(4 * M); //In MIPS _large_page_size is seted 4*M. // TODO: LA
 #endif // ZERO
 
   FILE *fp = fopen("/proc/meminfo", "r");
@@ -5124,7 +5138,12 @@ jint os::init_2(void)
   Linux::fast_thread_clock_init();
 
   // Allocate a single page and mark it as readable for safepoint polling
+#ifdef OPT_SAFEPOINT
+  void * p = (void *)(0x10000);
+  address polling_page = (address) ::mmap(p, Linux::page_size(), PROT_READ, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+#else
   address polling_page = (address) ::mmap(NULL, Linux::page_size(), PROT_READ, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+#endif
   guarantee( polling_page != MAP_FAILED, "os::init_2: failed to allocate polling page" );
 
   os::set_polling_page( polling_page );
@@ -5159,13 +5178,20 @@ jint os::init_2(void)
   // size.  Add a page for compiler2 recursion in main thread.
   // Add in 2*BytesPerWord times page size to account for VM stack during
   // class initialization depending on 32 or 64 bit VM.
+
+  /*
+   * 2014/1/2: JDK8 requires larger -Xss option.
+   *   Some application cannot run with -Xss192K.
+   *   We are not sure whether this causes errors, so simply print a warning.
+   */
+  size_t min_stack_allowed_jdk6 = os::Linux::min_stack_allowed;
   os::Linux::min_stack_allowed = MAX2(os::Linux::min_stack_allowed,
             (size_t)(StackYellowPages+StackRedPages+StackShadowPages) * Linux::page_size() +
                     (2*BytesPerWord COMPILER2_PRESENT(+1)) * Linux::vm_default_page_size());
 
   size_t threadStackSizeInBytes = ThreadStackSize * K;
   if (threadStackSizeInBytes != 0 &&
-      threadStackSizeInBytes < os::Linux::min_stack_allowed) {
+      threadStackSizeInBytes < min_stack_allowed_jdk6) {
         tty->print_cr("\nThe stack size specified is too small, "
                       "Specify at least %dk",
                       os::Linux::min_stack_allowed/ K);

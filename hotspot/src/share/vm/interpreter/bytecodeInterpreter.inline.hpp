@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_INTERPRETER_BYTECODEINTERPRETER_INLINE_HPP
 #define SHARE_VM_INTERPRETER_BYTECODEINTERPRETER_INLINE_HPP
 
@@ -45,6 +51,12 @@
 // Platform dependent data manipulation
 #ifdef TARGET_ARCH_x86
 # include "bytecodeInterpreter_x86.inline.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "bytecodeInterpreter_mips.inline.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "bytecodeInterpreter_loongarch.inline.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "bytecodeInterpreter_aarch64.inline.hpp"

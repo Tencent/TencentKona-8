@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_RUNTIME_DTRACEJSDT_HPP
 #define SHARE_VM_RUNTIME_DTRACEJSDT_HPP
 
@@ -43,6 +49,12 @@
 #endif
 #ifdef TARGET_ARCH_ppc
 # include "nativeInst_ppc.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "nativeInst_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "nativeInst_loongarch.hpp"
 #endif
 
 class RegisteredProbes;

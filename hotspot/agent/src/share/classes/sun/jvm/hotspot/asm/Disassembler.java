@@ -94,6 +94,12 @@ public class Disassembler {
             } else if (arch.equals("amd64") || arch.equals("x86_64")) {
                path.append(sep + "lib" + sep + "amd64" + sep);
                libname +=  "-amd64.so";
+            } else if (arch.equals("mips64") || arch.equals("mips64el")) {
+               path.append(sep + "lib" + sep + "mips64" + sep);
+               libname +=  "-mips64.so";
+            } else if (arch.equals("loongarch64")) {
+               path.append(sep + "lib" + sep + "loongarch64" + sep);
+               libname +=  "-loongarch64.so";
             } else {
                path.append(sep + "lib" + sep + arch + sep);
                libname +=  "-" + arch + ".so";

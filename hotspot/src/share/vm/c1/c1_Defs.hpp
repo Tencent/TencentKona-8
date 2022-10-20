@@ -22,12 +22,21 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022. These
+ * modifications are Copyright (c) 2015, 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_C1_C1_DEFS_HPP
 #define SHARE_VM_C1_C1_DEFS_HPP
 
 #include "utilities/globalDefinitions.hpp"
 #ifdef TARGET_ARCH_x86
 # include "register_x86.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "register_loongarch.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "register_aarch64.hpp"
@@ -55,6 +64,9 @@ enum {
 
 #ifdef TARGET_ARCH_x86
 # include "c1_Defs_x86.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "c1_Defs_loongarch.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "c1_Defs_aarch64.hpp"

@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "classfile/symbolTable.hpp"
 #include "interpreter/bytecodeStream.hpp"
@@ -45,6 +51,12 @@
 #endif
 #ifdef TARGET_ARCH_ppc
 # include "bytes_ppc.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "bytes_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "bytes_loongarch.hpp"
 #endif
 // FIXME: add Deprecated attribute
 // FIXME: fix Synthetic attribute

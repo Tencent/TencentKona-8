@@ -22,12 +22,21 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022. These
+ * modifications are Copyright (c) 2015, 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "c1/c1_FrameMap.hpp"
 #include "c1/c1_LIR.hpp"
 #include "runtime/sharedRuntime.hpp"
 #ifdef TARGET_ARCH_x86
 # include "vmreg_x86.inline.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "vmreg_loongarch.inline.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "vmreg_aarch64.inline.hpp"

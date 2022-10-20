@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022. These
+ * modifications are Copyright (c) 2015, 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "c1/c1_Compilation.hpp"
 #include "c1/c1_Instruction.hpp"
@@ -33,6 +39,10 @@
 #ifdef TARGET_ARCH_x86
 # include "nativeInst_x86.hpp"
 # include "vmreg_x86.inline.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "nativeInst_loongarch.hpp"
+# include "vmreg_loongarch.inline.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "nativeInst_aarch64.hpp"
@@ -810,6 +820,18 @@ void LIR_Assembler::emit_op2(LIR_Op2* op) {
   }
 }
 
+
+void LIR_Assembler::emit_op4(LIR_Op4* op) {
+  switch (op->code()) {
+    case lir_cmp_cmove:
+      cmp_cmove(op->condition(), op->in_opr1(), op->in_opr2(), op->in_opr3(), op->in_opr4(), op->result_opr(), op->type());
+      break;
+
+    default:
+      Unimplemented();
+      break;
+  }
+}
 
 void LIR_Assembler::build_frame() {
   _masm->build_frame(initial_frame_size_in_bytes(), bang_size_in_bytes());

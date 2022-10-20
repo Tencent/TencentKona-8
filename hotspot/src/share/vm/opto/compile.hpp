@@ -1029,7 +1029,7 @@ class Compile : public Phase {
   bool           in_scratch_emit_size() const   { return _in_scratch_emit_size;     }
 
   enum ScratchBufferBlob {
-    MAX_inst_size       = 1024,
+    MAX_inst_size       = 1024 MIPS64_ONLY(* 2) LOONGARCH64_ONLY(*2),
     MAX_locs_size       = 128, // number of relocInfo elements
     MAX_const_size      = 128,
     MAX_stubs_size      = 128
