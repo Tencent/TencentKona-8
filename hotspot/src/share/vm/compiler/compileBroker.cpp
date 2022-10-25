@@ -2454,11 +2454,11 @@ const char* CompileBroker::compiler_name(int comp_level) {
 void CompileBroker::print_aot_times(outputStream* output) {
   if (UsePerfData) {
     output->print_cr("    Standard Compilation info");
-    output->print_cr("      Total compile method count   : %ld ", CompileBroker::_perf_total_standard_compile_count->get_value());
+    output->print_cr("      Total compile method count   : " JLONG_FORMAT , CompileBroker::_perf_total_standard_compile_count->get_value());
     output->print_cr("      Total compile method time    : %6.3f ms", 
                      ((double)CompileBroker::_perf_standard_compilation->get_value() / os::elapsed_frequency() * (double)1000.0));
     output->print_cr("    Accumulated AOT restore info");
-    output->print_cr("      Total restore method count   : %ld ", CompileBroker::_perf_total_aot_compile_count->get_value());
+    output->print_cr("      Total restore method count   : " JLONG_FORMAT, CompileBroker::_perf_total_aot_compile_count->get_value());
     output->print_cr("      Total restore method time    : %6.3f ms", 
                      ((double)CompileBroker::_perf_aot_compilation->get_value() / os::elapsed_frequency() * (double)1000.0));
   }
