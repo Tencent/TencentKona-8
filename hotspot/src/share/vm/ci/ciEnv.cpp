@@ -62,6 +62,13 @@
 #include "opto/runtime.hpp"
 #endif
 
+// CodeRevive
+#include "cr/codeReviveCodeBlob.hpp"
+#include "cr/codeReviveFile.hpp"
+#include "cr/codeReviveMetaSpace.hpp"
+#include "cr/codeReviveVersionSelectPolicy.hpp"
+#include "cr/revive.hpp"
+
 // ciEnv
 //
 // This class is the top level broker for requests from the compiler
@@ -1014,6 +1021,11 @@ void ciEnv::register_method(ciMethod* target,
       validate_compile_task_dependencies(target);
     }
 
+    // CodeRevive
+    if (!failing() && opt_records() != NULL) {
+      opt_records()->encode_content_bytes();
+    }
+
     methodHandle method(THREAD, target->get_Method());
 
 #if INCLUDE_RTM_OPT
@@ -1047,7 +1059,7 @@ void ciEnv::register_method(ciMethod* target,
                                entry_bci,
                                offsets,
                                orig_pc_offset,
-                               debug_info(), dependencies(), code_buffer,
+                               debug_info(), dependencies(), opt_records(), code_buffer,
                                frame_words, oop_map_set,
                                handler_table, inc_table,
                                compiler, comp_level);
@@ -1060,6 +1072,10 @@ void ciEnv::register_method(ciMethod* target,
 #if INCLUDE_RTM_OPT
       nm->set_rtm_state(rtm_state);
 #endif
+      // CodeRevive
+      if (CodeRevive::is_save() && dependencies()->has_call_site_target_value()) {
+        nm->set_has_call_site_target_value();
+      }
 
       // Record successful registration.
       // (Put nm into the task handle *before* publishing to the Java heap.)
@@ -1115,6 +1131,114 @@ void ciEnv::register_method(ciMethod* target,
   }
 }
 
+
+// CodeRevive: register methods saved by CodeRevive
+void ciEnv::register_aot_method(ciMethod* target,
+                                int entry_bci,
+                                char* start,
+                                AbstractCompiler* compiler,
+                                int comp_level) {
+  nmethod* nm = NULL;
+  
+  nm = get_method_from_revive_code(target, entry_bci, start, compiler, comp_level, CodeRevive::current_meta_space());
+  if (nm == NULL) {
+    CR_LOG(cr_restore, cr_warning, "revive fail: %s, %s\n", failure_reason(), target->get_Method()->name_and_sig_as_C_string());
+    return;
+  }
+  
+  CR_LOG(cr_restore, cr_trace, "revive success: %s, nmethod %p\n",
+         target->get_Method()->name_and_sig_as_C_string(),
+         nm);
+}
+
+// CodeRevive: get nmethod from CodeRevive saved codes.
+nmethod* ciEnv::get_method_from_revive_code(ciMethod* target,
+                                        int entry_bci,
+                                        char* start,
+                                        AbstractCompiler* compiler,
+                                        int comp_level,
+                                        CodeReviveMetaSpace* meta_space) {
+  ResourceMark rm;
+  CodeReviveCodeBlob::JitVersionReviveState* revive_state = NULL;
+  const char* err_str = NULL;
+
+  {
+    TraceTime t1("Restore AOT method", CodeRevive::get_aot_timer(CodeRevive::T_SELECT), CodeRevive::perf_enable());
+    ReviveVersionSelector version_selector(start, target->get_Method(), meta_space, &revive_state);
+  }
+
+  if (revive_state == NULL) {
+    record_failure("No usable or valid aot code version");
+    return NULL;
+  }
+
+  CodeReviveCodeBlob revive(revive_state->_start, meta_space);
+
+  // ReviveAuxInfoTask::get_global_oop calls ciEnv::ArrayStoreException_instance, which calls ciEnv::get_or_create_exception.
+  // ciEnv::get_or_create_exception need to be executed in native status.
+  // So we move the exception creation out of create_nmethod
+  if (!revive.create_global_oops(revive_state->_global_oop_array)) {
+    record_failure("Fail to create global oops");
+    return NULL;
+  }
+
+  nmethod* nm = NULL;
+  VM_ENTRY_MARK;
+  {
+    TraceTime t2("Restore AOT method", CodeRevive::get_aot_timer(CodeRevive::T_CREATE), CodeRevive::perf_enable());
+    // To prevent compile queue updates.
+    MutexLocker locker(MethodCompileQueue_lock, THREAD);
+
+    // Prevent SystemDictionary::add_to_hierarchy from running
+    // and invalidating our dependencies until we install this method.
+    // No safepoints are allowed. Otherwise, class redefinition can occur in between.
+    MutexLocker ml(Compile_lock);
+    No_Safepoint_Verifier nsv;
+
+    methodHandle method(THREAD, revive_state->_method);
+
+    nm = revive.create_nmethod(method, compile_id(), compiler, revive_state);
+    if (nm == NULL) {
+      return NULL;
+    }
+
+    // Following code is similar with register method, except
+    // entry must be InvocationEntryBci
+    if (task() != NULL) {
+      task()->set_code(nm);
+    }
+    guarantee(entry_bci == InvocationEntryBci, "");
+    {
+      // If test_after_install is set, the nmethod set in method must be C2 compiled which need to be made not entrant.
+      // Otherwise, TieredCompilation must be enabled.
+      if (TieredCompilation) {
+        nmethod* old = method->code();
+        if (TraceMethodReplacement && old != NULL) {
+          ResourceMark rm;
+          char *method_name = method->name_and_sig_as_C_string();
+          tty->print_cr("Replacing method %s", method_name);
+        }
+        if (old != NULL) {
+          old->make_not_entrant();
+        }
+      }
+    }
+    if (TraceNMethodInstalls) {
+      ResourceMark rm;
+      char *method_name = method->name_and_sig_as_C_string();
+      ttyLocker ttyl;
+      tty->print_cr("Installing method (%d) %s ",
+                    comp_level,
+                    method_name);
+    }
+    // Allow the code to be executed
+    method->set_code(method, nm);
+    method->set_aot_version(revive_state->_version);
+  }  // safepoints are allowed again
+  // JVMTI -- compiled method notification (must be done outside lock)
+  nm->post_compiled_method_load_event();
+  return nm;
+}
 
 // ------------------------------------------------------------------
 // ciEnv::find_system_klass

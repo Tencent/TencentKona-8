@@ -430,6 +430,8 @@
 #define NOT_ARM32(code) code
 #endif
 
+#define MACOS_AARCH64_ONLY(x) MACOS_ONLY(AARCH64_ONLY(x))
+
 #ifdef JAVASE_EMBEDDED
 #define EMBEDDED_ONLY(code) code
 #define NOT_EMBEDDED(code)

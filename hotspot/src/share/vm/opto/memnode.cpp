@@ -39,6 +39,9 @@
 #include "opto/phaseX.hpp"
 #include "opto/regmask.hpp"
 
+// CodeRevive
+#include "cr/revive.hpp"
+
 // Portions of code courtesy of Clifford Click
 
 // Optimization - Graph Style
@@ -1770,7 +1773,7 @@ const Type *LoadNode::Value( PhaseTransform *phase ) const {
       const TypeOopPtr* t = phase->type(base)->isa_oopptr();
       if (t != NULL && t->singleton()) {
         ciField* field = env->String_klass()->get_field_by_offset(off, false);
-        if (field != NULL && field->is_final()) {
+        if (field != NULL && field->is_final() && !CodeRevive::is_save()) {
           ciObject* string = t->const_oop();
           ciConstant constant = string->as_instance()->field_value(field);
           if (constant.basic_type() == T_INT) {

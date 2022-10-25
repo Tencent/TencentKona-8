@@ -474,6 +474,16 @@ class CompileBroker: AllStatic {
   static int get_sum_nmethod_code_size() {        return _sum_nmethod_code_size; }
   static long get_peak_compilation_time() {       return _peak_compilation_time; }
   static long get_total_compilation_time() {      return _t_total_compilation.milliseconds(); }
+
+  // CodeRevive
+ private:
+  static PerfCounter* _perf_aot_compilation;
+  static PerfCounter* _perf_total_aot_compile_count;
+
+  // CodeRevive: find and register aot saved methods
+  static bool revive_aot_method(ciEnv* ci_env, ciMethod* target, AbstractCompiler* comp, CompileTask* task);
+ public:
+  static void print_aot_times(outputStream* output);
 };
 
 #endif // SHARE_VM_COMPILER_COMPILEBROKER_HPP

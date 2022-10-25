@@ -1086,6 +1086,8 @@ void Compile::Init(int aliaslevel) {
   env()->set_oop_recorder(new OopRecorder(env()->arena()));
   env()->set_debug_info(new DebugInformationRecorder(env()->oop_recorder()));
   env()->set_dependencies(new Dependencies(env()));
+  // CodeRevive
+  env()->set_opt_records((_method == NULL || CodeRevive::is_save() == false) ? NULL : new CodeReviveOptRecords(env()));
 
   _fixed_slots = 0;
   set_has_split_ifs(false);

@@ -29,6 +29,9 @@
 #include "opto/adlcVMDeps.hpp"
 #include "runtime/handles.hpp"
 
+// CodeRevive
+#include "cr/revive.hpp"
+
 // Portions of code courtesy of Clifford Click
 
 // Optimization - Graph Style
@@ -826,15 +829,25 @@ public:
 // include the stack pointer, top of heap, card-marking area, handles, etc.
 class TypeRawPtr : public TypePtr {
 protected:
-  TypeRawPtr( PTR ptr, address bits ) : TypePtr(RawPtr,ptr,0), _bits(bits){}
+  TypeRawPtr( PTR ptr, address bits, bool reloc=false) : TypePtr(RawPtr,ptr,0), _bits(bits), _reloc(reloc){}
 public:
   virtual bool eq( const Type *t ) const;
   virtual int  hash() const;     // Type specific hashing
 
   const address _bits;          // Constant value, if applicable
+  const bool    _reloc;         // CodeRevive: need be external world relocation
 
   static const TypeRawPtr *make( PTR ptr );
-  static const TypeRawPtr *make( address bits );
+  static const TypeRawPtr *make( address bits, bool reloc);
+
+  // CodeRevive: return external_word_type for CodeRevive save
+  relocInfo::relocType rawptr_reloc() const {
+    if (_reloc && CodeRevive::is_save()) {
+      guarantee(ptr() == Constant, "reloc raw ptr must be constant");
+      return relocInfo::external_word_type;
+    }
+    return reloc();
+  }
 
   // Return a 'ptr' version of this type
   virtual const Type *cast_to_ptr_type(PTR ptr) const;

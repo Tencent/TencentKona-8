@@ -60,6 +60,8 @@ class ClassPathEntry: public CHeapObj<mtClass> {
   // Is this entry created from the "Class-path" attribute from a JAR Manifest?
   virtual bool from_class_path_attr() = 0;
   virtual void set_from_class_path_attr() = 0;
+  virtual bool from_wildcard_directory() = 0;
+  virtual void set_from_wildcard_directory() = 0;
   virtual const char* name() = 0;
   virtual bool is_lazy();
   // Constructor
@@ -81,6 +83,8 @@ class ClassPathDirEntry: public ClassPathEntry {
   bool is_jar_file()  { return false;  }
   bool from_class_path_attr() { return false; }
   void set_from_class_path_attr() { }
+  bool from_wildcard_directory() { return false; }
+  void set_from_wildcard_directory() { }
   const char* name()  { return _dir; }
   ClassPathDirEntry(const char* dir);
   virtual ~ClassPathDirEntry() {}
@@ -110,10 +114,13 @@ class ClassPathZipEntry: public ClassPathEntry {
   jzfile* _zip;              // The zip archive
   const char*   _zip_name;   // Name of zip archive
   bool _from_class_path_attr;// From the "Class-path" attribute of a jar file
+  bool _from_wildcard_dir;   // the jar file is in the directory with wildcard
  public:
   bool is_jar_file()  { return true;  }
   bool from_class_path_attr() { return _from_class_path_attr; }
   void set_from_class_path_attr() { _from_class_path_attr = true; }
+  bool from_wildcard_directory() { return _from_wildcard_dir; }
+  void set_from_wildcard_directory() { _from_wildcard_dir = true; }
   const char* name()  { return _zip_name; }
   ClassPathZipEntry(jzfile* zip, const char* zip_name);
   virtual ~ClassPathZipEntry();
@@ -144,6 +151,8 @@ class LazyClassPathEntry: public ClassPathEntry {
   bool is_jar_file();
   bool from_class_path_attr() { return false; }
   void set_from_class_path_attr() { }
+  bool from_wildcard_directory() { return false; }
+  void set_from_wildcard_directory() { }
   const char* name()  { return _path; }
   LazyClassPathEntry(const char* path, const struct stat* st, bool throw_exception);
   virtual ~LazyClassPathEntry() {}
@@ -225,6 +234,7 @@ class ClassLoader: AllStatic {
   CDS_ONLY(static ClassPathEntry* _app_classpath_entries;)
   CDS_ONLY(static ClassPathEntry* _last_app_classpath_entry;)
   CDS_ONLY(static void setup_app_search_path(const char* class_path);)
+  CDS_ONLY(static bool setup_app_search_path_with_wildcard(const char *class_path);)
   static void add_to_app_classpath_entries(const char* path,
                                            ClassPathEntry* entry,
                                            bool check_for_duplicates); 

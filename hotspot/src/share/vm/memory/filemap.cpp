@@ -39,6 +39,9 @@
 #include "services/memTracker.hpp"
 #include "utilities/defaultStream.hpp"
 
+// CodeRevive
+#include "cr/classPathEntryTable.hpp"
+
 # include <sys/stat.h>
 # include <errno.h>
 
@@ -184,7 +187,7 @@ void FileMapInfo::FileMapHeader::populate(FileMapInfo* mapinfo, size_t alignment
   _has_ext_or_app_classes = ClassLoaderExt::has_ext_or_app_classes();
 }
 
-void SharedClassPathEntry::init(ClassPathEntry *cpe, const char* name) {
+void SharedClassPathEntry::init(ClassPathEntry *cpe, const char* name, bool set_timestamp) {
   assert(DumpSharedSpaces, "dump time only");
   _timestamp = 0;
   _filesize  = 0;
@@ -203,7 +206,7 @@ void SharedClassPathEntry::init(ClassPathEntry *cpe, const char* name) {
     _type = jar_entry;
     _from_class_path_attr = cpe->from_class_path_attr();
     EXCEPTION_MARK; // The following call should never throw, but would exit VM on error.
-    SharedClassUtil::update_shared_classpath(cpe, this, st.st_mtime, st.st_size, THREAD);
+    SharedClassUtil::update_shared_classpath(cpe, this, set_timestamp ? st.st_mtime : 0, st.st_size, THREAD);
   } else {
     _filesize  = -1;
     if (!UseAppCDS && !os::dir_is_empty(name)) {
@@ -345,7 +348,7 @@ void FileMapInfo::allocate_classpath_entry_table() {
           }
         } else {
           SharedClassPathEntry* ent = shared_classpath(cur_entry);
-          ent->init(acpe, name);
+          ent->init(acpe, name, !acpe->from_wildcard_directory());
           ent->_name = strptr;
           if (strptr + name_bytes <= strptr_max) {
             strncpy(strptr, name, (size_t)name_bytes); // name_bytes includes trailing 0.
@@ -1129,6 +1132,10 @@ bool FileMapInfo::check_paths(int shared_path_start_idx, int num_paths, Growable
   int i = 0;
   int j = shared_path_start_idx;
   bool mismatch = false;
+  GrowableArray<const char*>* jarfiles_in_jsa = NULL;
+  GrowableArray<const char*>* jarfiles_in_dir_with_wildcard = NULL;  
+  bool in_directory_with_wildcard = false;
+
   while (i < num_paths && !mismatch) {
     while (shared_classpath(j)->from_class_path_attr() && j < _header->_classpath_entry_table_size) {
       // shared_path(j) was expanded from the JAR file attribute "Class-Path:"
@@ -1148,11 +1155,39 @@ bool FileMapInfo::check_paths(int shared_path_start_idx, int num_paths, Growable
       ClassLoader::trace_class_path(tty, "Expected: ", shared_classpath(j)->name());
       ClassLoader::trace_class_path(tty, "Actual: ", rp_array->at(i));
     }
-    if (!same_files(shared_classpath(j)->name(), rp_array->at(i))) {
-      mismatch = true;
+    // if the entry with jar doesn't have timestamp, it means that it is in the directory with wildcard
+    if (RelaxCheckForAppCDS && !shared_classpath(j)->has_timestamp()) {
+      if (in_directory_with_wildcard == false) {
+        // initialize the data structure to compare
+        jarfiles_in_jsa = new GrowableArray<const char*>();
+        jarfiles_in_dir_with_wildcard = new GrowableArray<const char*>();
+        in_directory_with_wildcard = true;
+      }
+      // 1. compare whether the directory is the same
+      const char* save_ptr = strrchr(shared_classpath(j)->name(), os::file_separator()[0]);
+      size_t save_dir_len = save_ptr - shared_classpath(j)->name();
+      const char* app_ptr = strrchr(rp_array->at(i), os::file_separator()[0]);
+      // the path may not have file_separator
+      size_t app_dir_len = app_ptr != NULL ? app_ptr - rp_array->at(i) : 0;
+      if (save_dir_len != app_dir_len || strncmp(shared_classpath(j)->name(), rp_array->at(i), save_dir_len) != 0) {
+        mismatch = true;
+      } else {
+        // 2. add the jar files into array which is used to compare at the end
+        jarfiles_in_jsa->append(shared_classpath(j)->name());
+        jarfiles_in_dir_with_wildcard->append(rp_array->at(i));
+      }
+    } else {
+      if (!same_files(shared_classpath(j)->name(), rp_array->at(i))) {
+        mismatch = true;
+      }
     }
     i++;
     j++;
+  }
+  if (RelaxCheckForAppCDS && !mismatch && in_directory_with_wildcard) {
+    if (ClassPathEntryTable::compare_jar_array(jarfiles_in_jsa, jarfiles_in_dir_with_wildcard) == false) {
+      mismatch = true;
+    }
   }
   return mismatch;
 }

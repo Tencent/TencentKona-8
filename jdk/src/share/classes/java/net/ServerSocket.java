@@ -31,6 +31,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 
+import sun.security.action.GetPropertyAction;
 import sun.security.util.SecurityConstants;
 
 /**
@@ -82,6 +83,14 @@ class ServerSocket implements java.io.Closeable {
         checkPermission();
         this.impl = impl;
         impl.setServerSocket(this);
+        String tos = java.security.AccessController.doPrivileged(new GetPropertyAction("kona.socket.tos.value"));
+        if (tos != null) {
+            try {
+                impl.setOption(StandardSocketOptions.IP_TOS, Integer.valueOf(tos).intValue());
+            } catch (IOException ioe) {
+                // do nothing
+            }
+        }
     }
 
     private static Void checkPermission() {
@@ -302,8 +311,17 @@ class ServerSocket implements java.io.Closeable {
             // SocketImpl!
             impl = new SocksSocketImpl();
         }
-        if (impl != null)
+        if (impl != null) {
             impl.setServerSocket(this);
+            String tos = java.security.AccessController.doPrivileged(new GetPropertyAction("kona.socket.tos.value"));
+            if (tos != null) {
+                try {
+                    impl.setOption(StandardSocketOptions.IP_TOS, Integer.valueOf(tos).intValue());
+                } catch (IOException ioe) {
+                    // do nothing
+                }
+            }
+        }
     }
 
     /**
@@ -317,6 +335,14 @@ class ServerSocket implements java.io.Closeable {
             setImpl();
         try {
             impl.create(true);
+            String tos = java.security.AccessController.doPrivileged(new GetPropertyAction("kona.socket.tos.value"));
+            if (tos != null) {
+                try {
+                    impl.setOption(StandardSocketOptions.IP_TOS, Integer.valueOf(tos).intValue());
+                } catch (IOException ioe) {
+                    // do nothing
+                }
+            }
             created = true;
         } catch (IOException e) {
             throw new SocketException(e.getMessage());

@@ -207,7 +207,8 @@ const Type* Type::get_typeflow_type(ciType* type) {
 
   case T_ADDRESS:
     assert(type->is_return_address(), "");
-    return TypeRawPtr::make((address)(intptr_t)type->as_return_address()->bci());
+    // CodeRevive: bci doesn't need relocate
+    return TypeRawPtr::make((address)(intptr_t)type->as_return_address()->bci(), false);
 
   default:
     // make sure we did not mix up the cases:
@@ -2380,9 +2381,9 @@ const TypeRawPtr *TypeRawPtr::make( enum PTR ptr ) {
   return (TypeRawPtr*)(new TypeRawPtr(ptr,0))->hashcons();
 }
 
-const TypeRawPtr *TypeRawPtr::make( address bits ) {
+const TypeRawPtr *TypeRawPtr::make( address bits, bool reloc) {
   assert( bits, "Use TypePtr for NULL" );
-  return (TypeRawPtr*)(new TypeRawPtr(Constant,bits))->hashcons();
+  return (TypeRawPtr*)(new TypeRawPtr(Constant, bits, reloc))->hashcons();
 }
 
 //------------------------------cast_to_ptr_type-------------------------------
@@ -2455,7 +2456,7 @@ const Type *TypeRawPtr::xmeet( const Type *t ) const {
 //------------------------------xdual------------------------------------------
 // Dual: compute field-by-field dual
 const Type *TypeRawPtr::xdual() const {
-  return new TypeRawPtr( dual_ptr(), _bits );
+  return new TypeRawPtr( dual_ptr(), _bits, _reloc);
 }
 
 //------------------------------add_offset-------------------------------------
@@ -2472,7 +2473,8 @@ const TypePtr *TypeRawPtr::add_offset( intptr_t offset ) const {
   case TypePtr::Constant: {
     address bits = _bits+offset;
     if ( bits == 0 ) return TypePtr::NULL_PTR;
-    return make( bits );
+    // CodeRevive: if original bits is relocatable add offset should be relocatable too
+    return make( bits, _reloc);
   }
   default:  ShouldNotReachHere();
   }
@@ -2483,7 +2485,12 @@ const TypePtr *TypeRawPtr::add_offset( intptr_t offset ) const {
 // Structural equality check for Type representations
 bool TypeRawPtr::eq( const Type *t ) const {
   const TypeRawPtr *a = (const TypeRawPtr*)t;
-  return _bits == a->_bits && TypePtr::eq(t);
+  // CodeRevive:
+  if (_bits == a->_bits && TypePtr::eq(t)) {
+    guarantee(_reloc == a->_reloc, "reloc must be same");
+    return true;
+  }
+  return false;
 }
 
 //------------------------------hash-------------------------------------------
@@ -2498,7 +2505,7 @@ void TypeRawPtr::dump2( Dict &d, uint depth, outputStream *st ) const {
   if( _ptr == Constant )
     st->print(INTPTR_FORMAT, _bits);
   else
-    st->print("rawptr:%s", ptr_msg[_ptr]);
+    st->print("rawptr:%s %s", ptr_msg[_ptr], _reloc ? "external reloc" : "");
 }
 #endif
 

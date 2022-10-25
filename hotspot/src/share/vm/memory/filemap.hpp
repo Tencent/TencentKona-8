@@ -59,13 +59,13 @@ public:
   const char *_name;
   u1     _type;
   bool   _from_class_path_attr;
-  time_t _timestamp;          // jar timestamp,  0 if is directory
+  time_t _timestamp;          // jar timestamp,  0 if is directory or in wildcard 
   long   _filesize;           // jar file size, -1 if is directory
   char*  _manifest;
   bool is_dir() {
     return _filesize == -1;
   }
-  void init(ClassPathEntry *cpe, const char* name);
+  void init(ClassPathEntry *cpe, const char* name, bool set_timestamp = true);
   bool validate();
   // The _timestamp only gets set for jar files.
   bool has_timestamp() {
@@ -278,9 +278,10 @@ public:
   }
 
   static bool same_files(const char* file1, const char* file2);
+  static int   num_paths(const char* path);
+
 private:
   void  log_paths(const char* msg, int start_idx, int end_idx);
-  int   num_paths(const char* path) NOT_CDS_RETURN_(0);
   GrowableArray<const char*>* create_path_array(const char* path, int* size) NOT_CDS_RETURN_(NULL);
   bool  classpath_failure(const char* msg, const char* name) NOT_CDS_RETURN_(false);
   bool  check_paths(int shared_path_start_idx, int num_paths,

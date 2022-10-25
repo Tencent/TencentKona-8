@@ -1953,7 +1953,8 @@ void GraphKit::replace_call(CallNode* call, Node* result, bool do_replaced_nodes
 // for statistics: increment a VM counter by 1
 
 void GraphKit::increment_counter(address counter_addr) {
-  Node* adr1 = makecon(TypeRawPtr::make(counter_addr));
+  // CodeRevive: counter only used in debug build and off when code revive is on
+  Node* adr1 = makecon(TypeRawPtr::make(counter_addr, false));
   increment_counter(adr1);
 }
 
@@ -2938,6 +2939,13 @@ Node* GraphKit::gen_instanceof(Node* obj, Node* superklass, bool safe_for_replac
       }
       if (cast_obj != NULL) {
         not_null_obj = cast_obj;
+        // CodeRevive: record the speculate receiver for _instanceof bytecode
+        if (CodeRevive::is_save() && !C->is_osr_compilation() && java_bc() == Bytecodes::_instanceof) {
+          ciKlass* exact_kls = profile_has_unique_klass();
+          if (spec_obj_type == NULL && exact_kls != NULL) {
+            env()->opt_records()->add_ProfiledReceiverRecord(method(), bci(), exact_kls);
+          }
+        }
       }
     }
   }
@@ -3055,6 +3063,16 @@ Node* GraphKit::gen_checkcast(Node *obj, Node* superklass,
          data->as_CounterData()->count() >= 0)) {
       cast_obj = maybe_cast_profiled_receiver(not_null_obj, tk->klass(), spec_obj_type, safe_for_replace);
       if (cast_obj != NULL) {
+        // CodeRevive: record the speculate receiver for _checkcast bytecode
+        if (CodeRevive::is_save() && !C->is_osr_compilation() &&
+            (java_bc() == Bytecodes::_checkcast || java_bc() == Bytecodes::_aastore)) {
+          // either use profile data or speculative type to generate trap
+          ciKlass* exact_kls = profile_has_unique_klass();
+          if (spec_obj_type == NULL && exact_kls != NULL) {
+            env()->opt_records()->add_ProfiledReceiverRecord(method(), bci(), exact_kls);
+          }
+        }
+
         if (failure_control != NULL) // failure is now impossible
           (*failure_control) = top();
         // adjust the type of the phi to the exact klass:

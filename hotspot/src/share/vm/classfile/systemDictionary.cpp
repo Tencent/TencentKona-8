@@ -95,6 +95,9 @@ bool        SystemDictionary::_has_checkPackageAccess     =  false;
 // lazily initialized klass variables
 Klass* volatile SystemDictionary::_abstract_ownable_synchronizer_klass = NULL;
 
+// CodeRevive
+oop         SystemDictionary::_ext_loader                 =  NULL;
+
 #if INCLUDE_JFR
 static const Symbol* jfr_event_handler_proxy = NULL;
 #endif // INCLUDE_JFR
@@ -104,6 +107,11 @@ static const Symbol* jfr_event_handler_proxy = NULL;
 
 oop SystemDictionary::java_system_loader() {
   return _java_system_loader;
+}
+
+// CodeRevive: get ext classloader
+oop SystemDictionary::ext_loader() {
+  return _ext_loader;
 }
 
 void SystemDictionary::compute_java_system_loader(TRAPS) {
@@ -123,6 +131,9 @@ void SystemDictionary::compute_java_system_loader(TRAPS) {
 
 ClassLoaderData* SystemDictionary::register_loader(Handle class_loader, TRAPS) {
   if (class_loader() == NULL) return ClassLoaderData::the_null_class_loader_data();
+  if (is_ext_class_loader(class_loader)) { // CodeRevive
+    _ext_loader = class_loader();
+  }
   return ClassLoaderDataGraph::find_or_create(class_loader, THREAD);
 }
 
@@ -1849,6 +1860,7 @@ bool SystemDictionary::do_unloading(BoolObjectClosure* is_alive, bool clean_aliv
 
 void SystemDictionary::roots_oops_do(OopClosure* strong, OopClosure* weak) {
   strong->do_oop(&_java_system_loader);
+  strong->do_oop(&_ext_loader); // CodeRevive
   strong->do_oop(&_system_loader_lock_obj);
   CDS_ONLY(SystemDictionaryShared::roots_oops_do(strong);)
 
@@ -1861,6 +1873,7 @@ void SystemDictionary::roots_oops_do(OopClosure* strong, OopClosure* weak) {
 
 void SystemDictionary::oops_do(OopClosure* f) {
   f->do_oop(&_java_system_loader);
+  f->do_oop(&_ext_loader); // CodeRevive
   f->do_oop(&_system_loader_lock_obj);
   CDS_ONLY(SystemDictionaryShared::oops_do(f);)
 

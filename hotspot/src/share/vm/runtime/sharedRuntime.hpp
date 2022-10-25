@@ -704,6 +704,12 @@ class AdapterHandlerLibrary: public AllStatic {
   static void print_statistics();
 #endif /* PRODUCT */
 
+  // CodeRevive
+ public:
+  // If addr is c2i entry for one AdapterHandlerEntry, return its AdapterFingerPrint's
+  // content: length and compact array. Also return if entry is verified or not.
+  // If not c2i entry, return NULL.
+  static int* find_c2i_adapter(address addr, bool* verified_entry, int* length);
 };
 
 #endif // SHARE_VM_RUNTIME_SHAREDRUNTIME_HPP

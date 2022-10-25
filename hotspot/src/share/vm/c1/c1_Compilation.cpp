@@ -130,6 +130,8 @@ void Compilation::initialize() {
   _env->set_debug_info(new DebugInformationRecorder(ooprec));
   debug_info_recorder()->set_oopmaps(new OopMapSet());
   _env->set_dependencies(new Dependencies(_env));
+  // CodeRevive: set NULL in C1 now
+  _env->set_opt_records(NULL);
 }
 
 

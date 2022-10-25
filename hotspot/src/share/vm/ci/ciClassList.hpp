@@ -75,7 +75,10 @@ class       ciTypeArrayKlass;
 // Everyone gives access to ciObjectFactory
 #define CI_PACKAGE_ACCESS \
 friend class ciObjectFactory; \
-friend class VMStructs;
+friend class VMStructs;       \
+/* CodeRevive */              \
+friend class ReviveAuxInfoTask;
+
 
 // These are the packages that have access to ciEnv
 // Any more access must be given explicitly.
@@ -117,5 +120,10 @@ friend class ciInstanceKlass;          \
 friend class ciArrayKlass;             \
 friend class ciObjArrayKlass;          \
 friend class ciTypeArrayKlass;         \
+/* CodeRevive */                       \
+friend class ReviveAuxInfoTask;        \
+friend class PreReviveTask;            \
+friend class CollectMetadataArrayNameTask; \
+friend class OptRecordDeVirtual;       \
 
 #endif // SHARE_VM_CI_CICLASSLIST_HPP

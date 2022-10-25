@@ -45,7 +45,7 @@ import java.nio.channels.SocketChannel;
 import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
-
+import sun.security.action.GetPropertyAction;
 
 // Make a socket channel look like a socket.
 //
@@ -72,6 +72,14 @@ class SocketAdaptor
     private SocketAdaptor(SocketChannelImpl sc) throws SocketException {
         super((SocketImpl) null);
         this.sc = sc;
+        String tos = java.security.AccessController.doPrivileged(new GetPropertyAction("kona.socket.tos.value"));
+        if (tos != null) {
+            try {
+                sc.setOption(StandardSocketOptions.IP_TOS, Integer.valueOf(tos).intValue());
+            } catch (IOException ioe) {
+                // do nothing
+            }
+        }
     }
 
     public static Socket create(SocketChannelImpl sc) {

@@ -2082,6 +2082,9 @@ encode %{
   enc_class Java_To_Runtime(method meth) %{
     // No relocation needed
     MacroAssembler _masm(&cbuf);
+    if (CodeRevive::is_save()) {
+      cbuf.relocate(__ pc(), runtime_call_Relocation::spec(), 0);
+    }
     __ mov64(r10, (int64_t) $meth$$method);
     __ call(r10);
   %}

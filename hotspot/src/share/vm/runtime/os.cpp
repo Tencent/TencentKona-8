@@ -47,6 +47,7 @@
 #include "runtime/mutexLocker.hpp"
 #include "runtime/os.hpp"
 #include "runtime/stubRoutines.hpp"
+#include "runtime/stubRoutines.inline.hpp"
 #include "runtime/thread.inline.hpp"
 #include "services/attachListener.hpp"
 #include "services/nmtCommon.hpp"

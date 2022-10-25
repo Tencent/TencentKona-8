@@ -737,6 +737,14 @@ protected:
   // barriers used by klass_oop_store
   void klass_update_barrier_set(oop v);
   void klass_update_barrier_set_pre(oop* p, oop v);
+
+  // CodeRevive
+ private:
+  int    _csa_meta_index;
+
+ public:
+  virtual int  csa_meta_index() const { return _csa_meta_index; }
+  virtual void set_csa_meta_index(int index) { _csa_meta_index = index; }
 };
 
 #endif // SHARE_VM_OOPS_KLASS_HPP

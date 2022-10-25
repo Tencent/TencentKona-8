@@ -72,6 +72,7 @@
 #include "runtime/threadCritical.hpp"
 #include "runtime/threadLocalStorage.hpp"
 #include "runtime/threadStatisticalInfo.hpp"
+#include "runtime/threadWXSetters.inline.hpp"
 #include "runtime/vframe.hpp"
 #include "runtime/vframeArray.hpp"
 #include "runtime/vframe_hp.hpp"
@@ -117,6 +118,10 @@
 #if INCLUDE_JFR
 #include "jfr/jfr.hpp"
 #endif
+
+// CodeRevive
+#include "cr/codeReviveMerge.hpp"
+#include "cr/revive.hpp"
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
@@ -307,6 +312,7 @@ Thread::Thread() {
            "bug in forced alignment of thread objects");
   }
 #endif /* ASSERT */
+  MACOS_AARCH64_ONLY(DEBUG_ONLY(_wx_init = false));
 }
 
 void Thread::initialize_thread_local_storage() {
@@ -1333,6 +1339,8 @@ int WatcherThread::sleep() const {
 void WatcherThread::run() {
   assert(this == watcher_thread(), "just checking");
 
+  MACOS_AARCH64_ONLY(this->init_wx());
+
   this->record_stack_base_and_size();
   this->initialize_thread_local_storage();
   this->set_native_thread_name(this->name());
@@ -1665,6 +1673,8 @@ JavaThread::~JavaThread() {
 
 // The first routine called by a new Java thread
 void JavaThread::run() {
+  MACOS_AARCH64_ONLY(this->init_wx());
+
   // initialize thread-local alloc buffer related fields
   this->initialize_tlab();
 
@@ -2454,6 +2464,9 @@ void JavaThread::check_safepoint_and_suspend_for_native_trans(JavaThread *thread
 // Note only the native==>VM/Java barriers can call this function and when
 // thread state is _thread_in_native_trans.
 void JavaThread::check_special_condition_for_native_trans(JavaThread *thread) {
+  // Enable WXWrite: called directly from interpreter native wrapper.
+  MACOS_AARCH64_ONLY(ThreadWXEnable wx(WXWrite, thread));
+
   check_safepoint_and_suspend_for_native_trans(thread);
 
   if (thread->has_async_exception()) {
@@ -3362,6 +3375,8 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   // Initialize the os module before using TLS
   os::init();
 
+  MACOS_AARCH64_ONLY(os::current_thread_enable_wx(WXWrite));
+
   // Initialize system properties.
   Arguments::init_system_properties();
 
@@ -3450,6 +3465,8 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   main_thread->initialize_thread_local_storage();
 
   main_thread->set_active_handles(JNIHandleBlock::allocate_block());
+
+  MACOS_AARCH64_ONLY(main_thread->init_wx());
 
   if (!main_thread->set_as_starting_thread()) {
     vm_shutdown_during_initialization(
@@ -3678,6 +3695,8 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   // Notify JVMTI agents that VM initialization is complete - nop if no agents.
   JvmtiExport::post_vm_initialized();
 
+  CodeRevive::on_vm_start();
+
   JFR_ONLY(Jfr::on_vm_start();)
 
   if (CleanChunkPoolAsync) {
@@ -3757,6 +3776,15 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
 #ifdef ASSERT
   _vm_complete = true;
 #endif
+  if (CodeRevive::is_merge()) {
+    CodeReviveMerge::merge_and_dump(CHECK_0);
+    ShouldNotReachHere();
+  }
+  if (CodeRevive::is_restore()) {
+    // code restore needs global oop of ArrayIndexOutOfBoundsException in ciEnv
+    initialize_class(vmSymbols::java_lang_ArrayIndexOutOfBoundsException(), CHECK_0);
+  }
+
   return JNI_OK;
 }
 

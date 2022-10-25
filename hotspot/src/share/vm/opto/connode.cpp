@@ -1183,7 +1183,11 @@ const Type *CastX2PNode::Value( PhaseTransform *phase ) const {
   if (t->base() == Type_X && t->singleton()) {
     uintptr_t bits = (uintptr_t) t->is_intptr_t()->get_con();
     if (bits == 0)   return TypePtr::NULL_PTR;
-    return TypeRawPtr::make((address) bits);
+    // CodeRevive
+    // This usually used in unsafe access convert unsafe address to raw
+    // ptr can not relocate these address and might disable code revive with
+    // these raw ptr.
+    return TypeRawPtr::make((address) bits, false);
   }
   return CastX2PNode::bottom_type();
 }

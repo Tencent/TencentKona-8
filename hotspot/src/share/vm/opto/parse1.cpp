@@ -483,7 +483,7 @@ Parse::Parse(JVMState* caller, ciMethod* parse_method, float expected_uses)
   // Always register dependence if JVMTI is enabled, because
   // either breakpoint setting or hotswapping of methods may
   // cause deoptimization.
-  if (C->env()->jvmti_can_hotswap_or_post_breakpoint()) {
+  if (C->env()->jvmti_can_hotswap_or_post_breakpoint() || CodeRevive::is_save()) {
     C->dependencies()->assert_evol_method(method());
   }
 
@@ -2221,7 +2221,7 @@ void Parse::add_safepoint() {
 
   // Create a node for the polling address
   if( add_poll_param ) {
-    Node *polladr = ConPNode::make(C, (address)os::get_polling_page());
+    Node *polladr = ConPNode::make(C, (address)os::get_polling_page(), true);
     sfpnt->init_req(TypeFunc::Parms+0, _gvn.transform(polladr));
   }
 

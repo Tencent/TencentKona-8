@@ -1407,6 +1407,11 @@ void ArchDesc::declareClasses(FILE *fp) {
           fprintf(fp, " }\n");
           // Generate query to determine if this pointer is an oop
           fprintf(fp,"  virtual relocInfo::relocType           constant_reloc() const {");
+
+          // CodeRevive: check raw ptr type's reloc information
+          // when CodeRevive:is_save() is false, rawptr_reloc will still return _c0->reloc()
+          fprintf(fp,   " if (_c0->isa_rawptr() != NULL) { return _c0->isa_rawptr()->rawptr_reloc(); }");
+
           fprintf(fp,   " return _c0->reloc();");
           fprintf(fp, " }\n");
         }
