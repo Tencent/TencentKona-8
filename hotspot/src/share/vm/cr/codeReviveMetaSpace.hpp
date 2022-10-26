@@ -95,7 +95,7 @@ class CodeReviveMetaSpace : public CHeapObj<mtInternal> {
 
   void resolve_metadata(CodeReviveMetaSpace* global_metadata);
 
-  bool is_resolved(int index) {
+  bool is_resolved_meta(int index) {
     intptr_t* content = ((intptr_t*)_start) + 1;
     return is_resolved(content[index]);
   }

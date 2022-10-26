@@ -532,6 +532,6 @@ void CodeReviveFile::print_opt_with_container(CodeReviveContainer* container) {
 void CodeReviveFile::print_file_info() {
   outputStream* output = CodeRevive::out();
   output->print_cr("CSA file size                 : %d", CodeRevive::get_file_size());
-  output->print_cr("  the size of read only part  : %lu", _header->_meta_space_offset);
-  output->print_cr("  the size of read write part : %lu", _header->_meta_space_size);
+  output->print_cr("  the size of read only part  : " SIZE_FORMAT, _header->_meta_space_offset);
+  output->print_cr("  the size of read write part : " SIZE_FORMAT, _header->_meta_space_size);
 }

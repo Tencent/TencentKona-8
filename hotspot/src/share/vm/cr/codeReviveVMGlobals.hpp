@@ -87,7 +87,7 @@ enum CR_GLOBAL_KIND {
   CR_SR_dlog10,
   CR_SR_dexp,
   CR_SR_dpow,
-#ifdef X86
+#ifdef AMD64
 #ifndef _WINDOWS
   CR_SR_montgomery_multiply,
   CR_SR_montgomery_square,
