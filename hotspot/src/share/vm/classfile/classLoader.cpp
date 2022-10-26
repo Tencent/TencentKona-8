@@ -640,7 +640,7 @@ void ClassLoader::check_shared_classpath(const char *path) {
 
 /*
  * Record the wildcard information in classpath entry
- * In java.c, the classpath: a.jar:dir1/*:dir2/*:b.jar is converted to
+ * In java.c, the classpath: a.jar:dir1/"*":dir2/"*":b.jar is converted to
  * a.jar:dir1/1.jar:dir1/2.jar:dir1/3.jar:dir2/4.jar:dir2/5.jar:b.jar
  *
  * Use RecordClasspathForCDSDump to pass the origin classpath

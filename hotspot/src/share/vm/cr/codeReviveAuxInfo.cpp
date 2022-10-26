@@ -1214,19 +1214,19 @@ void PrintAuxInfoTask::process_non_oop() {
 }
 
 void CheckMetaResolveTask::process_klass_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) {
-  if (!_meta_space->is_resolved(meta_index)) {
+  if (!_meta_space->is_resolved_meta(meta_index)) {
     fail();
   }
 }
 
 void CheckMetaResolveTask::process_mirror_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) {
-  if (!_meta_space->is_resolved(meta_index)) {
+  if (!_meta_space->is_resolved_meta(meta_index)) {
     fail();
   }
 }
 
 void CheckMetaResolveTask::process_method_by_name_classloader(LoaderType loader_type, int32_t meta_index) {
-  if (!_meta_space->is_resolved(meta_index)) {
+  if (!_meta_space->is_resolved_meta(meta_index)) {
     fail();
   }
 }

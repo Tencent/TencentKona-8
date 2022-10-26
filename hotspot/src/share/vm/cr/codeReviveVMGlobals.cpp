@@ -76,7 +76,7 @@ static const char* CR_SYMBOL_names[] = {
   "SharedRuntime::dlog10",
   "SharedRuntime::dexp",
   "SharedRuntime::dpow",
-#ifdef X86
+#ifdef AMD64
 #ifndef _WINDOWS
   "SharedRuntime::montgomery_multiply",
   "SharedRuntime::montgomery_square",
@@ -222,7 +222,7 @@ CodeReviveVMGlobals::CodeReviveVMGlobals() {
   add(CR_SR_dlog10, (address)&SharedRuntime::dlog10);
   add(CR_SR_dexp, (address)&SharedRuntime::dexp);
   add(CR_SR_dpow, (address)&SharedRuntime::dpow);
-#ifdef X86
+#ifdef AMD64
 #ifndef _WINDOWS
   add(CR_SR_montgomery_multiply, (address)&SharedRuntime::montgomery_multiply);
   add(CR_SR_montgomery_square, (address)&SharedRuntime::montgomery_square);
