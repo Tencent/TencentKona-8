@@ -26,6 +26,7 @@
 #include "precompiled.hpp"
 #include "asm/macroAssembler.hpp"
 #include "code/relocInfo.hpp"
+#include "compiler/disassembler.hpp"
 #include "nativeInst_mips.hpp"
 #include "oops/oop.inline.hpp"
 #include "runtime/safepoint.hpp"

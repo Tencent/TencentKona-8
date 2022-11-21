@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1997, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2020, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2022, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,10 +29,6 @@
 #include "asm/assembler.inline.hpp"
 #include "asm/codeBuffer.hpp"
 #include "code/codeCache.hpp"
-
-inline void Assembler::emit_int32(int x) {
-  AbstractAssembler::emit_int32(x);
-}
 
 inline void Assembler::emit_data(int x, relocInfo::relocType rtype) {
   relocate(rtype);

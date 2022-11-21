@@ -44,6 +44,9 @@
 #include "runtime/vframe.hpp"
 #include "runtime/vframeArray.hpp"
 #include "vmreg_loongarch.inline.hpp"
+#if INCLUDE_ALL_GCS
+#include "gc_implementation/g1/g1SATBCardTableModRefBS.hpp"
+#endif
 
 #define A0 RA0
 #define A1 RA1

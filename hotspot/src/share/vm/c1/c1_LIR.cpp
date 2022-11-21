@@ -2134,7 +2134,9 @@ void LIR_OpConvert::print_instr(outputStream* out) const {
   print_bytecode(out, bytecode());
   in_opr()->print(out);                  out->print(" ");
   result_opr()->print(out);              out->print(" ");
-  if(tmp()->is_valid())                  tmp()->print(out); out->print(" ");
+  if(tmp()->is_valid()) {
+    tmp()->print(out);                   out->print(" ");
+  }
 }
 
 void LIR_OpConvert::print_bytecode(outputStream* out, Bytecodes::Code code) {

@@ -49,6 +49,7 @@
 
 #ifdef COMPILER2
 #include "opto/compile.hpp"
+#include "opto/node.hpp"
 #endif
 
 #define A0 RA0

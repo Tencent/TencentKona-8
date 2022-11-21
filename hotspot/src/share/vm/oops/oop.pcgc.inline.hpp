@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022. These
+ * modifications are Copyright (c) 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_OOPS_OOP_PCGC_INLINE_HPP
 #define SHARE_VM_OOPS_OOP_PCGC_INLINE_HPP
 
@@ -75,7 +81,7 @@ inline oop oopDesc::forward_to_atomic(oop p) {
     // forwarding pointer.
     oldMark = curMark;
   }
-  return forwardee();
+  return (oop) oldMark->decode_pointer();
 }
 
 #endif // SHARE_VM_OOPS_OOP_PCGC_INLINE_HPP

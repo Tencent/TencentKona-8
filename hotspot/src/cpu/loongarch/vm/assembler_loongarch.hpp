@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2021, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2022, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1556,11 +1556,9 @@ public:
     AbstractAssembler::flush();
   }
 
-  inline void emit_int32(int);
   inline void emit_data(int x) { emit_int32(x); }
   inline void emit_data(int, RelocationHolder const&);
   inline void emit_data(int, relocInfo::relocType rtype);
-
 
   // Generic instructions
   // Does 32bit or 64bit as needed for the platform. In some sense these
