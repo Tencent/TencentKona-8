@@ -49,14 +49,14 @@ public class TestKonaSocketTOSValue {
     }
 
     static void testFailure(String arg) throws Exception {
-        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(arg, Test.class.getName());
+        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder("-Djdk.internal.VTSocket=off", arg, Test.class.getName());
         OutputAnalyzer output = new OutputAnalyzer(pb.start());
         output.shouldContain("Invalid IP_TOS value");
         output.shouldContain("Exception");
     }
 
     static void testSetTraffic(String arg, String traffic) throws Exception {
-        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(arg, Test.class.getName(), traffic);
+        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder("-Djdk.internal.VTSocket=off", arg, Test.class.getName(), traffic);
         OutputAnalyzer output = new OutputAnalyzer(pb.start());
         output.shouldContain("socket: " + traffic);
         output.shouldContain("server socket: " + traffic);
@@ -74,9 +74,9 @@ public class TestKonaSocketTOSValue {
     static void testOptions(String arg, String tos) throws Exception {
         ProcessBuilder pb;
         if (arg != null) {
-            pb = ProcessTools.createJavaProcessBuilder(arg, Test.class.getName());
+            pb = ProcessTools.createJavaProcessBuilder("-Djdk.internal.VTSocket=off", arg, Test.class.getName());
         } else {
-            pb = ProcessTools.createJavaProcessBuilder(Test.class.getName());
+            pb = ProcessTools.createJavaProcessBuilder("-Djdk.internal.VTSocket=off", Test.class.getName());
         }
 
         // check the output

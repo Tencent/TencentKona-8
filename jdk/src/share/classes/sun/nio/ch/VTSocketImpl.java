@@ -666,6 +666,9 @@ public class VTSocketImpl extends SocketImpl {
     @Override
     public <T> T getOption(SocketOption<T> name) throws IOException {
         if (isServerSocket) {
+            if (name == StandardSocketOptions.IP_TOS) {
+                throw new UnsupportedOperationException("'" + name + "' not supported when add option -Djdk.internal.VTSocket=true(default is true)");
+            }
             return getServerSocketChannelImpl().getOption(name);
         } else {
             return getSocketChannelImpl().getOption(name);
