@@ -280,6 +280,12 @@ sun/rmi/transport/tcp/DisableRMIOverHttp/DisableRMIOverHTTPTest.java    windows-
 
 # jdk_security
 
+# 8296480
+java/security/cert/pkix/policyChanges/TestPolicy.java generic-all
+
+# 8296485
+java/security/cert/CertPathBuilder/targetConstraints/BuildEEBasicConstraints.java generic-all
+
 # 8026976
 sun/security/pkcs11/ec/TestKeyFactory.java                      generic-all
 # 8180837
