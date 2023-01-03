@@ -672,13 +672,13 @@ bool ClassLoader::setup_app_search_path_with_wildcard(const char *class_path) {
   // create path array with the classpath with wildcard information
   // ignore the directory and non exist jar file
   // create_merged_path_array can return NULL
+  Thread* THREAD = Thread::current();
+  ResourceMark rm(THREAD);
   GrowableArray<WildcardEntryInfo*>* merged_cp_array = ClassPathEntryTable::create_merged_path_array(RecordClasspathForCDSDump,
                                                                                                      NULL, RelaxCheckForAppCDS);
   if (merged_cp_array == NULL) {
     return false;
   }
-  Thread* THREAD = Thread::current();
-  ResourceMark rm(THREAD);
 
   WildcardIterator wildcardIterator(merged_cp_array);
 
