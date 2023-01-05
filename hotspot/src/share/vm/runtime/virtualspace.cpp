@@ -195,10 +195,8 @@ void ReservedSpace::initialize(size_t size, size_t alignment, bool large,
         base = NULL;
       }
     } else {
-      base = os::reserve_memory(size, NULL, alignment);
       base = MACOS_ONLY(os::reserve_memory(size, NULL, alignment, _executable))
              NOT_MACOS(os::reserve_memory(size, NULL, alignment));
-
     }
 
     if (base == NULL) return;
