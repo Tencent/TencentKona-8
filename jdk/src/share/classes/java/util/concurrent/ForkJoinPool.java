@@ -2042,6 +2042,9 @@ public class ForkJoinPool extends AbstractExecutorService {
             (t instanceof ForkJoinWorkerThread) &&
             (p = (wt = (ForkJoinWorkerThread)t).pool) != null) {
             try {
+                if (Thread.holdsLock(p.stealCounter)) {
+                    return true;
+                }
                 canBlock = SharedSecrets.getJavaLangAccess().executeOnCarrierThread(() ->
                     p.tryCompensate(wt.workQueue)
                 );
