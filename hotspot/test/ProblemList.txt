@@ -86,6 +86,11 @@ compiler/rtm/locking/TestRTMSpinLoopCount.java 8183263 generic-x64
 compiler/rtm/locking/TestUseRTMDeopt.java 8183263 generic-x64
 compiler/rtm/locking/TestUseRTMXendForLockBusy.java 8183263 generic-x64
 compiler/rtm/print/TestPrintPreciseRTMLockingStatistics.java 8183263 generic-x64
+compiler/rtm/locking/TestRTMTotalCountIncrRate.java 8183263 generic-x64,generic-i586
+compiler/rtm/locking/TestUseRTMAfterLockInflation.java 8183263 generic-x64,generic-i586
+compiler/rtm/locking/TestUseRTMForInflatedLocks.java 8183263 generic-x64,generic-i586
+compiler/rtm/locking/TestUseRTMForStackLocks.java 8183263 generic-x64,generic-i586
+compiler/rtm/method_options/TestUseRTMLockElidingOption.java 8183263 generic-x64,generic-i586
 
 # Random failed because gclog_or_tty is used after free
 # See http://tapd.oa.com/20417984/bugtrace/bugs/view/1020417984086238891 for details.
