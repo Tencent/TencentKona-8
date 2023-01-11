@@ -1,24 +1,22 @@
 /*
+ * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
- * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
  *
- * This code is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
- * this particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 2 for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #include "precompiled.hpp"
 #include "runtime/arguments.hpp"
 #include "utilities/ostream.hpp"
@@ -52,7 +50,7 @@ int32_t CodeRevive::_coverage = 100;
 int32_t CodeRevive::_max_container_count = INT_MAX;
 int32_t CodeRevive::_max_nmethod_versions = 16;
 uint32_t CodeRevive::_log_kind = cr_number;
-uint64_t CodeRevive::_max_file_size = G; 
+uint64_t CodeRevive::_max_file_size = G;
 CodeRevive::MergePolicy CodeRevive::_merge_policy = CodeRevive::M_COVERAGE;
 outputStream* CodeRevive::_log_file = NULL;
 uint8_t CodeRevive::_log_ctrls[cr_number] = {0};
@@ -181,7 +179,7 @@ static const char* parse_integer_value(const char* cur_pos, const char* end_pos,
   }
   if (*value > expect_max || *value < expect_min) {
     jio_fprintf(defaultStream::error_stream(), "Incorrect CodeReviveOptions:%s %d out of range [%d:%d]\n",
-                                                name, *value, expect_min, expect_max);  
+                                                name, *value, expect_min, expect_max);
     CodeRevive::set_should_disable();
     return cur_pos;
   }
@@ -202,14 +200,14 @@ static const char* parse_file_size(const char* cur_pos, const char* end_pos, uin
     return cur_pos;
   }
   *file_size = value * M;
- 
+
   if (*file_size > max_uintx || *file_size < M) {
     jio_fprintf(defaultStream::error_stream(), "Incorrect CodeReviveOptions:max_file_size %dM out of range [%d:%ld]\n",
                                                 value, M, max_uintx);
     CodeRevive::set_should_disable();
     return cur_pos;
   }
-  cur_pos += 1; 
+  cur_pos += 1;
   return cur_pos;
 }
 /*
@@ -736,5 +734,5 @@ void CodeRevive::check_dir_path(const char* source_path, TRAPS) {
       // check whether the directory is in the AOT class path
       CodeRevive::check_class_dir_path(dir_path, len, THREAD);
     }
-  } 
+  }
 }

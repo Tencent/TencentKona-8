@@ -1,24 +1,22 @@
 /*
+ * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
- * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
  *
- * This code is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
- * this particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 2 for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #ifndef SHARE_VM_CR_CODE_REVIVE_HASH_TABLE_HPP
 #define SHARE_VM_CR_CODE_REVIVE_HASH_TABLE_HPP
 
@@ -28,7 +26,7 @@
 
 class MergePhaseKlassResovleCacheEntry : public HashtableEntry<Symbol*, mtSymbol> {
  private:
-  // the value can be null. 
+  // the value can be null.
   // if it is null, it means that the klass can't be resolved in merge stage
   Klass* _klass;
 
@@ -37,11 +35,11 @@ class MergePhaseKlassResovleCacheEntry : public HashtableEntry<Symbol*, mtSymbol
 
   Klass*  klass()  const             { return _klass; }
   void    set_klass(Klass* k)        { _klass = k; }
-          
+
   MergePhaseKlassResovleCacheEntry* next() const {
     return (MergePhaseKlassResovleCacheEntry*)HashtableEntry<Symbol*, mtSymbol>::next();
   }
-  
+
   MergePhaseKlassResovleCacheEntry** next_addr() {
     return (MergePhaseKlassResovleCacheEntry**)HashtableEntry<Symbol*, mtSymbol>::next_addr();
   }
@@ -49,7 +47,7 @@ class MergePhaseKlassResovleCacheEntry : public HashtableEntry<Symbol*, mtSymbol
 
 /*
  * record klass information in csa merge
- * if the klass can't be resolved, the klass name is still recorded, and klass is NULL. 
+ * if the klass can't be resolved, the klass name is still recorded, and klass is NULL.
  *
  */
 class MergePhaseKlassResovleCacheTable : public Hashtable<Symbol*, mtSymbol> {
@@ -106,7 +104,7 @@ class DirWithClassEntry : public HashtableEntry<const char*, mtInternal> {
  public:
   const char* dir_path() const            { return literal(); }
   bool is_in_classpath()                  { return _is_in_classpath; }
-  void set_in_classpath(bool value)       { _is_in_classpath = value; } 
+  void set_in_classpath(bool value)       { _is_in_classpath = value; }
 
   DirWithClassEntry* next() const {
     return (DirWithClassEntry*)HashtableEntry<const char*, mtInternal>::next();
@@ -153,7 +151,7 @@ public:
   }
 
   static DirWithClassEntry* lookup(const char* name, size_t len, bool add_real, TRAPS);
-  
+
   //lookup only, won't add
   static bool lookup_only(const char* name, size_t len);
 };

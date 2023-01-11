@@ -1,30 +1,28 @@
 /*
+ * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
- * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
  *
- * This code is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
- * this particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 2 for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #include "precompiled.hpp"
 #include "classfile/javaClasses.hpp"
 #include "cr/codeReviveHashTable.hpp"
 #include "cr/revive.hpp"
 
-#ifndef _WINDOWS 
+#ifndef _WINDOWS
 #define MAX_BUFFER_SIZE PATH_MAX
 #else
 #define MAX_BUFFER_SIZE MAX_PATH
@@ -42,7 +40,7 @@ MergePhaseKlassResovleCacheEntry* MergePhaseKlassResovleCacheTable::new_entry(un
 void MergePhaseKlassResovleCacheTable::add_klass(Symbol* name, Klass* k) {
   unsigned int hashValue = compute_hash(name);
   int index = the_table()->hash_to_index(hashValue);
-  
+
   MergePhaseKlassResovleCacheEntry* e = the_table()->basic_add(index, name, hashValue);
   e->set_klass(k);
 }
@@ -91,7 +89,7 @@ void MergePhaseKlassResovleCacheTable::print_information() {
 }
 
 void MergePhaseKlassResovleCacheTable::print_cache_table_information() {
-  the_table()->print_information();  
+  the_table()->print_information();
 }
 
 static const char* canonical_path(const char* orig, char* buf) {
@@ -123,9 +121,9 @@ DirWithClassEntry* DirWithClassTable::new_entry(unsigned int hash, const char* n
 DirWithClassEntry* DirWithClassTable::lookup(const char* name, size_t len, bool add_real, TRAPS) {
   unsigned int hashValue = compute_hash(name, (int)len);
   int index = the_table()->hash_to_index(hashValue);
-  
+
   DirWithClassEntry* e = the_table()->lookup(index, name, hashValue);
-  
+
   // Found the directory path in hashtable
   if (e != NULL) return e;
 
@@ -135,7 +133,7 @@ DirWithClassEntry* DirWithClassTable::lookup(const char* name, size_t len, bool 
   // find the real path name
   // 1. add the real path into hashtable in save stage
   // 2. look up the real path in hashtable in restore stage
- 
+
   char buffer[MAX_BUFFER_SIZE];
   const char* real_path = canonical_path(name, buffer);
   if (real_path != name) {
@@ -182,7 +180,7 @@ DirWithClassEntry* DirWithClassTable::basic_add(int index, const char* name, siz
     return entry;
   }
   char* dir_path = NEW_C_HEAP_ARRAY(char, len + 1, mtInternal);
-  memcpy(dir_path, name, len + 1); 
+  memcpy(dir_path, name, len + 1);
   entry = new_entry(hashValue, dir_path);
   Hashtable<const char*, mtInternal>::add_entry(index, entry);
   return entry;

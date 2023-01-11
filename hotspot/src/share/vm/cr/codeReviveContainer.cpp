@@ -1,24 +1,22 @@
 /*
+ * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
- * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
  *
- * This code is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
- * this particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 2 for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #include "precompiled.hpp"
 #include "code/codeCache.hpp"
 #include "code/nmethod.hpp"
@@ -237,7 +235,7 @@ bool CodeReviveContainer::save_merged() {
     MergedCodeBlob* mcb = candidate_codeblobs->at(i);
     // get csa file name
     char* file_name = CodeReviveMerge::csa_file_name(mcb->file_index());
-    
+
     CodeReviveFile* csa_file = new CodeReviveFile();
     // map the read only part and read write part
     // construct CodeReviveMetaSpace
@@ -246,18 +244,18 @@ bool CodeReviveContainer::save_merged() {
       delete csa_file;
       continue;
     }
-   
+
     CodeReviveMetaSpace* meta_space = csa_file->meta_space();
 
     // resolve all the meta in meta space
     meta_space->resolve_metadata(NULL);
 
     char* code_space_start = _start + _header->_code_space_offset;
- 
+
     // dump all the codeblob in the same csa file
     while(mcb != NULL) {
       char* codeblob = csa_file->offset_to_addr(mcb->file_offset());
-      // the offset is computed in candidate_selection 
+      // the offset is computed in candidate_selection
       char* code_ptr = code_space_start + mcb->code_offset();
       guarantee(codeblob != NULL, "should be");
 
@@ -306,7 +304,7 @@ char* CodeReviveContainer::find_valid_container(char* file_start, char* containe
  * get the next container start ptr in the same csa file
  */
 char* CodeReviveContainer::get_next_container(char* file_start) {
-  if (_header->_next_offset != 0) { 
+  if (_header->_next_offset != 0) {
     return file_start + _header->_next_offset;
   }
   return NULL;
@@ -327,8 +325,8 @@ void CodeReviveContainer::map_header() {
   _header = (CodeReviveContainerHeader*)_start;
 }
 
-void CodeReviveContainer::add_filename_index(int index) { 
-  _file_indexes->append(index); 
+void CodeReviveContainer::add_filename_index(int index) {
+  _file_indexes->append(index);
 }
 
 void CodeReviveContainer::print() {
@@ -384,9 +382,9 @@ int CodeReviveContainer::compare_by_count(CodeReviveContainer** c1, CodeReviveCo
   // 2. fingerprint size
   // 3. max size of lookup table = entry_size * nmethod_number
   // 4. codeblob size = offset_in_codespace
-void CodeReviveContainer::compute_estimated_size(size_t code_space_size, size_t lookup_table_size) { 
+void CodeReviveContainer::compute_estimated_size(size_t code_space_size, size_t lookup_table_size) {
   _estimated_size = align_up(sizeof(CodeReviveContainerHeader), CodeReviveFile::alignment());
   _estimated_size += align_up(_fingerprint->size(), CodeReviveFile::alignment());
   _estimated_size += lookup_table_size;
-  _estimated_size += code_space_size; 
+  _estimated_size += code_space_size;
 }

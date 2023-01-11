@@ -1,24 +1,22 @@
 /*
+ * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
- * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
  *
- * This code is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
- * this particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 2 for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #include "precompiled.hpp"
 #include "cr/codeReviveAuxInfo.hpp"
 #include "cr/codeReviveCodeSpace.hpp"
@@ -39,7 +37,7 @@
 #include "utilities/align.hpp"
 #include "utilities/defaultStream.hpp"
 
-CodeReviveMetaSpace*  CodeReviveMerge::_global_meta_space = NULL; 
+CodeReviveMetaSpace*  CodeReviveMerge::_global_meta_space = NULL;
 GrowableArray<char*>* CodeReviveMerge::_csa_filenames = NULL;
 GrowableArray<const char*>* CodeReviveMerge::_cp_array = NULL;
 GrowableArray<WildcardEntryInfo*>* CodeReviveMerge::_merged_cp_array = NULL;
@@ -114,7 +112,7 @@ class FilePathWalker {
       CR_LOG(cr_merge, cr_warning, "Fail to get status of %s\n", file_or_dir);
       return;
     }
-    
+
     if ((sbuf.st_mode & S_IFMT) == S_IFDIR) {
       add_directory(file_or_dir);
     } else {
@@ -128,7 +126,7 @@ class FilePathWalker {
  * reset the ptr of codeblob to NULL
  */
 void CandidateCodeBlob::set_offset_and_size(int32_t file_offset, int32_t code_size) {
-  _file_offset = file_offset; 
+  _file_offset = file_offset;
   _code_size = code_size;
 }
 
@@ -190,7 +188,7 @@ void CodeReviveMerge::merge_and_dump(TRAPS) {
 
       container = containers->at(i);
 
-      // collect the jit meta info in container 
+      // collect the jit meta info in container
       CR_LOG(cr_merge, cr_trace, "Preprocess candidate nmethods for container %d\n", i);
       preprocess_candidate_nmethods(container, &container_arena);
 
@@ -299,7 +297,7 @@ void CodeReviveMerge::preprocess_candidate_nmethods(CodeReviveContainer* contain
       delete csa_file;
       continue;
     }
-    
+
     ResourceMark rm;
     // collect the candidate method
     CodeReviveLookupTable* lookup_table = csa_file->lookup_table();
@@ -319,7 +317,7 @@ void CodeReviveMerge::preprocess_candidate_nmethods(CodeReviveContainer* contain
       int32_t* lens;
       Method* m = meta_space->unresolved_name_parts_or_method(e->_meta_index, names, &lens);
       if (m == NULL) {
-        CR_LOG(cr_merge, cr_warning, "Unresolved method %s\n", names[0]);      
+        CR_LOG(cr_merge, cr_warning, "Unresolved method %s\n", names[0]);
         continue;
       }
       CodeReviveCodeBlob cr_cb(code_space->get_code_address(e->_code_offset), meta_space);
@@ -468,8 +466,8 @@ void CodeReviveMerge::candidate_selection(CodeReviveContainer* container, Arena*
     }
   }
   // estimate the size of container:
-  size_t lookup_table_size = sizeof(CodeReviveLookupTable::Entry) * jit_metas->length(); 
-  container->compute_estimated_size(offset_in_codespace, lookup_table_size); 
+  size_t lookup_table_size = sizeof(CodeReviveLookupTable::Entry) * jit_metas->length();
+  container->compute_estimated_size(offset_in_codespace, lookup_table_size);
 }
 
 // add the MergedCodeBlob into candidate_codeblobs
@@ -508,7 +506,7 @@ void CodeReviveMerge::print_candidate_info_in_container(CodeReviveContainer* con
   output->print_cr("  Number of candidate   : %d", total_candidate);
   output->print_cr("  Number of jit version : %d", version_count);
   output->print_cr("  Max of jit version    : %d", max_version_count);
-} 
+}
 
 void CodeReviveMerge::print_merged_code_info_in_container(CodeReviveContainer* container, int index) {
   outputStream* output = CodeRevive::out();
@@ -577,7 +575,7 @@ void CodeReviveMerge::remove_containers(GrowableArray<CodeReviveContainer*>* con
 
   // sort the containers using the file number in each container
   containers->sort(CodeReviveContainer::compare_by_count);
-  
+
   for (reserved_index = 0; reserved_index < containers->length(); reserved_index++) {
     // if the number of candidate files exceeds the expected number of csa files
     // or the number of containers exceeds the maximum of container,
@@ -589,7 +587,7 @@ void CodeReviveMerge::remove_containers(GrowableArray<CodeReviveContainer*>* con
   }
   // remove the container
   for (int i = containers->length() - 1; i > reserved_index; i--) {
-    CodeReviveContainer* container = containers->at(i); 
+    CodeReviveContainer* container = containers->at(i);
     containers->remove_at(i);
   }
 

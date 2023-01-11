@@ -1,24 +1,22 @@
 /*
+ * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
- * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
  *
- * This code is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
- * this particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 2 for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #include "precompiled.hpp"
 #include "classfile/classLoaderExt.hpp"
 #include "cr/classPathEntryTable.hpp"
@@ -39,7 +37,7 @@
 #include <limits.h>
 #endif
 
-#ifndef _WINDOWS 
+#ifndef _WINDOWS
 #define MAX_BUFFER_SIZE PATH_MAX
 #else
 #define MAX_BUFFER_SIZE MAX_PATH
@@ -86,7 +84,7 @@ size_t ClassPathEntryTable::size() {
 
 static ClassPathEntryTable::ClassPathEntry* shared_classpath(char* entry_table, int index) {
   char* p = entry_table;
-  p += class_path_entry_size * index; 
+  p += class_path_entry_size * index;
   return (ClassPathEntryTable::ClassPathEntry*)p;
 }
 
@@ -149,7 +147,7 @@ bool ClassPathEntryTable::setup_merged_classpath_entry_table() {
 
   // get the entry array that includes the existing files in class path
   GrowableArray<const char*>* classpath_array = CodeReviveMerge::cp_array();
-  GrowableArray<WildcardEntryInfo*>* merged_cp_array = CodeReviveMerge::merged_cp_array(); 
+  GrowableArray<WildcardEntryInfo*>* merged_cp_array = CodeReviveMerge::merged_cp_array();
 
   int num_app_classpath_entries = classpath_array->length();
   strptr = _cur_pos + num_app_classpath_entries * class_path_entry_size;
@@ -184,7 +182,7 @@ bool ClassPathEntryTable::setup_merged_classpath_entry_table() {
           // The directory where the jar file is located does not match the directory with wildcard
           CR_LOG(CodeRevive::log_kind(), cr_fail, "The directory of jar file %s isn't the same as the directory with wildcard %s.\n", name, wildcard_entry->path_name());
           return false;
-        } 
+        }
         ent->_timestamp = 0;
       } else {
         ent->_timestamp = st.st_mtime;
@@ -251,8 +249,8 @@ bool ClassPathEntryTable::validate_app_class_paths(int shared_app_paths_len) {
   int rp_len = FileMapInfo::num_paths(appcp);
   bool mismatch = false;
   if (rp_len < shared_app_paths_len) {
-    CR_LOG(CodeRevive::log_kind(), cr_fail, 
-           "Run time APP classpath is shorter than the one at dump time. \nActual = %s\nExpected = %s\n", 
+    CR_LOG(CodeRevive::log_kind(), cr_fail,
+           "Run time APP classpath is shorter than the one at dump time. \nActual = %s\nExpected = %s\n",
            appcp, _classpath_entry_table + _header->_classpath_offset);
     return false;
   }
@@ -347,7 +345,7 @@ GrowableArray<const char*>* ClassPathEntryTable::create_path_array(const char* p
           // add the real path into directory hash table
           path = canonical_path(path, buffer);
           DirWithClassEntry* entry = DirWithClassTable::lookup(path, strlen(path), true, THREAD);
-          entry->set_in_classpath(true); 
+          entry->set_in_classpath(true);
         } else if (CodeRevive::is_merge()) {
           CR_LOG(cr_merge, cr_fail,
                  "The class path can't have directory at merge time: %s\n", paths);
@@ -469,7 +467,7 @@ GrowableArray<WildcardEntryInfo*>* ClassPathEntryTable::create_merged_path_array
 
 /*
  * check the consistency for classpath between save and merge
- * 1. check size: the length in merge should be shorter than the length in save 
+ * 1. check size: the length in merge should be shorter than the length in save
  * 2. check the order in classpath
  * 3. check the timestamp and size for each file
  */
@@ -480,7 +478,7 @@ bool ClassPathEntryTable::validate_app_class_paths_for_merge(int csa_app_paths_l
 
   bool mismatch = false;
   if (merge_app_paths_len > csa_app_paths_len) {
-    CR_LOG(cr_merge, cr_fail, 
+    CR_LOG(cr_merge, cr_fail,
            "Merge time APP classpath is longer than the path in csa file. \nActual = %s\nExpected = %s\n",
             Arguments::get_appclasspath(), _classpath_entry_table + _header->_classpath_offset);
     return false;
@@ -506,7 +504,7 @@ bool ClassPathEntryTable::compare_jar_array(GrowableArray<const char*>* csa_jarf
       CR_LOG(CodeRevive::log_kind(), cr_fail, "APP classpath mismatch: file in csa = %s, file in classpath = %s\n",
                                                csa_jarfiles->at(i), cp_jarfiles->at(i));
       return false;
-    } 
+    }
   }
   return true;
 }
@@ -568,7 +566,7 @@ bool ClassPathEntryTable::check_paths(int num_paths, GrowableArray<const char*>*
     if (!validate_file(ent, save_name, true)) {
       CR_LOG(CodeRevive::log_kind(), cr_fail, "Fail to validate file %s\n", save_name);
       mismatch = true;
-    }  
+    }
     i++;
   }
   // 3. if there are jar files in the directory with wildcard, check whether the recorded files
@@ -590,7 +588,7 @@ bool ClassPathEntryTable::check_paths(int num_paths, GrowableArray<const char*>*
  * merge_app_path_array from -cp <>
  * merged_cp_array from -XX:CodeReviveOptions=merge_wildcard_classpath:<>
  */
-bool ClassPathEntryTable::check_paths_with_wildcard(int num_paths, GrowableArray<const char*>* sorted_jars_in_wildcards, 
+bool ClassPathEntryTable::check_paths_with_wildcard(int num_paths, GrowableArray<const char*>* sorted_jars_in_wildcards,
                                                     GrowableArray<WildcardEntryInfo*>* merged_cp_array) {
   int i = 0;
   WildcardIterator wildcardIterator(merged_cp_array);
@@ -631,7 +629,7 @@ bool ClassPathEntryTable::check_paths_with_wildcard(int num_paths, GrowableArray
     if (!validate_file(ent, save_name, false)) {
       CR_LOG(CodeRevive::log_kind(), cr_fail, "Fail to validate file %s\n", save_name);
       mismatch = true;
-    }  
+    }
     i++;
   }
   if (!mismatch) {
@@ -643,7 +641,7 @@ bool ClassPathEntryTable::check_paths_with_wildcard(int num_paths, GrowableArray
         mismatch = true;
         break;
       }
-    } 
+    }
   }
   if (mismatch) {
     CR_LOG(CodeRevive::log_kind(), cr_fail, "APP classpath mismatch. \nActual = %s\nExpected = %s\n",
@@ -686,4 +684,3 @@ WildcardEntryInfo* WildcardIterator::get_next_entry() {
   }
   return NULL;
 }
-
