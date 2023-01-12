@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -246,6 +246,7 @@ void GangWorker::initialize() {
   this->initialize_thread_local_storage();
   this->record_stack_base_and_size();
   MACOS_AARCH64_ONLY(thread->init_wx());
+  this->initialize_named_thread();
   assert(_gang != NULL, "No gang to run in");
   os::set_priority(this, NearMaxPriority);
   if (TraceWorkGang) {
