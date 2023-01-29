@@ -1,24 +1,22 @@
 /*
+ * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
- * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
  *
- * This code is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
- * this particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 2 for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #ifndef SHARE_VM_CR_REVIVE_HPP
 #define SHARE_VM_CR_REVIVE_HPP
 
@@ -31,7 +29,7 @@ class CodeReviveCodeSpace;
 
 class Method;
 class ciEnv;
- 
+
 const uint32_t cr_archive     = 0; // log contents of CSA file in save or restore
 const uint32_t cr_global      = 1; // log VM global symbols in save
 const uint32_t cr_assembly    = 2; // print the native codes of saved methods
@@ -47,7 +45,7 @@ const uint8_t cr_warning      = 2; // events those may reduce the effect of code
 const uint8_t cr_trace        = 3; // key events during code revive process.
 const uint8_t cr_info         = 4; // all events during code revive process.
 
-/* Usage of log kind and log level: 
+/* Usage of log kind and log level:
  *   archive:
  *     - trace  : contents of CSA files
  *   global:
@@ -73,7 +71,7 @@ const uint8_t cr_info         = 4; // all events during code revive process.
  *     - trace  : key steps of merging.
  *     - warning: fail on merging some methods.
  *     - fail   : why merge process failed.
- *     - none   : no compatible CSA file or valid class path found. 
+ *     - none   : no compatible CSA file or valid class path found.
  */
 
 enum LoaderType {
@@ -138,7 +136,7 @@ class CodeRevive : AllStatic {
   static char*            _log_file_path;
   static char*            _input_files;
   static char*            _input_list_file;
-  static char*            _merge_wildcard_classpath;  // the classpath containing wildcard during merge 
+  static char*            _merge_wildcard_classpath;  // the classpath containing wildcard during merge
   static int32_t          _percent;            // save/restore under this percent, range [1:99]
   static int32_t          _coverage;     // the coverage for merge csa, range [1:99]
   static int32_t          _max_container_count;
@@ -188,7 +186,7 @@ class CodeRevive : AllStatic {
   static uint32_t log_kind() {
     return _log_kind;
   }
-  
+
   static void log(const char* format, ...);
   static outputStream* out() {
     return _log_file;
@@ -249,7 +247,7 @@ class CodeRevive : AllStatic {
   }
   static uint get_file_size() {
     return _total_file_size;
-  } 
+  }
   static bool perf_enable() {
     return _perf_enable;
   }

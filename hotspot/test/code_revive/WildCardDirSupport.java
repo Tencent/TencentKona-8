@@ -1,24 +1,22 @@
 /*
+ * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
- * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
  *
- * This code is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
- * this particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 2 for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 /*
  * @test
  * @summary check whether there is some class reading from directory
@@ -53,7 +51,7 @@ public class WildCardDirSupport {
 
         // dump aot with wildcard in classpath
         OutputAnalyzer output = Test("-cp",
-                                     wildcard + ":" + filePath, 
+                                     wildcard + ":" + filePath,
                                      "-XX:CodeReviveOptions=save,file=classInDirCheck.csa,log=save=trace",
                                      "-XX:-TieredCompilation",
                                      "-XX:CompileCommand=compileonly,TestProfiledReceiver::foo",
@@ -85,7 +83,7 @@ public class WildCardDirSupport {
         // change timestamp of the jar file child1.jar
         File fileToChange = new File(appJar2);
         Date filetime = new Date(fileToChange.lastModified());
-        System.out.println(filetime.toString());     
+        System.out.println(filetime.toString());
         fileToChange.setLastModified(System.currentTimeMillis());
         filetime = new Date(fileToChange.lastModified());
         System.out.println(filetime.toString());
@@ -122,7 +120,7 @@ public class WildCardDirSupport {
                       "-XX:CodeReviveOptions=merge,input_files=classInDirCheck.csa,file=classInDirCheck_merge.csa,log=merge=trace,wildcard_classpath=" + wildcard,
                       "-version");
 
-        // Expect: the timestamp check is ignored, then pass the classpath check 
+        // Expect: the timestamp check is ignored, then pass the classpath check
         System.out.println(output.getOutput());
         output.shouldNotContain("APP classpath mismatch");
         output.shouldHaveExitValue(0);
@@ -144,7 +142,7 @@ public class WildCardDirSupport {
 
         // dump aot: load class from directory
         output = Test("-cp",
-                      wildcard + ":" + filePath, 
+                      wildcard + ":" + filePath,
                       "-XX:CodeReviveOptions=save,file=classInDirCheck.csa,log=save=trace",
                       "-XX:-TieredCompilation",
                       "-XX:CompileCommand=compileonly,TestProfiledReceiver::foo",
@@ -174,12 +172,12 @@ public class WildCardDirSupport {
         String child3 = ClassFileInstaller.writeJar("child3.jar", "Child2", "Child1");
         ClassFileInstaller.writeJar("parent.jar", "Parent");
         ClassFileInstaller.writeJar("child2.jar", "Child2");
- 
+
         File file3 = new File(child3);
         File file4 = new File("child3.war");
         file3.renameTo(file4);
 
-        // load with aot from merge 2 
+        // load with aot from merge 2
         output = Test("-cp", wildcard + ":" + filePath,
                       "-XX:CodeReviveOptions=restore,file=classInDirCheck_merge2.csa,log=restore=trace",
                       "-XX:-TieredCompilation",

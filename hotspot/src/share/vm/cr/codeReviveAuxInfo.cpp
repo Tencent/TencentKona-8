@@ -1,24 +1,22 @@
 /*
+ * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
- * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
  *
- * This code is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
- * this particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 2 for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #include "precompiled.hpp"
 #include "ci/ciUtilities.hpp"
 #include "ci/ciObjArrayKlass.hpp"
@@ -620,7 +618,7 @@ bool ReviveAuxInfoTask::revive_oop(oop_Relocation* r, GrowableArray<ciBaseObject
     read_u4();
     guarantee(oops_metas_index < oops_metas->length(), "");
     result = JNIHandles::resolve(oops_metas->at(oops_metas_index)->as_object()->constant_encoding());
-    oops_metas_index++; 
+    oops_metas_index++;
   } else {
     guarantee(false, "unexpected type");
   }
@@ -918,7 +916,7 @@ void ReviveAuxInfoTask::iterate_reloc_aux_info() {
       case tag_skip: {
         process_skip();
         break;
-      } 
+      }
       case tag_non_oop: {
         process_non_oop();
         break;
@@ -1064,7 +1062,7 @@ ciMetadata* PreReviveTask::prepare_klass_by_name_classloader(LoaderType loader_t
   oop loader = get_loader(loader_type);
   Klass* k = revive_get_klass(meta_index, loader, min_state);
   if (k == NULL) {
-    return NULL;    
+    return NULL;
   }
 
   ciKlass* result = CURRENT_ENV->get_klass(k);
@@ -1079,7 +1077,7 @@ ciObject* PreReviveTask::prepare_mirror_by_name_classloader(LoaderType loader_ty
   ciKlass* k = (ciKlass*)prepare_klass_by_name_classloader(loader_type, meta_index, min_state);
   if (k == NULL) {
     fail();
-    return NULL;    
+    return NULL;
   }
 
   ciInstance* result = k->java_mirror();
@@ -1244,7 +1242,7 @@ int32_t UpdateMetaIndexTask::update_one_meta_index(int32_t old_index, char* inde
 
 void UpdateMetaIndexTask::process_klass_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) {
   char* index_address = get_retral_address(2 * sizeof(uint32_t));
-  update_one_meta_index(meta_index, index_address); 
+  update_one_meta_index(meta_index, index_address);
 }
 
 void UpdateMetaIndexTask::process_mirror_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) {
@@ -1253,7 +1251,7 @@ void UpdateMetaIndexTask::process_mirror_by_name_classloader(LoaderType loader_t
 }
 
 void UpdateMetaIndexTask::process_method_by_name_classloader(LoaderType loader_type, int32_t meta_index) {
-  char* index_address = get_retral_address(sizeof(uint32_t)); 
+  char* index_address = get_retral_address(sizeof(uint32_t));
   update_one_meta_index(meta_index, index_address);
 }
 

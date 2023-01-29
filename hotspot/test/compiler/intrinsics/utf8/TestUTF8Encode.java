@@ -1,23 +1,20 @@
 /*
+ * Copyright (C) 2021, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * Copyright (C) 2021 THL A29 Limited, a Tencent company. All rights reserved.
- * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
  *
- * This code is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
- * this particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 2 for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /*
@@ -47,7 +44,7 @@ public class TestUTF8Encode {
     private static Class encoderC;
     private static Method encodeArrayLoopM;
     private static Surrogate.Parser sgp;
-    
+
     public static void main(String[] args) throws Exception {
         try {
             Class utf8C = Class.forName("sun.nio.cs.UTF_8");
@@ -95,16 +92,16 @@ public class TestUTF8Encode {
         char[] sa = src.array();
         int sp = src.arrayOffset() + src.position();
         int sl = src.arrayOffset() + src.limit();
-    
+
         byte[] da = dst.array();
         int dp = dst.arrayOffset() + dst.position();
         int dl = dst.arrayOffset() + dst.limit();
         int dlASCII = dp + Math.min(sl - sp, dl - dp);
-    
+
         // ASCII only loop
         while (dp < dlASCII && sa[sp] < '\u0080')
             da[dp++] = (byte) sa[sp++];
-    
+
         while (sp < sl) {
             char c = sa[sp];
             if (c < 0x80) {
@@ -248,7 +245,7 @@ public class TestUTF8Encode {
 
             for (int i = 0; i < num; i++) {
                 int c = begin + rand.nextInt(end - begin);
-                charArray[pos + i] = (char)c; 
+                charArray[pos + i] = (char)c;
             }
             pos += num;
             return this;
@@ -378,4 +375,3 @@ public class TestUTF8Encode {
 
     }
 }
-

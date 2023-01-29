@@ -1,24 +1,22 @@
 /*
+ * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
- * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
  *
- * This code is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
- * this particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 2 for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #include "precompiled.hpp"
 #include "memory/resourceArea.hpp"
 #include "utilities/align.hpp"
@@ -247,7 +245,7 @@ void CodeReviveMetaSpace::resolve_metadata(CodeReviveMetaSpace* global_metadata)
   intptr_t* content = ((intptr_t*)_start) + 1;
   for (int i = 0; i < count; i++) {
     intptr_t v = content[i];
-    guarantee(!is_resolved(v), "must be not resolved"); 
+    guarantee(!is_resolved(v), "must be not resolved");
     if (is_unresolved_class(v)) {
       Klass* k = resolve_klass(i, global_metadata != NULL);
       if (k != NULL) {
@@ -255,7 +253,7 @@ void CodeReviveMetaSpace::resolve_metadata(CodeReviveMetaSpace* global_metadata)
         if (global_metadata != NULL) {
           global_metadata->record_metadata(k);
           _resolve_klass_count++;
-        }       
+        }
       } else if (global_metadata != NULL) {
         _unresolve_klass_count++;
       }
@@ -292,7 +290,7 @@ Klass* CodeReviveMetaSpace::resolve_klass(int32_t index, bool add_to_global) {
   k = SystemDictionary::resolve_or_null(class_name_symbol, SystemDictionary::java_system_loader(), Handle(), THREAD);
   CLEAR_PENDING_EXCEPTION;
   if (add_to_global) {
-    // Regardless of whether it is successful or not, 
+    // Regardless of whether it is successful or not,
     // add the result into klass resolve cache table
     MergePhaseKlassResovleCacheTable::add_klass(class_name_symbol, k);
   }

@@ -1,24 +1,22 @@
 /*
+ * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
- * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
  *
- * This code is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
- * this particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 2 for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #include "precompiled.hpp"
 #include "classfile/classLoaderExt.hpp"
 #include "cr/codeReviveFingerprint.hpp"
@@ -61,12 +59,12 @@
   do_option("UseContainerSupport")                   \
   do_option("CMSConcurrentMTEnabled")                \
 
-  
+
 bool CodeReviveFingerprint::in_white_list(const char* name) {
   #define WHITE_LIST_CHECK(option_name)                         \
     if (strncmp(name, option_name, strlen(option_name)) == 0) { \
       return true;                                              \
-    } 
+    }
   WHITE_LIST_DO(WHITE_LIST_CHECK)
   #undef WHITE_LIST_CHECK
   return false;
@@ -120,13 +118,13 @@ void CodeReviveFingerprint::setup_options() {
       }
       if (in_white_list(name)) {
         continue;
-      } 
+      }
       validate_bool_flag_array->append(i);
     }
   }
   _header->_bool_flag_count = validate_bool_flag_array->length();
   _size = align_up(sizeof(FingerPrintHeader), CodeReviveFile::alignment());
-  
+
   char* cur_pos = _start + _size;
   size_t bool_flag_size = sizeof(BoolFlag);
   int index = 0;
@@ -138,8 +136,8 @@ void CodeReviveFingerprint::setup_options() {
     flag = &Flag::flags[index];
     bflag->_value = flag->get_bool();
   }
- 
-  _size += bool_flag_size * _header->_bool_flag_count; 
+
+  _size += bool_flag_size * _header->_bool_flag_count;
 }
 
 void CodeReviveFingerprint::setup_narrow_ptr() {
@@ -201,7 +199,7 @@ static bool is_same_oop_nps(NarrowPtrStruct a, NarrowPtrStruct b) {
     return false;
   }
   if (a._shift != b._shift) {
-    return false; 
+    return false;
   }
   if (a._use_implicit_null_checks != b._use_implicit_null_checks) {
     return false;

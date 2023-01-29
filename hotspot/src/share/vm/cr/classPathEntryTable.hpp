@@ -1,30 +1,28 @@
 /*
+ * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
- * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
  *
- * This code is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
- * this particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 2 for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #ifndef SHARE_VM_CLASSPATH_ENTRY_TABLE_HPP
 #define SHARE_VM_CLASSPATH_ENTRY_TABLE_HPP
 
 /*
  * WildcardEntryInfo: store the entry information in original class path
- * In java.c, the directory with wildcard will be converted to jar files 
+ * In java.c, the directory with wildcard will be converted to jar files
  * in the directory. In different machine, the order may be different.
  */
 class WildcardEntryInfo : public ResourceObj {
@@ -38,7 +36,7 @@ class WildcardEntryInfo : public ResourceObj {
   int     num_of_jar()                   { return _num_of_jar; }
   bool    is_wildcard()                  { return _is_wildcard; }
   char*   path_name()                    { return _path_name; }
-  
+
 };
 
 class WildcardIterator : public StackObj {
@@ -71,7 +69,7 @@ public:
  *    -- classpath offset in ClassPathEntryTable
  * -- Array of ClassPathEntry Struct
  *    -- jar full path: offset, pointing to follwing strings
- *    -- jar timestamp: can be 0 if the jar file is in the directory with wildcard 
+ *    -- jar timestamp: can be 0 if the jar file is in the directory with wildcard
  *    --jar file size: can't be 0, it must be checked
  *    ...
  *    {}
@@ -94,7 +92,7 @@ class ClassPathEntryTable : public CHeapObj<mtInternal> {
   // uttilities
   size_t size();
   void   print_on(outputStream* out);
- 
+
   struct ClassPathEntry {
     int32_t _name_offset;       // offset from ClassPathEntryTableHeader's end to jar_x path
     time_t  _timestamp;         // jar timestamp
