@@ -24,8 +24,8 @@
 #
 
 #
-# This file has been modified by Loongson Technology in 2022. These
-# modifications are Copyright (c) 2018, 2022, Loongson Technology, and are made
+# This file has been modified by Loongson Technology in 2023. These
+# modifications are Copyright (c) 2018, 2023, Loongson Technology, and are made
 # available on the same license terms set forth above.
 #
 
@@ -231,7 +231,7 @@ BUILDER_NAME:=@BUILDER_NAME@
 HOST_NAME:=@HOST_NAME@
 
 # Loongson OpenJDK Version info
-VER=8.1.12
+VER=8.1.13
 ifeq ($(HOST_NAME), )
   HOST_NAME=unknown
 endif
