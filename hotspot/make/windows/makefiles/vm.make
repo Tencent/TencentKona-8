@@ -145,6 +145,7 @@ VM_PATH=$(VM_PATH);../generated/jfrfiles
 VM_PATH=$(VM_PATH);$(WorkSpace)/src/share/vm/c1
 VM_PATH=$(VM_PATH);$(WorkSpace)/src/share/vm/compiler
 VM_PATH=$(VM_PATH);$(WorkSpace)/src/share/vm/code
+VM_PATH=$(VM_PATH);$(WorkSpace)/src/share/vm/cr
 VM_PATH=$(VM_PATH);$(WorkSpace)/src/share/vm/interpreter
 VM_PATH=$(VM_PATH);$(WorkSpace)/src/share/vm/ci
 VM_PATH=$(VM_PATH);$(WorkSpace)/src/share/vm/classfile
@@ -221,6 +222,9 @@ arguments.obj: $(WorkSpace)\src\share\vm\runtime\arguments.cpp
         $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
 
 {$(COMMONSRC)\share\vm\code}.cpp.obj::
+        $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
+
+{$(COMMONSRC)\share\vm\cr}.cpp.obj::
         $(CXX) $(CXX_FLAGS) $(CXX_USE_PCH) /c $<
 
 {$(COMMONSRC)\share\vm\interpreter}.cpp.obj::

@@ -484,6 +484,10 @@ void nmethod::init_defaults() {
   _stack_traversal_mark       = 0;
   _unload_reported            = false;           // jvmti state
 
+  // CodeRevive
+  _has_call_site_target_value = 0;
+  _load_from_aot              = 0;
+
 #ifdef ASSERT
   _oops_are_stale             = false;
 #endif
@@ -582,6 +586,12 @@ nmethod* nmethod::new_dtrace_nmethod(methodHandle method,
 
 #endif // def HAVE_DTRACE_H
 
+
+// CodeRevive: new an empty nmethod
+nmethod* nmethod::new_nmethod(int size) {
+  return new (size)nmethod();
+}
+
 nmethod* nmethod::new_nmethod(methodHandle method,
   int compile_id,
   int entry_bci,
@@ -589,6 +599,7 @@ nmethod* nmethod::new_nmethod(methodHandle method,
   int orig_pc_offset,
   DebugInformationRecorder* debug_info,
   Dependencies* dependencies,
+  CodeReviveOptRecords* opt_records,
   CodeBuffer* code_buffer, int frame_size,
   OopMapSet* oop_maps,
   ExceptionHandlerTable* handler_table,
@@ -606,13 +617,14 @@ nmethod* nmethod::new_nmethod(methodHandle method,
       allocation_size(code_buffer, sizeof(nmethod))
       + adjust_pcs_size(debug_info->pcs_size())
       + round_to(dependencies->size_in_bytes() , oopSize)
+      + round_to(opt_records != NULL? opt_records->size_in_bytes() : 0, oopSize) // CodeRevive
       + round_to(handler_table->size_in_bytes(), oopSize)
       + round_to(nul_chk_table->size_in_bytes(), oopSize)
       + round_to(debug_info->data_size()       , oopSize);
 
     nm = new (nmethod_size)
     nmethod(method(), nmethod_size, compile_id, entry_bci, offsets,
-            orig_pc_offset, debug_info, dependencies, code_buffer, frame_size,
+            orig_pc_offset, debug_info, dependencies, opt_records, code_buffer, frame_size,
             oop_maps,
             handler_table,
             nul_chk_table,
@@ -690,7 +702,8 @@ nmethod::nmethod(
     _scopes_data_offset      = _metadata_offset     + round_to(code_buffer->total_metadata_size(), wordSize);
     _scopes_pcs_offset       = _scopes_data_offset;
     _dependencies_offset     = _scopes_pcs_offset;
-    _handler_table_offset    = _dependencies_offset;
+    _opt_records_offset      = _dependencies_offset; // CodeRevive: no opt records for native wrapper
+    _handler_table_offset    = _opt_records_offset;
     _nul_chk_table_offset    = _handler_table_offset;
     _nmethod_end_offset      = _nul_chk_table_offset;
     _compile_id              = compile_id;
@@ -777,7 +790,8 @@ nmethod::nmethod(
     _scopes_data_offset      = _metadata_offset     + round_to(code_buffer->total_metadata_size(), wordSize);
     _scopes_pcs_offset       = _scopes_data_offset;
     _dependencies_offset     = _scopes_pcs_offset;
-    _handler_table_offset    = _dependencies_offset;
+    _opt_records_offset      = _dependencies_offset; // CodeRevive: no opt records for dtrace wrapper
+    _handler_table_offset    = _opt_records_offset;
     _nul_chk_table_offset    = _handler_table_offset;
     _nmethod_end_offset      = _nul_chk_table_offset;
     _compile_id              = 0;  // default
@@ -832,6 +846,18 @@ void* nmethod::operator new(size_t size, int nmethod_size) throw() {
   return CodeCache::allocate(nmethod_size);
 }
 
+// CodeRevive: constructor to build a empty nmethod
+nmethod::nmethod()
+  : CodeBlob(),
+  _native_receiver_sp_offset(in_ByteSize(-1)),
+  _native_basic_lock_sp_offset(in_ByteSize(-1)) {
+}
+
+// CodeRevive
+void nmethod::post_test_revive_replace(nmethod* new_nm) {
+  NOT_PRODUCT(nmethod_stats.note_nmethod(new_nm));
+}
+
 nmethod::nmethod(
   Method* method,
   int nmethod_size,
@@ -841,6 +867,7 @@ nmethod::nmethod(
   int orig_pc_offset,
   DebugInformationRecorder* debug_info,
   Dependencies* dependencies,
+  CodeReviveOptRecords* opt_records,
   CodeBuffer *code_buffer,
   int frame_size,
   OopMapSet* oop_maps,
@@ -894,7 +921,13 @@ nmethod::nmethod(
 
     _scopes_pcs_offset       = _scopes_data_offset   + round_to(debug_info->data_size       (), oopSize);
     _dependencies_offset     = _scopes_pcs_offset    + adjust_pcs_size(debug_info->pcs_size());
-    _handler_table_offset    = _dependencies_offset  + round_to(dependencies->size_in_bytes (), oopSize);
+    _opt_records_offset      = _dependencies_offset  + round_to(dependencies->size_in_bytes (), oopSize);
+    // CodeRevive
+    if (opt_records != NULL) {
+      _handler_table_offset  = _opt_records_offset   + round_to(opt_records->size_in_bytes  (), oopSize);
+    } else {
+      _handler_table_offset  = _opt_records_offset;
+    }
     _nul_chk_table_offset    = _handler_table_offset + round_to(handler_table->size_in_bytes(), oopSize);
     _nmethod_end_offset      = _nul_chk_table_offset + round_to(nul_chk_table->size_in_bytes(), oopSize);
 
@@ -908,6 +941,9 @@ nmethod::nmethod(
     code_buffer->copy_values_to(this);
     debug_info->copy_to(this);
     dependencies->copy_to(this);
+    if (opt_records != NULL) { // CodeRevive
+      opt_records->copy_to(this);
+    }
     if (ScavengeRootsInCode) {
       if (detect_scavenge_root_oops()) {
         CodeCache::add_scavenge_root_nmethod(this);
@@ -932,7 +968,7 @@ nmethod::nmethod(
   bool printnmethods = PrintNMethods
     || CompilerOracle::should_print(_method)
     || CompilerOracle::has_option_string(_method, "PrintNMethods");
-  if (printnmethods || PrintDebugInfo || PrintRelocations || PrintDependencies || PrintExceptionHandlers) {
+  if (printnmethods || PrintDebugInfo || PrintRelocations || PrintDependencies || PrintOptRecords || PrintExceptionHandlers || PrintNMCodeValue) {
     print_nmethod(printnmethods);
   }
 }
@@ -1019,6 +1055,9 @@ void nmethod::print_nmethod(bool printmethod) {
       oop_maps()->print();
     }
   }
+  if (PrintNMCodeValue) { // CodeRevive
+    print_oops_metadatas();
+  }
   if (PrintDebugInfo) {
     print_scopes();
   }
@@ -1027,6 +1066,9 @@ void nmethod::print_nmethod(bool printmethod) {
   }
   if (PrintDependencies) {
     print_dependencies();
+  }
+  if (PrintOptRecords) { // CodeRevive
+    print_opt_records();
   }
   if (PrintExceptionHandlers) {
     print_handler_table();
@@ -1422,7 +1464,13 @@ void nmethod::log_state_change() const {
     }
   }
   if (PrintCompilation && _state != unloaded) {
-    print_on(tty, _state == zombie ? "made zombie" : "made not entrant");
+    if (load_from_aot()) { // CodeRevive
+      char buf[64];
+      jio_snprintf(buf, 63, "aot made %s [v%d]", _state == zombie ? "zombie" : "not entrant", method()->aot_version());
+      print_on(tty, buf);
+    } else {
+      print_on(tty, _state == zombie ? "made zombie" : "made not entrant");
+    }
   }
 }
 
@@ -1656,24 +1704,28 @@ bool nmethod::can_unload(BoolObjectClosure* is_alive, oop* root, bool unloading_
 // Transfer information from compilation to jvmti
 void nmethod::post_compiled_method_load_event() {
 
-  Method* moop = method();
+  // This is a bad time for a safepoint.  We don't want
+  // this nmethod to get unloaded while we're queueing the event.
+  No_Safepoint_Verifier nsv;
+
+  Method* m = method();
 #ifndef USDT2
   HS_DTRACE_PROBE8(hotspot, compiled__method__load,
-      moop->klass_name()->bytes(),
-      moop->klass_name()->utf8_length(),
-      moop->name()->bytes(),
-      moop->name()->utf8_length(),
-      moop->signature()->bytes(),
-      moop->signature()->utf8_length(),
+      m->klass_name()->bytes(),
+      m->klass_name()->utf8_length(),
+      m->name()->bytes(),
+      m->name()->utf8_length(),
+      m->signature()->bytes(),
+      m->signature()->utf8_length(),
       insts_begin(), insts_size());
 #else /* USDT2 */
   HOTSPOT_COMPILED_METHOD_LOAD(
-      (char *) moop->klass_name()->bytes(),
-      moop->klass_name()->utf8_length(),
-      (char *) moop->name()->bytes(),
-      moop->name()->utf8_length(),
-      (char *) moop->signature()->bytes(),
-      moop->signature()->utf8_length(),
+      (char *) m->klass_name()->bytes(),
+      m->klass_name()->utf8_length(),
+      (char *) m->name()->bytes(),
+      m->name()->utf8_length(),
+      (char *) m->signature()->bytes(),
+      m->signature()->utf8_length(),
       insts_begin(), insts_size());
 #endif /* USDT2 */
 
@@ -2864,7 +2916,11 @@ void nmethod::print() const {
   if (is_compiled_by_c1()) {
     tty->print("(c1) ");
   } else if (is_compiled_by_c2()) {
-    tty->print("(c2) ");
+    if (load_from_aot()) { // CodeRevive
+      tty->print("(c2 aot) ");
+    } else {
+      tty->print("(c2) ");
+    }
   } else if (is_compiled_by_shark()) {
     tty->print("(shark) ");
   } else {
@@ -2924,6 +2980,11 @@ void nmethod::print() const {
                                               dependencies_begin(),
                                               dependencies_end(),
                                               dependencies_size());
+  // CodeRevive: print opt records.
+  if (opt_records_size  () > 0) tty->print_cr(" opt_records    [" INTPTR_FORMAT "," INTPTR_FORMAT "] = %d",
+                                              opt_records_begin(),
+                                              opt_records_end(),
+                                              opt_records_size());
   if (handler_table_size() > 0) tty->print_cr(" handler table  [" INTPTR_FORMAT "," INTPTR_FORMAT "] = %d",
                                               handler_table_begin(),
                                               handler_table_end(),
@@ -2945,6 +3006,62 @@ void nmethod::print_scopes() {
 
     ScopeDesc* sd = scope_desc_at(p->real_pc(this));
     sd->print_on(tty, p);
+  }
+}
+
+// CodeRevive: print all oops and metadata.
+void nmethod::print_oops_metadatas() {
+  ResourceMark rm;
+  ttyLocker ttyl;   // keep the following output all in one block
+  tty->print_cr("oops: count = %d", (int)(oops_end() - oops_begin()));
+  for (oop* p = oops_begin(); p < oops_end(); p++) {
+    if (*p == Universe::non_oop_word() || *p == NULL) {
+      continue;  // skip non-oops
+    }
+#ifdef CHECK_UNHANDLED_OOPS
+    oopDesc* o = (*p).obj();
+#else
+    oopDesc* o = *p;
+#endif // CHECK_UNHANDLED_OOPS
+    tty->print_cr("index %d: %p %s", (int)(p - oops_begin()), o, (*p)->klass()->name()->as_C_string());
+  }
+
+  tty->print_cr("metadatas: count = %d", (int)(metadata_end() - metadata_begin()));
+  for (Metadata** p = metadata_begin(); p < metadata_end(); p++) {
+    if (*p == Universe::non_oop_word() || *p == NULL) {
+      continue;  // skip non-oops
+    }
+    Metadata* md = *p;
+    tty->print("index %d: %p ", (int)(p - metadata_begin()), md);
+    if (md->is_klass()) {
+      tty->print_cr("klass %s", md->internal_name());
+    } else if (md->is_method()) {
+      tty->print("%s ", md->internal_name());
+      ((Method*)md)->print_name(tty);
+      tty->cr();
+    } else if (md->is_methodData()) {
+      tty->print("%s of ", md->internal_name());
+      ((MethodData*)md)->method()->print_name(tty);
+      tty->cr();
+    } else if (md->is_constantPool()) {
+      tty->print_cr("%s of %s", md->internal_name(), ((ConstantPool*)md)->pool_holder()->external_name());
+    } else {
+      tty->print_cr("%s", md->internal_name());
+    }
+  }
+}
+
+// CodeRevive: print opt records
+void nmethod::print_opt_records() {
+  if (opt_records_size() == 0) {
+    return;
+  }
+  ResourceMark rm;
+  ttyLocker ttyl;   // keep the following output all in one block
+  tty->print_cr("opt_records:");
+  OptStream stream(OptRecord::NM_INSTALL, this, opt_records_begin());
+  for (OptRecord* o = stream.next(); o != NULL; o = stream.next()) {
+    o->print_on(tty);
   }
 }
 

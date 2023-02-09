@@ -261,27 +261,7 @@ public class DerInputStream {
             return new BitArray(0);
         }
 
-        /*
-         * First byte = number of excess bits in the last octet of the
-         * representation.
-         */
-        length--;
-        int excessBits = buffer.read();
-        if (excessBits < 0) {
-            throw new IOException("Unused bits of bit string invalid");
-        }
-        int validBits = length*8 - excessBits;
-        if (validBits < 0) {
-            throw new IOException("Valid bits of bit string invalid");
-        }
-
-        byte[] repn = new byte[length];
-
-        if ((length != 0) && (buffer.read(repn) != length)) {
-            throw new IOException("Short read of DER bit string");
-        }
-
-        return new BitArray(validBits, repn);
+        return buffer.getUnalignedBitString(length);
     }
 
     /**
@@ -292,6 +272,9 @@ public class DerInputStream {
             throw new IOException("DER input not an octet string");
 
         int length = getDefiniteLength(buffer);
+        if (length > buffer.available())
+            throw new IOException("short read of an octet string");
+
         byte[] retval = new byte[length];
         if ((length != 0) && (buffer.read(retval) != length))
             throw new IOException("Short read of DER octet string");
@@ -517,6 +500,10 @@ public class DerInputStream {
                                   stringName + " string");
 
         int length = getDefiniteLength(buffer);
+        if (length > buffer.available())
+            throw new IOException("short read of " +
+                                  stringName + " string");
+
         byte[] retval = new byte[length];
         if ((length != 0) && (buffer.read(retval) != length))
             throw new IOException("Short read of DER " +

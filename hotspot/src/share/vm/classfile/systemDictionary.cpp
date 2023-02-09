@@ -95,6 +95,9 @@ bool        SystemDictionary::_has_checkPackageAccess     =  false;
 // lazily initialized klass variables
 Klass* volatile SystemDictionary::_abstract_ownable_synchronizer_klass = NULL;
 
+// CodeRevive
+oop         SystemDictionary::_ext_loader                 =  NULL;
+
 #if INCLUDE_JFR
 static const Symbol* jfr_event_handler_proxy = NULL;
 #endif // INCLUDE_JFR
@@ -104,6 +107,11 @@ static const Symbol* jfr_event_handler_proxy = NULL;
 
 oop SystemDictionary::java_system_loader() {
   return _java_system_loader;
+}
+
+// CodeRevive: get ext classloader
+oop SystemDictionary::ext_loader() {
+  return _ext_loader;
 }
 
 void SystemDictionary::compute_java_system_loader(TRAPS) {
@@ -123,6 +131,9 @@ void SystemDictionary::compute_java_system_loader(TRAPS) {
 
 ClassLoaderData* SystemDictionary::register_loader(Handle class_loader, TRAPS) {
   if (class_loader() == NULL) return ClassLoaderData::the_null_class_loader_data();
+  if (is_ext_class_loader(class_loader)) { // CodeRevive
+    _ext_loader = class_loader();
+  }
   return ClassLoaderDataGraph::find_or_create(class_loader, THREAD);
 }
 
@@ -1849,6 +1860,7 @@ bool SystemDictionary::do_unloading(BoolObjectClosure* is_alive, bool clean_aliv
 
 void SystemDictionary::roots_oops_do(OopClosure* strong, OopClosure* weak) {
   strong->do_oop(&_java_system_loader);
+  strong->do_oop(&_ext_loader); // CodeRevive
   strong->do_oop(&_system_loader_lock_obj);
   CDS_ONLY(SystemDictionaryShared::roots_oops_do(strong);)
 
@@ -1861,6 +1873,7 @@ void SystemDictionary::roots_oops_do(OopClosure* strong, OopClosure* weak) {
 
 void SystemDictionary::oops_do(OopClosure* f) {
   f->do_oop(&_java_system_loader);
+  f->do_oop(&_ext_loader); // CodeRevive
   f->do_oop(&_system_loader_lock_obj);
   CDS_ONLY(SystemDictionaryShared::oops_do(f);)
 
@@ -2048,12 +2061,11 @@ void SystemDictionary::initialize_preloaded_classes(TRAPS) {
   InstanceKlass::cast(WK_KLASS(Reference_klass))->set_reference_type(REF_OTHER);
   InstanceRefKlass::update_nonstatic_oop_maps(WK_KLASS(Reference_klass));
 
-  initialize_wk_klasses_through(WK_KLASS_ENUM_NAME(Cleaner_klass), scan, CHECK);
+  initialize_wk_klasses_through(WK_KLASS_ENUM_NAME(PhantomReference_klass), scan, CHECK);
   InstanceKlass::cast(WK_KLASS(SoftReference_klass))->set_reference_type(REF_SOFT);
   InstanceKlass::cast(WK_KLASS(WeakReference_klass))->set_reference_type(REF_WEAK);
   InstanceKlass::cast(WK_KLASS(FinalReference_klass))->set_reference_type(REF_FINAL);
   InstanceKlass::cast(WK_KLASS(PhantomReference_klass))->set_reference_type(REF_PHANTOM);
-  InstanceKlass::cast(WK_KLASS(Cleaner_klass))->set_reference_type(REF_CLEANER);
 
   initialize_wk_klasses_through(WK_KLASS_ENUM_NAME(ReferenceQueue_klass), scan, CHECK);
 

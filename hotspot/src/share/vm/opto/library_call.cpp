@@ -6211,7 +6211,7 @@ bool LibraryCallKit::inline_updateCRC32() {
   Node* result = _gvn.transform(new (C) XorINode(crc, b));
   result = _gvn.transform(new (C) AndINode(result, intcon(0xFF)));
 
-  Node* base = makecon(TypeRawPtr::make(StubRoutines::crc_table_addr()));
+  Node* base = makecon(TypeRawPtr::make(StubRoutines::crc_table_addr(), true));
   Node* offset = _gvn.transform(new (C) LShiftINode(result, intcon(0x2)));
   Node* adr = basic_plus_adr(top(), base, ConvI2X(offset));
   result = make_load(control(), adr, TypeInt::INT, T_INT, MemNode::unordered);

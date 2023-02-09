@@ -90,7 +90,7 @@ public class Settings extends TestHelper {
              * after aligning up all parts to the page size, the final size would be 448KB.
              * See details in JDK-8163363
              */
-            stackSize = "448";
+            stackSize = "472";
         }
         TestResult tr = null;
         tr = doExec(javaCmd, "-Xms64m", "-Xmx512m",

@@ -62,6 +62,7 @@ Monitor* StringDedupQueue_lock        = NULL;
 Mutex*   StringDedupTable_lock        = NULL;
 Mutex*   CodeCache_lock               = NULL;
 Mutex*   MethodData_lock              = NULL;
+Mutex*   DirWithClassTable_lock       = NULL;
 Mutex*   RetData_lock                 = NULL;
 Monitor* VMOperationQueue_lock        = NULL;
 Monitor* VMOperationRequest_lock      = NULL;
@@ -230,6 +231,7 @@ void mutex_init() {
   def(SignatureHandlerLibrary_lock , Mutex  , leaf,        false);
   def(SymbolTable_lock             , Mutex  , leaf+2,      true );
   def(StringTable_lock             , Mutex  , leaf,        true );
+  def(DirWithClassTable_lock       , Mutex  , leaf,        true );
   def(ProfilePrint_lock            , Mutex  , leaf,        false); // serial profile printing
   def(ExceptionCache_lock          , Mutex  , leaf,        false); // serial profile printing
   def(OsrList_lock                 , Mutex  , leaf,        true );

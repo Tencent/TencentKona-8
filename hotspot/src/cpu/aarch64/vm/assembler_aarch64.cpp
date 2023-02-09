@@ -109,14 +109,14 @@ void entry(CodeBuffer *cb) {
     __ eor(r25, r28, r1, Assembler::LSL, 51);          //       eor     x25, x28, x1, LSL #51
     __ ands(r10, r27, r11, Assembler::ASR, 15);        //       ands    x10, x27, x11, ASR #15
     __ andw(r25, r5, r12, Assembler::ASR, 23);         //       and     w25, w5, w12, ASR #23
-    __ orrw(r18, r14, r10, Assembler::LSR, 4);         //       orr     w18, w14, w10, LSR #4
+    __ orrw(r18_tls, r14, r10, Assembler::LSR, 4);     //       orr     w18, w14, w10, LSR #4
     __ eorw(r4, r21, r5, Assembler::ASR, 22);          //       eor     w4, w21, w5, ASR #22
     __ andsw(r21, r0, r5, Assembler::ASR, 29);         //       ands    w21, w0, w5, ASR #29
     __ bic(r26, r30, r6, Assembler::ASR, 37);          //       bic     x26, x30, x6, ASR #37
     __ orn(r3, r1, r13, Assembler::LSR, 29);           //       orn     x3, x1, x13, LSR #29
     __ eon(r0, r28, r9, Assembler::LSL, 47);           //       eon     x0, x28, x9, LSL #47
     __ bics(r29, r5, r28, Assembler::LSL, 46);         //       bics    x29, x5, x28, LSL #46
-    __ bicw(r9, r18, r7, Assembler::LSR, 20);          //       bic     w9, w18, w7, LSR #20
+    __ bicw(r9, r18_tls, r7, Assembler::LSR, 20);      //       bic     w9, w18, w7, LSR #20
     __ ornw(r26, r13, r25, Assembler::ASR, 24);        //       orn     w26, w13, w25, ASR #24
     __ eonw(r25, r4, r19, Assembler::LSL, 6);          //       eon     w25, w4, w19, LSL #6
     __ bicsw(r5, r26, r4, Assembler::LSR, 24);         //       bics    w5, w26, w4, LSR #24
@@ -289,10 +289,10 @@ void entry(CodeBuffer *cb) {
     __ ldarw(r22, r2);                                 //       ldar    w22, [x2]
 
 // LoadStoreExclusiveOp
-    __ stxrh(r18, r15, r0);                            //       stxrh   w18, w15, [x0]
+    __ stxrh(r18_tls, r15, r0);                        //       stxrh   w18, w15, [x0]
     __ stlxrh(r11, r5, r28);                           //       stlxrh  w11, w5, [x28]
     __ ldxrh(r29, r6);                                 //       ldxrh   w29, [x6]
-    __ ldaxrh(r18, r7);                                //       ldaxrh  w18, [x7]
+    __ ldaxrh(r18_tls, r7);                            //       ldaxrh  w18, [x7]
     __ stlrh(r25, r28);                                //       stlrh   w25, [x28]
     __ ldarh(r2, r19);                                 //       ldarh   w2, [x19]
 
@@ -314,7 +314,7 @@ void entry(CodeBuffer *cb) {
     __ ldxpw(r25, r4, r22);                            //       ldxp    w25, w4, [x22]
     __ ldaxpw(r13, r14, r15);                          //       ldaxp   w13, w14, [x15]
     __ stxpw(r20, r26, r8, r10);                       //       stxp    w20, w26, w8, [x10]
-    __ stlxpw(r23, r18, r18, r18);                     //       stlxp   w23, w18, w18, [x18]
+    __ stlxpw(r23, r18_tls, r18_tls, r18_tls);         //       stlxp   w23, w18, w18, [x18]
 
 // base_plus_unscaled_offset
 // LoadStoreOp
@@ -332,14 +332,14 @@ void entry(CodeBuffer *cb) {
     __ ldrsw(r17, Address(r17, -91));                  //       ldrsw   x17, [x17, -91]
     __ ldrd(v2, Address(r20, -17));                    //       ldr     d2, [x20, -17]
     __ ldrs(v22, Address(r7, -10));                    //       ldr     s22, [x7, -10]
-    __ strd(v30, Address(r18, -223));                  //       str     d30, [x18, -223]
+    __ strd(v30, Address(r18_tls, -223));              //       str     d30, [x18, -223]
     __ strs(v13, Address(r22, 21));                    //       str     s13, [x22, 21]
 
 // pre
 // LoadStoreOp
-    __ str(r9, Address(__ pre(r18, -112)));            //       str     x9, [x18, -112]!
+    __ str(r9, Address(__ pre(r18_tls, -112)));        //       str     x9, [x18, -112]!
     __ strw(r29, Address(__ pre(r23, 11)));            //       str     w29, [x23, 11]!
-    __ strb(r18, Address(__ pre(r12, -1)));            //       strb    w18, [x12, -1]!
+    __ strb(r18_tls, Address(__ pre(r12, -1)));        //       strb    w18, [x12, -1]!
     __ strh(r16, Address(__ pre(r20, -23)));           //       strh    w16, [x20, -23]!
     __ ldr(r3, Address(__ pre(r29, 9)));               //       ldr     x3, [x29, 9]!
     __ ldrw(r25, Address(__ pre(r3, 19)));             //       ldr     w25, [x3, 19]!
@@ -359,10 +359,10 @@ void entry(CodeBuffer *cb) {
     __ str(r5, Address(__ post(r11, 37)));             //       str     x5, [x11], 37
     __ strw(r24, Address(__ post(r15, 19)));           //       str     w24, [x15], 19
     __ strb(r15, Address(__ post(r26, -1)));           //       strb    w15, [x26], -1
-    __ strh(r18, Address(__ post(r18, -6)));           //       strh    w18, [x18], -6
+    __ strh(r18_tls, Address(__ post(r18_tls, -6)));   //       strh    w18, [x18], -6
     __ ldr(r7, Address(__ post(r2, -230)));            //       ldr     x7, [x2], -230
     __ ldrw(r27, Address(__ post(r11, -27)));          //       ldr     w27, [x11], -27
-    __ ldrb(r18, Address(__ post(r3, -25)));           //       ldrb    w18, [x3], -25
+    __ ldrb(r18_tls, Address(__ post(r3, -25)));       //       ldrb    w18, [x3], -25
     __ ldrh(r10, Address(__ post(r24, -32)));          //       ldrh    w10, [x24], -32
     __ ldrsb(r22, Address(__ post(r10, 4)));           //       ldrsb   x22, [x10], 4
     __ ldrsh(r17, Address(__ post(r12, 25)));          //       ldrsh   x17, [x12], 25
@@ -377,7 +377,7 @@ void entry(CodeBuffer *cb) {
 // LoadStoreOp
     __ str(r2, Address(r22, r15, Address::sxtw(0)));   //       str     x2, [x22, w15, sxtw #0]
     __ strw(r2, Address(r16, r29, Address::lsl(0)));   //       str     w2, [x16, x29, lsl #0]
-    __ strb(r20, Address(r18, r14, Address::uxtw(0))); //       strb    w20, [x18, w14, uxtw #0]
+    __ strb(r20, Address(r18_tls, r14, Address::uxtw(0))); //       strb    w20, [x18, w14, uxtw #0]
     __ strh(r6, Address(r19, r20, Address::sxtx(1)));  //       strh    w6, [x19, x20, sxtx #1]
     __ ldr(r14, Address(r29, r14, Address::sxtw(0)));  //       ldr     x14, [x29, w14, sxtw #0]
     __ ldrw(r16, Address(r20, r12, Address::sxtw(2))); //       ldr     w16, [x20, w12, sxtw #2]
@@ -385,7 +385,7 @@ void entry(CodeBuffer *cb) {
     __ ldrh(r12, Address(r17, r3, Address::lsl(1)));   //       ldrh    w12, [x17, x3, lsl #1]
     __ ldrsb(r2, Address(r17, r3, Address::sxtx(0)));  //       ldrsb   x2, [x17, x3, sxtx #0]
     __ ldrsh(r7, Address(r1, r17, Address::uxtw(1)));  //       ldrsh   x7, [x1, w17, uxtw #1]
-    __ ldrshw(r25, Address(r15, r18, Address::sxtw(1))); //     ldrsh   w25, [x15, w18, sxtw #1]
+    __ ldrshw(r25, Address(r15, r18_tls, Address::sxtw(1))); //     ldrsh   w25, [x15, w18, sxtw #1]
     __ ldrsw(r23, Address(r21, r12, Address::lsl(0))); //       ldrsw   x23, [x21, x12, lsl #0]
     __ ldrd(v5, Address(r13, r8, Address::lsl(3)));    //       ldr     d5, [x13, x8, lsl #3]
     __ ldrs(v3, Address(r10, r22, Address::lsl(2)));   //       ldr     s3, [x10, x22, lsl #2]
@@ -431,7 +431,7 @@ void entry(CodeBuffer *cb) {
 // AddSubCarryOp
     __ adcw(r13, r9, r28);                             //       adc     w13, w9, w28
     __ adcsw(r27, r19, r28);                           //       adcs    w27, w19, w28
-    __ sbcw(r19, r18, r6);                             //       sbc     w19, w18, w6
+    __ sbcw(r19, r18_tls, r6);                         //       sbc     w19, w18, w6
     __ sbcsw(r14, r20, r3);                            //       sbcs    w14, w20, w3
     __ adc(r16, r14, r8);                              //       adc     x16, x14, x8
     __ adcs(r0, r29, r8);                              //       adcs    x0, x29, x8
@@ -464,7 +464,7 @@ void entry(CodeBuffer *cb) {
     __ cselw(r21, r13, r12, Assembler::GT);            //       csel    w21, w13, w12, GT
     __ csincw(r10, r27, r15, Assembler::LS);           //       csinc   w10, w27, w15, LS
     __ csinvw(r0, r13, r9, Assembler::HI);             //       csinv   w0, w13, w9, HI
-    __ csnegw(r18, r4, r26, Assembler::VS);            //       csneg   w18, w4, w26, VS
+    __ csnegw(r18_tls, r4, r26, Assembler::VS);        //       csneg   w18, w4, w26, VS
     __ csel(r12, r29, r7, Assembler::LS);              //       csel    x12, x29, x7, LS
     __ csinc(r6, r7, r20, Assembler::VC);              //       csinc   x6, x7, x20, VC
     __ csinv(r22, r21, r3, Assembler::LE);             //       csinv   x22, x21, x3, LE
@@ -487,9 +487,9 @@ void entry(CodeBuffer *cb) {
     __ udivw(r29, r4, r0);                             //       udiv    w29, w4, w0
     __ sdivw(r0, r29, r29);                            //       sdiv    w0, w29, w29
     __ lslvw(r5, r17, r21);                            //       lslv    w5, w17, w21
-    __ lsrvw(r9, r9, r18);                             //       lsrv    w9, w9, w18
+    __ lsrvw(r9, r9, r18_tls);                         //       lsrv    w9, w9, w18
     __ asrvw(r1, r27, r8);                             //       asrv    w1, w27, w8
-    __ rorvw(r18, r20, r13);                           //       rorv    w18, w20, w13
+    __ rorvw(r18_tls, r20, r13);                       //       rorv    w18, w20, w13
     __ udiv(r8, r25, r12);                             //       udiv    x8, x25, x12
     __ sdiv(r7, r5, r28);                              //       sdiv    x7, x5, x28
     __ lslv(r5, r17, r27);                             //       lslv    x5, x17, x27
@@ -504,8 +504,8 @@ void entry(CodeBuffer *cb) {
     __ msub(r30, r6, r30, r8);                         //       msub    x30, x6, x30, x8
     __ smaddl(r21, r6, r14, r8);                       //       smaddl  x21, w6, w14, x8
     __ smsubl(r10, r10, r24, r19);                     //       smsubl  x10, w10, w24, x19
-    __ umaddl(r20, r18, r14, r24);                     //       umaddl  x20, w18, w14, x24
-    __ umsubl(r18, r2, r5, r5);                        //       umsubl  x18, w2, w5, x5
+    __ umaddl(r20, r18_tls, r14, r24);                 //       umaddl  x20, w18, w14, x24
+    __ umsubl(r18_tls, r2, r5, r5);                    //       umsubl  x18, w2, w5, x5
 
 // ThreeRegFloatOp
     __ fmuls(v8, v18, v13);                            //       fmul    s8, s18, s13
@@ -563,7 +563,7 @@ void entry(CodeBuffer *cb) {
 
 // LoadStorePairOp
     __ stpw(r29, r12, Address(r17, 128));              //       stp     w29, w12, [x17, #128]
-    __ ldpw(r22, r18, Address(r14, -96));              //       ldp     w22, w18, [x14, #-96]
+    __ ldpw(r22, r18_tls, Address(r14, -96));          //       ldp     w22, w18, [x14, #-96]
     __ ldpsw(r11, r16, Address(r1, 64));               //       ldpsw   x11, x16, [x1, #64]
     __ stp(r0, r11, Address(r26, 112));                //       stp     x0, x11, [x26, #112]
     __ ldp(r7, r1, Address(r26, 16));                  //       ldp     x7, x1, [x26, #16]
@@ -572,7 +572,7 @@ void entry(CodeBuffer *cb) {
     __ stpw(r10, r7, Address(__ pre(r24, 0)));         //       stp     w10, w7, [x24, #0]!
     __ ldpw(r7, r28, Address(__ pre(r24, -256)));      //       ldp     w7, w28, [x24, #-256]!
     __ ldpsw(r25, r28, Address(__ pre(r21, -240)));    //       ldpsw   x25, x28, [x21, #-240]!
-    __ stp(r20, r18, Address(__ pre(r14, -16)));       //       stp     x20, x18, [x14, #-16]!
+    __ stp(r20, r18_tls, Address(__ pre(r14, -16)));   //       stp     x20, x18, [x14, #-16]!
     __ ldp(r8, r10, Address(__ pre(r13, 80)));         //       ldp     x8, x10, [x13, #80]!
 
 // LoadStorePairOp

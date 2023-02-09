@@ -36,6 +36,9 @@
 #include "runtime/deoptimization.hpp"
 #include "runtime/handles.inline.hpp"
 
+// CodeRevive
+#include "cr/revive.hpp"
+
 //=============================================================================
 // Helper methods for _get* and _put* bytecodes
 //=============================================================================
@@ -146,7 +149,7 @@ void Parse::do_field_access(bool is_get, bool is_field) {
 
 void Parse::do_get_xxx(Node* obj, ciField* field, bool is_field) {
   // Does this field have a constant value?  If so, just push the value.
-  if (field->is_constant()) {
+  if (field->is_constant() && !CodeRevive::is_save()) {
     // final or stable field
     const Type* stable_type = NULL;
     if (FoldStableValues && field->is_stable()) {
@@ -182,7 +185,7 @@ void Parse::do_get_xxx(Node* obj, ciField* field, bool is_field) {
       // Treat final non-static fields of trusted classes (classes in
       // java.lang.invoke and sun.invoke packages and subpackages) as
       // compile time constants.
-      if (obj->is_Con()) {
+      if (obj->is_Con() && !CodeRevive::is_save()) {
         const TypeOopPtr* oop_ptr = obj->bottom_type()->isa_oopptr();
         ciObject* constant_oop = oop_ptr->const_oop();
         ciConstant constant = field->constant_value_of(constant_oop);
@@ -215,7 +218,7 @@ void Parse::do_get_xxx(Node* obj, ciField* field, bool is_field) {
     if (!field->type()->is_loaded()) {
       type = TypeInstPtr::BOTTOM;
       must_assert_null = true;
-    } else if (field->is_constant() && field->is_static()) {
+    } else if (field->is_constant() && field->is_static() && !CodeRevive::is_save()) {
       // This can happen if the constant oop is non-perm.
       ciObject* con = field->constant_value().as_object();
       // Do not "join" in the previous type; it doesn't add value,

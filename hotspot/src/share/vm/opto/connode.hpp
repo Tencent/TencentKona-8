@@ -71,11 +71,11 @@ public:
   virtual int Opcode() const;
 
   // Factory methods:
-  static ConPNode* make( Compile *C ,address con ) {
+  static ConPNode* make( Compile *C ,address con, bool reloc) {
     if (con == NULL)
       return new (C) ConPNode( TypePtr::NULL_PTR ) ;
     else
-      return new (C) ConPNode( TypeRawPtr::make(con) );
+      return new (C) ConPNode( TypeRawPtr::make(con, reloc) );
   }
 };
 

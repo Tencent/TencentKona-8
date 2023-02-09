@@ -104,6 +104,9 @@
 #include "jfr/jfr.hpp"
 #endif
 
+// CodeRevive
+#include "cr/revive.hpp"
+
 #ifndef USDT2
 HS_DTRACE_PROBE_DECL(hotspot, vm__shutdown);
 #endif /* !USDT2 */
@@ -534,6 +537,8 @@ void before_exit(JavaThread * thread) {
     event.set_thread(JFR_THREAD_ID(thread));
     event.commit();
   }
+
+  CodeRevive::on_vm_shutdown();
 
   JFR_ONLY(Jfr::on_vm_shutdown();)
 

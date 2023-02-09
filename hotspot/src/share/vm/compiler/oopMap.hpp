@@ -167,7 +167,7 @@ class OopMap: public ResourceObj {
   OopMap(DeepCopyToken, OopMap* source);  // used only by deep_copy
 
  public:
-  OopMap(int frame_size, int arg_count);
+  OopMap(int frame_size, int arg_count, bool dummy = false);
 
   // pc-offset handling
   int offset() const     { return _pc_offset; }
@@ -200,6 +200,9 @@ class OopMap: public ResourceObj {
   // Printing
   void print_on(outputStream* st) const;
   void print() const { print_on(tty); }
+
+  // CodeRevive
+  friend class CodeReviveCodeBlob;
 };
 
 
@@ -221,7 +224,7 @@ class OopMapSet : public ResourceObj {
   void set(int index,OopMap* value) { assert((index == 0) || ((index > 0) && (index < om_size())),"bad index"); _om_data[index] = value; }
 
  public:
-  OopMapSet();
+  OopMapSet(bool dummy = false);
 
   // returns the number of OopMaps in this OopMapSet
   int size() const            { return _om_count; }
@@ -259,6 +262,9 @@ class OopMapSet : public ResourceObj {
   // Printing
   void print_on(outputStream* st) const;
   void print() const { print_on(tty); }
+
+  // CodeRevive
+  friend class CodeReviveCodeBlob;
 };
 
 

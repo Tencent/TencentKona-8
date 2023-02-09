@@ -4068,6 +4068,9 @@ class CommandLineFlags {
   product(bool, RelaxCheckForAppCDS, false,                                 \
           "Relax the check for AppCDS")                                     \
                                                                             \
+  product(ccstr, RecordClasspathForCDSDump, NULL,                           \
+          "Specify the classpath with wildcard during dump shared archive") \
+                                                                            \
   experimental(uintx, ArrayAllocatorMallocLimit,                            \
           SOLARIS_ONLY(64*K) NOT_SOLARIS(max_uintx),                        \
           "Allocation less than this value will be allocated "              \
@@ -4111,6 +4114,23 @@ class CommandLineFlags {
                                                                             \
   diagnostic(bool, PrintAsyncGCLog, false,                                  \
           "Print some information of Async GC Log")                         \
+                                                                            \
+  /* CodeRevive */                                                          \
+  develop(bool, PrintNMCodeValue, false,                                    \
+          "Print oops & metadata for all nmethods when generated")          \
+                                                                            \
+  develop(bool, PrintOptRecords, false,                                     \
+          "Print optimization records for all nmethods when generated")     \
+                                                                            \
+  product(ccstrlist, ReviveOnly, "",                                        \
+          "List of methods (pkg/class.name) to restrict revive to")         \
+                                                                            \
+  product(ccstr, CodeReviveOptions, NULL,                                   \
+          "Save and restore JIT compiled code options")                     \
+                                                                            \
+  product(ccstr, CodeReviveOptionsFile, NULL,                               \
+          "Save and restore JIT compiled code options stored in file")
+
 
 /*
  *  Macros for factoring of globals

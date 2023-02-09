@@ -568,6 +568,13 @@ void ciCallProfile::add_receiver(ciKlass* receiver, int receiver_count) {
   if (_limit < MorphismLimit) _limit++;
 }
 
+// CodeRevive: print ciCallProfile
+void ciCallProfile::print_on(outputStream* out) {
+  out->print_cr("ciCallProfile limit %d, morphism %d, count %d", _limit, _morphism, _count);
+  for (int i = 0; i < _limit; i++) {
+    out->print_cr("\t%d: %d, %s", i, _receiver_count[i], _receiver[i]->name()->as_quoted_ascii());
+  }
+}
 
 void ciMethod::assert_virtual_call_type_ok(int bci) {
   assert(java_code_at_bci(bci) == Bytecodes::_invokevirtual ||

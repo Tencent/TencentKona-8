@@ -297,6 +297,9 @@ public:
     assert(!_defunct, "Use of invalid CodeStrings");
 #endif
   }
+
+  // CodeRevive
+  friend class CodeReviveCodeBlob;
 };
 
 // A CodeBuffer describes a memory space into which assembly

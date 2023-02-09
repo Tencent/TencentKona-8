@@ -99,6 +99,8 @@
   template(WhiteBoxOperation)                     \
   template(ClassLoaderStatsOperation)             \
   template(JFROldObject)                          \
+  /* CodeRevive */                                \
+  template(DumpSharedCodeSpace)                   \
 
 class VM_Operation: public CHeapObj<mtInternal> {
  public:

@@ -386,7 +386,7 @@ extern Mutex* tty_lock;
 char* get_datetime_string(char *buf, size_t len) {
   os::local_time_string(buf, len);
   int i = (int)strlen(buf);
-  while (i-- >= 0) {
+  while (--i >= 0) {
     if (buf[i] == ' ') buf[i] = '_';
     else if (buf[i] == ':') buf[i] = '-';
   }
@@ -496,7 +496,7 @@ static const char* make_log_name_internal(const char* log_name, const char* forc
 // -XX:DumpLoadedClassList=<file_name>
 // in log_name, %p => pid1234 and
 //              %t => YYYY-MM-DD_HH-MM-SS
-static const char* make_log_name(const char* log_name, const char* force_directory) {
+const char* make_log_name(const char* log_name, const char* force_directory) {
   char timestr[32];
   get_datetime_string(timestr, sizeof(timestr));
   return make_log_name_internal(log_name, force_directory, os::current_process_id(),

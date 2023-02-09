@@ -44,6 +44,9 @@
 #include "runtime/sharedRuntime.hpp"
 #include "runtime/stubRoutines.hpp"
 #include "runtime/timer.hpp"
+#include "runtime/vframeArray.hpp"
+#include "utilities/debug.hpp"
+#include "utilities/macros.hpp"
 
 # define __ _masm->
 
@@ -463,27 +466,6 @@ bool AbstractInterpreter::bytecode_should_reexecute(Bytecodes::Code code) {
 
     default:
       return false;
-  }
-}
-
-void AbstractInterpreterGenerator::bang_stack_shadow_pages(bool native_call) {
-  // Quick & dirty stack overflow checking: bang the stack & handle trap.
-  // Note that we do the banging after the frame is setup, since the exception
-  // handling code expects to find a valid interpreter frame on the stack.
-  // Doing the banging earlier fails if the caller frame is not an interpreter
-  // frame.
-  // (Also, the exception throwing code expects to unlock any synchronized
-  // method receiever, so do the banging after locking the receiver.)
-
-  // Bang each page in the shadow zone. We can't assume it's been done for
-  // an interpreter frame with greater than a page of locals, so each page
-  // needs to be checked.  Only true for non-native.
-  if (UseStackBanging) {
-    const int start_page = native_call ? StackShadowPages : 1;
-    const int page_size = os::vm_page_size();
-    for (int pages = start_page; pages <= StackShadowPages ; pages++) {
-      __ bang_stack_with_offset(pages*page_size);
-    }
   }
 }
 

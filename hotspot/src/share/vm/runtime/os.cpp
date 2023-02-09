@@ -47,6 +47,7 @@
 #include "runtime/mutexLocker.hpp"
 #include "runtime/os.hpp"
 #include "runtime/stubRoutines.hpp"
+#include "runtime/stubRoutines.inline.hpp"
 #include "runtime/thread.inline.hpp"
 #include "services/attachListener.hpp"
 #include "services/nmtCommon.hpp"
@@ -632,6 +633,11 @@ void* os::malloc(size_t size, MEMFLAGS memflags, const NativeCallStack& stack) {
   NMT_TrackingLevel level = MemTracker::tracking_level();
   size_t            nmt_header_size = MemTracker::malloc_header_size(level);
 
+  // Check for overflow.
+  if (size + nmt_header_size < size) {
+    return NULL;
+  }
+
 #ifndef ASSERT
   const size_t alloc_size = size + nmt_header_size;
 #else
@@ -887,8 +893,12 @@ void os::print_date_and_time(outputStream *st, char* buf, size_t buflen) {
 
   struct tm tz;
   if (localtime_pd(&tloc, &tz) != NULL) {
-    ::strftime(buf, buflen, "%Z", &tz);
-    st->print_cr("timezone: %s", buf);
+    wchar_t w_buf[80];
+    size_t n = ::wcsftime(w_buf, 80, L"%Z", &tz);
+    if (n > 0) {
+      ::wcstombs(buf, w_buf, buflen);
+      st->print_cr("timezone: %s", buf);
+    }
   }
 
   double t = os::elapsedTime();
@@ -1352,11 +1362,9 @@ bool os::stack_shadow_pages_available(Thread *thread, methodHandle method) {
   // respectively.
   const int framesize_in_bytes =
     Interpreter::size_top_interpreter_activation(method()) * wordSize;
-  int reserved_area = ((StackShadowPages + StackRedPages + StackYellowPages)
-                      * vm_page_size()) + framesize_in_bytes;
   // The very lower end of the stack
-  address stack_limit = thread->stack_base() - thread->stack_size();
-  return (sp > (stack_limit + reserved_area));
+  address stack_limit = ((JavaThread*)thread)->shadow_zone_safe_limit();
+  return (sp > (stack_limit + framesize_in_bytes));
 }
 
 size_t os::page_size_for_region(size_t region_size, size_t min_pages, bool must_be_aligned) {
@@ -1473,8 +1481,12 @@ bool os::create_stack_guard_pages(char* addr, size_t bytes) {
   return os::pd_create_stack_guard_pages(addr, bytes);
 }
 
-char* os::reserve_memory(size_t bytes, char* addr, size_t alignment_hint) {
-  char* result = pd_reserve_memory(bytes, addr, alignment_hint);
+MACOS_ONLY(char* os::reserve_memory(size_t bytes, char* addr, size_t alignment_hint, bool executable))
+NOT_MACOS(char* os::reserve_memory(size_t bytes, char* addr, size_t alignment_hint)) {
+  char* result = NULL;
+  result = MACOS_ONLY(pd_reserve_memory(bytes, addr, alignment_hint, executable))
+           NOT_MACOS(pd_reserve_memory(bytes, addr, alignment_hint));
+
   if (result != NULL) {
     MemTracker::record_virtual_memory_reserve((address)result, bytes, CALLER_PC);
   }
@@ -1535,16 +1547,19 @@ void os::commit_memory_or_exit(char* addr, size_t size, size_t alignment_hint,
   MemTracker::record_virtual_memory_commit((address)addr, size, CALLER_PC);
 }
 
-bool os::uncommit_memory(char* addr, size_t bytes) {
+MACOS_ONLY(bool os::uncommit_memory(char* addr, size_t bytes, bool executable))
+NOT_MACOS(bool os::uncommit_memory(char* addr, size_t bytes)) {
   bool res;
   if (MemTracker::tracking_level() > NMT_minimal) {
     Tracker tkr = MemTracker::get_virtual_memory_uncommit_tracker();
-    res = pd_uncommit_memory(addr, bytes);
+    res = MACOS_ONLY(pd_uncommit_memory(addr, bytes, executable))
+          NOT_MACOS(pd_uncommit_memory(addr, bytes));
     if (res) {
       tkr.record((address)addr, bytes);
     }
   } else {
-    res = pd_uncommit_memory(addr, bytes);
+    res = MACOS_ONLY(pd_uncommit_memory(addr, bytes, executable))
+          NOT_MACOS(pd_uncommit_memory(addr, bytes));
   }
   return res;
 }
