@@ -81,6 +81,11 @@ class Metadata : public MetaspaceObj {
   // during class redefinition.  This is a virtual call because only methods
   // and constant pools need to be set, but someday instanceKlasses might also.
   static void mark_on_stack(Metadata* m) { m->set_on_stack(true); }
+
+  // CodeRevive:
+ public:
+  virtual int csa_meta_index() const { return -1; }
+  virtual void set_csa_meta_index(int index) { }
 };
 
 #endif // SHARE_VM_OOPS_METADATA_HPP

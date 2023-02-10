@@ -37,6 +37,7 @@
 #include "classfile/verificationType.hpp"
 #include "classfile/verifier.hpp"
 #include "classfile/vmSymbols.hpp"
+#include "cr/revive.hpp"
 #include "memory/allocation.hpp"
 #include "memory/gcLocker.hpp"
 #include "memory/metadataFactory.hpp"
@@ -4059,6 +4060,10 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
       }
     }
 #endif
+    // CodeRevive: check whether there are some classes loading from directory
+    if (CodeRevive::is_on() && cfs->source() != NULL && SystemDictionary::is_app_class_loader(class_loader)) {
+      CodeRevive::check_dir_path(cfs->source(), THREAD);
+    }
 
     u2 super_class_index = cfs->get_u2_fast();
     instanceKlassHandle super_klass = parse_super_class(super_class_index,

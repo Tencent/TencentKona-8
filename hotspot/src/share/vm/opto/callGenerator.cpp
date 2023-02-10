@@ -97,6 +97,19 @@ JVMState* ParseGenerator::generate(JVMState* jvms) {
     return NULL;
   }
 
+  // CodeRevive: record inline information
+  if (CodeRevive::is_save() && jvms->has_method() && C->is_osr_compilation() == false) {
+    guarantee(jvms->bci() != -1 , "should be");
+    // exclude simple inline cases
+    if (!(method()->is_accessor() ||
+          // method()->is_initializer() ||
+          method()->code_size() <= MaxTrivialSize ||
+          method()->is_boxing_method() ||
+          method()->is_unboxing_method())) {
+      C->env()->opt_records()->add_InlineRecord(jvms->method(), method(), jvms->bci());
+    }
+  }
+
   assert(exits.jvms()->same_calls_as(jvms), "sanity");
 
   // Simply return the exit state of the parser,

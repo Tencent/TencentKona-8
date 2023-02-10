@@ -81,7 +81,11 @@ void OopMapStream::find_next() {
 
 // frame_size units are stack-slots (4 bytes) NOT intptr_t; we can name odd
 // slots to hold 4-byte values like ints and floats in the LP64 build.
-OopMap::OopMap(int frame_size, int arg_count) {
+OopMap::OopMap(int frame_size, int arg_count, bool dummy) {
+  if (dummy) {
+    // CodeRevive: used to get vptr.
+    return;
+  }
   // OopMaps are usually quite so small, so pick a small initial size
   set_write_stream(new CompressedWriteStream(32));
   set_omv_data(NULL);
@@ -202,7 +206,11 @@ void OopMap::set_derived_oop(VMReg reg, VMReg derived_from_local_register ) {
 
 // OopMapSet
 
-OopMapSet::OopMapSet() {
+OopMapSet::OopMapSet(bool dummy) {
+  if (dummy) {
+    // CodeRevive: used to get vptr.
+    return;
+  }
   set_om_size(MinOopMapAllocation);
   set_om_count(0);
   OopMap** temp = NEW_RESOURCE_ARRAY(OopMap*, om_size());

@@ -108,6 +108,7 @@ JavaCallWrapper::JavaCallWrapper(methodHandle callee_method, Handle receiver, Ja
   if (_anchor.last_Java_sp() == NULL) {
     _thread->record_base_of_stack_pointer();
   }
+  MACOS_AARCH64_ONLY(_thread->enable_wx(WXExec));
 }
 
 #if INCLUDE_KONA_FIBER
@@ -126,6 +127,7 @@ void JavaCallWrapper::initialize(JavaThread* thread, JNIHandleBlock* handles, Me
 JavaCallWrapper::~JavaCallWrapper() {
   assert(_thread == JavaThread::current(), "must still be the same thread");
 
+  MACOS_AARCH64_ONLY(_thread->enable_wx(WXWrite));
   // restore previous handle block & Java frame linkage
   JNIHandleBlock *_old_handles = _thread->active_handles();
   _thread->set_active_handles(_handles);

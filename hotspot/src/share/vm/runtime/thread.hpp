@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 1997, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Azul Systems, Inc. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -338,6 +339,7 @@ class Thread: public ThreadShadow {
   virtual bool is_VM_thread()       const            { return false; }
   virtual bool is_Java_thread()     const            { return false; }
   virtual bool is_Compiler_thread() const            { return false; }
+  virtual bool is_service_thread() const             { return false; }
   virtual bool is_hidden_from_external_view() const  { return false; }
   virtual bool is_jvmti_agent_thread() const         { return false; }
   // True iff the thread can perform GC operations at a safepoint.
@@ -582,6 +584,7 @@ protected:
   void    set_stack_base(address base) { _stack_base = base; }
   size_t  stack_size() const           { return _stack_size; }
   void    set_stack_size(size_t size)  { _stack_size = size; }
+  address stack_end()  const           { return stack_base() - stack_size(); }
   void    record_stack_base_and_size();
 
   bool    on_local_stack(address adr) const {
@@ -692,6 +695,15 @@ protected:
   static void muxAcquire  (volatile intptr_t * Lock, const char * Name) ;
   static void muxAcquireW (volatile intptr_t * Lock, ParkEvent * ev) ;
   static void muxRelease  (volatile intptr_t * Lock) ;
+
+#if defined(__APPLE__) && defined(AARCH64)
+ private:
+  DEBUG_ONLY(bool _wx_init);
+  WXMode _wx_state;
+ public:
+  void init_wx();
+  WXMode enable_wx(WXMode new_state);
+#endif // __APPLE__ && AARCH64
 };
 
 // Inline implementation of Thread::current()
@@ -741,6 +753,7 @@ class NamedThread: public Thread {
   ~NamedThread();
   // May only be called once per thread.
   void set_name(const char* format, ...)  ATTRIBUTE_PRINTF(2, 3);
+  void initialize_named_thread();
   virtual bool is_Named_thread() const { return true; }
   virtual char* name() const { return _name == NULL ? (char*)"Unknown Thread" : _name; }
   JavaThread *processed_thread() { return _processed_thread; }
@@ -748,6 +761,7 @@ class NamedThread: public Thread {
 
   void set_gc_id(uint gc_id) { _gc_id = gc_id; }
   uint gc_id() { return _gc_id; }
+  virtual void print_on(outputStream* st) const;
 };
 
 // Worker threads are named and have an id of an assigned work.
@@ -792,7 +806,6 @@ class WatcherThread: public Thread {
   // Printing
   char* name() const { return (char*)"VM Periodic Task Thread"; }
   void print_on(outputStream* st) const;
-  void print() const { print_on(tty); }
   void unpark();
 
   // Returns the single instance of WatcherThread
@@ -816,6 +829,7 @@ typedef void (*ThreadFunction)(JavaThread*, TRAPS);
 class JavaThread: public Thread {
   friend class VMStructs;
  private:
+  bool           _in_asgct;                      // Is set when this JavaThread is handling ASGCT call
   JavaThread*    _next;                          // The next thread in the Threads list
   oop            _threadObj;                     // The Java level thread object
 
@@ -952,6 +966,9 @@ class JavaThread: public Thread {
   // We load it from here to simplify the stack overflow check in assembly.
   address          _stack_overflow_limit;
 
+  address          _shadow_zone_safe_limit;
+  address          _shadow_zone_growth_watermark;
+  address          _shadow_zone_growth_native_watermark;
   // Compiler exception handling (NOTE: The _exception_oop is *NOT* the same as _pending_exception. It is
   // used to temp. parsing values into and out of the runtime system during exception handling for compiled
   // code)
@@ -1366,7 +1383,13 @@ class JavaThread: public Thread {
     { return (a <= stack_yellow_zone_base()) && (a >= stack_red_zone_base()); }
   bool in_stack_red_zone(address a)
     { return (a <= stack_red_zone_base()) && (a >= (address)((intptr_t)stack_base() - stack_size())); }
+  static size_t stack_shadow_zone_size()
+    { return StackShadowPages * os::vm_page_size(); }
 
+  address shadow_zone_safe_limit() const {
+    assert(_shadow_zone_safe_limit != NULL, "Don't call this before the field is initialized.");
+    return _shadow_zone_safe_limit;
+  }
   void create_stack_guard_pages();
   void remove_stack_guard_pages();
 
@@ -1398,6 +1421,12 @@ class JavaThread: public Thread {
                               StackRedPages) * os::vm_page_size());
   }
 
+ void set_shadow_zone_limits() {
+  _shadow_zone_safe_limit =
+     Thread::stack_end() + JavaThread::stack_red_zone_size() + JavaThread::stack_yellow_zone_size() + JavaThread::stack_shadow_zone_size();
+  _shadow_zone_growth_watermark = JavaThread::stack_base();
+  _shadow_zone_growth_native_watermark = JavaThread::stack_base();
+ }
   // Misc. accessors/mutators
   void set_do_not_unlock(void)                   { _do_not_unlock_if_synchronized = true; }
   void clr_do_not_unlock(void)                   { _do_not_unlock_if_synchronized = false; }
@@ -1435,6 +1464,9 @@ class JavaThread: public Thread {
   static ByteSize stack_overflow_limit_offset()  { return byte_offset_of(JavaThread, _stack_overflow_limit); }
   static ByteSize is_method_handle_return_offset() { return byte_offset_of(JavaThread, _is_method_handle_return); }
   static ByteSize stack_guard_state_offset()     { return byte_offset_of(JavaThread, _stack_guard_state   ); }
+  static ByteSize shadow_zone_safe_limit_offset() { return byte_offset_of(JavaThread, _shadow_zone_safe_limit);}
+  static ByteSize shadow_zone_growth_watermark_offset() { return byte_offset_of(JavaThread, _shadow_zone_growth_watermark);}
+  static ByteSize shadow_zone_growth_native_watermark_offset() { return byte_offset_of(JavaThread, _shadow_zone_growth_native_watermark);}
   static ByteSize suspend_flags_offset()         { return byte_offset_of(JavaThread, _suspend_flags       ); }
 #if INCLUDE_KONA_FIBER
   static ByteSize current_coro_offset()          { return byte_offset_of(JavaThread,_current_coroutine    ); }
@@ -1857,6 +1889,10 @@ private:
 public:
   uint get_claimed_par_id() { return _claimed_par_id; }
   void set_claimed_par_id(uint id) { _claimed_par_id = id;}
+
+  // AsyncGetCallTrace support
+  inline bool in_asgct(void) {return _in_asgct;}
+  inline void set_in_asgct(bool value) {_in_asgct = value;}
 };
 
 // Inline implementation of JavaThread::current

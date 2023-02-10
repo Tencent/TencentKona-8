@@ -35,6 +35,7 @@
 #include "runtime/icache.hpp"
 #include "runtime/interfaceSupport.hpp"
 #include "runtime/signature.hpp"
+#include "utilities/align.hpp"
 
 #define __ _masm->
 
@@ -42,6 +43,98 @@
 Register InterpreterRuntime::SignatureHandlerGenerator::from() { return rlocals; }
 Register InterpreterRuntime::SignatureHandlerGenerator::to()   { return sp; }
 Register InterpreterRuntime::SignatureHandlerGenerator::temp() { return rscratch1; }
+
+// On macos/aarch64 native stack is packed, int/float are using only 4 bytes
+// on stack. Natural alignment for types are still in place,
+// for example double/long should be 8 bytes aligned.
+int InterpreterRuntime::SignatureHandlerGenerator::next_stack_offset(unsigned elem_size) {
+  MACOS_ONLY(_stack_offset = align_up(_stack_offset, elem_size));
+  int ret = _stack_offset;
+  _stack_offset += NOT_MACOS(wordSize) MACOS_ONLY(elem_size);
+  return ret;
+}
+
+void InterpreterRuntime::SignatureHandlerGenerator::pass_byte() {
+  const Address src(from(), Interpreter::local_offset_in_bytes(offset()));
+
+  switch (_num_int_args) {
+  case 0:
+    __ ldr(c_rarg1, src);
+    _num_int_args++;
+    break;
+  case 1:
+    __ ldr(c_rarg2, src);
+    _num_int_args++;
+    break;
+  case 2:
+    __ ldr(c_rarg3, src);
+    _num_int_args++;
+    break;
+  case 3:
+    __ ldr(c_rarg4, src);
+    _num_int_args++;
+    break;
+  case 4:
+    __ ldr(c_rarg5, src);
+    _num_int_args++;
+    break;
+  case 5:
+    __ ldr(c_rarg6, src);
+    _num_int_args++;
+    break;
+  case 6:
+    __ ldr(c_rarg7, src);
+    _num_int_args++;
+    break;
+  default:
+    __ ldrb(r0, src);
+    __ strb(r0, Address(to(), next_stack_offset(sizeof(jbyte))));
+
+    _num_int_args++;
+    break;
+  }
+}
+
+void InterpreterRuntime::SignatureHandlerGenerator::pass_short() {
+  const Address src(from(), Interpreter::local_offset_in_bytes(offset()));
+
+  switch (_num_int_args) {
+  case 0:
+    __ ldr(c_rarg1, src);
+    _num_int_args++;
+    break;
+  case 1:
+    __ ldr(c_rarg2, src);
+    _num_int_args++;
+    break;
+  case 2:
+    __ ldr(c_rarg3, src);
+    _num_int_args++;
+    break;
+  case 3:
+    __ ldr(c_rarg4, src);
+    _num_int_args++;
+    break;
+  case 4:
+    __ ldr(c_rarg5, src);
+    _num_int_args++;
+    break;
+  case 5:
+    __ ldr(c_rarg6, src);
+    _num_int_args++;
+    break;
+  case 6:
+    __ ldr(c_rarg7, src);
+    _num_int_args++;
+    break;
+  default:
+    __ ldrh(r0, src);
+    __ strh(r0, Address(to(), next_stack_offset(sizeof(jshort))));
+
+    _num_int_args++;
+    break;
+  }
+}
 
 void InterpreterRuntime::SignatureHandlerGenerator::pass_int() {
   const Address src(from(), Interpreter::local_offset_in_bytes(offset()));
@@ -77,8 +170,7 @@ void InterpreterRuntime::SignatureHandlerGenerator::pass_int() {
     break;
   default:
     __ ldr(r0, src);
-    __ str(r0, Address(to(), _stack_offset));
-    _stack_offset += wordSize;
+    __ str(r0, Address(to(), next_stack_offset(sizeof(jint))));
     _num_int_args++;
     break;
   }
@@ -118,8 +210,7 @@ void InterpreterRuntime::SignatureHandlerGenerator::pass_long() {
     break;
   default:
     __ ldr(r0, src);
-    __ str(r0, Address(to(), _stack_offset));
-    _stack_offset += wordSize;
+    __ str(r0, Address(to(), next_stack_offset(sizeof(jlong))));
     _num_int_args++;
     break;
   }
@@ -132,8 +223,7 @@ void InterpreterRuntime::SignatureHandlerGenerator::pass_float() {
     __ ldrs(as_FloatRegister(_num_fp_args++), src);
   } else {
     __ ldrw(r0, src);
-    __ strw(r0, Address(to(), _stack_offset));
-    _stack_offset += wordSize;
+    __ strw(r0, Address(to(), next_stack_offset(sizeof(jfloat))));
     _num_fp_args++;
   }
 }
@@ -145,8 +235,7 @@ void InterpreterRuntime::SignatureHandlerGenerator::pass_double() {
     __ ldrd(as_FloatRegister(_num_fp_args++), src);
   } else {
     __ ldr(r0, src);
-    __ str(r0, Address(to(), _stack_offset));
-    _stack_offset += wordSize;
+    __ str(r0, Address(to(), next_stack_offset(sizeof(jdouble))));
     _num_fp_args++;
   }
 }
@@ -239,8 +328,7 @@ void InterpreterRuntime::SignatureHandlerGenerator::pass_object() {
       __ cbnz(temp(), L);
       __ mov(r0, zr);
       __ bind(L);
-      __ str(r0, Address(to(), _stack_offset));
-      _stack_offset += wordSize;
+      __ str(r0, Address(to(), next_stack_offset(sizeof(jobject))));
       _num_int_args++;
       break;
    }
@@ -268,12 +356,47 @@ class SlowSignatureHandler
   : public NativeSignatureIterator {
  private:
   address   _from;
-  intptr_t* _to;
+  char*     _to;
   intptr_t* _int_args;
   intptr_t* _fp_args;
   intptr_t* _fp_identifiers;
   unsigned int _num_int_args;
   unsigned int _num_fp_args;
+  template<typename T>
+  void pass_stack(T value) {
+    MACOS_ONLY(_to = align_up(_to, sizeof(value)));
+    *(T *)_to = value;
+    _to += NOT_MACOS(wordSize) MACOS_ONLY(sizeof(value));
+  }
+
+  virtual void pass_byte()
+  {
+    jbyte from_obj = *(jbyte *)(_from+Interpreter::local_offset_in_bytes(0));
+    _from -= Interpreter::stackElementSize;
+
+    if (_num_int_args < Argument::n_int_register_parameters_c-1) {
+      *_int_args++ = from_obj;
+      _num_int_args++;
+    } else {
+      pass_stack<>(from_obj);
+      _num_int_args++;
+    }
+  }
+
+  virtual void pass_short()
+  {
+    jshort from_obj = *(jshort *)(_from+Interpreter::local_offset_in_bytes(0));
+    _from -= Interpreter::stackElementSize;
+
+    if (_num_int_args < Argument::n_int_register_parameters_c-1) {
+      *_int_args++ = from_obj;
+      _num_int_args++;
+    } else {
+      pass_stack<>(from_obj);
+      _num_int_args++;
+    }
+  }
+
 
   virtual void pass_int()
   {
@@ -284,7 +407,7 @@ class SlowSignatureHandler
       *_int_args++ = from_obj;
       _num_int_args++;
     } else {
-      *_to++ = from_obj;
+      pass_stack<>(from_obj);
       _num_int_args++;
     }
   }
@@ -298,7 +421,7 @@ class SlowSignatureHandler
       *_int_args++ = from_obj;
       _num_int_args++;
     } else {
-      *_to++ = from_obj;
+      pass_stack<>(from_obj);
       _num_int_args++;
     }
   }
@@ -306,13 +429,14 @@ class SlowSignatureHandler
   virtual void pass_object()
   {
     intptr_t *from_addr = (intptr_t*)(_from + Interpreter::local_offset_in_bytes(0));
+    intptr_t from_obj = *from_addr == 0 ? NULL : (intptr_t)from_addr;
     _from -= Interpreter::stackElementSize;
 
     if (_num_int_args < Argument::n_int_register_parameters_c-1) {
-      *_int_args++ = (*from_addr == 0) ? NULL : (intptr_t)from_addr;
+      *_int_args++ = from_obj;
       _num_int_args++;
     } else {
-      *_to++ = (*from_addr == 0) ? NULL : (intptr_t) from_addr;
+      pass_stack<>(from_obj);
       _num_int_args++;
     }
   }
@@ -326,7 +450,7 @@ class SlowSignatureHandler
       *_fp_args++ = from_obj;
       _num_fp_args++;
     } else {
-      *_to++ = from_obj;
+      pass_stack<>(from_obj);
       _num_fp_args++;
     }
   }
@@ -341,7 +465,7 @@ class SlowSignatureHandler
       *_fp_identifiers |= (1 << _num_fp_args); // mark as double
       _num_fp_args++;
     } else {
-      *_to++ = from_obj;
+      pass_stack<>(from_obj);
       _num_fp_args++;
     }
   }
@@ -351,7 +475,7 @@ class SlowSignatureHandler
     : NativeSignatureIterator(method)
   {
     _from = from;
-    _to   = to;
+    _to   = (char *)to;
 
     _int_args = to - (method->is_static() ? 16 : 17);
     _fp_args =  to - 8;

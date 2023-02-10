@@ -29,7 +29,7 @@
 #include "oops/oopsHierarchy.hpp"
 #include "runtime/os.hpp"
 #include "utilities/debug.hpp"
-#include "gc_implementation/g1/g1ParScanThreadState.hpp"
+#include "gc_implementation/g1/g1ParScanThreadState.inline.hpp"
 
 // A BufferingOops closure tries to separate out the cost of finding roots
 // from the cost of applying closures to them.  It maintains an array of

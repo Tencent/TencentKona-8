@@ -34,6 +34,9 @@
 // Makes a string of the macro expansion of a
 #define XSTR(a) STR(a)
 
+// Allow commas in macro arguments.
+#define COMMA ,
+
 // -DINCLUDE_<something>=0 | 1 can be specified on the command line to include
 // or exclude functionality.
 
@@ -260,6 +263,14 @@
 #define NOT_LINUX(code) code
 #endif
 
+#ifdef __APPLE__
+#define MACOS_ONLY(code) code
+#define NOT_MACOS(code)
+#else
+#define MACOS_ONLY(code)
+#define NOT_MACOS(code) code
+#endif
+
 #ifdef AIX
 #define AIX_ONLY(code) code
 #define NOT_AIX(code)
@@ -421,6 +432,8 @@
 #define ARM32_ONLY(code)
 #define NOT_ARM32(code) code
 #endif
+
+#define MACOS_AARCH64_ONLY(x) MACOS_ONLY(AARCH64_ONLY(x))
 
 #ifdef JAVASE_EMBEDDED
 #define EMBEDDED_ONLY(code) code

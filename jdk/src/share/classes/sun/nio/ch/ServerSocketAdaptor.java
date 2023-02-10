@@ -39,7 +39,8 @@ import java.nio.channels.IllegalBlockingModeException;
 import java.nio.channels.NotYetBoundException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-
+import java.security.AccessController;
+import sun.security.action.GetPropertyAction;
 
 // Make a server-socket channel look like a server socket.
 //
@@ -71,6 +72,14 @@ class ServerSocketAdaptor                        // package-private
         throws IOException
     {
         this.ssc = ssc;
+        String tos = java.security.AccessController.doPrivileged(new GetPropertyAction("kona.socket.tos.value"));
+        if (tos != null) {
+            try {
+                ssc.setOption(StandardSocketOptions.IP_TOS, Integer.valueOf(tos).intValue());
+            } catch (IOException ioe) {
+                // do nothing
+            }
+        }
     }
 
 

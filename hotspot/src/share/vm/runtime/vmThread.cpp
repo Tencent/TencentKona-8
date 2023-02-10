@@ -251,10 +251,11 @@ void VMThread::destroy() {
 }
 
 void VMThread::run() {
+  MACOS_AARCH64_ONLY(this->init_wx());
   assert(this == vm_thread(), "check");
 
   this->initialize_thread_local_storage();
-  this->set_native_thread_name(this->name());
+  this->initialize_named_thread();
   this->record_stack_base_and_size();
   // Notify_lock wait checks on active_handles() to rewait in
   // case of spurious wakeup, it should wait on the last
@@ -353,12 +354,6 @@ void VMThread::wait_for_vm_thread_exit() {
         _terminate_lock->wait(Mutex::_no_safepoint_check_flag);
     }
   }
-}
-
-void VMThread::print_on(outputStream* st) const {
-  st->print("\"%s\" ", name());
-  Thread::print_on(st);
-  st->cr();
 }
 
 static void post_vm_operation_event(EventExecuteVMOperation* event, VM_Operation* op) {

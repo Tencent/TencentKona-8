@@ -60,6 +60,9 @@ class   KlassDepChange;
 class   CallSiteDepChange;
 class No_Safepoint_Verifier;
 
+// CodeRevive
+class ReviveDependencies;
+
 class Dependencies: public ResourceObj {
  public:
   // Note: In the comments on dependency types, most uses of the terms
@@ -432,7 +435,8 @@ class Dependencies: public ResourceObj {
 
   static void print_dependency(DepType dept,
                                GrowableArray<DepArgument>* args,
-                               Klass* witness = NULL);
+                               Klass* witness = NULL,
+                               outputStream* out = NULL);
 
  private:
   // helper for encoding common context types as zero:
@@ -491,6 +495,7 @@ class Dependencies: public ResourceObj {
     DepStream(Dependencies* deps)
       : _deps(deps),
         _code(NULL),
+        _revive_deps(NULL),
         _bytes(deps->content_bytes())
     {
       initial_asserts(deps->size_in_bytes());
@@ -498,6 +503,7 @@ class Dependencies: public ResourceObj {
     DepStream(nmethod* code)
       : _deps(NULL),
         _code(code),
+        _revive_deps(NULL),
         _bytes(code->dependencies_begin())
     {
       initial_asserts(code->dependencies_size());
@@ -541,11 +547,22 @@ class Dependencies: public ResourceObj {
     void log_dependency(Klass* witness = NULL);
 
     // Print the current dependency to tty.
-    void print_dependency(Klass* witness = NULL, bool verbose = false);
+    void print_dependency(Klass* witness = NULL, bool verbose = false, outputStream* out = NULL);
+
+    // CodeRevive
+  private:
+    ReviveDependencies*   _revive_deps;  // AOT flow
+
+  public:
+    DepStream(ReviveDependencies* revive_deps);
   };
   friend class Dependencies::DepStream;
 
   static void print_statistics() PRODUCT_RETURN;
+
+  // CodeRevive
+public:
+  bool has_call_site_target_value() const;
 };
 
 

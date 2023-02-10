@@ -191,8 +191,6 @@ static jint CurrentVersion = JNI_VERSION_1_8;
 #define FP_SELECT(TypeName, intcode, fpcode) \
   FP_SELECT_##TypeName(intcode, fpcode)
 
-#define COMMA ,
-
 // Choose DT_RETURN_MARK macros  based on the type: float/double -> void
 // (dtrace doesn't do FP yet)
 #ifndef USDT2
@@ -4499,6 +4497,7 @@ static bool initializeDirectBufferSupport(JNIEnv* env, JavaThread* thread) {
       // is not necessary. The following call to change the VM state is purposely
       // put inside the loop to avoid potential deadlock when multiple threads
       // try to call this method. See 6791815 for more details.
+      MACOS_AARCH64_ONLY(ThreadWXEnable __wx(WXWrite, thread));
       ThreadInVMfromNative tivn(thread);
       os::yield_all();
     }
@@ -5281,6 +5280,7 @@ _JNI_IMPORT_OR_EXPORT_ jint JNICALL JNI_CreateJavaVM(JavaVM **vm, void **penv, v
 
     // Since this is not a JVM_ENTRY we have to set the thread state manually before leaving.
     ThreadStateTransition::transition_and_fence(thread, _thread_in_vm, _thread_in_native);
+    MACOS_AARCH64_ONLY(thread->enable_wx(WXExec));
   } else {
     if (can_try_again) {
       // reset safe_to_recreate_vm to 1 so that retrial would be possible
@@ -5366,6 +5366,7 @@ jint JNICALL jni_DestroyJavaVM(JavaVM *vm) {
 
   // Since this is not a JVM_ENTRY we have to set the thread state manually before entering.
   JavaThread* thread = JavaThread::current();
+  MACOS_AARCH64_ONLY(WXMode oldmode = thread->enable_wx(WXWrite));
   ThreadStateTransition::transition_from_native(thread, _thread_in_vm);
   if (Threads::destroy_vm()) {
     // Should not change thread state, VM is gone
@@ -5374,6 +5375,7 @@ jint JNICALL jni_DestroyJavaVM(JavaVM *vm) {
     return res;
   } else {
     ThreadStateTransition::transition_and_fence(thread, _thread_in_vm, _thread_in_native);
+    MACOS_AARCH64_ONLY(thread->enable_wx(oldmode));
     res = JNI_ERR;
     return res;
   }
@@ -5413,6 +5415,8 @@ static jint attach_current_thread(JavaVM *vm, void **penv, void *_args, bool dae
   thread->initialize_coroutine_support();
 #endif
 
+  MACOS_AARCH64_ONLY(thread->init_wx());
+  
   if (!os::create_attached_thread(thread)) {
     delete thread;
     return JNI_ERR;
@@ -5486,6 +5490,7 @@ static jint attach_current_thread(JavaVM *vm, void **penv, void *_args, bool dae
   // needed.
 
   ThreadStateTransition::transition_and_fence(thread, _thread_in_vm, _thread_in_native);
+  MACOS_AARCH64_ONLY(thread->enable_wx(WXExec));
 
   // Perform any platform dependent FPU setup
   os::setup_fpu();
@@ -5556,6 +5561,8 @@ jint JNICALL jni_DetachCurrentThread(JavaVM *vm)  {
     // Can't detach a thread that's running java, that can't work.
     return JNI_ERR;
   }
+  // We are going to VM, change W^X state to the expected one.
+  MACOS_AARCH64_ONLY(thread->enable_wx(WXWrite));
 
   // Safepoint support. Have to do call-back to safepoint code, if in the
   // middel of a safepoint operation
@@ -5572,6 +5579,10 @@ jint JNICALL jni_DetachCurrentThread(JavaVM *vm)  {
   // maintenance work?)
   thread->exit(false, JavaThread::jni_detach);
   delete thread;
+
+  // Go to the execute mode, the initial state of the thread on creation.
+  // Use os interface as the thread is not a JavaThread anymore.
+  MACOS_AARCH64_ONLY(os::current_thread_enable_wx(WXExec));
 
 #ifndef USDT2
   DTRACE_PROBE1(hotspot_jni, DetachCurrentThread__return, JNI_OK);

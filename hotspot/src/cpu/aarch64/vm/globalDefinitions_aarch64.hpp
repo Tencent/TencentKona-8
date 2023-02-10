@@ -41,4 +41,13 @@ const bool CCallingConventionRequiresIntsAsLongs = false;
 #undef CODE_CACHE_DEFAULT_LIMIT
 #define CODE_CACHE_DEFAULT_LIMIT (128*M)
 
+#if defined(__APPLE__) || defined(_WIN64)
+#define R18_RESERVED
+#define R18_RESERVED_ONLY(code) code
+#define NOT_R18_RESERVED(code)
+#else
+#define R18_RESERVED_ONLY(code)
+#define NOT_R18_RESERVED(code) code
+#endif
+
 #endif // CPU_AARCH64_VM_GLOBALDEFINITIONS_AARCH64_HPP

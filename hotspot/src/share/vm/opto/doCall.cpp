@@ -204,6 +204,9 @@ CallGenerator* Compile::call_generator(ciMethod* callee, int vtable_index, bool 
       ciMethod* receiver_method = NULL;
 
       int morphism = profile.morphism();
+      // CodeRevive
+      bool is_miss_trap = false;
+      bool is_speculative_resolved = false; // skip record profiled devirtualize optimization
       if (speculative_receiver_type != NULL) {
         if (!too_many_traps(caller, bci, Deoptimization::Reason_speculate_class_check)) {
           // We have a speculative type, we should be able to resolve
@@ -216,6 +219,7 @@ CallGenerator* Compile::call_generator(ciMethod* callee, int vtable_index, bool 
             speculative_receiver_type = NULL;
           } else {
             morphism = 1;
+            is_speculative_resolved = true;
           }
         } else {
           // speculation failed before. Use profiling at the call
@@ -264,6 +268,7 @@ CallGenerator* Compile::call_generator(ciMethod* callee, int vtable_index, bool 
             // in case of monomorphic or bimorphic virtual call site.
             miss_cg = CallGenerator::for_uncommon_trap(callee, reason,
                         Deoptimization::Action_maybe_recompile);
+            is_miss_trap = true;
           } else {
             // Generate virtual call for class check failure path
             // in case of polymorphic virtual call site.
@@ -282,6 +287,16 @@ CallGenerator* Compile::call_generator(ciMethod* callee, int vtable_index, bool 
               ciKlass* k = speculative_receiver_type != NULL ? speculative_receiver_type : profile.receiver(0);
               float hit_prob = speculative_receiver_type != NULL ? 1.0 : profile.receiver_prob(0);
               CallGenerator* cg = CallGenerator::for_predicted_call(k, miss_cg, hit_cg, hit_prob);
+              // CodeRevive
+              if (cg != NULL && CodeRevive::is_save() && speculative_receiver_type == NULL && C->is_osr_compilation() == false) {
+                env()->opt_records()->add_DeVirtualRecord(
+                  caller,
+                  profile.receiver(0),
+                  morphism == 2 ? profile.receiver(1) : NULL,
+                  bci,
+                  morphism,
+                  is_miss_trap);
+              }
               if (cg != NULL)  return cg;
             }
           }

@@ -375,7 +375,9 @@ void Parse::increment_and_test_invocation_counter(int limit) {
   }
 
   Node* ctrl = control();
-  const TypePtr* adr_type = TypeRawPtr::make((address) counters_adr);
+  // "TypeRawPtr::make" api change due to CodeRevive. As profiling in c2 is not support
+  // currently, this code is not well tested.
+  const TypePtr* adr_type = TypeRawPtr::make((address) counters_adr, false);
   Node *counters_node = makecon(adr_type);
   Node* adr_iic_node = basic_plus_adr(counters_node, counters_node,
     MethodCounters::interpreter_invocation_counter_offset_in_bytes());

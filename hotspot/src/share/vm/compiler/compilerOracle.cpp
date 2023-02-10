@@ -24,6 +24,7 @@
 
 #include "precompiled.hpp"
 #include "compiler/compilerOracle.hpp"
+#include "cr/revive.hpp"
 #include "memory/allocation.inline.hpp"
 #include "memory/oopFactory.hpp"
 #include "memory/resourceArea.hpp"
@@ -306,6 +307,7 @@ enum OracleCommand {
   InlineCommand,
   DontInlineCommand,
   CompileOnlyCommand,
+  ReviveOnlyCommand,
   LogCommand,
   OptionCommand,
   QuietCommand,
@@ -321,6 +323,7 @@ static const char * command_names[] = {
   "inline",
   "dontinline",
   "compileonly",
+  "reviveonly",
   "log",
   "option",
   "quiet",
@@ -403,6 +406,16 @@ bool CompilerOracle::should_exclude(methodHandle method, bool& quietly) {
     return !lists[CompileOnlyCommand]->match(method);
   }
   return false;
+}
+
+// CodeRevive: whether the method should be revived.
+bool CompilerOracle::should_revive(methodHandle method) {
+  if (lists[ReviveOnlyCommand] == NULL) return true; // by default, revive all
+  bool result = check_predicate(ReviveOnlyCommand, method);
+  CR_LOG(CodeRevive::log_kind(), cr_info, "%s by revive only check: %s\n",
+                  result ? "Enabled" : "Disabled",
+                  method()->name_and_sig_as_C_string());
+  return result;
 }
 
 
@@ -848,6 +861,7 @@ void CompilerOracle::append_exclude_to_file(methodHandle method) {
 void compilerOracle_init() {
   CompilerOracle::parse_from_string(CompileCommand, CompilerOracle::parse_from_line);
   CompilerOracle::parse_from_string(CompileOnly, CompilerOracle::parse_compile_only);
+  CompilerOracle::parse_from_string(ReviveOnly, CompilerOracle::parse_revive_only); // CodeRevive
   if (CompilerOracle::has_command_file()) {
     CompilerOracle::parse_from_file();
   } else {
@@ -868,8 +882,7 @@ void compilerOracle_init() {
   }
 }
 
-
-void CompilerOracle::parse_compile_only(char * line) {
+void parse_only_command(OracleCommand command, char* line) {
   int i;
   char name[1024];
   const char* className = NULL;
@@ -951,10 +964,15 @@ void CompilerOracle::parse_compile_only(char * line) {
       Symbol* m_name = SymbolTable::new_symbol(methodName, CHECK);
       Symbol* signature = NULL;
 
-      add_predicate(CompileOnlyCommand, c_name, c_match, m_name, m_match, signature);
+      add_predicate(command, c_name, c_match, m_name, m_match, signature);
       if (PrintVMOptions) {
-        tty->print("CompileOnly: compileonly ");
-        lists[CompileOnlyCommand]->print();
+        if (command == CompileOnlyCommand) {
+          tty->print("CompileOnly: compileonly ");
+          lists[CompileOnlyCommand]->print();
+        } else if (command == ReviveOnlyCommand) {
+          tty->print("ReviveOnly: reviveonly ");
+          lists[ReviveOnlyCommand]->print();
+        }
       }
 
       className = NULL;
@@ -964,3 +982,14 @@ void CompilerOracle::parse_compile_only(char * line) {
     line = *line == '\0' ? line : line + 1;
   }
 }
+
+void CompilerOracle::parse_compile_only(char* line) {
+  parse_only_command(CompileOnlyCommand, line);
+}
+
+// CodeRevive: parse ReviveOnlyCommand
+void CompilerOracle::parse_revive_only(char* line) {
+  parse_only_command(ReviveOnlyCommand, line);
+}
+
+

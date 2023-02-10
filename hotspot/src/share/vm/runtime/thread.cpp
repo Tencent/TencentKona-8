@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,6 +75,7 @@
 #include "runtime/threadCritical.hpp"
 #include "runtime/threadLocalStorage.hpp"
 #include "runtime/threadStatisticalInfo.hpp"
+#include "runtime/threadWXSetters.inline.hpp"
 #include "runtime/vframe.hpp"
 #include "runtime/vframeArray.hpp"
 #include "runtime/vframe_hp.hpp"
@@ -120,6 +121,10 @@
 #if INCLUDE_JFR
 #include "jfr/jfr.hpp"
 #endif
+
+// CodeRevive
+#include "cr/codeReviveMerge.hpp"
+#include "cr/revive.hpp"
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
@@ -314,6 +319,7 @@ Thread::Thread() {
            "bug in forced alignment of thread objects");
   }
 #endif /* ASSERT */
+  MACOS_AARCH64_ONLY(DEBUG_ONLY(_wx_init = false));
 }
 
 void Thread::initialize_thread_local_storage() {
@@ -334,6 +340,7 @@ void Thread::record_stack_base_and_size() {
   set_stack_size(os::current_stack_size());
   if (is_Java_thread()) {
     ((JavaThread*) this)->set_stack_overflow_limit();
+    ((JavaThread*) this)->set_shadow_zone_limits();
   }
   // CR 7190089: on Solaris, primordial thread's stack is adjusted
   // in initialize_thread(). Without the adjustment, stack size is
@@ -1259,6 +1266,17 @@ void NamedThread::set_name(const char* format, ...) {
   va_end(ap);
 }
 
+void NamedThread::initialize_named_thread() {
+  set_native_thread_name(name());
+}
+
+void NamedThread::print_on(outputStream* st) const {
+  st->print("\"%s\" ", name());
+  Thread::print_on(st);
+  st->cr();
+}
+
+
 // ======= WatcherThread ========
 
 // The watcher thread exists to simulate timer interrupts.  It should
@@ -1338,6 +1356,8 @@ int WatcherThread::sleep() const {
 
 void WatcherThread::run() {
   assert(this == watcher_thread(), "just checking");
+
+  MACOS_AARCH64_ONLY(this->init_wx());
 
   this->record_stack_base_and_size();
   this->initialize_thread_local_storage();
@@ -1476,12 +1496,16 @@ void JavaThread::initialize() {
   set_monitor_chunks(NULL);
   set_next(NULL);
   set_thread_state(_thread_new);
+  _in_asgct = false;
   _terminated = _not_terminated;
   _privileged_stack_top = NULL;
   _array_for_gc = NULL;
   _suspend_equivalent = false;
   _in_deopt_handler = 0;
   _doing_unsafe_access = false;
+  _shadow_zone_safe_limit = NULL;
+  _shadow_zone_growth_watermark = NULL;
+  _shadow_zone_growth_native_watermark = NULL;
   _stack_guard_state = stack_guard_unused;
   (void)const_cast<oop&>(_exception_oop = oop(NULL));
   _exception_pc  = 0;
@@ -1692,6 +1716,8 @@ JavaThread::~JavaThread() {
 
 // The first routine called by a new Java thread
 void JavaThread::run() {
+  MACOS_AARCH64_ONLY(this->init_wx());
+
   // initialize thread-local alloc buffer related fields
   this->initialize_tlab();
 
@@ -2493,6 +2519,9 @@ void JavaThread::check_safepoint_and_suspend_for_native_trans(JavaThread *thread
 // Note only the native==>VM/Java barriers can call this function and when
 // thread state is _thread_in_native_trans.
 void JavaThread::check_special_condition_for_native_trans(JavaThread *thread) {
+  // Enable WXWrite: called directly from interpreter native wrapper.
+  MACOS_AARCH64_ONLY(ThreadWXEnable wx(WXWrite, thread));
+
   check_safepoint_and_suspend_for_native_trans(thread);
 
   if (thread->has_async_exception()) {
@@ -3438,6 +3467,8 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   // Initialize the os module before using TLS
   os::init();
 
+  MACOS_AARCH64_ONLY(os::current_thread_enable_wx(WXWrite));
+
   // Initialize system properties.
   Arguments::init_system_properties();
 
@@ -3533,6 +3564,8 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   }
 #endif
   main_thread->set_active_handles(JNIHandleBlock::allocate_block());
+
+  MACOS_AARCH64_ONLY(main_thread->init_wx());
 
   if (!main_thread->set_as_starting_thread()) {
     vm_shutdown_during_initialization(
@@ -3761,6 +3794,8 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   // Notify JVMTI agents that VM initialization is complete - nop if no agents.
   JvmtiExport::post_vm_initialized();
 
+  CodeRevive::on_vm_start();
+
   JFR_ONLY(Jfr::on_vm_start();)
 
   if (CleanChunkPoolAsync) {
@@ -3840,6 +3875,15 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
 #ifdef ASSERT
   _vm_complete = true;
 #endif
+  if (CodeRevive::is_merge()) {
+    CodeReviveMerge::merge_and_dump(CHECK_0);
+    ShouldNotReachHere();
+  }
+  if (CodeRevive::is_restore()) {
+    // code restore needs global oop of ArrayIndexOutOfBoundsException in ciEnv
+    initialize_class(vmSymbols::java_lang_ArrayIndexOutOfBoundsException(), CHECK_0);
+  }
+
   return JNI_OK;
 }
 
@@ -4060,10 +4104,9 @@ void JavaThread::invoke_shutdown_hooks() {
     // SystemDictionary::resolve_or_null will return null if there was
     // an exception.  If we cannot load the Shutdown class, just don't
     // call Shutdown.shutdown() at all.  This will mean the shutdown hooks
-    // and finalizers (if runFinalizersOnExit is set) won't be run.
-    // Note that if a shutdown hook was registered or runFinalizersOnExit
-    // was called, the Shutdown class would have already been loaded
-    // (Runtime.addShutdownHook and runFinalizersOnExit will load it).
+    // won't be run. Note that if a shutdown hook was registered,
+    // the Shutdown class would have already been loaded
+    // (Runtime.addShutdownHook will load it).
     instanceKlassHandle shutdown_klass (THREAD, k);
     JavaValue result(T_VOID);
     JavaCalls::call_static(&result,
@@ -4087,7 +4130,7 @@ void JavaThread::invoke_shutdown_hooks() {
 //   + Wait until we are the last non-daemon thread to execute
 //     <-- every thing is still working at this moment -->
 //   + Call java.lang.Shutdown.shutdown(), which will invoke Java level
-//        shutdown hooks, run finalizers if finalization-on-exit
+//        shutdown hooks
 //   + Call before_exit(), prepare for VM exit
 //      > run VM level shutdown hooks (they are registered through JVM_OnExit(),
 //        currently the only user of this mechanism is File.deleteOnExit())
@@ -4144,15 +4187,8 @@ bool Threads::destroy_vm() {
   }
   os::wait_for_keypress_at_exit();
 
-  if (JDK_Version::is_jdk12x_version()) {
-    // We are the last thread running, so check if finalizers should be run.
-    // For 1.3 or later this is done in thread->invoke_shutdown_hooks()
-    HandleMark rm(thread);
-    Universe::run_finalizers_on_exit();
-  } else {
-    // run Java level shutdown hooks
-    thread->invoke_shutdown_hooks();
-  }
+  // run Java level shutdown hooks
+  thread->invoke_shutdown_hooks();
 
   before_exit(thread);
 
