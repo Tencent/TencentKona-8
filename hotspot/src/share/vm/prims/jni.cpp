@@ -5416,7 +5416,7 @@ static jint attach_current_thread(JavaVM *vm, void **penv, void *_args, bool dae
 #endif
 
   MACOS_AARCH64_ONLY(thread->init_wx());
-  
+
   if (!os::create_attached_thread(thread)) {
     delete thread;
     return JNI_ERR;
