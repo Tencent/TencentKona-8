@@ -136,7 +136,7 @@ class javaVFrame: public vframe {
   GrowableArray<MonitorInfo*>* locked_monitors();
 
   // printing used during stack dumps
-  void print_lock_info_on(outputStream* st, int frame_count);
+  void print_lock_info_on(outputStream* st, int frame_count, Coroutine* target_coro = NULL);
   void print_lock_info(int frame_count) { print_lock_info_on(tty, frame_count); }
 
 #ifndef PRODUCT

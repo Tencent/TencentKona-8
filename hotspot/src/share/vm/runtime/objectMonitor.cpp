@@ -330,36 +330,43 @@ void ATTR ObjectMonitor::enter(TRAPS) {
   Thread * const Self = THREAD ;
   void * cur ;
   void *cur_exec = ((JavaThread *)Self)->get_cur_exec();
-
-  cur = Atomic::cmpxchg_ptr (cur_exec, &_owner, NULL);
-  if (cur == NULL) {
-     // Either ASSERT _recursions == 0 or explicitly set _recursions = 0.
-     assert (_recursions == 0   , "invariant") ;
-     assert (_owner      == cur_exec, "invariant") ;
-     // CONSIDER: set or assert OwnerIsThread == 1
-     return ;
-  }
-
-  if (cur == cur_exec) {
-     // TODO-FIXME: check for integer overflow!  BUGID 6557169.
-     _recursions ++ ;
-     return ;
-  }
-
-  if (Self->is_lock_owned ((address)cur)) {
-    assert (_recursions == 0, "internal state error");
-    _recursions = 1 ;
-    // Commute owner from a thread-specific on-stack BasicLockObject address to
-    // a full-fledged "Thread *".
-    _owner = cur_exec;
-    OwnerIsThread = 1 ;
-    return ;
-  }
-
 #if INCLUDE_KONA_FIBER
-  Atomic::inc_ptr(&_count); //Prevent deflation at STW-time.
-  while (!Coroutine::try_compensate(Self));
-  Atomic::dec_ptr(&_count);
+  while (true) {
+#endif
+    cur = Atomic::cmpxchg_ptr (cur_exec, &_owner, NULL);
+    if (cur == NULL) {
+      // Either ASSERT _recursions == 0 or explicitly set _recursions = 0.
+      assert (_recursions == 0   , "invariant") ;
+      assert (_owner      == cur_exec, "invariant") ;
+      // CONSIDER: set or assert OwnerIsThread == 1
+      return ;
+    }
+
+    if (cur == cur_exec) {
+      // TODO-FIXME: check for integer overflow!  BUGID 6557169.
+      _recursions ++ ;
+      return ;
+    }
+
+    if (Self->is_lock_owned ((address)cur)) {
+      assert (_recursions == 0, "internal state error");
+      _recursions = 1 ;
+      // Commute owner from a thread-specific on-stack BasicLockObject address to
+      // a full-fledged "Thread *".
+      _owner = cur_exec;
+      OwnerIsThread = 1 ;
+      return ;
+    }
+#if INCLUDE_KONA_FIBER
+    Atomic::inc_ptr(&_count); //Prevent deflation at STW-time.
+    if (!Coroutine::try_compensate(Self)) {
+      Atomic::dec_ptr(&_count);
+      continue;
+    } else {
+      Atomic::dec_ptr(&_count);
+      break;
+    }
+  }
 #endif
 
   // We've encountered genuine contention.
