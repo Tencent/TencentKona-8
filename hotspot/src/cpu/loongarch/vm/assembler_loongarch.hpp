@@ -1557,8 +1557,15 @@ public:
   }
 
   inline void emit_data(int x) { emit_int32(x); }
-  inline void emit_data(int, RelocationHolder const&);
-  inline void emit_data(int, relocInfo::relocType rtype);
+  inline void emit_data(int x, relocInfo::relocType rtype) {
+    relocate(rtype);
+    emit_int32(x);
+  }
+
+  inline void emit_data(int x, RelocationHolder const& rspec) {
+    relocate(rspec);
+    emit_int32(x);
+  }
 
   // Generic instructions
   // Does 32bit or 64bit as needed for the platform. In some sense these

@@ -30,28 +30,4 @@
 #include "asm/codeBuffer.hpp"
 #include "code/codeCache.hpp"
 
-
-
-inline void Assembler::check_delay() {
-# ifdef CHECK_DELAY
-  guarantee(delay_state != at_delay_slot, "must say delayed() when filling delay slot");
-  delay_state = no_delay;
-# endif
-}
-
-inline void Assembler::emit_long(int x) {
-  check_delay();
-  AbstractAssembler::emit_int32(x);
-}
-
-inline void Assembler::emit_data(int x, relocInfo::relocType rtype) {
-  relocate(rtype);
-  emit_long(x);
-}
-
-inline void Assembler::emit_data(int x, RelocationHolder const& rspec) {
-  relocate(rspec);
-  emit_long(x);
-}
-
 #endif // CPU_MIPS_VM_ASSEMBLER_MIPS_INLINE_HPP

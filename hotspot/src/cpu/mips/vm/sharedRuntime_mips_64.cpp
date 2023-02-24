@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2003, 2013, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2022, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2023, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1647,7 +1647,7 @@ nmethod *SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
 
   const Register oop_handle_reg = S4;
   if (is_critical_native) {
-     __ stop("generate_native_wrapper in sharedRuntime <2>");
+    Unimplemented();
     // check_needs_gc_for_critical_native(masm, stack_slots, total_c_args, total_in_args,
     //                                   oop_handle_offset, oop_maps, in_regs, in_sig_bt);
   }
@@ -1710,7 +1710,7 @@ nmethod *SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
   // critical natives they are offset down.
   GrowableArray<int> arg_order(2 * total_in_args);
   VMRegPair tmp_vmreg;
-  tmp_vmreg.set1(T8->as_VMReg());
+  tmp_vmreg.set2(T8->as_VMReg());
 
   if (!is_critical_native) {
     for (int i = total_in_args - 1, c_arg = total_c_args - 1; i >= 0; i--, c_arg--) {
@@ -1719,7 +1719,7 @@ nmethod *SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     }
   } else {
     // Compute a valid move order, using tmp_vmreg to break any cycles
-     __ stop("generate_native_wrapper in sharedRuntime <2>");
+    Unimplemented();
     // ComputeMoveOrder cmo(total_in_args, in_regs, total_c_args, out_regs, in_sig_bt, arg_order, tmp_vmreg);
   }
 
@@ -1757,7 +1757,7 @@ nmethod *SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     switch (in_sig_bt[i]) {
       case T_ARRAY:
         if (is_critical_native) {
-          __ stop("generate_native_wrapper in sharedRuntime <2>");
+          Unimplemented();
           // unpack_array_argument(masm, in_regs[i], in_elem_bt[i], out_regs[c_arg + 1], out_regs[c_arg]);
           c_arg++;
 #ifdef ASSERT
@@ -1950,7 +1950,7 @@ nmethod *SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
   }
   __ sw(AT, thread, in_bytes(JavaThread::thread_state_offset()));
   // do the call
-  __ call(method->native_function(), relocInfo::runtime_call_type);
+  __ call(native_func, relocInfo::runtime_call_type);
   __ delayed()->nop();
   // WARNING - on Windows Java Natives use pascal calling convention and pop the
   // arguments off of the stack. We could just re-adjust the stack pointer here

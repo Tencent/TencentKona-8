@@ -23,8 +23,8 @@
  */
 
 /*
- * This file has been modified by Loongson Technology in 2021. These
- * modifications are Copyright (c) 2015, 2021, Loongson Technology, and are made
+ * This file has been modified by Loongson Technology in 2023. These
+ * modifications are Copyright (c) 2015, 2023, Loongson Technology, and are made
  * available on the same license terms set forth above.
  */
 
@@ -329,9 +329,7 @@ void CodeSection::relocate(address at, RelocationHolder const& spec, int format)
     assert(rtype == relocInfo::none              ||
            rtype == relocInfo::runtime_call_type ||
            rtype == relocInfo::internal_word_type||
-#if defined MIPS && !defined ZERO
-           rtype == relocInfo::internal_pc_type  ||
-#endif
+           NOT_ZERO(MIPS64_ONLY(rtype == relocInfo::internal_pc_type ||))
            rtype == relocInfo::section_word_type ||
            rtype == relocInfo::external_word_type,
            "code needs relocation information");

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1997, 2014, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2020, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2023, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -414,6 +414,13 @@ void VM_Version::get_processor_features() {
   // This machine allows unaligned memory accesses
   if (FLAG_IS_DEFAULT(UseUnalignedAccesses)) {
     FLAG_SET_DEFAULT(UseUnalignedAccesses, true);
+  }
+
+  if (CriticalJNINatives) {
+    if (FLAG_IS_CMDLINE(CriticalJNINatives)) {
+      warning("CriticalJNINatives specified, but not supported in this VM");
+    }
+    FLAG_SET_DEFAULT(CriticalJNINatives, false);
   }
 }
 

@@ -37,6 +37,10 @@
 #include "c1/c1_Runtime1.hpp"
 #endif
 
+#ifndef PRODUCT
+#include "compiler/disassembler.hpp"
+#endif
+
 #include <sys/mman.h>
 
 #define A0 RA0
@@ -313,7 +317,9 @@ intptr_t NativeMovConstReg::data() const {
     return Assembler::simm12((int_at(0) >> 10) & 0xfff);
   }
 
+#ifndef PRODUCT
   Disassembler::decode(addr_at(0), addr_at(0) + 16, tty);
+#endif
   fatal("not a mov reg, imm52");
   return 0; // unreachable
 }

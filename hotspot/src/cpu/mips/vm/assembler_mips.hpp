@@ -976,11 +976,11 @@ public:
     AbstractAssembler::flush();
   }
 
-  inline void emit_long(int);  // shadows AbstractAssembler::emit_long
-  inline void emit_data(int x) { emit_long(x); }
-  inline void emit_data(int, RelocationHolder const&);
-  inline void emit_data(int, relocInfo::relocType rtype);
-  inline void check_delay();
+  void emit_long(int);  // shadows AbstractAssembler::emit_long
+  void emit_data(int);
+  void emit_data(int, RelocationHolder const&);
+  void emit_data(int, relocInfo::relocType rtype);
+  void check_delay();
 
 
   // Generic instructions

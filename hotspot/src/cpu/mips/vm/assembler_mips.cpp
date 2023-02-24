@@ -37,6 +37,9 @@
 #include "runtime/os.hpp"
 #include "runtime/sharedRuntime.hpp"
 #include "runtime/stubRoutines.hpp"
+#ifndef PRODUCT
+#include "compiler/disassembler.hpp"
+#endif
 #if INCLUDE_ALL_GCS
 #include "gc_implementation/g1/g1CollectedHeap.inline.hpp"
 #include "gc_implementation/g1/g1SATBCardTableModRefBS.hpp"
@@ -745,4 +748,27 @@ void Assembler::jal(address entry) {
   int dest = ((intptr_t)entry & (intptr_t)0xfffffff)>>2;
   emit_long((jal_op<<26) | dest);
   has_delay_slot();
+}
+
+void Assembler::emit_long(int x) { // shadows AbstractAssembler::emit_long
+  check_delay();
+  AbstractAssembler::emit_int32(x);
+}
+
+inline void Assembler::emit_data(int x) { emit_long(x); }
+inline void Assembler::emit_data(int x, relocInfo::relocType rtype) {
+  relocate(rtype);
+  emit_long(x);
+}
+
+inline void Assembler::emit_data(int x, RelocationHolder const& rspec) {
+  relocate(rspec);
+  emit_long(x);
+}
+
+inline void Assembler::check_delay() {
+#ifdef CHECK_DELAY
+  guarantee(delay_state != at_delay_slot, "must say delayed() when filling delay slot");
+  delay_state = no_delay;
+#endif
 }

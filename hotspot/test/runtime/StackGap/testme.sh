@@ -49,19 +49,6 @@ if [ "x$gcc_cmd" = "x" ]; then
     exit 0;
 fi
 
-PLATFORM=$(echo ${VM_CPU})
-case "$PLATFORM" in
-  mips64el )
-    CFLAGS="-mabi=${VM_BITS}"
-    ;;
-  loongarch64 )
-    CFLAGS="-mabi=lp${VM_BITS}"
-    ;;
-  * )
-    CFLAGS="-m${VM_BITS}"
-    ;;
-esac
-
 LD_LIBRARY_PATH=.:${COMPILEJAVA}/jre/lib/${VM_CPU}/${VM_TYPE}:/usr/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH
 

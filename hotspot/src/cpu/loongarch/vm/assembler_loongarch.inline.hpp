@@ -30,14 +30,4 @@
 #include "asm/codeBuffer.hpp"
 #include "code/codeCache.hpp"
 
-inline void Assembler::emit_data(int x, relocInfo::relocType rtype) {
-  relocate(rtype);
-  emit_int32(x);
-}
-
-inline void Assembler::emit_data(int x, RelocationHolder const& rspec) {
-  relocate(rspec);
-  emit_int32(x);
-}
-
 #endif // CPU_LOONGARCH_VM_ASSEMBLER_LOONGARCH_INLINE_HPP

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1999, 2014, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2022, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2023, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -351,7 +351,7 @@ JVM_handle_linux_signal(int sig,
 #endif
 
       // Handle signal from NativeJump::patch_verified_entry().
-      if (sig == SIGILL & nativeInstruction_at(pc)->is_sigill_zombie_not_entrant()) {
+      if (sig == SIGILL && nativeInstruction_at(pc)->is_sigill_zombie_not_entrant()) {
 #ifdef PRINT_SIGNAL_HANDLE
         tty->print_cr("verified entry = %lx, sig=%d", nativeInstruction_at(pc), sig);
 #endif

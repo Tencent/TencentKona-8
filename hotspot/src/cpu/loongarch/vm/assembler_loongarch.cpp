@@ -415,7 +415,6 @@ void Assembler::ld_w(Register rd, Address src){
       ldx_w(dst, base, AT);
     }
   }
-//Disassembler::decode(pc()-32, pc(), tty);
 }
 
 void Assembler::ld_wu(Register rd, Address src){

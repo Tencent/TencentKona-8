@@ -324,7 +324,7 @@ JVM_handle_linux_signal(int sig,
 #endif
 
       // Handle signal from NativeJump::patch_verified_entry().
-      if (sig == SIGILL & nativeInstruction_at(pc)->is_sigill_zombie_not_entrant()) {
+      if (sig == SIGILL && nativeInstruction_at(pc)->is_sigill_zombie_not_entrant()) {
 #ifdef PRINT_SIGNAL_HANDLE
         tty->print_cr("verified entry = %lx, sig=%d", nativeInstruction_at(pc), sig);
 #endif
