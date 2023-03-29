@@ -724,7 +724,7 @@ class GCCauseSetter : StackObj {
 /* any task that want to be executed by FreeHeapPhysicalMemoryThread 
  * thread should inherite this class and explicitly implement doit method.
  */
-class Task {
+class Task : public CHeapObj<mtInternal>{
   public:
     virtual void doit() {};
 };

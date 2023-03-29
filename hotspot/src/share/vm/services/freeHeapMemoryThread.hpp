@@ -20,22 +20,24 @@
 #ifndef FREE_HEAP_PHYSICAL_MEMORY_HPP
 #define FREE_HEAP_PHYSICAL_MEMORY_HPP
 
-#include "gc_implementation/shared/concurrentGCThread.hpp"
+#include "runtime/thread.hpp"
 
-class FreeHeapPhysicalMemoryThread: public ConcurrentGCThread {
-private:
-  Monitor* _monitor;
-  CollectedHeap* _sh;
+// A JavaThread for free heap physical memory.
+class FreeHeapPhysicalMemoryThread : public JavaThread {
+  friend class VMStructs;
+ private:
+  static CollectedHeap* _sh;
   static FreeHeapPhysicalMemoryThread* _thread;
 
-  void stop_service();
+  static void free_heap_memory_thread_entry(JavaThread* thread, TRAPS);
+  FreeHeapPhysicalMemoryThread(ThreadFunction entry_point) : JavaThread(entry_point) { _sh = Universe::heap(); };
 
-  void sleep_before_next_cycle(uintx waitms);
-  FreeHeapPhysicalMemoryThread();
+ public:
+  static void initialize();
 
-public:
-  virtual void run();
-  static void start();
-  static FreeHeapPhysicalMemoryThread* thread() { return _thread;}
+  // Hide this thread from external view.
+  bool is_hidden_from_external_view() const      { return true; }
+
+  static FreeHeapPhysicalMemoryThread* thread()  { return _thread;}
 };
 #endif // FREE_HEAP_PHYSICAL_MEMORY_HPP
