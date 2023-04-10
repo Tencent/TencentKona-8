@@ -130,7 +130,8 @@ bool PSVirtualSpace::shrink_by(size_t bytes) {
     if (FreeHeapPhysicalMemory) {
       //should try to madvise virtual memory [base_addr, base_addr + bytes] 
       //only after os::uncommit_memory succeed
-      os::free_heap_physical_memory(base_addr, bytes);
+      bool result = os::free_heap_physical_memory(base_addr, bytes);
+      guarantee(result, "free heap physical memory should be successful");
     }
   }
 
