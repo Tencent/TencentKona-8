@@ -66,7 +66,7 @@ public class PlainRead {
 
     public static void main(String[] args) throws Exception {
         WhiteBox wb = WhiteBox.getWhiteBox();
-        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder("-XX:+UnlockDiagnosticVMOptions", "-XX:+PrintContainerInfo", "-version");
+        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder("-XX:+UseContainerSupport", "-XX:+UnlockDiagnosticVMOptions", "-XX:+PrintContainerInfo", "-version");
 
         OutputAnalyzer output = new OutputAnalyzer(pb.start());
 
