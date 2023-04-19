@@ -270,6 +270,7 @@ private:
   static JavaThreadState update_thread_state(Thread *Self, JavaThreadState new_jts);
   static void init_forkjoinpool_method(Method** init_method, Symbol* method_name, Symbol* signature);
   static void call_forkjoinpool_method(Thread* Self, Method* target_method, JavaCallArguments* args, JavaValue* result);
+  static bool need_invoke_forkjoinpool_method(Thread* Self, Method* target_method);
 
 public:
   virtual ~Coroutine();
