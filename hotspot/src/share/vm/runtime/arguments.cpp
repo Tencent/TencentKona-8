@@ -1792,8 +1792,8 @@ void Arguments::set_gc_specific_flags() {
     FLAG_SET_CMDLINE(bool, ExplicitGCInvokesConcurrentAndUnloadsClasses, false);
   }
   if (FreeHeapPhysicalMemory) {
-    if (UseLargePages || UseSHM) {
-      warning("-XX:+FreeHeapPhysicalMemory can not be combined with -XX:+UseLargePages or -XX:+UseSHM, "
+    if (UseLargePages) {
+      warning("-XX:+FreeHeapPhysicalMemory can not be combined with -XX:+UseLargePages, "
               "if you do that, -XX:+FreeHeapPhysicalMemory will have no effect");
     }
   }
