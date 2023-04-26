@@ -49,6 +49,7 @@
 #include "gc_implementation/g1/heapRegionRemSet.hpp"
 #include "gc_implementation/g1/heapRegionSet.inline.hpp"
 #include "gc_implementation/g1/vm_operations_g1.hpp"
+#include "gc_implementation/shared/elasticMaxHeap.hpp"
 #include "gc_implementation/shared/gcHeapSummary.hpp"
 #include "gc_implementation/shared/gcTimer.hpp"
 #include "gc_implementation/shared/gcTrace.hpp"
@@ -792,16 +793,21 @@ HeapWord* G1CollectedHeap::humongous_obj_allocate(size_t word_size, AllocationCo
 
       _hrm.expand_at(first, obj_regions);
       g1_policy()->record_new_heap_size(num_regions());
-
-#ifdef ASSERT
-      for (uint i = first; i < first + obj_regions; ++i) {
-        HeapRegion* hr = region_at(i);
-        assert(hr->is_free(), "sanity");
-        assert(hr->is_empty(), "sanity");
-        assert(is_on_master_free_list(hr), "sanity");
+      if (ElasticMaxHeap) {
+        // expand might fail, search continous only empty again
+        first = _hrm.find_contiguous_only_empty(obj_regions);
       }
+      if (first != G1_NO_HRM_INDEX) {
+#ifdef ASSERT
+        for (uint i = first; i < first + obj_regions; ++i) {
+          HeapRegion* hr = region_at(i);
+          assert(hr->is_free(), "sanity");
+          assert(hr->is_empty(), "sanity");
+          assert(is_on_master_free_list(hr), "sanity");
+        }
 #endif
-      _hrm.allocate_free_regions_starting_at(first, obj_regions);
+        _hrm.allocate_free_regions_starting_at(first, obj_regions);
+      }
     } else {
       // Policy: Potentially trigger a defragmentation GC.
     }
@@ -1616,7 +1622,11 @@ resize_if_necessary_after_full_collection(size_t word_size) {
   const double minimum_used_percentage = 1.0 - maximum_free_percentage;
 
   const size_t min_heap_size = collector_policy()->min_heap_byte_size();
-  const size_t max_heap_size = collector_policy()->max_heap_byte_size();
+  size_t max_heap_size = collector_policy()->max_heap_byte_size();
+  if (ElasticMaxHeap) {
+    max_heap_size = collector_policy()->current_max_heap_byte_size();
+    guarantee(max_heap_size >= min_heap_size, "must be");
+  }
 
   // We have to be careful here as these two calculations can overflow
   // 32-bit size_t's.
@@ -1679,6 +1689,26 @@ resize_if_necessary_after_full_collection(size_t word_size) {
                   ergo_format_byte_perc("max desired capacity"),
                   capacity_after_gc, used_after_gc,
                   maximum_desired_capacity, (double) MaxHeapFreeRatio);
+    shrink(shrink_bytes);
+  }
+
+  size_t exp_size = exp_EMH_size();
+  if (ElasticMaxHeap &&
+      (exp_size > 0) &&
+      (exp_size < capacity()) &&
+      (exp_size >= minimum_desired_capacity)) {
+    // shrink to exp_EMH_size when
+    // 1. exp_EMH_size smaller than capacity
+    // 2. exp_EMH_size bigger than minimum_desired_capacity
+    size_t shrink_bytes = capacity() - exp_size;
+    ergo_verbose3(ErgoHeapSizing,
+                  "attempt heap shrinking for elastic max heap",
+                  ergo_format_reason("capacity higher than "
+                                     "expected elastic max heap after Full GC")
+                  ergo_format_byte("capacity")
+                  ergo_format_byte("occupancy")
+                  ergo_format_byte("expected elastic max heap"),
+                  capacity_after_gc, used_after_gc, exp_size);
     shrink(shrink_bytes);
   }
 }
@@ -2924,6 +2954,12 @@ size_t G1CollectedHeap::unsafe_max_tlab_alloc(Thread* ignored) const {
 }
 
 size_t G1CollectedHeap::max_capacity() const {
+  // Elastic Max Heap
+  if (ElasticMaxHeap) {
+    size_t cur_size = collector_policy()->current_max_heap_byte_size();
+    guarantee(cur_size <= _hrm.reserved().byte_size(), "must be");
+    return cur_size;
+  }
   return _hrm.reserved().byte_size();
 }
 

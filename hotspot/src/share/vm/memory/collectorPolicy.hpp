@@ -71,6 +71,7 @@ class CollectorPolicy : public CHeapObj<mtGC> {
   size_t _initial_heap_byte_size;
   size_t _max_heap_byte_size;
   size_t _min_heap_byte_size;
+  size_t _current_max_heap_byte_size;
 
   size_t _space_alignment;
   size_t _heap_alignment;
@@ -111,6 +112,10 @@ class CollectorPolicy : public CHeapObj<mtGC> {
   size_t initial_heap_byte_size() { return _initial_heap_byte_size; }
   size_t max_heap_byte_size()     { return _max_heap_byte_size; }
   size_t min_heap_byte_size()     { return _min_heap_byte_size; }
+  size_t current_max_heap_byte_size()     { return _current_max_heap_byte_size; }
+  void set_current_max_heap_byte_size(size_t new_size) {
+    _current_max_heap_byte_size = new_size;
+  }
 
   enum Name {
     CollectorPolicyKind,
@@ -223,6 +228,8 @@ class ClearedAllSoftRefs : public StackObj {
 
 class GenCollectorPolicy : public CollectorPolicy {
 friend class TestGenCollectorPolicy;
+friend class VM_PSResizeMaxHeap;
+friend class PS_ElasticMaxHeapOp;
  protected:
   size_t _min_gen0_size;
   size_t _initial_gen0_size;

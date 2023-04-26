@@ -1355,6 +1355,11 @@ class ConcurrentMarkSweepGeneration: public CardGeneration {
 
   CollectionTypes debug_collection_type() { return _debug_collection_type; }
   void rotate_debug_collection_type();
+
+  // Elastic Max Heap
+  virtual void update_gen_max_counter(size_t size) {
+    _gen_counters->update_max_size(size);
+  }
 };
 
 class ASConcurrentMarkSweepGeneration : public ConcurrentMarkSweepGeneration {

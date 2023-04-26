@@ -28,6 +28,7 @@
 #include "classfile/symbolTable.hpp"
 #include "compiler/compilerOracle.hpp"
 #include "cr/revive.hpp"
+#include "gc_implementation/shared/elasticMaxHeap.hpp"
 #include "memory/allocation.inline.hpp"
 #include "memory/cardTableRS.hpp"
 #include "memory/genCollectedHeap.hpp"
@@ -1761,6 +1762,7 @@ static bool verify_serial_gc_flags() {
 
 void Arguments::set_gc_specific_flags() {
 #if INCLUDE_ALL_GCS
+  ElasticMaxHeapChecker::check_common_opitons();
   // Set per-collector flags
   if (UseParallelGC || UseParallelOldGC) {
     set_parallel_gc_flags();

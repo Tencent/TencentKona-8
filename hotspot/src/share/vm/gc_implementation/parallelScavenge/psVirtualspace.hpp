@@ -51,6 +51,9 @@ class PSVirtualSpace : public CHeapObj<mtGC> {
   // os::commit_memory() or os::uncommit_memory().
   bool _special;
 
+  // Elastic Max Heap
+  size_t _EMH_size;
+
   // Convenience wrapper.
   inline static size_t pointer_delta(const char* left, const char* right);
 
@@ -89,6 +92,17 @@ class PSVirtualSpace : public CHeapObj<mtGC> {
   virtual bool   shrink_by(size_t bytes);
   virtual size_t expand_into(PSVirtualSpace* space, size_t bytes);
   void           release();
+  // Elastic Max Heap
+  void set_EMH_size(size_t new_size) {
+    guarantee(new_size <= reserved_size(), "must be");
+    guarantee(new_size >= committed_size(), "must be");
+    _EMH_size = new_size;
+  }
+  size_t EMH_size() const {
+    guarantee(_EMH_size <= reserved_size(), "must be");
+    guarantee(_EMH_size >= committed_size(), "must be");
+    return _EMH_size;
+  }
 
 #ifndef PRODUCT
   // Debugging
@@ -161,6 +175,9 @@ inline size_t PSVirtualSpace::reserved_size() const {
 }
 
 inline size_t PSVirtualSpace::uncommitted_size() const {
+  if (ElasticMaxHeap) {
+    return EMH_size()- committed_size();
+  }
   return reserved_size() - committed_size();
 }
 
@@ -168,6 +185,10 @@ inline void PSVirtualSpace::set_reserved(char* low_addr, char* high_addr, bool s
   _reserved_low_addr = low_addr;
   _reserved_high_addr = high_addr;
   _special = special;
+  if (ElasticMaxHeap) {
+    guarantee(_EMH_size == 0, "resize virtual NYI");
+    _EMH_size = high_addr - low_addr;
+  }
 }
 
 inline void PSVirtualSpace::set_reserved(ReservedSpace rs) {

@@ -698,6 +698,12 @@ class CollectedHeap : public CHeapObj<mtInternal> {
   /////////////// Unit tests ///////////////
 
   NOT_PRODUCT(static void test_is_in();)
+
+ public:
+  // Elastic Max Heap
+  // 1. change elastic max heap size
+  // 2. return true if resize success or not
+  bool update_elastic_max_heap(size_t new_size, outputStream* st);
 };
 
 // Class to set and reset the GC cause for a CollectedHeap.

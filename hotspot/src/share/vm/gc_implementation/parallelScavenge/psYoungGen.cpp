@@ -40,7 +40,8 @@ PSYoungGen::PSYoungGen(size_t        initial_size,
                        size_t        max_size) :
   _init_gen_size(initial_size),
   _min_gen_size(min_size),
-  _max_gen_size(max_size)
+  _max_gen_size(max_size),
+  _cur_max_gen_size(max_size)
 {}
 
 void PSYoungGen::initialize_virtual_space(ReservedSpace rs, size_t alignment) {
@@ -276,7 +277,7 @@ void PSYoungGen::resize(size_t eden_size, size_t survivor_size) {
         " used: " SIZE_FORMAT " capacity: " SIZE_FORMAT
         " gen limits: " SIZE_FORMAT " / " SIZE_FORMAT,
         eden_size, survivor_size, used_in_bytes(), capacity_in_bytes(),
-        _max_gen_size, min_gen_size());
+        max_size(), min_gen_size());
     }
   }
 }

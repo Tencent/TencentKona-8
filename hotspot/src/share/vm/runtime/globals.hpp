@@ -4111,7 +4111,17 @@ class CommandLineFlags {
           "Save and restore JIT compiled code options")                     \
                                                                             \
   product(ccstr, CodeReviveOptionsFile, NULL,                               \
-          "Save and restore JIT compiled code options stored in file")
+          "Save and restore JIT compiled code options stored in file")      \
+                                                                            \
+  product(bool, ElasticMaxHeap, false,                                      \
+          "Allow change max heap size during runtime with jcmd")            \
+                                                                            \
+  product(bool, TraceElasticMaxHeap, false,                                 \
+          "Trace Elastic Max Heap adjustion logs and failure reasons")      \
+                                                                            \
+  product(uintx, ElasticMaxHeapShrinkMinFreeRatio, 40,                      \
+          "minimal ratio of free bytes after elastic max heap shirnk")
+
 
 
 /*

@@ -231,14 +231,14 @@ class G1MonitoringSupport : public CHeapObj<mtGC> {
   size_t overall_used()               { return _overall_used;         }
 
   size_t young_gen_committed()        { return _young_gen_committed;  }
-  size_t young_gen_max()              { return overall_reserved();    }
+  size_t young_gen_max();
   size_t eden_space_committed()       { return _eden_committed;       }
   size_t eden_space_used()            { return _eden_used;            }
   size_t survivor_space_committed()   { return _survivor_committed;   }
   size_t survivor_space_used()        { return _survivor_used;        }
 
   size_t old_gen_committed()          { return old_space_committed(); }
-  size_t old_gen_max()                { return overall_reserved();    }
+  size_t old_gen_max();
   size_t old_space_committed()        { return _old_committed;        }
   size_t old_space_used()             { return _old_used;             }
 };

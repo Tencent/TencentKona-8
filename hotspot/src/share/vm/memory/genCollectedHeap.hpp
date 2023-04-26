@@ -49,6 +49,7 @@ class GenCollectedHeap : public SharedHeap {
   friend class VM_GenCollectFullConcurrent;
   friend class VM_GC_HeapInspection;
   friend class VM_HeapDumper;
+  friend class Gen_ElasticMaxHeapOp;
   friend class HeapInspection;
   friend class GCCauseSetter;
   friend class VMStructs;
