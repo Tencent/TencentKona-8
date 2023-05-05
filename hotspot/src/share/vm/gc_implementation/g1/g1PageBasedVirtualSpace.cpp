@@ -232,8 +232,9 @@ void G1PageBasedVirtualSpace::uncommit_internal(size_t start_page, size_t end_pa
   static int counter = 0;
   bool res = os::uncommit_memory(start_addr, pointer_delta(bounded_end_addr(end_page), start_addr, sizeof(char)));
   //should madvise the physical memory only after uncommit operation succeed
-  if (res && FreeHeapPhysicalMemory) {
-    os::free_heap_physical_memory(start_addr, pointer_delta(bounded_end_addr(end_page), start_addr, sizeof(char)));
+  if (res && (FreeHeapPhysicalMemory || (ElasticMaxHeap && ((G1CollectedHeap*)Universe::heap())->exp_EMH_size() > 0))) {
+    bool result = os::free_heap_physical_memory(start_addr, pointer_delta(bounded_end_addr(end_page), start_addr, sizeof(char)));
+    guarantee(result, "free heap physical memory should be successful");
   }
 }
 

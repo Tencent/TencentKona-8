@@ -36,6 +36,7 @@
 #include "gc_implementation/parallelScavenge/psPromotionManager.hpp"
 #include "gc_implementation/parallelScavenge/psScavenge.hpp"
 #include "gc_implementation/parallelScavenge/vmPSOperations.hpp"
+#include "gc_implementation/shared/elasticMaxHeap.hpp"
 #include "gc_implementation/shared/gcHeapSummary.hpp"
 #include "gc_implementation/shared/gcWhen.hpp"
 #include "memory/gcLocker.inline.hpp"
@@ -169,6 +170,12 @@ bool ParallelScavengeHeap::is_maximal_no_gc() const {
 
 size_t ParallelScavengeHeap::max_capacity() const {
   size_t estimated = reserved_region().byte_size();
+  // Elastic Max Heap
+  if (ElasticMaxHeap) {
+    // young_gen()->max_size() is also controlled by ElasticMaxHeap
+    guarantee(collector_policy()->current_max_heap_byte_size() <= estimated, "must be");
+    estimated = collector_policy()->current_max_heap_byte_size();
+  }
   if (UseAdaptiveSizePolicy) {
     estimated -= _size_policy->max_survivor_size(young_gen()->max_size());
   } else {

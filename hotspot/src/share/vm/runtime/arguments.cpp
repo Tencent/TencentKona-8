@@ -28,6 +28,7 @@
 #include "classfile/symbolTable.hpp"
 #include "compiler/compilerOracle.hpp"
 #include "cr/revive.hpp"
+#include "gc_implementation/shared/elasticMaxHeap.hpp"
 #include "memory/allocation.inline.hpp"
 #include "memory/cardTableRS.hpp"
 #include "memory/genCollectedHeap.hpp"
@@ -1761,6 +1762,7 @@ static bool verify_serial_gc_flags() {
 
 void Arguments::set_gc_specific_flags() {
 #if INCLUDE_ALL_GCS
+  ElasticMaxHeapChecker::check_common_opitons();
   // Set per-collector flags
   if (UseParallelGC || UseParallelOldGC) {
     set_parallel_gc_flags();
@@ -1790,6 +1792,12 @@ void Arguments::set_gc_specific_flags() {
     FLAG_SET_CMDLINE(bool, CMSClassUnloadingEnabled, false);
     FLAG_SET_CMDLINE(bool, ClassUnloadingWithConcurrentMark, false);
     FLAG_SET_CMDLINE(bool, ExplicitGCInvokesConcurrentAndUnloadsClasses, false);
+  }
+  if (FreeHeapPhysicalMemory) {
+    if (UseLargePages) {
+      warning("-XX:+FreeHeapPhysicalMemory can not be combined with -XX:+UseLargePages, "
+              "if you do that, -XX:+FreeHeapPhysicalMemory will have no effect");
+    }
   }
 #else // INCLUDE_ALL_GCS
   assert(verify_serial_gc_flags(), "SerialGC unset");

@@ -706,7 +706,8 @@ void  CollectedHeap::free_heap_physical_memory_after_fullgc(void* start, void* e
   size_t length = (size_t)end - (size_t)start_address;
   guarantee (length % page_size == 0, "Invariant") ;
   _free_heap_physical_memory_total_byte_size = length;
-  os::free_heap_physical_memory(start_address, length);
+  bool result = os::free_heap_physical_memory(start_address, length);
+  guarantee(result, "free heap physical memory should be successful");
   double end_sec = os::elapsedTime();
   _free_heap_physical_memory_time_sec = end_sec - start_sec;
   _last_full_gc_time = end_sec;

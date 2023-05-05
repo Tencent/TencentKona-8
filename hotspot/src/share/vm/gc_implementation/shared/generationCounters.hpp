@@ -40,6 +40,8 @@ private:
                   size_t curr_capacity);
 
  protected:
+  // Elastic Max Heap
+  PerfVariable*      _max_size;       // max size can be change when Elastic Max Heap is on
   PerfVariable*      _current_size;
   VirtualSpace*      _virtual_space;
 
@@ -73,6 +75,9 @@ private:
   }
 
   virtual void update_all();
+
+  // Elastic Max Heap
+  void update_max_size(size_t size);
 
   const char* name_space() const        { return _name_space; }
 

@@ -2325,7 +2325,8 @@ void ConcurrentMark::completeCleanup() {
 
         for (int i = 0; i < should_be_freed_region_length && cur != NULL; i++) {
           free_heap_physical_memory_total_byte_size += cur->capacity();
-          os::free_heap_physical_memory(((char*)cur->bottom()), cur->capacity());
+          bool result = os::free_heap_physical_memory(((char*)cur->bottom()), cur->capacity());
+          guarantee(result, "free heap physical memory should be successful");
           cur = cur->next();
         }
         double end_sec = os::elapsedTime();

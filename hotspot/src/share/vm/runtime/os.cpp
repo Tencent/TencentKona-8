@@ -1564,8 +1564,8 @@ NOT_MACOS(bool os::uncommit_memory(char* addr, size_t bytes)) {
   return res;
 }
 
-void os::free_heap_physical_memory(char *addr, size_t bytes) {
-  pd_free_heap_physical_memory(addr, bytes);
+bool os::free_heap_physical_memory(char *addr, size_t bytes) {
+  return pd_free_heap_physical_memory(addr, bytes);
 }
 
 bool os::release_memory(char* addr, size_t bytes) {

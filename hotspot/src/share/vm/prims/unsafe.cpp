@@ -612,13 +612,20 @@ UNSAFE_ENTRY(jlong, Unsafe_AllocateMemory(JNIEnv *env, jobject unsafe, jlong siz
   if (sz == 0) {
     return 0;
   }
+  EventJavaNativeAllocation event;
   sz = round_to(sz, HeapWordSize);
   void* x = os::malloc(sz, mtInternal);
   if (x == NULL) {
     THROW_0(vmSymbols::java_lang_OutOfMemoryError());
   }
-  //Copy::fill_to_words((HeapWord*)x, sz / HeapWordSize);
-  return addr_to_java(x);
+   //Copy::fill_to_words((HeapWord*)x, sz / HeapWordSize);
+  jlong javaAddr = addr_to_java(x);
+  if (event.should_commit()) {
+    event.set_allocationSize(sz);
+    event.set_addr(javaAddr);
+    event.commit();
+  }
+  return javaAddr;
 UNSAFE_END
 
 UNSAFE_ENTRY(jlong, Unsafe_ReallocateMemory(JNIEnv *env, jobject unsafe, jlong addr, jlong size))
@@ -632,12 +639,20 @@ UNSAFE_ENTRY(jlong, Unsafe_ReallocateMemory(JNIEnv *env, jobject unsafe, jlong a
     os::free(p);
     return 0;
   }
+  EventJavaNativeReallocate event;
   sz = round_to(sz, HeapWordSize);
   void* x = (p == NULL) ? os::malloc(sz, mtInternal) : os::realloc(p, sz, mtInternal);
   if (x == NULL) {
     THROW_0(vmSymbols::java_lang_OutOfMemoryError());
   }
-  return addr_to_java(x);
+  jlong javaAddr = addr_to_java(x);
+  if (event.should_commit()) {
+    event.set_allocationSize(sz);
+    event.set_allocAddr(javaAddr);
+    event.set_freeAddr(addr);
+    event.commit();
+  }
+  return javaAddr;
 UNSAFE_END
 
 UNSAFE_ENTRY(void, Unsafe_FreeMemory(JNIEnv *env, jobject unsafe, jlong addr))
@@ -646,7 +661,12 @@ UNSAFE_ENTRY(void, Unsafe_FreeMemory(JNIEnv *env, jobject unsafe, jlong addr))
   if (p == NULL) {
     return;
   }
+  EventJavaNativeFree event;
   os::free(p);
+  if (event.should_commit()) {
+    event.set_addr(addr);
+    event.commit();
+  }
 UNSAFE_END
 
 UNSAFE_ENTRY(void, Unsafe_SetMemory(JNIEnv *env, jobject unsafe, jlong addr, jlong size, jbyte value))

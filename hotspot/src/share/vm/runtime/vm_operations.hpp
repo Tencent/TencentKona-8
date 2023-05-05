@@ -101,6 +101,8 @@
   template(JFROldObject)                          \
   /* CodeRevive */                                \
   template(DumpSharedCodeSpace)                   \
+  /* Elstic Max Heap */                           \
+  template(ElasticMaxHeap)                        \
 
 class VM_Operation: public CHeapObj<mtInternal> {
  public:

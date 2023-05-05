@@ -57,6 +57,8 @@ class PSYoungGen : public CHeapObj<mtGC> {
   const size_t _init_gen_size;
   const size_t _min_gen_size;
   const size_t _max_gen_size;
+  // DHS
+  size_t _cur_max_gen_size;
 
   // Performance counters
   PSGenerationCounters*     _gen_counters;
@@ -116,7 +118,7 @@ class PSYoungGen : public CHeapObj<mtGC> {
   PSVirtualSpace* virtual_space() const { return _virtual_space; }
 
   // For Adaptive size policy
-  size_t min_gen_size() { return _min_gen_size; }
+  size_t min_gen_size() const { return _min_gen_size; }
 
   // MarkSweep support
   PSMarkSweepDecorator* eden_mark_sweep() const    { return _eden_mark_sweep; }
@@ -136,6 +138,9 @@ class PSYoungGen : public CHeapObj<mtGC> {
   //        not allow us to use these values.
   void resize(size_t eden_size, size_t survivor_size);
 
+  // Resize for DynamicHeapSize, shrink to new_size
+  bool shrinkAfterFullGC(size_t new_size);
+
   // Size info
   size_t capacity_in_bytes() const;
   size_t used_in_bytes() const;
@@ -146,11 +151,33 @@ class PSYoungGen : public CHeapObj<mtGC> {
   size_t free_in_words() const;
 
   // The max this generation can grow to
-  size_t max_size() const { return _reserved.byte_size(); }
+  size_t max_size() const {
+    if (ElasticMaxHeap) {
+      guarantee(_cur_max_gen_size <= _max_gen_size && _cur_max_gen_size >= min_gen_size(), "must be");
+      guarantee(_reserved.byte_size() == _max_gen_size, "must be");
+      return _cur_max_gen_size;
+    }
+    return _reserved.byte_size();
+  }
 
   // The max this generation can grow to if the boundary between
   // the generations are allowed to move.
-  size_t gen_size_limit() const { return _max_gen_size; }
+  size_t gen_size_limit() const {
+    if (ElasticMaxHeap) {
+      guarantee(_cur_max_gen_size <= _max_gen_size && _cur_max_gen_size >= min_gen_size(), "must be");
+      return _cur_max_gen_size;
+    }
+    return _max_gen_size;
+  }
+
+  void set_cur_max_gen_size(size_t new_size) {
+    guarantee(ElasticMaxHeap, "must be");
+    guarantee(new_size <= _max_gen_size && new_size >= min_gen_size(), "must be");
+    guarantee(_max_gen_size == _reserved.byte_size(), "must be");
+    _cur_max_gen_size = new_size;
+    virtual_space()->set_EMH_size(new_size);
+    _gen_counters->update_max_size(new_size);
+  }
 
   bool is_maximal_no_gc() const {
     return true;  // Never expands except at a GC

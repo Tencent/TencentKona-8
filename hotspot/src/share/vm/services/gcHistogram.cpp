@@ -73,7 +73,7 @@ int GCHistogram::search(long key) {
 GCHistogram::GCHistogram() : _bucket_limits(init_default_buckets()) { clear(); }
 
 long* GCHistogram::init_default_buckets_inner() {
-  long* result = new long[ALL_LEVEL];
+  long* result = NEW_C_HEAP_ARRAY(long, ALL_LEVEL, mtGC);
   for (int i = 0; i < ALL_LEVEL; i++) {
     if (i < LEVEL1) {//100,200,300......19000
       result[i] = i * 100;
@@ -107,7 +107,7 @@ void GCHistogram::clear() {
   _num = 0;
   _sum = 0;
   _sum_squares = 0;
-  _buckets = new long[ALL_LEVEL];
+  _buckets = NEW_C_HEAP_ARRAY(long, ALL_LEVEL, mtGC);
   for (size_t i = 0; i < ALL_LEVEL; i++) {
     _buckets[i] = 0;
   }

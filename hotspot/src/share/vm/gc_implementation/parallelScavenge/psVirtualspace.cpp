@@ -49,6 +49,7 @@ PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 PSVirtualSpace::PSVirtualSpace(ReservedSpace rs, size_t alignment) :
   _alignment(alignment)
 {
+  _EMH_size = 0;
   set_reserved(rs);
   set_committed(reserved_low_addr(), reserved_low_addr());
   DEBUG_ONLY(verify());
@@ -57,6 +58,7 @@ PSVirtualSpace::PSVirtualSpace(ReservedSpace rs, size_t alignment) :
 PSVirtualSpace::PSVirtualSpace(ReservedSpace rs) :
   _alignment(os::vm_page_size())
 {
+  _EMH_size = 0;
   set_reserved(rs);
   set_committed(reserved_low_addr(), reserved_low_addr());
   DEBUG_ONLY(verify());
@@ -64,6 +66,7 @@ PSVirtualSpace::PSVirtualSpace(ReservedSpace rs) :
 
 // Deprecated.
 PSVirtualSpace::PSVirtualSpace(): _alignment(os::vm_page_size()) {
+  _EMH_size = 0;
 }
 
 // Deprecated.
@@ -130,7 +133,8 @@ bool PSVirtualSpace::shrink_by(size_t bytes) {
     if (FreeHeapPhysicalMemory) {
       //should try to madvise virtual memory [base_addr, base_addr + bytes] 
       //only after os::uncommit_memory succeed
-      os::free_heap_physical_memory(base_addr, bytes);
+      bool result = os::free_heap_physical_memory(base_addr, bytes);
+      guarantee(result, "free heap physical memory should be successful");
     }
   }
 

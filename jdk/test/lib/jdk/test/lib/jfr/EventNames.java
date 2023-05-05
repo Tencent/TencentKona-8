@@ -85,6 +85,9 @@ public class EventNames {
     public final static String BiasedLockClassRevocation = PREFIX + "BiasedLockClassRevocation";
     // This event is hard to test
     public final static String ReservedStackActivation = PREFIX + "ReservedStackActivation";
+    public final static String JavaNativeAllocation = PREFIX + "JavaNativeAllocation";
+    public final static String JavaNativeFree = PREFIX + "JavaNativeFree";
+    public final static String JavaNativeReallocate = PREFIX + "JavaNativeReallocate";
 
     // GC
     public final static String GCHeapSummary = PREFIX + "GCHeapSummary";

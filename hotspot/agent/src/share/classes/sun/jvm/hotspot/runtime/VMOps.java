@@ -82,5 +82,6 @@ public enum VMOps {
   JFRCheckpoint,
   Exit,
   LinuxDllLoad,
+  ElasticMaxHeap,
   Terminating
 }

@@ -355,6 +355,10 @@ protected:
     return _promo_failure_scan_stack.is_empty();
   }
 
+  // Elastic Max Heap
+  virtual void update_gen_max_counter(size_t size) {
+    _gen_counters->update_max_size(size);
+  }
  protected:
   // If clear_space is true, clear the survivor spaces.  Eden is
   // cleared if the minimum size of eden is 0.  If mangle_space

@@ -3779,7 +3779,7 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
       //  we should start new thread
       if (FreeHeapPhysicalMemory
         && (UseG1GC || PeriodicGCInterval != 0 || ForcePeriodicGCInterval != 0)) {
-         FreeHeapPhysicalMemoryThread::start();
+         FreeHeapPhysicalMemoryThread::initialize();
       }
   }
 

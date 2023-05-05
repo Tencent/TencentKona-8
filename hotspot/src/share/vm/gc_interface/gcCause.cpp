@@ -70,6 +70,9 @@ const char* GCCause::to_string(GCCause::Cause cause) {
     case _allocation_failure:
       return "Allocation Failure";
 
+    case _elastic_max_heap:
+      return "Elastic Max Heap";
+
     case _tenured_generation_full:
       return "Tenured Generation Full";
 

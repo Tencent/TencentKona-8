@@ -221,6 +221,8 @@ class G1CollectedHeap : public SharedHeap {
   // Testing classes.
   friend class G1CheckCSetFastTableClosure;
 
+  friend class G1_ElasticMaxHeapOp;
+
 private:
   // The one and only G1CollectedHeap, so static functions can find it.
   static G1CollectedHeap* _g1h;
@@ -1689,6 +1691,25 @@ public:
 
 protected:
   size_t _max_heap_capacity;
+
+private:
+  // Elastic Max Heap
+  // expected ElasticMaxHeap size during full gc (temp value)
+  // 0 means do not adjust
+  // min_gen_size <= _expected_EMH_size  <= _reserved size.
+  // will be cleared after ElasticMaxHeap VM operation.
+  size_t _exp_EMH_size;
+public:
+  size_t exp_EMH_size() const { return _exp_EMH_size; }
+  void set_exp_EMH_size(size_t size) {
+    guarantee(size <= _reserved.byte_size(), "must be");
+    _exp_EMH_size = size;
+  }
+  void update_gen_max_counter(size_t size) {
+    guarantee(ElasticMaxHeap, "must be");
+    _g1mm->young_collection_counters()->update_max_size(size);
+    _g1mm->old_collection_counters()->update_max_size(size);
+  }
 };
 
 class FreeHeapPhsicalMemoryTask : public Task{

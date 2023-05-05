@@ -29,6 +29,7 @@
 #include "code/codeCache.hpp"
 #include "code/icBuffer.hpp"
 #include "gc_implementation/shared/collectorCounters.hpp"
+#include "gc_implementation/shared/elasticMaxHeap.hpp"
 #include "gc_implementation/shared/gcTrace.hpp"
 #include "gc_implementation/shared/gcTraceTime.hpp"
 #include "gc_implementation/shared/vmGCOperations.hpp"
@@ -163,6 +164,8 @@ jint GenCollectedHeap::initialize() {
   }
 #endif // INCLUDE_ALL_GCS
 
+  // Elastic Max Heap
+  ElasticMaxHeapChecker::check_GenCollected_opitons();
   return JNI_OK;
 }
 

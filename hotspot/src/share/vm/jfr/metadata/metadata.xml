@@ -907,6 +907,24 @@
     <Field type="ulong" name="value" label="Value" />
   </Event>
 
+  <Event name="JavaNativeAllocation" category="Java Application" label="Java Native Allocation" description="Allocation memory when using native"
+    thread="true" stackTrace="true" startTime="true">
+    <Field type="ulong" name="addr" label="Addr" />
+    <Field type="ulong" contentType="bytes" name="allocationSize" label="Allocation Size" />
+  </Event>
+
+  <Event name="JavaNativeReallocate" category="Java Application" label="Java Native JavaNativeReallocate" description="Reallocate memory when using native"
+    thread="true" stackTrace="true" startTime="true">
+    <Field type="ulong" name="freeAddr" label="Free Addr" />
+    <Field type="ulong" name="allocAddr" label="Alloc Addr" />
+    <Field type="ulong" contentType="bytes" name="allocationSize" label="Allocation Size" />
+  </Event>
+
+  <Event name="JavaNativeFree" category="Java Application" label="Java Native Free" description="Free memory when using native"
+    thread="true" stackTrace="true" startTime="true">
+    <Field type="ulong" name="addr" label="Addr" />
+  </Event>
+
   <Type name="ZStatisticsCounterType" label="Z Statistics Counter">
     <Field type="string" name="counter" label="Counter" />
   </Type>

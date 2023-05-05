@@ -21,7 +21,7 @@
 #define SHARE_VM_SERVICES_HISTOGRAM_HPP
 
 //This class provides a framework for collecting percentile statistics.
-class GCHistogram {
+class GCHistogram : public CHeapObj<mtGC>{
  public:
   enum BucketLevel {
     LEVEL1 = 200,

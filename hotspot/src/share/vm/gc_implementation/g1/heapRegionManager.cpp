@@ -51,6 +51,8 @@ void HeapRegionManager::initialize(G1RegionToSpaceMapper* heap_storage,
   MemRegion reserved = heap_storage->reserved();
   _regions.initialize(reserved.start(), reserved.end(), HeapRegion::GrainBytes);
 
+  _EMH_length = (uint)_regions.length();
+
   _available_map.resize(_regions.length(), false);
   _available_map.clear();
 }
@@ -170,6 +172,12 @@ uint HeapRegionManager::expand_by(uint num_regions) {
 uint HeapRegionManager::expand_at(uint start, uint num_regions) {
   if (num_regions == 0) {
     return 0;
+  }
+  if (ElasticMaxHeap) {
+    uint avaiable_regions = EMH_length() - length();
+    guarantee(EMH_length() >= length(), "must be");
+    guarantee(avaiable_regions >= 0 && avaiable_regions <= max_length() && avaiable_regions <= EMH_length(), "must be");
+    num_regions = MIN2(num_regions, avaiable_regions);
   }
 
   uint cur = start;
