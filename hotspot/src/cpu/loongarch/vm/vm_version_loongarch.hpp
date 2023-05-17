@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2021, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2023, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,13 @@
 #include "runtime/globals_extension.hpp"
 #include "runtime/vm_version.hpp"
 
+#ifndef HWCAP_LOONGARCH_LSX
+#define HWCAP_LOONGARCH_LSX       (1 << 4)
+#endif
+
+#ifndef HWCAP_LOONGARCH_LASX
+#define HWCAP_LOONGARCH_LASX      (1 << 5)
+#endif
 
 class VM_Version: public Abstract_VM_Version {
 public:
@@ -196,30 +203,32 @@ public:
 protected:
 
   enum {
-    CPU_LA32              = (1 << 1),
-    CPU_LA64              = (1 << 2),
-    CPU_LLEXC             = (1 << 3),
-    CPU_SCDLY             = (1 << 4),
-    CPU_LLDBAR            = (1 << 5),
-    CPU_LBT_X86           = (1 << 6),
-    CPU_LBT_ARM           = (1 << 7),
-    CPU_LBT_MIPS          = (1 << 8),
-    CPU_CCDMA             = (1 << 9),
-    CPU_COMPLEX           = (1 << 10),
-    CPU_FP                = (1 << 11),
-    CPU_CRYPTO            = (1 << 14),
-    CPU_LSX               = (1 << 15),
-    CPU_LASX              = (1 << 17),
-    CPU_LAM               = (1 << 21),
-    CPU_LLSYNC            = (1 << 23),
-    CPU_TGTSYNC           = (1 << 24),
-    CPU_ULSYNC            = (1 << 25),
-    CPU_UAL               = (1 << 26),
+    CPU_LAM               = (1 << 1),
+    CPU_UAL               = (1 << 2),
+    CPU_LSX               = (1 << 4),
+    CPU_LASX              = (1 << 5),
+    CPU_COMPLEX           = (1 << 7),
+    CPU_CRYPTO            = (1 << 8),
+    CPU_LBT_X86           = (1 << 10),
+    CPU_LBT_ARM           = (1 << 11),
+    CPU_LBT_MIPS          = (1 << 12),
+    /* flags above must follow Linux HWCAP */
+    CPU_LA32              = (1 << 13),
+    CPU_LA64              = (1 << 14),
+    CPU_FP                = (1 << 15),
+    CPU_LLEXC             = (1 << 16),
+    CPU_SCDLY             = (1 << 17),
+    CPU_LLDBAR            = (1 << 18),
+    CPU_CCDMA             = (1 << 19),
+    CPU_LLSYNC            = (1 << 20),
+    CPU_TGTSYNC           = (1 << 21),
+    CPU_ULSYNC            = (1 << 22),
 
     //////////////////////add some other feature here//////////////////
   } cpuFeatureFlags;
 
   static int  _cpuFeatures;
+  static unsigned long auxv;
   static const char* _features_str;
   static bool _cpu_info_is_initialized;
 
@@ -270,8 +279,8 @@ public:
   static bool is_la32()             { return _cpuFeatures & CPU_LA32; }
   static bool is_la64()             { return _cpuFeatures & CPU_LA64; }
   static bool supports_crypto()     { return _cpuFeatures & CPU_CRYPTO; }
-  static bool supports_lsx()        { return _cpuFeatures & CPU_LSX; }
-  static bool supports_lasx()       { return _cpuFeatures & CPU_LASX; }
+  static bool supports_lsx()        { return auxv & HWCAP_LOONGARCH_LSX; }
+  static bool supports_lasx()       { return auxv & HWCAP_LOONGARCH_LASX; }
   static bool supports_lam()        { return _cpuFeatures & CPU_LAM; }
   static bool supports_llexc()      { return _cpuFeatures & CPU_LLEXC; }
   static bool supports_scdly()      { return _cpuFeatures & CPU_SCDLY; }

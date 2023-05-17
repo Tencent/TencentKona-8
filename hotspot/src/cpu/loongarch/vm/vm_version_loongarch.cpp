@@ -34,6 +34,9 @@
 # include "os_linux.inline.hpp"
 #endif
 
+#include <sys/auxv.h>
+#include <asm/hwcap.h>
+
 #define A0 RA0
 #define A1 RA1
 #define A2 RA2
@@ -53,6 +56,7 @@
 #define T8 RT8
 
 int VM_Version::_cpuFeatures;
+unsigned long VM_Version::auxv;
 const char* VM_Version::_features_str = "";
 VM_Version::CpuidInfo VM_Version::_cpuid_info   = { 0, };
 bool VM_Version::_cpu_info_is_initialized = false;
@@ -151,10 +155,6 @@ uint32_t VM_Version::get_feature_flags_by_cpucfg() {
 
   if (_cpuid_info.cpucfg_info_id2.bits.FP_CFG != 0)
     result |= CPU_FP;
-  if (_cpuid_info.cpucfg_info_id2.bits.LSX != 0)
-    result |= CPU_LSX;
-  if (_cpuid_info.cpucfg_info_id2.bits.LASX != 0)
-    result |= CPU_LASX;
   if (_cpuid_info.cpucfg_info_id2.bits.COMPLEX != 0)
     result |= CPU_COMPLEX;
   if (_cpuid_info.cpucfg_info_id2.bits.CRYPTO != 0)
@@ -194,6 +194,8 @@ void VM_Version::get_processor_features() {
   if (UseG1GC && FLAG_IS_DEFAULT(MaxGCPauseMillis)) {
     FLAG_SET_CMDLINE(uintx, MaxGCPauseMillis, 650);
   }
+
+  auxv = getauxval(AT_HWCAP);
 
   if (supports_lsx()) {
     if (FLAG_IS_DEFAULT(UseLSX)) {
