@@ -231,7 +231,7 @@ BUILDER_NAME:=@BUILDER_NAME@
 HOST_NAME:=@HOST_NAME@
 
 # Loongson OpenJDK Version info
-VER=8.1.13
+VER=8.1.14
 ifeq ($(HOST_NAME), )
   HOST_NAME=unknown
 endif
