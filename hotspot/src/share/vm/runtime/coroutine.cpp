@@ -1030,6 +1030,7 @@ JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jobject cont
       THROW_0(vmSymbols::java_lang_OutOfMemoryError());
     }
   }
+  coro->set_continuation(JNIHandles::resolve(cont));
   ContContainer::insert(coro);
   if (TraceCoroutine) {
     tty->print_cr("CONT_createContinuation: create continuation %p", coro);
