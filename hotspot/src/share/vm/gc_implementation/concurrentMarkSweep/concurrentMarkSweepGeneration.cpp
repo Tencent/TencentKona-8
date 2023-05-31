@@ -6847,6 +6847,7 @@ bool CMSBitMap::allocate(MemRegion mr) {
     warning("CMS bit map allocation failure");
     return false;
   }
+  MemTracker::record_virtual_memory_type((address)brs.base(), mtGC);
   // For now we'll just commit all of the bit map up fromt.
   // Later on we'll try to be more parsimonious with swap.
   if (!_virtual_space.initialize(brs, brs.size())) {
@@ -6939,6 +6940,7 @@ bool CMSMarkStack::allocate(size_t size) {
     warning("CMSMarkStack allocation failure");
     return false;
   }
+  MemTracker::record_virtual_memory_type((address)rs.base(), mtGC);
   if (!_virtual_space.initialize(rs, rs.size())) {
     warning("CMSMarkStack backing store failure");
     return false;
@@ -6975,6 +6977,7 @@ void CMSMarkStack::expand() {
   ReservedSpace rs(ReservedSpace::allocation_align_size_up(
                    new_capacity * sizeof(oop)));
   if (rs.is_reserved()) {
+    MemTracker::record_virtual_memory_type((address)rs.base(), mtGC);
     // Release the backing store associated with old stack
     _virtual_space.release();
     // Reinitialize virtual space for new stack
