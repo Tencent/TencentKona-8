@@ -66,8 +66,19 @@ void Coroutine::call_forkjoinpool_method(Thread* Self, Method* target_method, Ja
   update_thread_state(Self, saved_jts);
 }
 
+bool Coroutine::need_invoke_forkjoinpool_method(Thread* Self, Method* target_method) {
+  assert(Self->is_Java_thread(), "Must be Java thread!");
+  Coroutine* cur_coro = ((JavaThread *)Self)->current_coroutine();
+  // Invoke tryCompensate of ForkJoinPool while current coroutine is not thread coroutine.
+  if (!YieldWithMonitor || target_method == NULL || cur_coro == NULL || cur_coro->is_thread_coroutine()) {
+    return false;
+  }
+
+  return true;
+}
+
 bool Coroutine::try_compensate(Thread* Self) {
-  if (!YieldWithMonitor || _try_compensate_method == NULL) {
+  if (!need_invoke_forkjoinpool_method(Self, _try_compensate_method)) {
     return true;
   }
 
@@ -79,7 +90,7 @@ bool Coroutine::try_compensate(Thread* Self) {
 }
 
 void Coroutine::update_active_count(Thread* Self) {
-  if (!YieldWithMonitor || _update_active_count_method == NULL) {
+  if (!need_invoke_forkjoinpool_method(Self, _update_active_count_method)) {
     return;
   }
 
@@ -1019,6 +1030,7 @@ JVM_ENTRY(jlong, CONT_createContinuation(JNIEnv* env, jclass klass, jobject cont
       THROW_0(vmSymbols::java_lang_OutOfMemoryError());
     }
   }
+  coro->set_continuation(JNIHandles::resolve(cont));
   ContContainer::insert(coro);
   if (TraceCoroutine) {
     tty->print_cr("CONT_createContinuation: create continuation %p", coro);

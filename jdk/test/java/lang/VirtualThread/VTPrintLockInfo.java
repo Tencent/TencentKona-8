@@ -33,56 +33,35 @@ import jdk.testlibrary.JDKToolFinder;
 import java.lang.reflect.Field;
 
 public class VTPrintLockInfo {
-    static CountDownLatch doneSignal = new CountDownLatch(1);
-    public static class YieldWithMonitor {
-        public static void main(String... args) throws Exception {
-            CountDownLatch startSignal = new CountDownLatch(1);
-            ReentrantLock lock = new ReentrantLock();
-
-            Runnable vt0_r = new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        startSignal.await();
-                        synchronized (this) {
-                            lock.lock();
-                        }
-                        lock.unlock();
-                    } catch (Exception e) {
-                    }
-                }
-            };
-
-            lock.lock();
-            startSignal.countDown();
-            Thread vt0 = Thread.ofVirtual().name("vt0").start(vt0_r);
-
-            doneSignal.await();
-            lock.unlock();
-            vt0.join();
-        }
-    }
-
-    public static long getPidOfProcess(Process p) {
-        long pid = -1;
-        try {
-            if (p.getClass().getName().equals("java.lang.UNIXProcess")) {
-                Field f = p.getClass().getDeclaredField("pid");
-                f.setAccessible(true);
-                pid = f.getLong(p);
-                f.setAccessible(false);
-            }
-        } catch (Exception e) {
-            pid = -1;
-        }
-        return pid;
-    }
+    static CountDownLatch vt_start_locking_signal = new CountDownLatch(1);
 
     public static void main(String[] args) throws Throwable {
-        ProcessBuilder simplePb = ProcessTools.createJavaProcessBuilder(VTPrintLockInfo.YieldWithMonitor.class.getName());
-        long simplePid = getPidOfProcess(simplePb.start());
+        ReentrantLock lock = new ReentrantLock();
+        Runnable vt0_r = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    synchronized (this) {
+                        vt_start_locking_signal.countDown();
+                        lock.lock();
+                    }
+                    lock.unlock();
+                } catch (Exception e) {
+                }
+            }
+        };
+        lock.lock();
+        Thread vt0 = Thread.ofVirtual().name("vt0").start(vt0_r);
+        // wait vt0 block at lock.lock
+        vt_start_locking_signal.await();
+        while (!lock.hasQueuedThreads()) {
+            Thread.sleep(100);
+        }
+
+        // trigger jstack to print coroutine lock status
+        int pid = ProcessTools.getProcessId();
         ProcessBuilder outputPb = new ProcessBuilder();
-        outputPb.command(new String[]{JDKToolFinder.getJDKTool("jstack"), String.valueOf(simplePid)});
+        outputPb.command(new String[]{JDKToolFinder.getJDKTool("jstack"), String.valueOf(pid)});
         OutputAnalyzer output = new OutputAnalyzer(outputPb.start());
         System.out.println(output.getOutput());
         /* output is:
@@ -108,6 +87,8 @@ public class VTPrintLockInfo {
         */
         output.shouldContain("- locked");
         output.shouldContain("- parking to wait for");
-        doneSignal.countDown();
+
+        lock.unlock();
+        vt0.join();
     }
 }
