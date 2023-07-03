@@ -31,19 +31,19 @@
 #include "runtime/os.hpp"
 #include "vm_version_loongarch.hpp"
 
-#define inlasm_sync() if (os::is_ActiveCoresMP()) \
+#define inlasm_sync(v) if (os::is_ActiveCoresMP()) \
                         __asm__ __volatile__ ("nop"   : : : "memory"); \
                       else \
-                        __asm__ __volatile__ ("dbar 0"   : : : "memory");
+                        __asm__ __volatile__ ("dbar %0"   : :"K"(v) : "memory");
 
-inline void OrderAccess::loadload()   { inlasm_sync(); }
-inline void OrderAccess::storestore() { inlasm_sync(); }
-inline void OrderAccess::loadstore()  { inlasm_sync(); }
-inline void OrderAccess::storeload()  { inlasm_sync(); }
+inline void OrderAccess::loadload()   { inlasm_sync(0x15); }
+inline void OrderAccess::storestore() { inlasm_sync(0x1a); }
+inline void OrderAccess::loadstore()  { inlasm_sync(0x16); }
+inline void OrderAccess::storeload()  { inlasm_sync(0x19); }
 
-inline void OrderAccess::acquire() { inlasm_sync(); }
-inline void OrderAccess::release() { inlasm_sync(); }
-inline void OrderAccess::fence()   { inlasm_sync(); }
+inline void OrderAccess::acquire() { inlasm_sync(0x14); }
+inline void OrderAccess::release() { inlasm_sync(0x12); }
+inline void OrderAccess::fence()   { inlasm_sync(0x10); }
 
 //implementation of load_acquire
 inline jbyte    OrderAccess::load_acquire(volatile jbyte*   p) { jbyte data = *p; acquire(); return data; }

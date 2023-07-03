@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1999, 2021, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2021, Loongson Technology. All rights reserved.
+ * Copyright (c) 2021, 2023, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -241,7 +241,7 @@ void C1_MacroAssembler::initialize_object(Register obj, Register klass, Register
      }
   }
 
-  dbar(0);
+  membar(StoreStore);
 
   if (CURRENT_ENV->dtrace_alloc_probes()) {
     assert(obj == A0, "must be");
@@ -276,7 +276,7 @@ void C1_MacroAssembler::allocate_array(Register obj, Register len, Register t1, 
   // clear rest of allocated space
   initialize_body(obj, arr_size, header_size * BytesPerWord, t1, t2);
 
-  dbar(0);
+  membar(StoreStore);
 
   if (CURRENT_ENV->dtrace_alloc_probes()) {
     assert(obj == A0, "must be");

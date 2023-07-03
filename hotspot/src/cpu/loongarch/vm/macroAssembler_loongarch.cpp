@@ -1972,7 +1972,7 @@ void MacroAssembler::cmpxchg(Address addr, Register oldval, Register newval,
 
   bind(fail);
   if (barrier)
-    membar(LoadLoad);
+    dbar(0x700);
   if (retold && oldval != R0)
     move(oldval, resflag);
   move(resflag, R0);
@@ -1995,7 +1995,7 @@ void MacroAssembler::cmpxchg(Address addr, Register oldval, Register newval,
 
   bind(neq);
   if (barrier)
-    membar(LoadLoad);
+    dbar(0x700);
   if (retold && oldval != R0)
     move(oldval, tmp);
   if (fail)
@@ -2020,7 +2020,7 @@ void MacroAssembler::cmpxchg32(Address addr, Register oldval, Register newval,
 
   bind(fail);
   if (barrier)
-    membar(LoadLoad);
+    dbar(0x700);
   if (retold && oldval != R0)
     move(oldval, resflag);
   move(resflag, R0);
@@ -2045,7 +2045,7 @@ void MacroAssembler::cmpxchg32(Address addr, Register oldval, Register newval, R
 
   bind(neq);
   if (barrier)
-    membar(LoadLoad);
+    dbar(0x700);
   if (retold && oldval != R0)
     move(oldval, tmp);
   if (fail)
@@ -2422,7 +2422,7 @@ void MacroAssembler::fast_unlock(Register objReg, Register boxReg, Register resR
       move(AT, R0);
       bnez(scrReg, DONE_SET);
 
-      membar(Assembler::Membar_mask_bits(LoadLoad|LoadStore));
+      membar(Assembler::Membar_mask_bits(LoadStore|StoreStore)); // release-store
       st_d(R0, Address(tmpReg, ObjectMonitor::owner_offset_in_bytes() - 2));
       li(resReg, 1);
       b(DONE);

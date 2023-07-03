@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1999, 2013, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2020, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2023, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -149,7 +149,7 @@ inline jint     Atomic::cmpxchg    (jint     exchange_value, volatile jint*     
       "   sc.w  %[__cmp],  %[__dest]  \n\t"
       "   beqz  %[__cmp],  1b    \n\t"
       "2:        \n\t"
-      "   dbar 0        \n\t"
+      "   dbar 0x700        \n\t"
 
       : [__prev] "=&r" (__prev), [__cmp] "=&r" (__cmp)
       : [__dest] "ZC" (*(volatile jint*)dest), [__old] "r" (compare_value),  [__new] "r" (exchange_value)
@@ -170,7 +170,7 @@ inline jlong    Atomic::cmpxchg    (jlong    exchange_value, volatile jlong*    
       "   sc.d  %[__cmp],  %[__dest]  \n\t"
       "   beqz  %[__cmp],  1b    \n\t"
       "2:        \n\t"
-      "   dbar 0 \n\t"
+      "   dbar 0x700 \n\t"
 
       : [__prev] "=&r" (__prev), [__cmp] "=&r" (__cmp)
       : [__dest] "ZC" (*(volatile jlong*)dest), [__old] "r" (compare_value),  [__new] "r" (exchange_value)
@@ -189,7 +189,7 @@ inline intptr_t Atomic::cmpxchg_ptr(intptr_t exchange_value, volatile intptr_t* 
       "   sc.d  %[__cmp],  %[__dest]  \n\t"
       "   beqz  %[__cmp],  1b    \n\t"
       "2:        \n\t"
-      "   dbar  0 \n\t"
+      "   dbar  0x700 \n\t"
 
       : [__prev] "=&r" (__prev), [__cmp] "=&r" (__cmp)
       : [__dest] "ZC" (*(volatile intptr_t*)dest), [__old] "r" (compare_value),  [__new] "r" (exchange_value)

@@ -2019,19 +2019,25 @@ public:
   void bceqz(ConditionalFlagRegister cj, Label& L)     { bceqz(cj, target(L)); }
   void bcnez(ConditionalFlagRegister cj, Label& L)     { bcnez(cj, target(L)); }
 
-  //1. Now Membar_mask_bits is 0,Need to fix it after LA6000
-  //2. Also to fix *prev & 0x7FFF)== hin in MacroAssembler::membar(Membar_mask_bits hint)
   typedef enum {
-    StoreStore = 0,
-    LoadStore  = 0,
-    StoreLoad  = 0,
-    LoadLoad   = 0,
-    AnyAny     = 0
+    // hint[4]
+    Completion = 0,
+    Ordering   = (1 << 4),
+
+    // The bitwise-not of the below constants is corresponding to the hint. This is convenient for OR operation.
+    // hint[3:2] and hint[1:0]
+    LoadLoad   = ((1 << 3) | (1 << 1)),
+    LoadStore  = ((1 << 3) | (1 << 0)),
+    StoreLoad  = ((1 << 2) | (1 << 1)),
+    StoreStore = ((1 << 2) | (1 << 0)),
+    AnyAny     = ((3 << 2) | (3 << 0)),
   } Membar_mask_bits;
 
   // Serializes memory and blows flags
   void membar(Membar_mask_bits hint) {
-    dbar(hint);
+    assert((hint & (3 << 0)) != 0, "membar mask unsupported!");
+    assert((hint & (3 << 2)) != 0, "membar mask unsupported!");
+    dbar(Ordering | (~hint & 0xf));
   }
 
   // LSX and LASX
