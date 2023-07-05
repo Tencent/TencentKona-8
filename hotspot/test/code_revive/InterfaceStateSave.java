@@ -32,7 +32,7 @@ import com.oracle.java.testlibrary.Asserts;
 public class InterfaceStateSave {
     public static void main(String[] args) throws Exception {
         String[] o0 = {
-            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$Callable, loader = 2, meta_index = 1, init_status 1",
+            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$Callable, loader = 2, meta_index = 3, init_status 1",
         };
         Test(o0,
              "-XX:-TieredCompilation",
@@ -42,7 +42,7 @@ public class InterfaceStateSave {
              "TestInterfaceKlassReviveAndRestore");
 
         String[] o1 = {
-            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$Callable, loader = 2, meta_index = 1, init_status 2",
+            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$Callable, loader = 2, meta_index = 3, init_status 2",
         };
         Test(o1,
              "-XX:-TieredCompilation",
@@ -59,7 +59,7 @@ public class InterfaceStateSave {
              "TestInterfaceKlassReviveAndRestore", "2");
 
         String[] o2 = {
-            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$Callable, loader = 2, meta_index = 1, init_status 4",
+            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$Callable, loader = 2, meta_index = 3, init_status 4",
         };
         Test(o2,
              "-XX:-TieredCompilation",
@@ -69,7 +69,7 @@ public class InterfaceStateSave {
              "TestInterfaceKlassReviveAndRestore", "3");
 
         String[] o3 = {
-            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$DefaultInterface, loader = 2, meta_index = 1, init_status 1",
+            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$DefaultInterface, loader = 2, meta_index = 4, init_status 1",
         };
         Test(o3,
              "-XX:-TieredCompilation",
@@ -79,7 +79,7 @@ public class InterfaceStateSave {
              "TestInterfaceKlassReviveAndRestore", "4");
 
         String[] o4 = {
-            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$DefaultInterface, loader = 2, meta_index = 1, init_status 4",
+            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$DefaultInterface, loader = 2, meta_index = 4, init_status 4",
         };
         Test(o4,
              "-XX:-TieredCompilation",
@@ -89,7 +89,7 @@ public class InterfaceStateSave {
              "TestInterfaceKlassReviveAndRestore", "5");
 
         String[] o5 = {
-            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$DefaultInterface1, loader = 2, meta_index = 1, init_status 4",
+            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$DefaultInterface1, loader = 2, meta_index = 4, init_status 4",
         };
         Test(o5,
              "-XX:-TieredCompilation",
@@ -99,7 +99,7 @@ public class InterfaceStateSave {
              "TestInterfaceKlassReviveAndRestore", "6");
 
         String[] o6 = {
-            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$DefaultInterface1, loader = 2, meta_index = 1, init_status 2",
+            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$DefaultInterface1, loader = 2, meta_index = 4, init_status 2",
         };
         Test(o6,
              "-XX:-TieredCompilation",
@@ -109,7 +109,7 @@ public class InterfaceStateSave {
              "TestInterfaceKlassReviveAndRestore", "7");
 
         String[] o7 = {
-            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$DefaultInterface1, loader = 2, meta_index = 1, init_status 4",
+            "mirror by name and classloader : tag =9, kls = TestInterfaceKlassReviveAndRestore$DefaultInterface1, loader = 2, meta_index = 4, init_status 4",
         };
         Test(o7,
              "-XX:-TieredCompilation",

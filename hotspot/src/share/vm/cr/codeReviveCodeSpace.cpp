@@ -34,9 +34,9 @@ CodeReviveCodeSpace::CodeReviveCodeSpace(char* start, char* limit, bool load) {
 int CodeReviveCodeSpace::saveCode(CodeBlob* cb, CodeReviveMetaSpace* meta_space) {
   char* save_pos = _cur;
 
-  CodeReviveCodeBlob rcb(save_pos, _limit, cb, meta_space);
-  if (rcb.save()) {
-    _cur += align_up(rcb.size(), _alignment);
+  CodeReviveCodeBlob* rcb = new CodeReviveCodeBlob(save_pos, _limit, cb, meta_space);
+  if (rcb->save()) {
+    _cur += align_up(rcb->size(), _alignment);
     return (int)(save_pos - _start);
   } else {
     return -1;

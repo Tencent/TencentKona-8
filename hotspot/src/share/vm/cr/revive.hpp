@@ -30,6 +30,8 @@ class CodeReviveCodeSpace;
 class Method;
 class ciEnv;
 
+class FileMapInfo;
+ 
 const uint32_t cr_archive     = 0; // log contents of CSA file in save or restore
 const uint32_t cr_global      = 1; // log VM global symbols in save
 const uint32_t cr_assembly    = 2; // print the native codes of saved methods
@@ -75,11 +77,11 @@ const uint8_t cr_info         = 4; // all events during code revive process.
  */
 
 enum LoaderType {
-  boot_loader          = 0,
-  ext_loader           = 1,
-  app_loader           = 2,
-  custom_loader        = 4,
-  method_holder_loader = 8, // used in data array, marked as method holder's classloader.
+  boot_loader          = 0x00,
+  ext_loader           = 0x01,
+  app_loader           = 0x02,
+  custom_loader        = 0x04, // oop/metadata loaded by custom classloader.
+  method_holder_loader = 0x08, // used in data array, marked as method holder's classloader.
 };
 
 class CodeRevive : AllStatic {
@@ -119,6 +121,14 @@ class CodeRevive : AllStatic {
     M_COVERAGE,
   };
 
+  enum {
+    REVIVE_SUCCESS,
+    REVIVE_FAIL,
+    REVIVE_NOT_IN_CSA,
+    REVIVE_FOUND_WITH_NAME,
+    REVIVE_TOTAL_STATUS,
+  } ReviveStatus;
+
  private:
   static CodeReviveVMGlobals* _vm_globals;
   static CodeReviveFile*  _load_file;
@@ -131,36 +141,39 @@ class CodeRevive : AllStatic {
   static bool             _perf_enable;
   static bool             _validate_check;
   static bool             _prepare_done;
-  static bool             _disable_check_dir;
+  static bool             _disable_constant_opt;
+  static bool             _verify_redefined_identity;   // Test option: verify identity when creating nmethod
+  static bool             _make_revive_fail_at_nmethod; // Test option: make revive failed when creating nmethod
   static char*            _file_path;
   static char*            _log_file_path;
   static char*            _input_files;
   static char*            _input_list_file;
-  static char*            _merge_wildcard_classpath;  // the classpath containing wildcard during merge
   static int32_t          _percent;            // save/restore under this percent, range [1:99]
   static int32_t          _coverage;     // the coverage for merge csa, range [1:99]
   static int32_t          _max_container_count;
   static int32_t          _max_nmethod_versions;
+  static volatile int32_t _redefine_epoch; // LSB: 0 invalid, 1 valid; Bit 1~62: epoch; Bit 63: unused.
   static uint32_t         _log_kind;
   static uint64_t         _max_file_size;
   static MergePolicy      _merge_policy;
   static outputStream*    _log_file;
   static uint8_t          _log_ctrls[cr_number];
   static elapsedTimer     _t_aot_timers[T_TOTAL_TIMERS];
+  static int              _revive_counter[REVIVE_TOTAL_STATUS]; 
   static uint             _aot_size_counters[S_TOTAL_COUNTERS];
   static uint             _total_file_size;
   static RevivePolicy     _revive_policy;
   static char*            _revive_policy_arg;
   static const char*      _revive_policy_name[REVIVE_POLICY_NUM];
+  static int64_t          _cds_identity;   // the identity for the CDS archive file
 
   static bool parse_options();
   static double get_ms_time(int timer) {
     return (double)get_aot_timer(timer)->ticks() / os::elapsed_frequency() * (double)1000.0;
   }
 
-  static LoaderType loader_type(oop loader);
-
  public:
+  static void early_init();
   static bool is_save() {
     return _is_save;
   }
@@ -200,17 +213,14 @@ class CodeRevive : AllStatic {
   static char* input_list_file() {
     return _input_list_file;
   }
-  static char* merge_wildcard_classpath() {
-    return _merge_wildcard_classpath;
-  }
   static void set_merge_policy(MergePolicy p) {
     _merge_policy = p;
   }
   static MergePolicy merge_policy() {
     return _merge_policy;
   }
-  static bool disable_check_dir() {
-    return _disable_check_dir;
+  static bool disable_constant_opt() {
+    return _disable_constant_opt;
   }
   static void set_should_disable() {
     _should_disable = true;
@@ -220,9 +230,10 @@ class CodeRevive : AllStatic {
   }
   static bool is_revive_candidate(Method* target, int task_level);
   static void disable();
+  static bool is_disabled();
   static void parse_option_file();
   static CodeReviveVMGlobals* vm_globals() { return _vm_globals; }
-  static char* find_revive_code(Method* m);
+  static char* find_revive_code(Method* m, bool only_use_name = false);
   static CodeReviveMetaSpace* current_meta_space();
   static CodeReviveCodeSpace* current_code_space();
   static void on_vm_start();
@@ -295,16 +306,25 @@ class CodeRevive : AllStatic {
   }
   static bool is_expected_level(int level);
   static void print_statistics();
-  static void collect_statistics(elapsedTimer time, bool success);
+  static void collect_statistics(Method* m, elapsedTimer time, int revive_status);
 
+  static LoaderType loader_type(oop loader);
   static LoaderType klass_loader_type(Klass* k);
   static LoaderType nmethod_loader_type(nmethod* nm);
   static bool is_save_candidate(CodeBlob* cb);
-  static void add_class_dir_path(const char* dir_path, size_t len, TRAPS);
-  static void check_class_dir_path(const char* dir_path, size_t len, TRAPS);
-  static bool read_class_from_path(const char* dir_path, size_t len, TRAPS);
   static bool is_unsupported(ciEnv* env);
-  static void check_dir_path(const char* source_path, TRAPS);
+  static int64_t get_cds_identity() {
+    return _cds_identity;
+  }
+  static void compute_cds_identity(FileMapInfo* mapinfo);
+  // class redefine support
+  static bool verify_redefined_identity() { return _verify_redefined_identity; }
+  static bool make_revive_fail_at_nmethod() { return _make_revive_fail_at_nmethod; }
+  static int32_t redefine_epoch() {
+    return OrderAccess::load_acquire(&_redefine_epoch);
+  }
+  static void next_redefine_epoch(Klass* k);
+  static void process_redefined_class(InstanceKlass* redefined_klass, InstanceKlass* scratch_klass);
 };
 
 #define CR_LOG(kind, level, fmt, ...)               \

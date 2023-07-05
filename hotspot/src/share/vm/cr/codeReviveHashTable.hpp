@@ -24,137 +24,87 @@
 #include "utilities/hashtable.hpp"
 #include "runtime/mutexLocker.hpp"
 
-class MergePhaseKlassResovleCacheEntry : public HashtableEntry<Symbol*, mtSymbol> {
+/*
+ * entry for meta information for method and class, include:
+ * 1. symbol name 
+ * 2. identity
+ * 3. loader type
+ * 4. global index
+ */
+class MergePhaseMetaEntry : public HashtableEntry<Symbol*, mtSymbol> {
  private:
-  // the value can be null.
-  // if it is null, it means that the klass can't be resolved in merge stage
-  Klass* _klass;
+  int64_t  _identity;
+  uint16_t _loader_type;
+  int      _global_index;
 
  public:
   Symbol* symbol() const             { return literal(); }
 
-  Klass*  klass()  const             { return _klass; }
-  void    set_klass(Klass* k)        { _klass = k; }
-
-  MergePhaseKlassResovleCacheEntry* next() const {
-    return (MergePhaseKlassResovleCacheEntry*)HashtableEntry<Symbol*, mtSymbol>::next();
+  int64_t identity()  const          { return _identity; }
+  void    set_identity(int64_t identity)        { _identity = identity; }
+  int     global_index()             { return _global_index; }
+  void    set_index(int index)       { _global_index = index; }
+  uint16_t loader_type()             { return _loader_type; }
+  void set_loader_type(uint16_t type)           { _loader_type = type; }
+  
+          
+  MergePhaseMetaEntry* next() const {
+    return (MergePhaseMetaEntry*)HashtableEntry<Symbol*, mtSymbol>::next();
   }
-
-  MergePhaseKlassResovleCacheEntry** next_addr() {
-    return (MergePhaseKlassResovleCacheEntry**)HashtableEntry<Symbol*, mtSymbol>::next_addr();
+  
+  MergePhaseMetaEntry** next_addr() {
+    return (MergePhaseMetaEntry**)HashtableEntry<Symbol*, mtSymbol>::next_addr();
   }
 };
 
 /*
- * record klass information in csa merge
- * if the klass can't be resolved, the klass name is still recorded, and klass is NULL.
- *
+ * Record meta information in csa merge, include method and klass
+ * use symbol and identity for each entry
  */
-class MergePhaseKlassResovleCacheTable : public Hashtable<Symbol*, mtSymbol> {
+class MergePhaseMetaTable : public Hashtable<Symbol*, mtSymbol> {
  private:
-  static MergePhaseKlassResovleCacheTable* _the_table;
+  static MergePhaseMetaTable* _the_table;
 
-  MergePhaseKlassResovleCacheEntry* bucket(int i) {
-    return (MergePhaseKlassResovleCacheEntry*) Hashtable<Symbol*, mtSymbol>::bucket(i);
+  MergePhaseMetaEntry* bucket(int i) {
+    return (MergePhaseMetaEntry*) Hashtable<Symbol*, mtSymbol>::bucket(i);
   }
 
   // the method is not MT-safe
-  MergePhaseKlassResovleCacheEntry** bucket_addr(int i) {
-    return (MergePhaseKlassResovleCacheEntry**) Hashtable<Symbol*, mtSymbol>::bucket_addr(i);
+  MergePhaseMetaEntry** bucket_addr(int i) {
+    return (MergePhaseMetaEntry**) Hashtable<Symbol*, mtSymbol>::bucket_addr(i);
   }
 
-  MergePhaseKlassResovleCacheEntry* lookup(int index, Symbol* name, unsigned int hash);
+  // lookup with name + identity + loader type
+  MergePhaseMetaEntry* lookup(int index, Symbol* name, unsigned int hash, int64_t identity, uint16_t loader_type);
 
   // the method is not MT-safe
-  MergePhaseKlassResovleCacheEntry* basic_add(int index, Symbol* name, unsigned int hashValue);
+  MergePhaseMetaEntry* basic_add(int index, Symbol* name, unsigned int hashValue, int64_t identity, uint16_t loader_type);
 
   static unsigned int compute_hash(Symbol* sym) {
     // Use the regular identity_hash.
     return (unsigned int) sym->identity_hash();
   }
 
-  MergePhaseKlassResovleCacheEntry* new_entry(unsigned int hash, Symbol* symbol);
+  MergePhaseMetaEntry* new_entry(unsigned int hash, Symbol* symbol, int64_t identity, uint16_t loader_type);
 
-  void add_entry(int index, MergePhaseKlassResovleCacheEntry* new_entry) {
+  void add_entry(int index, MergePhaseMetaEntry* new_entry) {
     Hashtable<Symbol*, mtSymbol>::add_entry(index,
       (HashtableEntry<Symbol*, mtSymbol>*)new_entry);
   }
 
-  void print_information();
-
-  MergePhaseKlassResovleCacheTable();
+  MergePhaseMetaTable();
 
  public:
-  static MergePhaseKlassResovleCacheTable* the_table() { return _the_table; }
+  static MergePhaseMetaTable* the_table() { return _the_table; }
 
   static void create_table() {
-    _the_table = new MergePhaseKlassResovleCacheTable();
+    _the_table = new MergePhaseMetaTable();
   }
 
-  static void add_klass(Symbol* name, Klass* k);
+  static MergePhaseMetaEntry* add_meta(Symbol* name, int64_t identity, uint16_t loader_type);
 
   // lookup only, won't add
-  static MergePhaseKlassResovleCacheEntry* lookup_only(Symbol* name);
-
-  static void print_cache_table_information();
+  static MergePhaseMetaEntry* lookup_only(Symbol* name, int64_t identity, uint16_t loader_type);
 };
-
-// hashtable for directores in class path
-class DirWithClassEntry : public HashtableEntry<const char*, mtInternal> {
- public:
-  const char* dir_path() const            { return literal(); }
-  bool is_in_classpath()                  { return _is_in_classpath; }
-  void set_in_classpath(bool value)       { _is_in_classpath = value; }
-
-  DirWithClassEntry* next() const {
-    return (DirWithClassEntry*)HashtableEntry<const char*, mtInternal>::next();
-  }
- private:
-  bool _is_in_classpath;
-};
-
-/*
- * 1. save stage:
- *   record the directory from which the klass is loaded
- * 2. merge stage:
- *   record the directory in classpath
- */
-class DirWithClassTable : public Hashtable<const char*, mtInternal> {
- private:
-  // The table of the directory with class
-  static DirWithClassTable* _the_table;
-
-  DirWithClassEntry* bucket(int i) {
-    return (DirWithClassEntry*) Hashtable<const char*, mtInternal>::bucket(i);
-  }
-
-  DirWithClassEntry* lookup(int index, const char* name, unsigned int hash);
-
-  DirWithClassEntry* basic_add(int index, const char* name, size_t len, unsigned int hashValue);
-
-  static unsigned int compute_hash(const char* name, int len);
-
-  DirWithClassEntry* new_entry(unsigned int hash, const char* symbol);
-
-  void add_entry(int index, DirWithClassEntry* new_entry) {
-    Hashtable<const char*, mtInternal>::add_entry(index,
-      (HashtableEntry<const char*, mtInternal>*)new_entry);
-  }
-
-  DirWithClassTable();
-
-public:
-  static DirWithClassTable* the_table() { return _the_table; }
-
-  static void create_table() {
-    _the_table = new DirWithClassTable();
-  }
-
-  static DirWithClassEntry* lookup(const char* name, size_t len, bool add_real, TRAPS);
-
-  //lookup only, won't add
-  static bool lookup_only(const char* name, size_t len);
-};
-
 
 #endif // SHARE_VM_CR_CODE_REVIVE_HASH_TABLE_HPP

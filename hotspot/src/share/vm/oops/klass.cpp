@@ -211,6 +211,7 @@ Klass::Klass() {
 
   // CodeRevive
   _csa_meta_index = -1;
+  _cr_identity = 0;
 }
 
 jint Klass::array_layout_helper(BasicType etype) {

@@ -23,13 +23,13 @@
 #include "code/nmethod.hpp"
 #include "compiler/compilerOracle.hpp"
 #include "compiler/disassembler.hpp"
-#include "cr/classPathEntryTable.hpp"
 #include "cr/codeReviveFile.hpp"
 #include "cr/codeReviveCodeBlob.hpp"
 #include "cr/codeReviveCodeSpace.hpp"
 #include "cr/codeReviveContainer.hpp"
 #include "cr/codeReviveLookupTable.hpp"
 #include "cr/codeReviveMerge.hpp"
+#include "cr/codeReviveMergedMetaInfo.hpp"
 #include "cr/codeReviveMetaSpace.hpp"
 #include "cr/revive.hpp"
 #include "memory/resourceArea.hpp"
@@ -67,7 +67,6 @@ CodeReviveFile::CodeReviveFile() {
   _header      = NULL;
   _meta_space  = NULL;
   _container   = NULL;
-  _cpe_table   = NULL;
   _ro_addr     = NULL;
   _rw_addr     = NULL;
   _used_size   = 0;
@@ -84,10 +83,6 @@ CodeReviveFile::~CodeReviveFile() {
   if (_container != NULL) {
     delete _container;
     _container   = NULL;
-  }
-  if (_cpe_table != NULL) {
-    delete _cpe_table;
-    _cpe_table = NULL;
   }
 }
 
@@ -124,14 +119,9 @@ bool CodeReviveFile::save(const char* file_path) {
 
   // step2
   setup_header();
-  if (setup_classpath_entry_table(false) == false) {
-    CR_LOG(cr_save, cr_fail, "Fail to setup class path entry during saving\n");
-    return false;
-  }
-  CR_LOG(cr_save, cr_trace, "Succeed to setup class path entry for %s\n", file_path);
 
   // step3
-  _meta_space = new CodeReviveMetaSpace(false);
+  _meta_space = new CodeReviveMetaSpace();
   _container = new CodeReviveContainer(_meta_space, _cur_pos, _vs.high());
   _container->init();
 
@@ -148,10 +138,26 @@ bool CodeReviveFile::save(const char* file_path) {
   }
 
   // step5
+  // metaspace will have rw access when using in restore scenario.
+  // Align metaspace with OS page size, then it will be mapped as rw different with other parts.
+  _cur_pos = (char*)align_ptr_up(_cur_pos, os::vm_page_size());
+  if (setup_meta_space() == false) {
+    CR_LOG(CodeRevive::log_kind(), cr_fail, "Fail to setup meta_space during saving\n");
+    return false;
+  }
+  CR_LOG(CodeRevive::log_kind(), cr_trace, "Setup metadata space (%d bytes)\n", _meta_space->size());
+
   return save_common_steps(file_path);
 }
 
-bool CodeReviveFile::save_merged(const char* file_path, GrowableArray<CodeReviveContainer*>* containers) {
+/*
+ * Used in merge phase
+ * 1. header
+ * 2. class path entry table
+ * 3. container
+ * 4. metaspace from CodeReviveMergedMetaInfo
+ */
+bool CodeReviveFile::save_merged(const char* file_path, GrowableArray<CodeReviveContainer*>* containers, CodeReviveMergedMetaInfo* meta_info) {
   ResourceMark rm;
   ReservedSpace rs(CodeRevive::max_file_size());
   _vs.initialize(rs, CodeRevive::max_file_size());
@@ -162,22 +168,29 @@ bool CodeReviveFile::save_merged(const char* file_path, GrowableArray<CodeRevive
   // Temporary use fingerprint and classpath when merging.
   setup_header();
 
-  if (setup_classpath_entry_table(true) == false) {
-    CR_LOG(cr_merge, cr_fail, "Fail to setup class path entry during merging\n");
-    return false;
-  }
-
   _used_size = _cur_pos - _vs.low();
 
-  _meta_space = CodeReviveMerge::global_meta_space();
-
   // compute meta_space size
-  _used_size += _meta_space->estimate_size();
+  _used_size += meta_info->estimate_size();
 
   // save the container from candidate container array
   if (save_all_container(containers) == false) {
     return false;
   }
+
+  // metaspace will have rw access when using in restore scenario.
+  // Align metaspace with OS page size, then it will be mapped as rw different with other parts.
+  _cur_pos = (char*)align_ptr_up(_cur_pos, os::vm_page_size());
+  // get the metadatas from CodeReviveMergedMetaInfo
+  if (meta_info->save_metadatas(_cur_pos) == false) {
+    CR_LOG(CodeRevive::log_kind(), cr_fail, "Fail to setup meta_space during saving\n");
+    return false;
+  }
+  CR_LOG(CodeRevive::log_kind(), cr_trace, "Setup metadata space (%d bytes)\n", meta_info->size());
+
+  _header->_meta_space_offset = (_cur_pos - _vs.low());
+  _header->_meta_space_size   = meta_info->size();
+  _cur_pos += align_up(meta_info->size(), _alignment);
 
   return save_common_steps(file_path);
 }
@@ -220,19 +233,9 @@ bool CodeReviveFile::save_all_container(GrowableArray<CodeReviveContainer*>* con
 /*
  * Common code when saving JIT code for a single processs or merged files.
  *
- * 1. setup_meta_space
- * 2. write content into file_path
+ * 1. write content into file_path
  */
 bool CodeReviveFile::save_common_steps(const char* file_path) {
-  // metaspace will have rw access when using in resotre scenario.
-  // Align metaspace with OS page size, then it will be mapped as rw different with other parts.
-  _cur_pos = (char*)align_ptr_up(_cur_pos, os::vm_page_size());
-  if (setup_meta_space() == false) {
-    CR_LOG(CodeRevive::log_kind(), cr_fail, "Fail to setup meta_space during saving\n");
-    return false;
-  }
-  CR_LOG(CodeRevive::log_kind(), cr_trace, "Setup metadata space (%d bytes)\n", _meta_space->size());
-
   int fd = open_for_write(file_path);
   if (fd < 0) {
     CR_LOG(CodeRevive::log_kind(), cr_fail, "Fail to open %s during saving\n", file_path);
@@ -270,7 +273,6 @@ bool CodeReviveFile::save_common_steps(const char* file_path) {
 
   // count space usage.
   CodeRevive::add_size_counter(CodeRevive::S_HEADER, sizeof(CodeReviveFileHeader));
-  CodeRevive::add_size_counter(CodeRevive::S_CLASSPATH_TABLE, (uint)_header->_cpe_table_size);
   CodeRevive::add_size_counter(CodeRevive::S_LOOKUP_TABLE, (uint)_container->lookup_table_size());
   CodeRevive::total_file_size(_cur_pos - _vs.low());
   return true;
@@ -285,7 +287,6 @@ bool CodeReviveFile::save_common_steps(const char* file_path) {
  * - map readwrite part (they are continous in file but might not continous in memory)
  * - initialize and validate data structure
  *   - _header
- *   - _cpe_table
  *   - _container
  *   - _meta_space
  *
@@ -308,7 +309,6 @@ bool CodeReviveFile::map(const char* file_path,
                          bool need_container,
                          bool need_meta_sapce,
                          bool select_container, // should select from multiple containers
-                         bool check_classpath,  // validate the classpath
                          uint32_t cr_kind) {
   // Step1 open file and basic checks
   guarantee(_fd == -1, "can only map once");
@@ -352,13 +352,7 @@ bool CodeReviveFile::map(const char* file_path,
     return false;
   }
 
-  // Step3 classpath check
-  _cpe_table = new ClassPathEntryTable(start() + _header->_cpe_table_offset);
-  if (CodeRevive::print_opt() == false && check_classpath && !_cpe_table->validate()) {
-    return false;
-  }
-
-  // Step4 map readwrite part and setup metas
+  // Step3 map readwrite part and setup metas
   if (need_meta_sapce) {
     _rw_len = _header->_meta_space_size;
     _rw_addr = os::map_memory(_fd, file_path, _ro_len, NULL, _rw_len, false);
@@ -372,7 +366,7 @@ bool CodeReviveFile::map(const char* file_path,
     _meta_space = new CodeReviveMetaSpace(meta_sapce_start, meta_sapce_start + _header->_meta_space_size);
   }
 
-  // Step5 setup container
+  // Step4 setup container
   // when revive select container with same fingerprint
   // In other cases, expect only one container in each file
   if (need_container) {
@@ -404,6 +398,9 @@ void CodeReviveFile::print() {
   _meta_space->print();
 }
 
+/*
+ * used in save phase
+ */
 bool CodeReviveFile::setup_meta_space() {
   ResourceMark rm;
   _meta_space->save_metadatas(_cur_pos, _vs.high());
@@ -419,25 +416,6 @@ void CodeReviveFile::setup_header() {
   const char *vm_version = VM_Version::internal_vm_info_string();
   memset(_header->_jvm_ident, 0, JVM_IDENT_MAX);
   strncpy(_header->_jvm_ident, vm_version, JVM_IDENT_MAX - 1);
-}
-
-bool CodeReviveFile::setup_classpath_entry_table(bool is_merge) {
-  ResourceMark rm;
-  _cpe_table = new ClassPathEntryTable(_cur_pos);
-  _header->_cpe_table_offset = (_cur_pos - _vs.low());
-  if (is_merge) {
-    if (_cpe_table->setup_merged_classpath_entry_table() == false) {
-      return false;
-    }
-  } else {
-    // save class path jars and paths information
-    if (_cpe_table->setup_classpath_entry_table() == false) {
-      return false;
-    }
-  }
-  _cur_pos += align_up(_cpe_table->size(), _alignment);
-  _header->_cpe_table_size = _cpe_table->size();
-  return true;
 }
 
 bool CodeReviveFile::file_integrity_check(size_t file_size) {
@@ -461,8 +439,8 @@ bool CodeReviveFile::validate_header(uint32_t cr_kind) {
   return true;
 }
 
-char* CodeReviveFile::find_revive_code(Method* m) {
-  CodeReviveLookupTable::Entry* e = lookup_table()->find_entry(m);
+char* CodeReviveFile::find_revive_code(Method* m, bool only_use_name) {
+  CodeReviveLookupTable::Entry* e = lookup_table()->find_entry(m, only_use_name);
   if (e != NULL && e->_code_offset != -1) {
     return (char*)(_container->code_space()->_start + e->_code_offset);
   }
@@ -477,15 +455,10 @@ CodeReviveLookupTable* CodeReviveFile::lookup_table() const {
   return _container->lookup_table();
 }
 
-static int compare_method_name(char** str1, char** str2) {
-  return strcmp(*str1, *str2);
-}
-
 /*
  * dump opt info for all saved method
  */
 void CodeReviveFile::print_opt() {
-  _cpe_table->print_on(CodeRevive::out());
   // print containers
   char* container_start = start() + _header->_code_container_offset;
   while(container_start != NULL) {
@@ -501,24 +474,20 @@ void CodeReviveFile::print_opt_with_container(CodeReviveContainer* container) {
   CodeReviveCodeSpace* code_space = container->code_space();
   ResourceMark rm;
   // collect methods
-  GrowableArray<char*>* method_names = new GrowableArray<char*>();
   CodeReviveLookupTableIterator iter(lookup_table);
   for (CodeReviveLookupTable::Entry* e = iter.first(); e != NULL; e = iter.next()) {
-    if (e->_code_offset != -1) {
-      method_names->append(_meta_space->metadata_name(e->_meta_index));
-    }
-  }
-  method_names->sort(compare_method_name);
-  for (int i = 0; i < method_names->length(); i++) {
-    CodeReviveLookupTable::Entry* e = lookup_table->find_entry(method_names->at(i));
     int32_t code_offset = e->_code_offset;
+    if (code_offset == -1) {
+      continue;
+    }
     int32_t version_idx = 0;
+    char* method_name = _meta_space->metadata_name(e->_meta_index);
     while (true) {
-      CodeRevive::out()->print_cr("%s version %d", method_names->at(i), version_idx);
-      CodeReviveCodeBlob cr_cb(code_space->get_code_address(code_offset), _meta_space);
-      cr_cb.print_opt(method_names->at(i));
-      if (cr_cb.next_version_offset() != -1) {
-        code_offset = cr_cb.next_version_offset();
+      CodeRevive::out()->print_cr("%s version %d", method_name, version_idx);
+      CodeReviveCodeBlob* cr_cb = new CodeReviveCodeBlob(code_space->get_code_address(code_offset), _meta_space);
+      cr_cb->print_opt(method_name);
+      if (cr_cb->next_version_offset() != -1) {
+        code_offset = cr_cb->next_version_offset();
         version_idx++;
       } else {
         break;

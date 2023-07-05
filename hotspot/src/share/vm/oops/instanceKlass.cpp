@@ -328,6 +328,9 @@ InstanceKlass::InstanceKlass(int vtable_len,
   // Set temporary value until parseClassFile updates it with the real instance
   // size.
   set_layout_helper(Klass::instance_layout_helper(0, true));
+
+  // CodeRevive
+  _redefine_epoch = 0;
 }
 
 
@@ -3943,3 +3946,52 @@ void InstanceKlass::set_class_loader_type(s2 loader_type) {
     break;
   }
 }
+
+void InstanceKlass::generate_classfile_crc32(const char* buf, int len) {
+  guarantee(buf != NULL, "bytecode is necessary to generate identity");
+  set_cr_identity((uint64_t)(uint32_t)ClassLoader::crc32(0, buf, len));
+}
+
+// CodeRevive
+// Generate CodeRevive Class Identity (cr_identity)
+//   my_crc32 = crc32(class bytecodes)
+//   cr_identity = crc32(super_cr_id + all interface_cr_id)) << 32 | my_crc32
+void InstanceKlass::generate_cr_identity() {
+  if (loader_type() != 0) {
+    set_cr_identity_with_shared_class();
+    return;
+  }
+
+  int64_t* cr_id_buf = NULL;
+  int32_t my_crc32 = (int32_t)_cr_identity;
+  guarantee(loader_type() == 0, "CDS not supported now");
+
+  int64_t cur_id = 0;
+  InstanceKlass* super_class = InstanceKlass::cast(super());
+  if (super_class != NULL) {
+    // not java.lang.Object;
+    int n_interface = local_interfaces()->length();
+    cr_id_buf = (int64_t*)alloca(sizeof(int64_t) * (n_interface + 2));
+    int64_t super_id = super_class->cr_identity();
+    cr_id_buf[0] = my_crc32;
+    cr_id_buf[1] = super_id;
+    
+    for (int i = 0; i < n_interface; i++) {
+      InstanceKlass* iface = InstanceKlass::cast(local_interfaces()->at(i));
+      int64_t iface_id = iface->cr_identity();
+      cr_id_buf[i + 2] = iface_id;
+    }
+    cur_id = ClassLoader::crc32(0, (const char*)cr_id_buf, sizeof(jlong) * (n_interface + 2));
+  }
+  set_cr_identity(cur_id << 32 | (uint64_t)(uint32_t)my_crc32);
+
+  CR_LOG(CodeRevive::is_save() ? cr_save : cr_restore, cr_info,
+         "CodeRevive Identity for class %s is %lx.\n" ,
+         external_name(), _cr_identity);
+}
+
+void InstanceKlass::set_cr_identity_with_shared_class() {
+  set_cr_identity(CodeRevive::get_cds_identity());
+}
+
+

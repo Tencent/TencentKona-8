@@ -127,9 +127,9 @@ public class TestCommon {
             opts.archiveName = getCurrentArchiveName();
 
         if ( opts.codeReviveOption == null) {
-            cmd.add("-XX:CodeReviveOptions=save,disable_check_dir,file=" + opts.archiveName);
+            cmd.add("-XX:CodeReviveOptions=save,file=" + opts.archiveName);
         } else {
-            cmd.add("-XX:CodeReviveOptions=save,disable_check_dir,file=" + opts.archiveName + "," + opts.codeReviveOption);
+            cmd.add("-XX:CodeReviveOptions=save,file=" + opts.archiveName + "," + opts.codeReviveOption);
         }
 
         for (String s : opts.suffix) cmd.add(s);
@@ -172,9 +172,9 @@ public class TestCommon {
             opts.archiveName = getCurrentArchiveName();
 
         if (opts.codeReviveOption == null) {
-            cmd.add("-XX:CodeReviveOptions=restore,disable_check_dir,file=" + opts.archiveName);
+            cmd.add("-XX:CodeReviveOptions=restore,file=" + opts.archiveName);
         } else {
-            cmd.add("-XX:CodeReviveOptions=restore,disable_check_dir,file=" + opts.archiveName + "," + opts.codeReviveOption);
+            cmd.add("-XX:CodeReviveOptions=restore,file=" + opts.archiveName + "," + opts.codeReviveOption);
         }
 
         cmd.add("-XX:+UnlockDiagnosticVMOptions");
@@ -212,7 +212,7 @@ public class TestCommon {
         if (opts.archiveName == null)
             opts.archiveName = getCurrentArchiveName();
 
-        cmd.add("-XX:CodeReviveOptions=merge,disable_check_dir,file=" + opts.archiveName + "," + opts.codeReviveOption);
+        cmd.add("-XX:CodeReviveOptions=merge,file=" + opts.archiveName + "," + opts.codeReviveOption);
 
         for (String s : opts.suffix) cmd.add(s);
 

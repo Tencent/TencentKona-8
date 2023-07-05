@@ -55,11 +55,47 @@ char* CodeReviveLookupTable::allocate(size_t size) {
   return result;
 }
 
-CodeReviveLookupTable::Entry* CodeReviveLookupTable::find_entry(Method* m) {
+/*
+ * only_use_name = true:  search the method using name
+ * only_use_name = false: search the method using name + identity + loader type
+ */
+CodeReviveLookupTable::Entry* CodeReviveLookupTable::find_entry(Method* m, bool only_use_name) {
   char* name = Method::name_and_sig_as_C_string_all(m->constants()->pool_holder(), m->name(), m->signature());
-  return find_entry(name);
+  if (only_use_name) {
+    return find_entry(name);
+  }
+  int64_t identity = m->cr_identity();
+  uint16_t loader_type = (uint16_t)CodeRevive::loader_type(m->method_holder()->class_loader());
+  return find_entry(name, identity, loader_type);
 }
 
+// search the entry with name + identity + loader type
+CodeReviveLookupTable::Entry* CodeReviveLookupTable::find_entry(char* name, int64_t identity, uint16_t loader_type) {
+  size_t name_len = strlen(name);
+  uint32_t hash = AltHashing::halfsiphash_32(_seed, (const uint8_t*)name, (int)name_len);
+
+  // locate Entry
+  Entry* e = bucket_entry(hash % _buckets_num);
+  if (e->_meta_index == -1) {
+    return NULL;
+  }
+  while (e != NULL) {
+    if (e->_hash == hash) {
+      char* e_name = _meta_space->metadata_name(e->_meta_index);
+      int64_t e_identity = _meta_space->metadata_identity(e->_meta_index);
+      uint16_t e_loader_type = _meta_space->metadata_loader_type(e->_meta_index);
+      size_t e_name_len = strlen(e_name);
+      if (identity == e_identity && name_len == e_name_len && loader_type == e_loader_type
+          &&strncmp(name, e_name, name_len) == 0) {
+        return e;
+      }
+    }
+    e = next(e);
+  }
+  return NULL;
+}
+
+// search the entry with name
 CodeReviveLookupTable::Entry* CodeReviveLookupTable::find_entry(char* name) {
   size_t name_len = strlen(name);
   uint32_t hash = AltHashing::halfsiphash_32(_seed, (const uint8_t*)name, (int)name_len);
@@ -82,15 +118,17 @@ CodeReviveLookupTable::Entry* CodeReviveLookupTable::find_entry(char* name) {
   return NULL;
 }
 
+
 void CodeReviveLookupTable::print_entry(Entry* e, const char* prefix) {
-  CodeRevive::out()->print_cr("%sEntry: ofst %d, meta index %d, hash %u, code %d, next %d, name %s",
+  CodeRevive::out()->print_cr("%sEntry: ofst %d, meta index %d, hash %u, code %d, next %d, name %s, identity " UINT64_FORMAT,
     prefix,
     (int)(((char*)e) - _start),
     e->_meta_index,
     e->_hash,
     e->_code_offset,
     e->_next_offset,
-    _meta_space->metadata_name(e->_meta_index));
+    _meta_space->metadata_name(e->_meta_index),
+    _meta_space->metadata_identity(e->_meta_index));
 }
 
 void CodeReviveLookupTable::print() {

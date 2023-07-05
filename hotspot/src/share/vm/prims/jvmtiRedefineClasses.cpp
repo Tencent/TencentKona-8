@@ -3905,6 +3905,10 @@ void VM_RedefineClasses::redefine_single_class(jclass the_jclass,
   instanceKlassHandle scratch_class(THREAD, scratch_class_oop);
   instanceKlassHandle the_class(THREAD, get_ik(the_jclass));
 
+  // CodeRevive
+  // Set new identity and clear metaspace for redefined/retransformed classes
+  CodeRevive::process_redefined_class(the_class(), scratch_class());
+
   // Remove all breakpoints in methods of this class
   JvmtiBreakpoints& jvmti_breakpoints = JvmtiCurrentBreakpoints::get_jvmti_breakpoints();
   jvmti_breakpoints.clearall_in_class_at_safepoint(the_class());

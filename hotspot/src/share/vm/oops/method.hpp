@@ -993,6 +993,13 @@ class Method : public Metadata {
     set_aot_version_unusable(aot_version());
   }
 
+  virtual int64_t cr_identity() { 
+    return method_holder()->cr_identity();
+  }
+  virtual bool verify_cr_identity(int64_t identity) {
+    return method_holder()->verify_cr_identity(identity);
+  }
+
   static uint32_t aot_max_versions() { return _aot_max_versions; }
 
   // above method print klass external name

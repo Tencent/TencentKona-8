@@ -687,3 +687,14 @@ void ObjArrayKlass::oop_verify_on(oop obj, outputStream* st) {
     guarantee(oa->obj_at(index)->is_oop_or_null(), "should be oop");
   }
 }
+
+void ObjArrayKlass::generate_cr_identity(int dimension, KlassHandle element_klass) {
+  jlong element_identity = element_klass->cr_identity();
+  uint64_t crc = (uint32_t)ClassLoader::crc32(0, (const char*)&element_identity, sizeof(jlong));
+  set_cr_identity(((int64_t)dimension << 32) | crc);
+
+  if (CodeRevive::is_log_on(cr_save, cr_info) || CodeRevive::is_log_on(cr_restore, cr_info)) {
+    ResourceMark rm;
+    CodeRevive::log("CodeRevive Identity for class %s is %lx.\n", external_name(), _cr_identity);
+  }
+}

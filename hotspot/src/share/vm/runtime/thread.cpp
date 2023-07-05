@@ -122,6 +122,7 @@
 // CodeRevive
 #include "cr/codeReviveMerge.hpp"
 #include "cr/revive.hpp"
+#include "cr/codeReviveCodeBlob.hpp"
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
@@ -3301,6 +3302,13 @@ CompilerThread::CompilerThread(CompileQueue* queue, CompilerCounters* counters)
 #ifndef PRODUCT
   _ideal_graph_printer = NULL;
 #endif
+  // in restore stage, allocate CodeReviveCodeBlob for each compiler thread,
+  // and reuse the codeblob in this compiler thread for code revive
+  if (CodeRevive::is_restore()) {
+    _aot_code_blob = new (ResourceObj::C_HEAP, mtCompiler) CodeReviveCodeBlob();
+  } else {
+    _aot_code_blob = NULL;
+  }
 }
 
 void CompilerThread::oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) {
@@ -3493,6 +3501,10 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
 
   // Initialize Java-Level synchronization subsystem
   ObjectMonitor::Initialize() ;
+
+  // CodeRevive: identity only generated during save/restore
+  // option parsing and some init need to be done before class init.
+  CodeRevive::early_init();
 
   // Initialize global modules
   jint status = init_globals();

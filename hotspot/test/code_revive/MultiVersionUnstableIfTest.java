@@ -38,7 +38,7 @@ public class MultiVersionUnstableIfTest {
                  "MultiVersionCase",
                  String.valueOf(i));
         }
-        String result = Test("-XX:CodeReviveOptions=merge,disable_check_dir,log=merge=info,file=a.csa,input_files=./");
+        String result = Test("-XX:CodeReviveOptions=merge,log=merge=info,file=a.csa,input_files=./");
         String[] lines = result.split("\n");
         int v15_count = 0;
         int v16_count = 0;

@@ -22,11 +22,12 @@
 #include "cr/codeReviveDependencies.hpp"
 #include "cr/codeReviveMetaSpace.hpp"
 #include "cr/codeReviveCodeSpace.hpp"
+#include "cr/revive.hpp"
 
 ReviveVersionSelectPolicy* ReviveVersionSelectPolicy::_policy = NULL;
 
-ReviveVersionSelector::ReviveVersionSelector(char* start, Method* method, CodeReviveMetaSpace* meta_space, CodeReviveCodeBlob::JitVersionReviveState** selected_version) :
-    _start(start), _method(method), _meta_space(meta_space), _cur_cb(NULL), _selected_version(selected_version), _method_name(NULL) {
+ReviveVersionSelector::ReviveVersionSelector(char* start, Method* method, CodeReviveMetaSpace* meta_space, CodeReviveCodeBlob::JitVersionReviveState** selected_version, CodeReviveCodeBlob* code_blob) :
+    _start(start), _method(method), _meta_space(meta_space), _cur_cb(code_blob), _selected_version(selected_version), _method_name(NULL) {
   guarantee(_start != NULL, "should be");
   guarantee(_meta_space != NULL, "should be");
 
@@ -74,14 +75,12 @@ void ReviveVersionSelector::do_selection() {
   ReviveVersionSelectPolicy* policy = ReviveVersionSelectPolicy::get_policy();
 
   GrowableArray<CodeReviveCodeBlob::JitVersionReviveState*>* checked_versions = new GrowableArray<CodeReviveCodeBlob::JitVersionReviveState*>();
-
   // Check opt_records and collect version.
   int32_t cur_version = 0;
   bool disable_aot = true;
   while(true) {
     CodeReviveCodeBlob::JitVersionReviveState* revive_state = NULL;
-    CodeReviveCodeBlob cb(_start, _meta_space);
-    _cur_cb = &cb;
+    _cur_cb->reset(_start, _meta_space);
 
     // candidate selection
     if (_method->is_aot_version_usable(cur_version)) {

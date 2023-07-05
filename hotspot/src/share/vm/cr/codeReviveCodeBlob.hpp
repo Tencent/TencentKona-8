@@ -70,7 +70,7 @@ class ReviveDepRecord;
  *    -- Oop Map
  */
 // optimize class name, method signature later, might have a big global symbol table
-class CodeReviveCodeBlob : public StackObj {
+class CodeReviveCodeBlob : public ResourceObj {
  private:
   struct Header {
     int                    _size;
@@ -145,8 +145,10 @@ class CodeReviveCodeBlob : public StackObj {
     REVIVE_OK, REVIVE_FAILED_ON_META_ARRAY, REVIVE_FAILED_ON_OOP_ARRAY, REVIVE_FAILED_ON_RELOCINFO, REVIVE_FAILED_ON_OPT_RECORD
   };
 
+  CodeReviveCodeBlob();
   CodeReviveCodeBlob(char* start, CodeReviveMetaSpace* meta_space);
   CodeReviveCodeBlob(char* start, char* limit, CodeBlob* cb, CodeReviveMetaSpace* meta_space);
+  void reset(char* start, CodeReviveMetaSpace* meta_space);
   CodeBlob* codeblob() const               { return _cb; }
   char* start() const                      { return _start; }
   char* cb_begin() const                   { return _start + sizeof(Header); }

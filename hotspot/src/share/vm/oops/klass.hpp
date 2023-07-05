@@ -741,10 +741,26 @@ protected:
   // CodeRevive
  private:
   int    _csa_meta_index;
+ protected:
+  // identity, to check whether a class is changed between save and restore time.
+  // Algorithm to calcualte identity:
+  // InstanceKlass:
+  //       Bit       63                                          32 31                                0
+  // InstanceKlass  |crc32(self crc32 + super/interface identities)|-------------------crc32(bytecode)|
+  // ObjArrayKlass  |------------crc32(base element class identity)|-----------------------dimensions |
+  // TypeArrayKlass |-----------------------------crc32(basic type)|-----------------------dimensions |
+  volatile int64_t _cr_identity;
 
  public:
   virtual int  csa_meta_index() const { return _csa_meta_index; }
   virtual void set_csa_meta_index(int index) { _csa_meta_index = index; }
+
+  void set_cr_identity(int64_t id);
+  int64_t cr_identity_no_check() { return _cr_identity; }
+  virtual int64_t cr_identity() = 0;
+  virtual bool verify_cr_identity(int64_t identity) {
+    return cr_identity() == identity;
+  }
 };
 
 #endif // SHARE_VM_OOPS_KLASS_HPP

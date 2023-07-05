@@ -35,7 +35,7 @@ public class NullDepCompare {
         Test(null_output,
              "-XX:CompileCommand=exclude,*.main",
              "-XX:-BackgroundCompilation",
-             "-XX:CodeReviveOptions=save,disable_check_dir,file=1.csa,log=opt=trace",
+             "-XX:CodeReviveOptions=save,file=1.csa,log=opt=trace",
              "TestUniqConcreteMethod");
 
         Test(null_output,
@@ -48,8 +48,8 @@ public class NullDepCompare {
            "TestUniqConcreteMethod.foo(LTestUniqConcreteMethod$B1;)I, count 2",
         };
         Test(expect_merge,
-            "-XX:CodeReviveOptions=merge,disable_check_dir,log=merge=info,file=a.csa,input_files=./");
-
+            "-XX:CodeReviveOptions=merge,log=merge=info,file=a.csa,input_files=./");
+ 
         String[] expect_outputs = {
             "unique_concrete_method null TestUniqConcreteMethod$B1.func()I",
         };

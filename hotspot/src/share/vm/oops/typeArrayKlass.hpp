@@ -118,6 +118,12 @@ class TypeArrayKlass : public ArrayKlass {
 
  public:
   const char* internal_name() const;
+
+  // CodeRevive
+ private:
+  void generate_cr_identity(BasicType type);
+ public:
+  virtual int64_t cr_identity();
 };
 
 #endif // SHARE_VM_OOPS_TYPEARRAYKLASS_HPP

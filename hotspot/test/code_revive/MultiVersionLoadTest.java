@@ -39,7 +39,7 @@ public class MultiVersionLoadTest {
              "-XX:CompileCommand=compileonly,*.foo",
              "-XX:CompileCommand=exclude,*.main",
              "-XX:-BackgroundCompilation",
-             "-XX:CodeReviveOptions=save,disable_check_dir,file=1.csa,log=opt=trace",
+             "-XX:CodeReviveOptions=save,file=1.csa,log=opt=trace",
              "TestDevirtual",
              "1");
 
@@ -51,7 +51,7 @@ public class MultiVersionLoadTest {
              "-XX:CompileCommand=compileonly,*.foo",
              "-XX:CompileCommand=exclude,*.main",
              "-XX:-BackgroundCompilation",
-             "-XX:CodeReviveOptions=save,disable_check_dir,file=2.csa,log=opt=trace",
+             "-XX:CodeReviveOptions=save,file=2.csa,log=opt=trace",
              "TestDevirtual",
              "2");
 
@@ -60,7 +60,7 @@ public class MultiVersionLoadTest {
             "method TestDevirtual.test([LBase;I)I, count 2",
          };
          Test(expect_merge,
-             "-XX:CodeReviveOptions=merge,disable_check_dir,log=merge=info,file=a.csa,input_files=./");
+             "-XX:CodeReviveOptions=merge,log=merge=info,file=a.csa,input_files=./");
 
          String[] expect_print = {
             "morphism=1  klass1: Child1  default: trap",

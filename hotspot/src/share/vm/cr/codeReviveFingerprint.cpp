@@ -58,6 +58,9 @@
   do_option("UseGCOverheadLimit")                    \
   do_option("UseContainerSupport")                   \
   do_option("CMSConcurrentMTEnabled")                \
+  do_option("RelaxCheckForAppCDS")                   \
+  do_option("RequireSharedSpaces")                   \
+  do_option("VerifySharedSpaces")                    \
 
 
 bool CodeReviveFingerprint::in_white_list(const char* name) {

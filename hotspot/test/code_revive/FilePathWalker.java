@@ -49,7 +49,7 @@ public class FilePathWalker {
         }
 
         Test(expect_outputs,
-             "-XX:CodeReviveOptions=merge,disable_check_dir,log=merge=trace,file=a.csa,input_files=" + csa_path,
+             "-XX:CodeReviveOptions=merge,log=merge=trace,file=a.csa,input_files=" + csa_path,
              "-version");
     }
 

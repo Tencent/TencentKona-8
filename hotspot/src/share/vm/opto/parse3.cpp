@@ -149,7 +149,7 @@ void Parse::do_field_access(bool is_get, bool is_field) {
 
 void Parse::do_get_xxx(Node* obj, ciField* field, bool is_field) {
   // Does this field have a constant value?  If so, just push the value.
-  if (field->is_constant() && !CodeRevive::is_save()) {
+  if (field->is_constant()) {
     // final or stable field
     const Type* stable_type = NULL;
     if (FoldStableValues && field->is_stable()) {
@@ -161,7 +161,7 @@ void Parse::do_get_xxx(Node* obj, ciField* field, bool is_field) {
     }
     if (field->is_static()) {
       // final static field
-      if (C->eliminate_boxing()) {
+      if (C->eliminate_boxing() && !CodeRevive::is_save()) {
         // The pointers in the autobox arrays are always non-null.
         ciSymbol* klass_name = field->holder()->name();
         if (field->name() == ciSymbol::cache_field_name() &&
@@ -178,8 +178,18 @@ void Parse::do_get_xxx(Node* obj, ciField* field, bool is_field) {
           }
         }
       }
-      if (push_constant(field->constant_value(), false, false, stable_type))
-        return;
+      if (!CodeRevive::is_save()) {
+        if (push_constant(field->constant_value(), false, false, stable_type))
+          return;
+      } else if (!CodeRevive::disable_constant_opt()) {
+        if (field->type()->is_primitive_type() && push_constant(field->constant_value(), false, false, stable_type)) {
+          // save for aot
+          ciKlass* klass = field->holder();
+          ciConstant field_const = field->constant_value();
+          env()->opt_records()->add_ConstantReplaceRecord(klass, field->offset(), (jshort)field_const.basic_type(), OptConstantReplace::get_field_val(field_const));
+          return;
+        }
+      }
     } else {
       // final or stable non-static field
       // Treat final non-static fields of trusted classes (classes in

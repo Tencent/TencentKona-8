@@ -109,6 +109,7 @@ class RelocClosure : public Closure {
 // which will be used to restore the runtime object in subsequent restore jvm process.
 class ReviveRelocClosure;
 class EmitRelocClosure;
+class CodeReviveMergedMetaInfo;
 class ReviveAuxInfoTask : public StackObj {
  friend class ReviveRelocClosure;
  friend class EmitRelocClosure;
@@ -134,7 +135,6 @@ class ReviveAuxInfoTask : public StackObj {
   uint32_t read_u4();
   char*    read_c_string();
   void     align();
-  LoaderType get_loader_type(Klass* k);
 
   // utilities: global oops/metadata informations
   CR_KnownOopKind get_index_of_global_oop(oop obj); // can be static, need access CiEnv as friend class
@@ -173,14 +173,18 @@ class ReviveAuxInfoTask : public StackObj {
 
   void     set_u4(uint32_t value, char* address);
   char*    get_retral_address(int len);
-  int      get_global_meta_index(int old_index);
+  // get the global index from CodeReviveMergedMetaInfo
+  int      get_global_meta_index(int old_index, CodeReviveMergedMetaInfo* global_meta);
+  LoaderType check_and_get_loader_type(Klass* k);
+  oop get_loader(LoaderType type);
+  oop get_method_holder_loader();
 
   virtual void process_vm_global(uint16_t kind, uint32_t offset) { }
   virtual void process_oop_str(uint16_t u2, char* str) { }
   virtual void process_meta_self_method() { }
-  virtual void process_klass_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) { }
-  virtual void process_mirror_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) { }
-  virtual void process_method_by_name_classloader(LoaderType loader_type, int32_t meta_index) { }
+  virtual void process_klass_by_name_classloader(int32_t meta_index, int32_t min_state) { }
+  virtual void process_mirror_by_name_classloader(int32_t meta_index, int32_t min_state) { }
+  virtual void process_method_by_name_classloader(int32_t meta_index) { }
   virtual void process_internal_word(uint32_t u4) { }
   virtual void process_oop_classloader(LoaderType loader_type) { }
   virtual void process_global_oop(uint16_t u2, uint32_t global_index) { }
@@ -223,9 +227,9 @@ class PreReviveTask : public ReviveAuxInfoTask {
   GrowableArray<uint32_t>* _global_oop_array;
   virtual void process_oop_str(uint16_t u2, char* str);
   virtual void process_meta_self_method();
-  virtual void process_klass_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state);
-  virtual void process_mirror_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state);
-  virtual void process_method_by_name_classloader(LoaderType loader_type, int32_t meta_index);
+  virtual void process_klass_by_name_classloader(int32_t meta_index, int32_t min_state);
+  virtual void process_mirror_by_name_classloader(int32_t meta_index, int32_t min_state);
+  virtual void process_method_by_name_classloader(int32_t meta_index);
   virtual void process_oop_classloader(LoaderType loader_type);
   virtual void process_global_oop(uint16_t u2, uint32_t global_index);
   // null meta&oop need be add to meta array for usage in Opt and Dependency
@@ -233,15 +237,18 @@ class PreReviveTask : public ReviveAuxInfoTask {
 
   // prepare oop & meta
   ciObject* prepare_oop_str(char* str);
-  ciMetadata* prepare_klass_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state);
-  ciObject* prepare_mirror_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state);
-  ciMetadata* prepare_method_by_name_classloader(LoaderType loader_type, int32_t meta_index);
+  ciMetadata* prepare_klass_by_name_classloader(int32_t meta_index, int32_t min_state);
+  ciObject* prepare_mirror_by_name_classloader(int32_t meta_index, int32_t min_state);
+  ciMetadata* prepare_method_by_name_classloader(int32_t meta_index);
 
   bool check_instance_klass_state(InstanceKlass* k, int min_state);
-  Klass* revive_get_klass(Symbol* name, oop loader, int min_state);
-  Klass* revive_get_klass(const char* name, oop loader, int min_state);
-  Klass* revive_get_klass(int32_t meta_index, oop loader, int min_state);
-  Method* revive_get_method(int32_t meta_index, oop loader);
+  bool check_loader_consistency(oopDesc* cur_loader, LoaderType loader_type);
+  bool check_klass_loader(Klass* k, LoaderType loader_type);
+  bool check_method_loader(Method* m, LoaderType loader_type);
+  Klass* revive_get_klass(Symbol* name, LoaderType loader_type, int min_state);
+  Klass* revive_get_klass(const char* name, LoaderType loader_type, int min_state);
+  Klass* revive_get_klass(int32_t meta_index, int min_state);
+  Method* revive_get_method(int32_t meta_index);
  public:
   PreReviveTask(Method* method, char* start, CodeReviveMetaSpace* meta_space)
     : ReviveAuxInfoTask(method, start, meta_space) {
@@ -259,8 +266,8 @@ class CollectMetadataArrayNameTask : public ReviveAuxInfoTask {
   GrowableArray<char*>* _names;
   char*                 _method_name;
   virtual void process_meta_self_method();
-  virtual void process_klass_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state);
-  virtual void process_method_by_name_classloader(LoaderType loader_type, int32_t meta_index);
+  virtual void process_klass_by_name_classloader(int32_t meta_index, int32_t min_state);
+  virtual void process_method_by_name_classloader(int32_t meta_index);
   virtual void process_non_oop();
  public:
   CollectMetadataArrayNameTask(char* start, CodeReviveMetaSpace* meta_space, char* method_name)
@@ -280,9 +287,9 @@ class PrintAuxInfoTask : public ReviveAuxInfoTask {
   virtual void process_vm_global(uint16_t kind, uint32_t offset);
   virtual void process_oop_str(uint16_t u2, char* str);
   virtual void process_meta_self_method();
-  virtual void process_klass_by_name_classloader(LoaderType type, int32_t meta_index, int32_t init_status);
-  virtual void process_mirror_by_name_classloader(LoaderType type, int32_t meta_index, int32_t init_status);
-  virtual void process_method_by_name_classloader(LoaderType type, int32_t meta_index);
+  virtual void process_klass_by_name_classloader(int32_t meta_index, int32_t init_status);
+  virtual void process_mirror_by_name_classloader(int32_t meta_index, int32_t init_status);
+  virtual void process_method_by_name_classloader(int32_t meta_index);
   virtual void process_internal_word(uint32_t offset);
   virtual void process_oop_classloader(LoaderType loader_type);
   virtual void process_global_oop(uint16_t u2, uint32_t global_index);
@@ -307,9 +314,9 @@ class PrintAuxInfoTask : public ReviveAuxInfoTask {
 class CheckMetaResolveTask : public ReviveAuxInfoTask {
  private:
   bool _prepare_data_array;
-  virtual void process_klass_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state);
-  virtual void process_mirror_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state);
-  virtual void process_method_by_name_classloader(LoaderType loader_type, int32_t meta_index);
+  virtual void process_klass_by_name_classloader(int32_t meta_index, int32_t min_state);
+  virtual void process_mirror_by_name_classloader(int32_t meta_index, int32_t min_state);
+  virtual void process_method_by_name_classloader(int32_t meta_index);
  public:
   CheckMetaResolveTask(char* start, CodeReviveMetaSpace* meta_space, bool prepare_data_array = false)
     : ReviveAuxInfoTask(start, meta_space) {
@@ -320,13 +327,14 @@ class CheckMetaResolveTask : public ReviveAuxInfoTask {
 /* iterate reloc aux info and update meta index with global meta index.*/
 class UpdateMetaIndexTask : ReviveAuxInfoTask {
  private:
+  CodeReviveMergedMetaInfo* _global_meta_info;
   int32_t update_one_meta_index(int32_t old_index, char* index_address);
-  virtual void process_klass_by_name_classloader(LoaderType type, int32_t meta_index, int32_t init_status);
-  virtual void process_mirror_by_name_classloader(LoaderType type, int32_t meta_index, int32_t init_status);
-  virtual void process_method_by_name_classloader(LoaderType type, int32_t meta_index);
+  virtual void process_klass_by_name_classloader(int32_t meta_index, int32_t init_status);
+  virtual void process_mirror_by_name_classloader(int32_t meta_index, int32_t init_status);
+  virtual void process_method_by_name_classloader(int32_t meta_index);
  public:
-  UpdateMetaIndexTask(char* start, CodeReviveMetaSpace* meta_space)
-    : ReviveAuxInfoTask(start, meta_space) {
+  UpdateMetaIndexTask(char* start, CodeReviveMetaSpace* meta_space, CodeReviveMergedMetaInfo* meta_info)
+    : ReviveAuxInfoTask(start, meta_space), _global_meta_info(meta_info) {
   }
   void update_meta_space_index() {
     iterate_reloc_aux_info();
@@ -338,14 +346,15 @@ class CollectKlassAndMethodIndexTask : public ReviveAuxInfoTask {
  private:
   int32_t _self_method;
   GrowableArray<int32_t>* _indexes;
+  CodeReviveMergedMetaInfo*     _global_meta_info;
 
   void process_meta_self_method();
-  void process_klass_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state);
-  void process_method_by_name_classloader(LoaderType loader_type, int32_t meta_index);
+  void process_klass_by_name_classloader(int32_t meta_index, int32_t min_state);
+  void process_method_by_name_classloader(int32_t meta_index);
   void process_non_oop();
 
  public:
-  CollectKlassAndMethodIndexTask(char* start, int32_t cur_method, GrowableArray<int32_t>* indexes, CodeReviveMetaSpace* meta_space)
-    : ReviveAuxInfoTask(start, meta_space), _self_method(cur_method), _indexes(indexes) {}
-};
+  CollectKlassAndMethodIndexTask(char* start, int32_t cur_method, GrowableArray<int32_t>* indexes, CodeReviveMetaSpace* meta_space, CodeReviveMergedMetaInfo* meta_info)
+    : ReviveAuxInfoTask(start, meta_space), _self_method(cur_method), _indexes(indexes), _global_meta_info(meta_info) {}
+}; 
 #endif // SHARE_VM_CR_CODE_REVIVE_AUX_INFO_HPP

@@ -35,7 +35,7 @@ public class MultiVersionSimpleCover {
             Test("-XX:CompileCommand=compileonly,TestMultiVersionSelection.foo",
                  "-XX:CompileCommand=compileonly,TestMultiVersionSelection.bar",
                  "-XX:-BackgroundCompilation",
-                 "-XX:CodeReviveOptions=save,disable_check_dir,file=r_%p.csa,log=opt=trace",
+                 "-XX:CodeReviveOptions=save,file=r_%p.csa,log=opt=trace",
                  "TestMultiVersionSelection",
                  String.valueOf(i));
         }
@@ -43,7 +43,7 @@ public class MultiVersionSimpleCover {
              "-XX:-BackgroundCompilation",
              "-XX:CodeReviveOptions=save,file=r_%p.csa,log=opt=trace",
              "TestMultiVersionSelection");
-        String result = Test("-XX:CodeReviveOptions=merge,disable_check_dir,log=merge=info,file=a.csa,input_files=./");
+        String result = Test("-XX:CodeReviveOptions=merge,policy=coverage,log=merge=info,file=a.csa,input_files=./");
         String[] lines = result.split("\n");
         int v15_count = 0;
         int v16_count = 0;

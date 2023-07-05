@@ -26,9 +26,9 @@
 #include "cr/codeReviveJitMeta.hpp"
 #include "cr/codeReviveLookupTable.hpp"
 #include "cr/codeReviveMerge.hpp"
+#include "cr/codeReviveMergedMetaInfo.hpp"
 #include "cr/codeReviveOptRecords.hpp"
 #include "cr/codeReviveHashTable.hpp"
-#include "cr/classPathEntryTable.hpp"
 #include "cr/revive.hpp"
 #include "memory/filemap.hpp"
 #include "runtime/arguments.hpp"
@@ -37,7 +37,8 @@
 #include "utilities/align.hpp"
 #include "utilities/defaultStream.hpp"
 
-CodeReviveMetaSpace*  CodeReviveMerge::_global_meta_space = NULL;
+CodeReviveMetaSpace*  CodeReviveMerge::_global_meta_space = NULL; 
+CodeReviveMergedMetaInfo*   CodeReviveMerge::_global_meta_info = NULL;
 GrowableArray<char*>* CodeReviveMerge::_csa_filenames = NULL;
 GrowableArray<const char*>* CodeReviveMerge::_cp_array = NULL;
 GrowableArray<WildcardEntryInfo*>* CodeReviveMerge::_merged_cp_array = NULL;
@@ -133,22 +134,16 @@ void CandidateCodeBlob::set_offset_and_size(int32_t file_offset, int32_t code_si
 /*
  * initialize the below global table
  */
-void CodeReviveMerge::init(Arena* arena) {
-  _global_meta_space = new CodeReviveMetaSpace(false);
-  const char* appcp = Arguments::get_appclasspath();
-  int rp_len = FileMapInfo::num_paths(appcp);
-  if (rp_len != 0) {
-    _cp_array = ClassPathEntryTable::create_path_array(appcp, INT_MAX);
-    if (_cp_array == NULL) {
-      CR_LOG(cr_merge, cr_none, "Fail to create path array during merging\n");
-      exit(1);
-    }
-    _cp_array_size = _cp_array->length();
-    if (CodeRevive::merge_wildcard_classpath() != NULL) {
-      _sorted_jars_in_wildcards = new GrowableArray<const char*>();
-      _merged_cp_array = ClassPathEntryTable::create_merged_path_array(CodeRevive::merge_wildcard_classpath(), _sorted_jars_in_wildcards);
-    }
+bool CodeReviveMerge::init(Arena* arena) {
+  // global meta information is stored in CodeReviveMergedMetaInfo
+  _global_meta_info = new CodeReviveMergedMetaInfo();
+  // To avoid a lot of modifications, pass CodeReviveMergedMetaInfo to CodeReviveMetaSpace,
+  // and use CodeReviveMergedMetaInfo to get name and identity in CodeReviveMetaSpace
+  _global_meta_space = new CodeReviveMetaSpace(_global_meta_info);
+  if (!_global_meta_info->initialize(arena)) {
+    return false;
   }
+  return true;
 }
 
 void CodeReviveMerge::merge_and_dump(TRAPS) {
@@ -163,7 +158,9 @@ void CodeReviveMerge::merge_and_dump(TRAPS) {
   _arena = &merge_arena;
 
   // initialize
-  init(_arena);
+  if (!init(_arena)) {
+    exit(1);
+  }
 
   GrowableArray<CodeReviveContainer*>* containers = check_and_group_files_by_fingerprint();
   if (containers->is_empty()) {
@@ -173,8 +170,8 @@ void CodeReviveMerge::merge_and_dump(TRAPS) {
   // remove containers with fewer files based on coverage and container maximum
   remove_containers(containers);
 
-  // create klass resolve cache table for resolve metaspace
-  MergePhaseKlassResovleCacheTable::create_table();
+  // create meta table for resolve metaspace
+  MergePhaseMetaTable::create_table();
 
   {
     // traverse all the csa files and collect the candidate nmethod
@@ -202,15 +199,10 @@ void CodeReviveMerge::merge_and_dump(TRAPS) {
     }
   }
 
-  // print the klass resolve information
-  MergePhaseKlassResovleCacheTable::print_cache_table_information();
-
-  CodeReviveMetaSpace::print_resolve_info();
-
   // save
   {
     CodeReviveFile output_file;
-    if (output_file.save_merged(CodeRevive::file_path(), containers)) {
+    if (output_file.save_merged(CodeRevive::file_path(), containers, _global_meta_info)) {
       CR_LOG(cr_merge, cr_none, "Succeed to generate merged CSA file %s\n", CodeRevive::file_path());
       output_file.print_file_info();
     }
@@ -255,7 +247,7 @@ GrowableArray<CodeReviveContainer*>* CodeReviveMerge::check_and_group_files_by_f
     char* name = _csa_filenames->at(i);
     CodeReviveFile* file = new CodeReviveFile();
     if (!file->map(name, true /* load container */, false /* init metaspace */, false /* select container */,
-                   true /* check class path*/, cr_merge)) {
+                   cr_merge)) {
       CR_LOG(cr_merge, cr_fail, "Fail to merge file %s\n", name);
       delete file;
       continue;
@@ -292,7 +284,7 @@ void CodeReviveMerge::preprocess_candidate_nmethods(CodeReviveContainer* contain
     int index = file_indexes->at(i);
     csa_file_name = _csa_filenames->at(index);
     CodeReviveFile* csa_file = new CodeReviveFile();
-    if (!csa_file->map(csa_file_name, true, true, false, false, cr_merge)) {
+    if (!csa_file->map(csa_file_name, true, true, false, cr_merge)) {
       CR_LOG(cr_merge, cr_fail, "Fail to merge file %s\n", csa_file_name);
       delete csa_file;
       continue;
@@ -304,8 +296,8 @@ void CodeReviveMerge::preprocess_candidate_nmethods(CodeReviveContainer* contain
     CodeReviveCodeSpace*   code_space   = csa_file->code_space();
     CodeReviveMetaSpace*   meta_space   = csa_file->meta_space();
 
-    // resolve all the meta in meta space
-    meta_space->resolve_metadata(_global_meta_space);
+    // record all the meta in meta space
+    meta_space->record_metadata(_global_meta_info);
 
     // iterate lookup table and find the candidate code
     CodeReviveLookupTableIterator iter(lookup_table);
@@ -313,24 +305,16 @@ void CodeReviveMerge::preprocess_candidate_nmethods(CodeReviveContainer* contain
       if (e->_code_offset == -1) {
         continue;
       }
-      char* names[3];
-      int32_t* lens;
-      Method* m = meta_space->unresolved_name_parts_or_method(e->_meta_index, names, &lens);
-      if (m == NULL) {
-        CR_LOG(cr_merge, cr_warning, "Unresolved method %s\n", names[0]);
-        continue;
-      }
-      CodeReviveCodeBlob cr_cb(code_space->get_code_address(e->_code_offset), meta_space);
-
-      // check whether the code blob can be merged
-      if (cr_cb.can_be_merged()) {
-        Metadata* meta = meta_space->resolved_metadata_or_null(e->_meta_index);
-        guarantee(meta != NULL, "Unresolved metadata");
-        // collect jit code meta of all code in all file
-        add_candidate_code_into_jit_metas(csa_file, &cr_cb, meta->csa_meta_index(), container, index, arena);
-      } else {
-        CR_LOG(cr_merge, cr_warning, "Fail to merge method %s\n", m->name_and_sig_as_C_string());
-      }
+      CodeReviveCodeBlob* cr_cb = new CodeReviveCodeBlob(code_space->get_code_address(e->_code_offset), meta_space);
+      char* name = meta_space->metadata_name(e->_meta_index);
+      int64_t identity = meta_space->metadata_identity(e->_meta_index);
+      uint16_t loader_type = meta_space->metadata_loader_type(e->_meta_index);
+      // use name and identity to get global index
+      int global_index = _global_meta_info->get_meta_index(name, identity, loader_type);
+      // the method should be recorded in merged meta info with record_metadata
+      guarantee(global_index != -1, "the method isn't in global meta array");
+      // collect jit code meta of all code in all file
+      add_candidate_code_into_jit_metas(csa_file, cr_cb, global_index, container, index, arena);
     }
     // release CodeReviveFile
     delete csa_file;
@@ -339,47 +323,47 @@ void CodeReviveMerge::preprocess_candidate_nmethods(CodeReviveContainer* contain
 }
 
 void CodeReviveMerge::update_code_blob_info(CodeReviveMetaSpace* meta_space, char* start, int32_t next_offset) {
-  CodeReviveCodeBlob cb(start, meta_space);
+  CodeReviveCodeBlob* cb = new CodeReviveCodeBlob(start, meta_space);
 
   // set the offset for next code blob
-  cb.set_next_version_offset(next_offset);
+  cb->set_next_version_offset(next_offset);
 
-  UpdateMetaIndexTask meta_array_task(cb.aux_meta_array_begin(), meta_space);
+  UpdateMetaIndexTask meta_array_task(cb->aux_meta_array_begin(), meta_space, _global_meta_info);
   meta_array_task.update_meta_space_index();
 
-  UpdateMetaIndexTask oop_array_task(cb.aux_oop_array_begin(), meta_space);
+  UpdateMetaIndexTask oop_array_task(cb->aux_oop_array_begin(), meta_space, _global_meta_info);
   oop_array_task.update_meta_space_index();
 
-  UpdateMetaIndexTask reloc_info_task(cb.aux_reloc_begin(), meta_space);
+  UpdateMetaIndexTask reloc_info_task(cb->aux_reloc_begin(), meta_space, _global_meta_info);
   reloc_info_task.update_meta_space_index();
 }
 
 void CodeReviveMerge::add_candidate_code_into_jit_metas(CodeReviveFile* file, CodeReviveCodeBlob* codeblob,
                                                         int32_t meta_index, CodeReviveContainer* container,
                                                         int32_t file_index, Arena *arena) {
-  CR_LOG(cr_merge, cr_info, "Add candidate code %s\n", _global_meta_space->metadata_name(meta_index));
+  CR_LOG(cr_merge, cr_info, "Add candidate code %s\n", _global_meta_info->metadata_name(meta_index));
   guarantee(meta_index >= 0, "should be");
   CandidateCodeBlob candidate(file_index, meta_index);
 
   GrowableArray<JitMetaInfo*>* jit_metas = container->jit_metas();
   CodeReviveMetaSpace* meta_space = file->meta_space();
-  CodeReviveCodeBlob cb(codeblob->start(), meta_space);
+  CodeReviveCodeBlob* cb = new CodeReviveCodeBlob(codeblob->start(), meta_space);
 
   // get global metadata indexs for klasses and methods in current candidate's data array
   GrowableArray<int32_t>* opt_meta_global_indexes = new GrowableArray<int32_t>();
-  CollectKlassAndMethodIndexTask collect_meta_task(cb.aux_meta_array_begin(), candidate._meta_index, opt_meta_global_indexes, meta_space);
+  CollectKlassAndMethodIndexTask collect_meta_task(cb->aux_meta_array_begin(), candidate._meta_index, opt_meta_global_indexes, meta_space, _global_meta_info);
   collect_meta_task.iterate_reloc_aux_info();
 
-  CollectKlassAndMethodIndexTask collect_oop_task(cb.aux_oop_array_begin(), candidate._meta_index, opt_meta_global_indexes, meta_space);
+  CollectKlassAndMethodIndexTask collect_oop_task(cb->aux_oop_array_begin(), candidate._meta_index, opt_meta_global_indexes, meta_space, _global_meta_info);
   collect_oop_task.iterate_reloc_aux_info();
 
   // get all opt records and revive deps
-  GrowableArray<OptRecord*>* opts = cb.get_opt_records_for_merge(_global_meta_space, opt_meta_global_indexes);
+  GrowableArray<OptRecord*>* opts = cb->get_opt_records_for_merge(_global_meta_space, opt_meta_global_indexes);
 
-  GrowableArray<ReviveDepRecord*>* deps = cb.get_revive_deps(opt_meta_global_indexes);
+  GrowableArray<ReviveDepRecord*>* deps = cb->get_revive_deps(opt_meta_global_indexes);
 
   // set file_offset and size in CandidateCodeBlob
-  candidate.set_offset_and_size(codeblob->start() - file->start(), cb.size());
+  candidate.set_offset_and_size(codeblob->start() - file->start(), cb->size());
 
   // update JitOptRecords statistics information
   bool found = false;
@@ -456,11 +440,21 @@ void CodeReviveMerge::candidate_selection(CodeReviveContainer* container, Arena*
     JitMetaInfo* jmi = jit_metas->at(i);
     guarantee(jmi->_count > 0, "must be");
     jmi->select_best_versions();
+    MergedCodeBlob* prev_mcb = NULL;
     for (int j = 0; j < jmi->_versions->length(); j++) {
       JitVersion* jv = jmi->_versions->at(j);
       MergedCodeBlob* mcb = new (arena) MergedCodeBlob(jv->_candidate._file_index, jmi->_method_index,
                                                jv->_candidate._file_offset, jv->_candidate._code_size,
                                                (int)offset_in_codespace);
+      // set the next offset and first offset
+      if (prev_mcb != NULL) {
+        // the next version of prev_mcb is the current mcb
+        prev_mcb->set_next_offset((int)offset_in_codespace);
+      } else {
+        // it is the first version, the offset will be set in the entry
+        mcb->set_first_offset((int)offset_in_codespace);
+      }
+      prev_mcb = mcb;
       offset_in_codespace += align_up((size_t)mcb->code_size(), CodeReviveFile::alignment());
       add_merged_codeblob(mcb, candidate_codeblobs);
     }

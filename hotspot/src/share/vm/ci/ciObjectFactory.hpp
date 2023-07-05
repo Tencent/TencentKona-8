@@ -47,6 +47,7 @@ private:
 
   Arena*                    _arena;
   GrowableArray<ciMetadata*>*        _ci_metadata;
+  GrowableArray<ciMetadata*>*        _cr_dep_metadata;
   GrowableArray<ciMethod*>* _unloaded_methods;
   GrowableArray<ciKlass*>* _unloaded_klasses;
   GrowableArray<ciInstance*>* _unloaded_instances;
@@ -144,9 +145,15 @@ public:
   GrowableArray<ciMetadata*>* get_ci_metadata() const { return _ci_metadata; }
   // RedefineClasses support
   void metadata_do(void f(Metadata*));
+  // CodeRevive: copy klass metadata to oop recorder before nmethod installed
+  void copy_values_to(OopRecorder* oop_recorder);
 
   void print_contents();
   void print();
+
+  // CodeRevive
+  ciMetadata* should_save_for_cr(ciMetadata* obj, Metadata*& key);
+  void try_insert_cr_meta(ciMetadata* obj, Metadata* key);
 };
 
 #endif // SHARE_VM_CI_CIOBJECTFACTORY_HPP

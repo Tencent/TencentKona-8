@@ -81,9 +81,6 @@
 # include "os_bsd.inline.hpp"
 #endif
 
-// CodeRevive
-#include "cr/classPathEntryTable.hpp"
-
 // Entry points in zip.dll for loading zip/jar file entries
 
 typedef void * * (JNICALL *ZipOpen_t)(const char *name, char **pmsg);
@@ -638,13 +635,209 @@ void ClassLoader::check_shared_classpath(const char *path) {
   }
 }
 
+char* ClassLoader::create_canonical_path(const char* orig, char* buf, int len) {
+  const char* real_path = NULL;
+  if (ClassLoader::get_canonical_path(orig, buf, len)) {
+    real_path = buf;
+  } else {
+    real_path = orig;
+  }
+  size_t path_len = strlen(real_path) + 1;
+  char* new_path = NEW_RESOURCE_ARRAY(char, path_len);
+  strncpy(new_path, real_path, path_len);
+  return new_path;
+}
+
+/*
+ * WildcardEntryInfo: store the entry information in original class path
+ * In java.c, the directory with wildcard will be converted to jar files 
+ * in the directory. In different machine, the order may be different.
+ */
+class WildcardEntryInfo : public ResourceObj {
+ private:
+  char*   _path_name;
+  int     _num_of_jar;          // the number of jar files in the directory, the value is 1 by default
+  bool    _is_wildcard;         // the directory is with wildcard
+ public:
+  WildcardEntryInfo(char* name, bool is_wildcard) : _path_name(name), _is_wildcard(is_wildcard), _num_of_jar(1) {}
+  void    set_num_of_jar(int number)     { _num_of_jar = number; }
+  int     num_of_jar()                   { return _num_of_jar; }
+  bool    is_wildcard()                  { return _is_wildcard; }
+  char*   path_name()                    { return _path_name; }
+  
+};
+
+class WildcardIterator : public StackObj {
+  GrowableArray<WildcardEntryInfo*>* _merged_cp_array;
+  WildcardEntryInfo* _wildcard_entry;
+  int _cur_wildcard_entry;
+  int _num_of_jar;
+
+public:
+  WildcardIterator(GrowableArray<WildcardEntryInfo*>* merged_cp_array) {
+    _merged_cp_array = merged_cp_array;
+    _cur_wildcard_entry = -1;
+    _num_of_jar = 0;
+    _wildcard_entry = NULL;
+    // if merged_cp_array is null, num_of_jar is -1
+    if (_merged_cp_array == NULL) {
+      _num_of_jar = -1;
+    }
+  }
+
+  WildcardEntryInfo* get_next_entry();
+};
+
+WildcardEntryInfo* WildcardIterator::get_next_entry() {
+  if (_num_of_jar == -1) {
+    return NULL;
+  }
+  // the jar files in the previous entry has been checked, and try to get the next entry
+  if (_num_of_jar == 0) {
+    _cur_wildcard_entry++;
+    if (_cur_wildcard_entry < _merged_cp_array->length()) {
+      _wildcard_entry = _merged_cp_array->at(_cur_wildcard_entry);
+      _num_of_jar = _wildcard_entry->num_of_jar();
+    } else {
+      _wildcard_entry = NULL;
+      _num_of_jar = -1;
+    }
+  }
+  if (_wildcard_entry != NULL) {
+    _num_of_jar--;
+    return _wildcard_entry;
+  }
+  return NULL;
+}
+
+// copy from filemap.cpp for implementing create_path_array
+class CodeReviveClasspathStream : public StackObj {
+  const char* _class_path;
+  int _len;
+  int _start;
+  int _end;
+
+public:
+  CodeReviveClasspathStream(const char* class_path) {
+    _class_path = class_path;
+    _len = (int)strlen(class_path);
+    _start = 0;
+    _end = 0;
+  }
+
+  bool has_next() {
+    return _start < _len;
+  }
+
+  char* get_next();
+};
+
+char* CodeReviveClasspathStream::get_next() {
+  while (_class_path[_end] != '\0' && _class_path[_end] != os::path_separator()[0]) {
+    _end++;
+  }
+  int path_len = _end - _start;
+  char* path = NEW_RESOURCE_ARRAY(char, path_len + 1);
+  strncpy(path, &_class_path[_start], path_len);
+  path[path_len] = '\0';
+
+  while (_class_path[_end] == os::path_separator()[0]) {
+    _end++;
+  }
+  _start = _end;
+  return path;
+}
+
+static int is_jar_file_name(const char *filename)
+{
+  int len = (int) strlen(filename);
+  return (len >= 4) &&
+         (filename[len - 4] == '.') &&
+         (strcmp(filename + len - 3, "jar") == 0 ||
+          strcmp(filename + len - 3, "JAR") == 0);
+}
+
+static char *wildcard_concat(const char *wildcard, const char *basename)
+{
+  size_t wildlen = strlen(wildcard);
+  size_t baselen = strlen(basename);
+  char *filename = NEW_RESOURCE_ARRAY(char, wildlen + baselen + 2);
+  /* Replace the trailing '*' with basename */
+  memcpy(filename, wildcard, wildlen);
+  filename[wildlen] = os::file_separator()[0];
+  memcpy(filename + wildlen + 1, basename, baselen + 1);
+  return filename;
+}
+
+static int compute_number_of_jar_in_dir(const char* name) {
+  char* new_path = NULL;
+  int number_of_jar = 0;
+  DIR *dir = NULL;
+  if (!(dir = os::opendir(name))) {
+    return number_of_jar;
+  }
+
+  struct dirent* dp = NULL;
+  while((dp = os::readdir(dir))) {
+    if (is_jar_file_name(dp->d_name)) {
+      new_path = wildcard_concat(name, dp->d_name);
+      number_of_jar++;
+    }
+  }
+
+  os::closedir(dir);
+  return number_of_jar;
+}
+
+static GrowableArray<WildcardEntryInfo*>* create_wildcard_path_array(const char* paths, bool allow_dir) {
+  GrowableArray<WildcardEntryInfo*>* path_array = new GrowableArray<WildcardEntryInfo*>(10);
+  char buffer[JVM_MAXPATHLEN + 1];
+  char* new_path = NULL;
+  WildcardEntryInfo* entry = NULL;
+  int n = 0;
+  CodeReviveClasspathStream cp_stream(paths);
+  while (cp_stream.has_next()) {
+    char* path = cp_stream.get_next();
+    size_t len = strlen(path);
+    // the path end with wildcard
+    if (path[len - 1] == '*' && (len == 1 || path[len - 2] == os::file_separator()[0])) {
+      if (len == 1) {
+        return NULL;
+      }
+      // compute the number of jar files
+      path[len - 1] = '\0';
+      new_path = ClassLoader::create_canonical_path(path, buffer, JVM_MAXPATHLEN);
+      int num_of_jar = compute_number_of_jar_in_dir(new_path);
+      // if there is no jar file, ignore the path
+      if (num_of_jar != 0) {
+        entry = new WildcardEntryInfo(new_path, true);
+        entry->set_num_of_jar(num_of_jar);
+        path_array->append(entry);
+      }
+    } else {
+      struct stat st;
+      if (os::stat(path, &st) == 0) {
+        if (((st.st_mode & S_IFMT) == S_IFDIR) && !allow_dir) {
+          return NULL;
+        }
+        if ((st.st_mode & S_IFREG) == S_IFREG) {
+          new_path = ClassLoader::create_canonical_path(path, buffer, JVM_MAXPATHLEN);
+          entry = new WildcardEntryInfo(new_path, false);
+          path_array->append(entry);
+        }
+      }
+    }
+  }
+  return path_array;
+}
+
 /*
  * Record the wildcard information in classpath entry
  * In java.c, the classpath: a.jar:dir1/"*":dir2/"*":b.jar is converted to
  * a.jar:dir1/1.jar:dir1/2.jar:dir1/3.jar:dir2/4.jar:dir2/5.jar:b.jar
  *
  * Use RecordClasspathForCDSDump to pass the origin classpath
- * use ClassPathEntryTable::create_merged_path_array to parse the classpath:
+ * use create_wildcard_path_array to parse the classpath:
  * WildcardEntryInfo
  * path_name  number_of_jar
  * a.jar      1
@@ -671,16 +864,15 @@ void ClassLoader::check_shared_classpath(const char *path) {
 bool ClassLoader::setup_app_search_path_with_wildcard(const char *class_path) {
   // create path array with the classpath with wildcard information
   // ignore the directory and non exist jar file
-  // create_merged_path_array can return NULL
+  // create_wildcard_path_array can return NULL
   Thread* THREAD = Thread::current();
   ResourceMark rm(THREAD);
-  GrowableArray<WildcardEntryInfo*>* merged_cp_array = ClassPathEntryTable::create_merged_path_array(RecordClasspathForCDSDump,
-                                                                                                     NULL, RelaxCheckForAppCDS);
-  if (merged_cp_array == NULL) {
+  GrowableArray<WildcardEntryInfo*>* wildcard_cp_array = create_wildcard_path_array(RecordClasspathForCDSDump, RelaxCheckForAppCDS);
+  if (wildcard_cp_array == NULL) {
     return false;
   }
 
-  WildcardIterator wildcardIterator(merged_cp_array);
+  WildcardIterator wildcardIterator(wildcard_cp_array);
 
   int len = (int)strlen(class_path);
   int end = 0;

@@ -130,10 +130,10 @@ bool CodeReviveContainer::setup_code_space() {
     if (cb->is_nmethod()) {
       nmethod* nm = (nmethod*)cb;
       Method* m = nm->method();
-      int code_offset = _code_space->saveCode(cb, _meta_space);
       CodeReviveLookupTable::Entry* e = _lookup_table->find_entry(m);
       assert(e != NULL, "");
       guarantee(e->_code_offset == -1, "already has code");
+      int code_offset = _code_space->saveCode(cb, _meta_space);
       // If the nmethod is make not entrant during memcpy, it's un-usable for later revive
       if (nm->is_in_use()) {
         e->_code_offset = code_offset;
@@ -142,9 +142,9 @@ bool CodeReviveContainer::setup_code_space() {
           (code_offset == -1 && CodeRevive::is_log_on(cr_assembly, cr_fail))) {
         Disassembler::decode(nm, CodeRevive::out());
       }
-      CR_LOG(cr_save, code_offset == -1 ? cr_fail : cr_trace, "Emit method %s %s\n",
+      CR_LOG(cr_save, code_offset == -1 ? cr_fail : cr_trace, "Emit method %s %s (Identity: %lx)\n",
              Method::name_and_sig_as_C_string_all(m->constants()->pool_holder(), m->name(), m->signature()),
-             code_offset == -1 ? "fail" : "success");
+             code_offset == -1 ? "fail" : "success", m->cr_identity());
     }
   }
   _header->_code_space_offset = (_cur_pos - _start);
@@ -232,6 +232,7 @@ bool CodeReviveContainer::save_merged() {
 
   for (int i = 0; i < candidate_codeblobs->length(); i++) {
     HandleMark   hm;
+    ResourceMark rm;
     MergedCodeBlob* mcb = candidate_codeblobs->at(i);
     // get csa file name
     char* file_name = CodeReviveMerge::csa_file_name(mcb->file_index());
@@ -239,16 +240,13 @@ bool CodeReviveContainer::save_merged() {
     CodeReviveFile* csa_file = new CodeReviveFile();
     // map the read only part and read write part
     // construct CodeReviveMetaSpace
-    if (!csa_file->map(file_name, false, true, false, false, cr_merge)) {
+    if (!csa_file->map(file_name, false, true, false, cr_merge)) {
       CR_LOG(cr_merge, cr_fail, "Fail to merge the candidate csa file: %s", file_name);
       delete csa_file;
       continue;
     }
 
     CodeReviveMetaSpace* meta_space = csa_file->meta_space();
-
-    // resolve all the meta in meta space
-    meta_space->resolve_metadata(NULL);
 
     char* code_space_start = _start + _header->_code_space_offset;
 
@@ -259,19 +257,23 @@ bool CodeReviveContainer::save_merged() {
       char* code_ptr = code_space_start + mcb->code_offset();
       guarantee(codeblob != NULL, "should be");
 
-      CodeReviveCodeBlob cb(codeblob, NULL);
+      CodeReviveCodeBlob* cb = new CodeReviveCodeBlob(codeblob, NULL);
 
       char* method_name = _meta_space->metadata_name(mcb->meta_index());
+      int64_t identity = _meta_space->metadata_identity(mcb->meta_index());
+      uint32_t loader_type = _meta_space->metadata_loader_type(mcb->meta_index());
 
-      CodeReviveLookupTable::Entry* entry = _lookup_table->find_entry(method_name);
+      // find the entry with method name + identity + loader type
+      CodeReviveLookupTable::Entry* entry = _lookup_table->find_entry(method_name, identity, loader_type);
       guarantee(entry != NULL, "should be");
       CR_LOG(cr_merge, cr_trace, "Merge saving %s\n", method_name);
 
       memcpy(code_ptr, codeblob, mcb->code_size());
 
-      guarantee(entry->_code_offset >= -1 , "should be");
-      CodeReviveMerge::update_code_blob_info(meta_space, code_ptr, entry->_code_offset);
-      entry->_code_offset = mcb->code_offset();
+      CodeReviveMerge::update_code_blob_info(meta_space, code_ptr, mcb->next_offset());
+      if (mcb->first_offset() != -1) {
+        entry->_code_offset = mcb->first_offset();
+      }
 
       _cur_pos += align_up((size_t)mcb->code_size(), CodeReviveFile::alignment());
       mcb = mcb->next();
@@ -330,6 +332,7 @@ void CodeReviveContainer::add_filename_index(int index) {
 }
 
 void CodeReviveContainer::print() {
+  ResourceMark rm;
   // iterate lookup table and print entry and code
   CodeReviveLookupTableIterator iter(_lookup_table);
   for (CodeReviveLookupTable::Entry* e = iter.first(); e != NULL; e = iter.next()) {
@@ -337,8 +340,8 @@ void CodeReviveContainer::print() {
     if (e->_code_offset == -1) {
       continue;
     }
-    CodeReviveCodeBlob cr_cb(_code_space->get_code_address(e->_code_offset), _meta_space);
-    cr_cb.print();
+    CodeReviveCodeBlob* cr_cb = new CodeReviveCodeBlob(_code_space->get_code_address(e->_code_offset), _meta_space);
+    cr_cb->print();
   }
 }
 

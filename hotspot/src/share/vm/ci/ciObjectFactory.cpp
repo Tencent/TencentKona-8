@@ -87,6 +87,11 @@ ciObjectFactory::ciObjectFactory(Arena* arena,
   _arena = arena;
   _ci_metadata = new (arena) GrowableArray<ciMetadata*>(arena, expected_size, 0, NULL);
 
+  // CodeRevive: initialize _cr_dep_metadata
+  if (CodeRevive::is_save()) {
+    _cr_dep_metadata = new (arena) GrowableArray<ciMetadata*>(arena, expected_size, 0, NULL);
+  }
+
   // If the shared ci objects exist append them to this factory's objects
 
   if (_shared_ci_metadata != NULL) {
@@ -303,9 +308,15 @@ ciMetadata* ciObjectFactory::get_metadata(Metadata* key) {
     }
     assert(!is_found_at(index, key, _ci_metadata), "no double insert");
     insert(index, new_object, _ci_metadata);
-    return new_object;
   }
-  return _ci_metadata->at(index)->as_metadata();
+
+  ciMetadata* ret_object = _ci_metadata->at(index)->as_metadata();
+
+  if (CodeRevive::is_save() && _initialized) {
+    try_insert_cr_meta(ret_object, key);
+  }
+
+  return ret_object;
 }
 
 // ------------------------------------------------------------------
@@ -772,6 +783,17 @@ void ciObjectFactory::metadata_do(void f(Metadata*)) {
 }
 
 // ------------------------------------------------------------------
+// ciObjectFactory::copy_values_to
+void ciObjectFactory::copy_values_to(OopRecorder* oop_recorder) {
+  if (_cr_dep_metadata == NULL) return;
+  for (int i = 0; i < _cr_dep_metadata->length(); i++) {
+    Metadata* meta = _cr_dep_metadata->at(i)->constant_encoding();
+    assert(meta->is_klass(), "bad metadata type.");
+    oop_recorder->find_index(meta);
+  }
+}
+
+// ------------------------------------------------------------------
 // ciObjectFactory::print_contents_impl
 void ciObjectFactory::print_contents_impl() {
   int len = _ci_metadata->length();
@@ -799,4 +821,41 @@ void ciObjectFactory::print() {
              _non_perm_count, _ci_metadata->length(), _unloaded_methods->length(),
              _unloaded_instances->length(),
              _unloaded_klasses->length());
+}
+
+// CodeRevive
+// ------------------------------------------------------------------
+// ciObjectFactory::should_save_for_cr
+//
+// CodeRevive: check if is valid metadata for nm metadata array
+ciMetadata* ciObjectFactory::should_save_for_cr(ciMetadata* obj, Metadata*& key) {
+  // The two special oop will be definitely created in ciEnv()
+  if (key == Universe::null_ptr_exception_instance()->klass() || key == Universe::arithmetic_exception_instance()->klass()) {
+    return NULL;
+  }
+  if (obj->is_method()) {
+    ciInstanceKlass* new_key = obj->as_method()->holder();
+    key = new_key->constant_encoding();
+    return new_key;
+  }
+  if (obj->is_obj_array_klass() || obj->is_instance_klass()) {
+    return obj;
+  }
+  return NULL;
+}
+
+void ciObjectFactory::try_insert_cr_meta(ciMetadata* obj, Metadata* key) {
+  // key will be replaced with its holder's Klass* in should_save_for_cr if it is Method*.
+  obj = should_save_for_cr(obj, key);
+  if (!obj) {
+    return;
+  }
+  guarantee(obj->constant_encoding() == key, "should be");
+
+  int index = find(key, _cr_dep_metadata);
+  if (is_found_at(index, key, _cr_dep_metadata)) {
+    return;
+  }
+
+  insert(index, obj, _cr_dep_metadata);
 }

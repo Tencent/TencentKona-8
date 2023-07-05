@@ -388,6 +388,7 @@ class ClassLoader: AllStatic {
   static void  exit_with_path_failure(const char* error, const char* message);
   static char* skip_uri_protocol(char* source);
   static void  record_result(InstanceKlass* ik, const ClassFileStream* stream, TRAPS);
+  static char* create_canonical_path(const char* orig, char* out, int len);
 #endif
 
   static void  trace_class_path(outputStream* out, const char* msg, const char* name = NULL);

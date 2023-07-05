@@ -86,7 +86,7 @@ class ReviveVersionSelector : public StackObj {
   bool revive_preprocess(CodeReviveCodeBlob::JitVersionReviveState* revive_state);
 
  public:
-  ReviveVersionSelector(char* start, Method* method, CodeReviveMetaSpace* meta_space, CodeReviveCodeBlob::JitVersionReviveState** selected_version);
+  ReviveVersionSelector(char* start, Method* method, CodeReviveMetaSpace* meta_space, CodeReviveCodeBlob::JitVersionReviveState** selected_version, CodeReviveCodeBlob* code_blob);
 
   void do_selection();
 };

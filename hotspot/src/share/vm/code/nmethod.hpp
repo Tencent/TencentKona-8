@@ -191,6 +191,9 @@ class nmethod : public CodeBlob {
   // used by jvmti to track if an unload event has been posted for this nmethod.
   bool _unload_reported;
 
+  // CodeRevive
+  bool _record_compile_time_metadata;
+
   // set during construction
   unsigned int _has_unsafe_access:1;         // May fault due to unsafe access.
   unsigned int _has_method_handle_invokes:1; // Has this method MethodHandle invokes?
@@ -502,6 +505,10 @@ class nmethod : public CodeBlob {
   void  set_has_wide_vectors(bool z)              { _has_wide_vectors = z; }
 
   int   comp_level() const                        { return _comp_level; }
+
+  // CodeRevive
+  bool  record_compile_time_metadata() const      { return _record_compile_time_metadata; }
+  void  set_record_compile_time_metadata()        { _record_compile_time_metadata = true; }
 
   // Support for oops in scopes and relocs:
   // Note: index 0 is reserved for null.

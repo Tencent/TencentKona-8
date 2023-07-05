@@ -94,6 +94,11 @@ TypeArrayKlass::TypeArrayKlass(BasicType type, Symbol* name) : ArrayKlass(name) 
   assert(size() >= TypeArrayKlass::header_size(), "bad size");
 
   set_class_loader_data(ClassLoaderData::the_null_class_loader_data());
+
+  // CodeRevive
+  // identity for TypeArrayKlass will not change.
+  // Can be calcaulated eagerly.
+  generate_cr_identity(type);
 }
 
 typeArrayOop TypeArrayKlass::allocate_common(int length, bool do_zero, TRAPS) {
@@ -392,4 +397,13 @@ void TypeArrayKlass::oop_print_on(oop obj, outputStream* st) {
 
 const char* TypeArrayKlass::internal_name() const {
   return Klass::external_name();
+}
+
+void TypeArrayKlass::generate_cr_identity(BasicType type) {
+  // dimension() is always 1 for TypeArrayKlass, because of that
+  //   multi-dimensional arrays in Java are all ObjArrayKlass.
+  uint64_t crc = (uint32_t)ClassLoader::crc32(0, (const char*)&type, sizeof(BasicType));
+  set_cr_identity((crc << 32) | dimension());
+
+  CR_LOG(CodeRevive::log_kind(), cr_info, "CodeRevive Identity for class %s is %lx.\n", external_name(type), _cr_identity);
 }

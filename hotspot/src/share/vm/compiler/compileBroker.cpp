@@ -1947,7 +1947,7 @@ static void post_compilation_event(EventCompilation* event, CompileTask* task) {
 bool CompileBroker::revive_aot_method(ciEnv* ci_env, ciMethod* target, AbstractCompiler* comp, CompileTask* task) {
   int osr_bci     = task->osr_bci();
   int task_level  = task->comp_level();
-  bool is_success = false;
+  int revive_status = CodeRevive::REVIVE_FAIL;
   if (osr_bci == InvocationEntryBci && !CodeRevive::is_unsupported(ci_env) &&
     CodeRevive::is_revive_candidate(target->get_Method(), task_level)) {
     ResourceMark rm;
@@ -1964,22 +1964,24 @@ bool CompileBroker::revive_aot_method(ciEnv* ci_env, ciMethod* target, AbstractC
     if (revive_start != NULL) {
       ci_env->register_aot_method(target, osr_bci, revive_start, comp, task_level);
       if (!ci_env->failing()) {
-        is_success = true;
+        revive_status = CodeRevive::REVIVE_SUCCESS;
       }
+    } else {
+      revive_status = CodeRevive::REVIVE_NOT_IN_CSA;
     }
-    if (!is_success) {
+    if (revive_status != CodeRevive::REVIVE_SUCCESS && !CodeRevive::make_revive_fail_at_nmethod()) {
       // clean up failure on env
       ci_env->reset_revive_failure();
     }
     if (CodeRevive::perf_enable()) {
       t1.stop();
-      CodeRevive::collect_statistics(t1, is_success);
+      CodeRevive::collect_statistics(target->get_Method(), t1, revive_status);
     }
     if (PrintCompilation) {
-      task->print_compilation(tty, is_success ? "aot revive success" : "aot no candidate");
+      task->print_compilation(tty, revive_status == CodeRevive::REVIVE_SUCCESS ? "aot revive success" : "aot no candidate");
     }
   }
-  return is_success;
+  return revive_status == CodeRevive::REVIVE_SUCCESS;
 }
 
 // ------------------------------------------------------------------
@@ -2071,7 +2073,7 @@ void CompileBroker::invoke_compiler_on_method(CompileTask* task) {
       bool load_aot = revive_aot_method(&ci_env, target, comp, task);
 
       // failed to revive aot method
-      if (!load_aot) {
+      if (!load_aot && !(CodeRevive::make_revive_fail_at_nmethod() && ci_env.failing())) {
         comp->compile_method(&ci_env, target, osr_bci);
       }
     }
