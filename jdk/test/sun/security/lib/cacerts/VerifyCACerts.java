@@ -54,12 +54,12 @@ public class VerifyCACerts {
             + File.separator + "security" + File.separator + "cacerts";
 
     // The numbers of certs now.
-    private static final int COUNT = 97;
+    private static final int COUNT = 98;
 
     // SHA-256 of cacerts, can be generated with
     // shasum -a 256 cacerts | sed -e 's/../&:/g' | tr '[:lower:]' '[:upper:]' | cut -c1-95
     private static final String CHECKSUM
-            = "72:C7:B8:9E:54:94:D2:D9:C0:E5:9F:F7:C3:8C:3B:18:D7:42:23:82:51:F2:AD:A1:14:26:E0:4A:F2:5F:AE:80";
+            = "AC:01:21:F6:55:57:ED:69:70:95:FD:8F:F0:41:6D:09:78:73:C8:EF:37:AE:A0:26:81:7C:8F:53:A4:A9:1F:AB";
 
     // map of cert alias to SHA-256 fingerprint
     @SuppressWarnings("serial")
@@ -260,6 +260,8 @@ public class VerifyCACerts {
                     "34:D8:A7:3E:E2:08:D9:BC:DB:0D:95:65:20:93:4B:4E:40:E6:94:82:59:6E:8B:6F:73:C8:42:6B:01:0A:6F:48");
             put("gtsrootecccar4 [jdk]",
                     "34:9D:FA:40:58:C5:E2:63:12:3B:39:8A:E7:95:57:3C:4E:13:13:C8:3F:E6:8F:93:55:6C:D5:E8:03:1B:3C:7D");
+            put("cfcaevroot [jdk]",
+                    "5C:C3:D7:8E:4E:1D:5E:45:54:7A:04:E6:87:3E:64:F9:0C:F9:53:6D:1C:CC:2E:F8:00:F3:55:C4:C5:FD:70:FD");
         }
     };
 
