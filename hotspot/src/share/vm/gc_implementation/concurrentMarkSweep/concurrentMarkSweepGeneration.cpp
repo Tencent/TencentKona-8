@@ -42,6 +42,7 @@
 #include "gc_implementation/shared/gcTraceTime.hpp"
 #include "gc_implementation/shared/isGCActiveMark.hpp"
 #include "gc_implementation/shared/owstTaskTerminator.hpp"
+#include "gc_implementation/shared/elasticMaxHeap.hpp"
 #include "gc_interface/collectedHeap.inline.hpp"
 #include "memory/allocation.hpp"
 #include "memory/cardTableRS.hpp"
@@ -3514,11 +3515,11 @@ bool ConcurrentMarkSweepGeneration::grow_by(size_t bytes) {
     guarantee(EMH_size() <= _virtual_space.reserved_size(), "must be");
     const size_t remaining_bytes = EMH_size() - _virtual_space.committed_size();
     if (bytes > remaining_bytes) {
-      gclog_or_tty->print_cr("ConcurrentMarkSweepGeneration::grow_by abort: "
-                             "EMH " SIZE_FORMAT "K, "
-                             "Committed " SIZE_FORMAT "K, "
-                             "Grow " SIZE_FORMAT "K",
-                             EMH_size() / K, _virtual_space.committed_size() / K, bytes / K);
+      EMH_LOG("ConcurrentMarkSweepGeneration::grow_by abort: "
+              "EMH " SIZE_FORMAT "K, "
+              "Committed " SIZE_FORMAT "K, "
+              "Grow " SIZE_FORMAT "K",
+              EMH_size() / K, _virtual_space.committed_size() / K, bytes / K);
       return false;
     }
   }

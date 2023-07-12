@@ -517,6 +517,7 @@ typedef TwoOopHashtable<Symbol*, mtClass>     SymbolTwoOopHashtable;
   nonstatic_field(CardTableRS,                 _ct_bs,                                        CardTableModRefBSForCTRS*)             \
                                                                                                                                      \
   nonstatic_field(CollectedHeap,               _reserved,                                     MemRegion)                             \
+  nonstatic_field(CollectedHeap,               _current_max_heap_size,                        size_t)                                \
   nonstatic_field(CollectedHeap,               _barrier_set,                                  BarrierSet*)                           \
   nonstatic_field(CollectedHeap,               _defer_initial_card_mark,                      bool)                                  \
   nonstatic_field(CollectedHeap,               _is_gc_active,                                 bool)                                  \

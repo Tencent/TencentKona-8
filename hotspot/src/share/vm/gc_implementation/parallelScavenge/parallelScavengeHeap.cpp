@@ -173,8 +173,8 @@ size_t ParallelScavengeHeap::max_capacity() const {
   // Elastic Max Heap
   if (ElasticMaxHeap) {
     // young_gen()->max_size() is also controlled by ElasticMaxHeap
-    guarantee(collector_policy()->current_max_heap_byte_size() <= estimated, "must be");
-    estimated = collector_policy()->current_max_heap_byte_size();
+    guarantee(current_max_heap_size() <= estimated, "must be");
+    estimated = current_max_heap_size();
   }
   if (UseAdaptiveSizePolicy) {
     estimated -= _size_policy->max_survivor_size(young_gen()->max_size());

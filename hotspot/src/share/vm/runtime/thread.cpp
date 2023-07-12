@@ -123,6 +123,8 @@
 #include "cr/codeReviveMerge.hpp"
 #include "cr/revive.hpp"
 #include "cr/codeReviveCodeBlob.hpp"
+// ElasticMaxHeap
+#include "gc_implementation/shared/elasticMaxHeap.hpp"
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
@@ -3806,6 +3808,23 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   if (CodeRevive::is_restore()) {
     // code restore needs global oop of ArrayIndexOutOfBoundsException in ciEnv
     initialize_class(vmSymbols::java_lang_ArrayIndexOutOfBoundsException(), CHECK_0);
+  }
+
+  // ElasticMaxHeap
+  if (ElasticMaxHeap && FLAG_IS_CMDLINE(ElasticMaxHeapSize) && FLAG_IS_CMDLINE(MaxHeapSize)) {
+    // MaxHeapSize has been replaced with ElasticMaxHeapSize,
+    // need to shrink to initial MaxHeapSize
+    size_t initial_max_heap_size = ElasticMaxHeapConfig::initial_max_heap_size();
+    guarantee((size_t)MaxHeapSize > initial_max_heap_size, "should be");
+    bool success = Universe::heap()->update_elastic_max_heap(initial_max_heap_size,
+                                                             tty,
+                                                             true /* init_shrink */);
+    if (!success) {
+      jio_fprintf(defaultStream::error_stream(),
+                  "VM failed to initialize heap, \n"
+                  "try to use a larger Xmx\n");
+      vm_exit(1);
+    }
   }
 
   return JNI_OK;

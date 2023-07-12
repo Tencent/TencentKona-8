@@ -139,7 +139,7 @@ class PSYoungGen : public CHeapObj<mtGC> {
   void resize(size_t eden_size, size_t survivor_size);
 
   // Resize for DynamicHeapSize, shrink to new_size
-  bool shrinkAfterFullGC(size_t new_size);
+  bool shrink_after_full_gc(size_t new_size);
 
   // Size info
   size_t capacity_in_bytes() const;

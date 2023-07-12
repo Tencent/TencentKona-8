@@ -275,14 +275,14 @@ void G1MonitoringSupport::update_eden_size() {
 
 size_t G1MonitoringSupport::young_gen_max() {
   if (ElasticMaxHeap) {
-    return _g1h->collector_policy()->current_max_heap_byte_size();
+    return _g1h->current_max_heap_size();
   }
   return overall_reserved();
 }
 
 size_t G1MonitoringSupport::old_gen_max() {
   if (ElasticMaxHeap) {
-    return _g1h->collector_policy()->current_max_heap_byte_size();
+    return _g1h->current_max_heap_size();
   }
   return overall_reserved();
 }

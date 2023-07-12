@@ -1624,7 +1624,7 @@ resize_if_necessary_after_full_collection(size_t word_size) {
   const size_t min_heap_size = collector_policy()->min_heap_byte_size();
   size_t max_heap_size = collector_policy()->max_heap_byte_size();
   if (ElasticMaxHeap) {
-    max_heap_size = collector_policy()->current_max_heap_byte_size();
+    max_heap_size = current_max_heap_size();
     guarantee(max_heap_size >= min_heap_size, "must be");
   }
 
@@ -2956,7 +2956,7 @@ size_t G1CollectedHeap::unsafe_max_tlab_alloc(Thread* ignored) const {
 size_t G1CollectedHeap::max_capacity() const {
   // Elastic Max Heap
   if (ElasticMaxHeap) {
-    size_t cur_size = collector_policy()->current_max_heap_byte_size();
+    size_t cur_size = current_max_heap_size();
     guarantee(cur_size <= _hrm.reserved().byte_size(), "must be");
     return cur_size;
   }
@@ -6923,7 +6923,7 @@ public:
   }
 };
 
-void G1CollectedHeap::rebuild_region_sets(bool free_list_only) {
+void G1CollectedHeap::rebuild_region_sets(bool free_list_only, bool is_elastic_max_heap_shrink) {
   assert_at_safepoint(true /* should_be_vm_thread */);
 
   if (!free_list_only) {
@@ -6936,7 +6936,8 @@ void G1CollectedHeap::rebuild_region_sets(bool free_list_only) {
   if (!free_list_only) {
     _allocator->set_used(cl.total_used());
   }
-  assert(_allocator->used_unlocked() == recalculate_used(),
+  // don't do this assert if is_elastic_max_heap_shrink
+  assert(is_elastic_max_heap_shrink || _allocator->used_unlocked() == recalculate_used(),
          err_msg("inconsistent _allocator->used_unlocked(), "
                  "value: " SIZE_FORMAT " recalculated: " SIZE_FORMAT,
                  _allocator->used_unlocked(), recalculate_used()));

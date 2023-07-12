@@ -26,6 +26,7 @@
 #include "gc_implementation/shared/gcTimer.hpp"
 #include "gc_implementation/shared/gcTrace.hpp"
 #include "gc_implementation/shared/spaceDecorator.hpp"
+#include "gc_implementation/shared/elasticMaxHeap.hpp"
 #include "gc_interface/collectedHeap.inline.hpp"
 #include "memory/allocation.inline.hpp"
 #include "memory/blockOffsetTable.inline.hpp"
@@ -538,13 +539,13 @@ void CardGeneration::compute_new_size() {
     // ElasticMaxHeap
     // log expand when need shrink
     if (ElasticMaxHeap && exp_size > committed_size()) {
-      gclog_or_tty->print_cr("CardGeneration::compute_new_size expand fails shrink:"
-                             "  minimum_desired_capacity: %6.1fK"
-                             "  real capacity: %6.1fK"
-                             "  exp_EMH_size: %6.1fK",
-                             minimum_desired_capacity / (double) K,
-                             capacity() / (double) K,
-                             exp_size / (double) K);
+      EMH_LOG("CardGeneration::compute_new_size expand fails shrink:"
+              "  minimum_desired_capacity: %6.1fK"
+              "  real capacity: %6.1fK"
+              "  exp_EMH_size: %6.1fK",
+              minimum_desired_capacity / (double) K,
+              capacity() / (double) K,
+              exp_size / (double) K);
     }
     return;
   }
@@ -642,13 +643,14 @@ void CardGeneration::compute_new_size() {
   // 1. exp_size >= minimum_desired_capacity
   // 2. exp_size < (capacity_after_gc - shrink_bytes)
   bool ignore_small_delta = true;
-  if (ElasticMaxHeap && (exp_size > 0) &&
+  if (ElasticMaxHeap &&
+      (exp_size > 0) &&
       (exp_size >= minimum_desired_capacity) &&
       (exp_size < (capacity_after_gc - shrink_bytes))) {
     shrink_bytes = capacity_after_gc - exp_size;
     ignore_small_delta = false;
     guarantee(shrink_bytes <= max_shrink_bytes, "must be");
-    gclog_or_tty->print_cr("CardGeneration: shrink according to ElasticMaxHeap");
+    EMH_LOG("CardGeneration: shrink according to ElasticMaxHeap");
   }
   
   // Don't shrink unless it's significant
@@ -657,15 +659,15 @@ void CardGeneration::compute_new_size() {
   }
 
   // ElasticMaxHeap
-  if (ElasticMaxHeap && (exp_size > 0)) {
+  if (ElasticMaxHeap && exp_size > 0) {
     size_t current_byte_size = committed_size();
-    gclog_or_tty->print_cr("CardGeneration ElasticMaxHeap adjust %s, expect "
-                           SIZE_FORMAT "K, actual " SIZE_FORMAT "K, min "
-                           SIZE_FORMAT "K",
-                           (exp_size >= current_byte_size) ? "success" : "fail",
-                           exp_size / K,
-                           current_byte_size / K,
-                           minimum_desired_capacity / K);
+    EMH_LOG("CardGeneration ElasticMaxHeap adjust %s, expect "
+            SIZE_FORMAT "K, actual " SIZE_FORMAT "K, min "
+            SIZE_FORMAT "K",
+            (exp_size >= current_byte_size) ? "success" : "fail",
+            exp_size / K,
+            current_byte_size / K,
+            minimum_desired_capacity / K);
   }
 }
 

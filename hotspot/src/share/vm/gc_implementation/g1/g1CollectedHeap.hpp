@@ -264,7 +264,7 @@ private:
   // free_list_only is true, it will only rebuild the master free
   // list. It is called after a Full GC (free_list_only == false) or
   // after heap shrinking (free_list_only == true).
-  void rebuild_region_sets(bool free_list_only);
+  void rebuild_region_sets(bool free_list_only, bool is_elastic_max_heap_shrink = false);
 
   // Callback for region mapping changed events.
   G1RegionMappingChangedListener _listener;
