@@ -1967,7 +1967,9 @@ void Arguments::set_heap_size() {
     }
 
     ElasticMaxHeapConfig::set_initial_max_heap_size((size_t)MaxHeapSize);
-    FLAG_SET_CMDLINE(uintx, MaxHeapSize, ElasticMaxHeapSize);
+    size_t _heap_alignment = CollectorPolicy::compute_heap_alignment();
+    uintx aligned_elastic_max_heap_size = align_size_up(ElasticMaxHeapSize, _heap_alignment);
+    FLAG_SET_CMDLINE(uintx, MaxHeapSize, aligned_elastic_max_heap_size);
   }
 }
 

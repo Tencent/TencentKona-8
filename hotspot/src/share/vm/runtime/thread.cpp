@@ -3811,7 +3811,7 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   }
 
   // ElasticMaxHeap
-  if (ElasticMaxHeap && FLAG_IS_CMDLINE(ElasticMaxHeapSize) && FLAG_IS_CMDLINE(MaxHeapSize)) {
+  if (ElasticMaxHeap && FLAG_IS_CMDLINE(ElasticMaxHeapSize)) {
     // MaxHeapSize has been replaced with ElasticMaxHeapSize,
     // need to shrink to initial MaxHeapSize
     size_t initial_max_heap_size = ElasticMaxHeapConfig::initial_max_heap_size();

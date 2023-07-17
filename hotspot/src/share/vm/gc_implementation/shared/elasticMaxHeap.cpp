@@ -458,14 +458,16 @@ bool CollectedHeap::update_elastic_max_heap(size_t new_size, outputStream* st, b
                  (collector_policy()->min_heap_byte_size() / K));
     return false;
   }
+  // don't print log if it is init shrink triggered by ElasticMaxHeapSize
   if (new_size == current_max_heap_size()) {
-    st->print_cr("GC.elastic_max_heap " SIZE_FORMAT "K same with current max heap size " SIZE_FORMAT "K",
-                 (new_size / K),
-                 (current_max_heap_size() / K));
+    if (!init_shrink) {
+      st->print_cr("GC.elastic_max_heap " SIZE_FORMAT "K same with current max heap size " SIZE_FORMAT "K",
+                   (new_size / K),
+                   (current_max_heap_size() / K));
+    }
     return true;
   }
   if (!init_shrink) {
-    // don't print log if it is init shrink triggered by ElasticMaxHeapSize
     st->print_cr("GC.elastic_max_heap (" SIZE_FORMAT "K" "->" SIZE_FORMAT "K)(" SIZE_FORMAT "K)",
                  (current_max_heap_size() / K),
                  (new_size / K),
