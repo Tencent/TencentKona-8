@@ -114,10 +114,6 @@ class Generation: public CHeapObj<mtGC> {
   // Statistics for garbage collection
   GCStats* _gc_stats;
 
-  // ElasticMaxHeap
-  // ElasticMaxHeap size, should LE _reserved size.
-  // default is same size with _reserved size.
-  size_t _EMH_size;
   // expected ElasticMaxHeap size during full gc (temp value)
   // 0 means do not adjust
   // min_gen_size <= _expected_EMH_size  <= _reserved size.
@@ -625,11 +621,11 @@ public:
   virtual CollectorCounters* counters() { return _gc_counters; }
 
   // ElasticMaxHeap
-  size_t EMH_size() const { return _EMH_size; }
+  size_t EMH_size() const { return _virtual_space.EMH_size(); }
   size_t exp_EMH_size() const { return _exp_EMH_size; }
   void set_EMH_size(size_t size) {
     guarantee(size <= _reserved.byte_size(), "must be");
-    _EMH_size = size;
+    _virtual_space.set_EMH_size(size);
   }
   void set_exp_EMH_size(size_t size) {
     guarantee(size <= _reserved.byte_size(), "must be");
