@@ -3423,12 +3423,7 @@ HeapWord* ConcurrentMarkSweepGeneration::expand_and_par_lab_allocate(CMSParGCThr
     res = ps->lab.alloc(word_sz);
     if (res != NULL) return res;
     // If there's not enough expansion space available, give up.
-    if (ElasticMaxHeap) {
-      size_t remaining_bytes = EMH_size() - _virtual_space.committed_size();
-      if (remaining_bytes < (word_sz * HeapWordSize)) {
-        return NULL;
-      }
-    } else if (_virtual_space.uncommitted_size() < (word_sz * HeapWordSize)) {
+    if (_virtual_space.uncommitted_size() < (word_sz * HeapWordSize)) {
       return NULL;
     }
     // Otherwise, we try expansion.
@@ -3456,12 +3451,7 @@ bool ConcurrentMarkSweepGeneration::expand_and_ensure_spooling_space(
       return true;
     }
     // If there's not enough expansion space available, give up.
-    if (ElasticMaxHeap) {
-      size_t remaining_bytes = EMH_size() - _virtual_space.committed_size();
-      if (remaining_bytes < refill_size_bytes) {
-        return false;
-      }
-    } else if (_virtual_space.uncommitted_size() < refill_size_bytes) {
+    if (_virtual_space.uncommitted_size() < refill_size_bytes) {
       return false;
     }
     // Otherwise, we try expansion.
@@ -3510,19 +3500,6 @@ void ConcurrentMarkSweepGeneration::shrink(size_t bytes) {
 
 bool ConcurrentMarkSweepGeneration::grow_by(size_t bytes) {
   assert_locked_or_safepoint(Heap_lock);
-  // ElasticMaxHeap
-  if (ElasticMaxHeap) {
-    guarantee(EMH_size() <= _virtual_space.reserved_size(), "must be");
-    const size_t remaining_bytes = EMH_size() - _virtual_space.committed_size();
-    if (bytes > remaining_bytes) {
-      EMH_LOG("ConcurrentMarkSweepGeneration::grow_by abort: "
-              "EMH " SIZE_FORMAT "K, "
-              "Committed " SIZE_FORMAT "K, "
-              "Grow " SIZE_FORMAT "K",
-              EMH_size() / K, _virtual_space.committed_size() / K, bytes / K);
-      return false;
-    }
-  }
   bool result = _virtual_space.expand_by(bytes);
   if (result) {
     size_t new_word_size =
@@ -3554,14 +3531,7 @@ bool ConcurrentMarkSweepGeneration::grow_by(size_t bytes) {
 bool ConcurrentMarkSweepGeneration::grow_to_reserved() {
   assert_locked_or_safepoint(Heap_lock);
   bool success = true;
-  size_t remaining_bytes = 0;
-  // ElasticMaxHeap
-  if (ElasticMaxHeap) {
-    guarantee(EMH_size() <= _virtual_space.reserved_size(), "must be");
-    remaining_bytes = EMH_size() - _virtual_space.committed_size();
-  } else {
-    remaining_bytes = _virtual_space.uncommitted_size();
-  }
+  const size_t remaining_bytes = _virtual_space.uncommitted_size();
   if (remaining_bytes > 0) {
     success = grow_by(remaining_bytes);
     DEBUG_ONLY(if (!success) warning("grow to reserved failed");)
