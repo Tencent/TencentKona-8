@@ -968,6 +968,30 @@ void ciEnv::validate_compile_task_dependencies(ciMethod* target) {
 }
 
 // ------------------------------------------------------------------
+// ciEnv::is_revive_candidate
+//
+// Check if the nm to be installed will be saved  as a candidate for CodeRevive.
+//
+/***** SHOULD BE IN SYNC!!!!!!! *****/
+// !!!!! Significant synchronization needs!
+// !!!!! Update - when CodeRevive::is_save_candidate changes
+bool ciEnv::is_revive_candidate(ciMethod* target, AbstractCompiler* compiler) {
+  if (target->get_Method()->is_native()) {
+    return false;
+  }
+  if (compiler == NULL || !compiler->is_c2()) {
+    return false;
+  }
+  if (target->get_Method()->method_holder()->is_anonymous()) {
+    return false;
+  }
+  if (CompilerOracle::should_revive(methodHandle(target->get_Method())) == false) {
+    return false;
+  }
+  return true;
+}
+
+// ------------------------------------------------------------------
 // ciEnv::register_method
 void ciEnv::register_method(ciMethod* target,
                             int entry_bci,
@@ -1054,6 +1078,12 @@ void ciEnv::register_method(ciMethod* target,
     assert(offsets->value(CodeOffsets::Deopt) != -1, "must have deopt entry");
     assert(offsets->value(CodeOffsets::Exceptions) != -1, "must have exception entry");
 
+    // code revive, insert metadata from _factory to _oop_recorder
+    bool record_compile_time_metadata = CodeRevive::is_save() && is_revive_candidate(target, compiler);
+    if (record_compile_time_metadata) {
+      _factory->copy_values_to(_oop_recorder);
+    }
+
     nm =  nmethod::new_nmethod(method,
                                compile_id(),
                                entry_bci,
@@ -1075,6 +1105,9 @@ void ciEnv::register_method(ciMethod* target,
       // CodeRevive
       if (CodeRevive::is_save() && dependencies()->has_call_site_target_value()) {
         nm->set_has_call_site_target_value();
+      }
+      if (record_compile_time_metadata) {
+        nm->set_record_compile_time_metadata();
       }
 
       // Record successful registration.
@@ -1131,7 +1164,6 @@ void ciEnv::register_method(ciMethod* target,
   }
 }
 
-
 // CodeRevive: register methods saved by CodeRevive
 void ciEnv::register_aot_method(ciMethod* target,
                                 int entry_bci,
@@ -1146,9 +1178,9 @@ void ciEnv::register_aot_method(ciMethod* target,
     return;
   }
   
-  CR_LOG(cr_restore, cr_trace, "revive success: %s, nmethod %p\n",
+  CR_LOG(cr_restore, cr_trace, "revive success: %s, nmethod %p with identity " INT64_FORMAT "\n",
          target->get_Method()->name_and_sig_as_C_string(),
-         nm);
+         nm, target->get_Method()->cr_identity());
 }
 
 // CodeRevive: get nmethod from CodeRevive saved codes.
@@ -1161,10 +1193,12 @@ nmethod* ciEnv::get_method_from_revive_code(ciMethod* target,
   ResourceMark rm;
   CodeReviveCodeBlob::JitVersionReviveState* revive_state = NULL;
   const char* err_str = NULL;
+  CompilerThread* current_thread = CompilerThread::current();
+  CodeReviveCodeBlob* code_blob = current_thread->get_code_blob();
 
   {
     TraceTime t1("Restore AOT method", CodeRevive::get_aot_timer(CodeRevive::T_SELECT), CodeRevive::perf_enable());
-    ReviveVersionSelector version_selector(start, target->get_Method(), meta_space, &revive_state);
+    ReviveVersionSelector version_selector(start, target->get_Method(), meta_space, &revive_state, code_blob);
   }
 
   if (revive_state == NULL) {
@@ -1172,12 +1206,13 @@ nmethod* ciEnv::get_method_from_revive_code(ciMethod* target,
     return NULL;
   }
 
-  CodeReviveCodeBlob revive(revive_state->_start, meta_space);
+  CodeReviveCodeBlob* revive = code_blob;
+  revive->reset(revive_state->_start, meta_space);
 
   // ReviveAuxInfoTask::get_global_oop calls ciEnv::ArrayStoreException_instance, which calls ciEnv::get_or_create_exception.
   // ciEnv::get_or_create_exception need to be executed in native status.
   // So we move the exception creation out of create_nmethod
-  if (!revive.create_global_oops(revive_state->_global_oop_array)) {
+  if (!revive->create_global_oops(revive_state->_global_oop_array)) {
     record_failure("Fail to create global oops");
     return NULL;
   }
@@ -1195,9 +1230,20 @@ nmethod* ciEnv::get_method_from_revive_code(ciMethod* target,
     MutexLocker ml(Compile_lock);
     No_Safepoint_Verifier nsv;
 
+    // Check whether a class redefine happens after metadata revive.
+    if (system_dictionary_modification_counter_changed() &&
+        validate_aot_metadata_identities(revive_state->_meta_array, target->get_Method())) {
+      return NULL;
+    }
+
+    if (CodeRevive::make_revive_fail_at_nmethod()) {
+      record_failure("Test made failure");
+      return NULL;
+    }
+
     methodHandle method(THREAD, revive_state->_method);
 
-    nm = revive.create_nmethod(method, compile_id(), compiler, revive_state);
+    nm = revive->create_nmethod(method, compile_id(), compiler, revive_state);
     if (nm == NULL) {
       return NULL;
     }

@@ -65,9 +65,14 @@ public class HeapSummary extends Tool {
       printGCAlgorithm(flagMap);
       System.out.println();
       System.out.println("Heap Configuration:");
+      // ElasticMaxHeap
+      long ElasticMaxHeap = getFlagValue("ElasticMaxHeap", flagMap);
       printValue("MinHeapFreeRatio         = ", getFlagValue("MinHeapFreeRatio", flagMap));
       printValue("MaxHeapFreeRatio         = ", getFlagValue("MaxHeapFreeRatio", flagMap));
       printValMB("MaxHeapSize              = ", getFlagValue("MaxHeapSize", flagMap));
+      if (ElasticMaxHeap != 0L) {
+         printValMB("CurrentElasticHeapSize   = ", heap.currentMaxHeapSize());
+      }
       printValMB("NewSize                  = ", getFlagValue("NewSize", flagMap));
       printValMB("MaxNewSize               = ", getFlagValue("MaxNewSize", flagMap));
       printValMB("OldSize                  = ", getFlagValue("OldSize", flagMap));

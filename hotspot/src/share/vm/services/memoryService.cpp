@@ -203,12 +203,13 @@ MemoryPool* MemoryService::add_gen(Generation* gen,
 }
 
 MemoryPool* MemoryService::add_space(ContiguousSpace* space,
+                                     DefNewGeneration* gen,
                                      const char* name,
                                      bool is_heap,
                                      size_t max_size,
                                      bool support_usage_threshold) {
   MemoryPool::PoolType type = (is_heap ? MemoryPool::Heap : MemoryPool::NonHeap);
-  ContiguousSpacePool* pool = new ContiguousSpacePool(space, name, type, max_size, support_usage_threshold);
+  ContiguousSpacePool* pool = new ContiguousSpacePool(space, gen, name, type, max_size, support_usage_threshold);
 
   _pools_list->append(pool);
   return (MemoryPool*) pool;
@@ -228,12 +229,13 @@ MemoryPool* MemoryService::add_survivor_spaces(DefNewGeneration* gen,
 
 #if INCLUDE_ALL_GCS
 MemoryPool* MemoryService::add_cms_space(CompactibleFreeListSpace* space,
+                                         ConcurrentMarkSweepGeneration* gen,
                                          const char* name,
                                          bool is_heap,
                                          size_t max_size,
                                          bool support_usage_threshold) {
   MemoryPool::PoolType type = (is_heap ? MemoryPool::Heap : MemoryPool::NonHeap);
-  CompactibleFreeListSpacePool* pool = new CompactibleFreeListSpacePool(space, name, type, max_size, support_usage_threshold);
+  CompactibleFreeListSpacePool* pool = new CompactibleFreeListSpacePool(space, gen, name, type, max_size, support_usage_threshold);
   _pools_list->append(pool);
   return (MemoryPool*) pool;
 }
@@ -254,6 +256,7 @@ void MemoryService::add_generation_memory_pool(Generation* gen,
       // Add a memory pool for each space and young gen doesn't
       // support low memory detection as it is expected to get filled up.
       MemoryPool* eden = add_space(young_gen->eden(),
+                                   young_gen,
                                    "Eden Space",
                                    true, /* is_heap */
                                    young_gen->max_eden_size(),
@@ -275,6 +278,7 @@ void MemoryService::add_generation_memory_pool(Generation* gen,
       // support low memory detection as it is expected to get filled up.
       ParNewGeneration* parnew_gen = (ParNewGeneration*) gen;
       MemoryPool* eden = add_space(parnew_gen->eden(),
+                                   parnew_gen,
                                    "Par Eden Space",
                                    true /* is_heap */,
                                    parnew_gen->max_eden_size(),
@@ -305,6 +309,7 @@ void MemoryService::add_generation_memory_pool(Generation* gen,
       assert(major_mgr != NULL && minor_mgr == NULL, "Should have only one manager");
       ConcurrentMarkSweepGeneration* cms = (ConcurrentMarkSweepGeneration*) gen;
       MemoryPool* pool = add_cms_space(cms->cmsSpace(),
+                                       cms,
                                        "CMS Old Gen",
                                        true, /* is_heap */
                                        cms->reserved().byte_size(),

@@ -3338,6 +3338,10 @@ void Metaspace::global_initialize() {
         if (mapinfo->initialize() && MetaspaceShared::map_shared_spaces(mapinfo)) {
           cds_total = FileMapInfo::shared_spaces_size();
           cds_address = (address)mapinfo->region_base(0);
+          // compute the identity for the archive file
+          if (CodeRevive::is_on()) {
+            CodeRevive::compute_cds_identity(mapinfo);
+          }
         } else {
           assert(!mapinfo->is_open() && !UseSharedSpaces,
                  "archive file not closed or shared spaces not disabled.");

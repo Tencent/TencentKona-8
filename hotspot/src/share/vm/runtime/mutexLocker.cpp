@@ -148,6 +148,9 @@ Mutex*   UnsafeJlong_lock             = NULL;
 static Monitor * _mutex_array[MAX_NUM_MUTEX];
 static int _num_mutex;
 
+// CodeRevive
+Mutex*   CodeReviveEpoch_lock         = NULL;
+
 #ifdef ASSERT
 void assert_locked_or_safepoint(const Monitor * lock) {
   // check if this thread owns the lock (common case)
@@ -303,6 +306,9 @@ void mutex_init() {
 #ifndef SUPPORTS_NATIVE_CX8
   def(UnsafeJlong_lock             , Mutex,   special,     false);
 #endif
+
+  // CodeRevive
+  def(CodeReviveEpoch_lock         , Mutex,   event,       true);
 }
 
 GCMutexLocker::GCMutexLocker(Monitor * mutex) {

@@ -73,6 +73,7 @@ class OptRecord : public ResourceObj {
     Inline,
     ProfiledReceiver,
     ProfiledUnstableIf,
+    ConstantReplace,
     END_OPT
   };
  protected:
@@ -200,6 +201,35 @@ class OptProfiledUnstableIf : public OptRecord {
   }
 };
 
+class OptConstantReplace : public OptRecord {
+ private:
+  int32_t        _klass_idx;
+  int32_t        _field_offset;
+  jshort         _field_type;
+  jlong          _field_val;
+ public:
+  OptConstantReplace(CtxType ctx_type, void* ctx) : OptRecord(ConstantReplace, ctx_type, ctx, -1, -1),
+    _klass_idx(-1) {}
+  OptConstantReplace(CtxType ctx_type, void* ctx,  int ki, int fo, jshort ft, jlong fv) :
+    OptRecord(ConstantReplace, ctx_type, ctx, -1, -1), 
+    _klass_idx(ki),
+    _field_offset(fo),
+    _field_type(ft),
+    _field_val(fv) {}
+  virtual size_t estimate_size_in_bytes();
+  virtual void write_to_stream(CompressedWriteStream* out);
+  virtual void read_from_stream(CompressedReadStream* in);
+  static jlong get_field_val(ciConstant field_const);
+  virtual int  calc_opt_score();
+  virtual bool equal(OptRecord* other);
+  virtual int  compare_by_type_name(OptRecord* other);
+  virtual void print_on(outputStream* out, int indent=0);
+  virtual void nm_meta_index_to_meta_space_index(GrowableArray<int32_t>* dest);
+  virtual OptRecord* duplicate_in_arena(Arena* arena) {
+    return new (arena) OptConstantReplace(_ctx_type, _ctx, _klass_idx, _field_offset, _field_type, _field_val);
+  }
+};
+
 class CodeReviveOptRecords : public ResourceObj {
  private:
   Arena*                     _arena;
@@ -216,6 +246,7 @@ class CodeReviveOptRecords : public ResourceObj {
   void add_InlineRecord(ciMethod* caller, ciMethod* callee, int bci);
   void add_ProfiledReceiverRecord(ciMethod* method, int bci, ciKlass* klass);
   void add_ProfiledUnstableIf(ciMethod* method, int bci, bool taken);
+  void add_ConstantReplaceRecord(ciKlass* klass, int field_offset, jshort field_type, jlong field_val);
   void encode_content_bytes();
   void copy_to(nmethod* nm);
   address content_bytes() {

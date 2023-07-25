@@ -37,6 +37,9 @@ import com.oracle.java.testlibrary.Asserts;
 public class MemoryPoolTest extends TestBase {
     static Object[] root_array;
     static final long M = 1024L * 1024L;
+    static long edenMaxSize;
+    static long survivorMaxSize;
+    static long oldGenMaxSize;
     public static void main(String[] args) throws Exception {
         int pid = ProcessTools.getProcessId();
         /*
@@ -52,12 +55,26 @@ public class MemoryPoolTest extends TestBase {
         long max = usage.getMax() / M;
         long committed = usage.getCommitted() / M;
         long used = usage.getUsed() / M;
-        System.out.println("After alloc -- Max: " + max + "M, Committed: " + committed + "M, Used : " + used + "M");
+        System.out.println("After alloc -- Heap Max: " + max +
+                           "M, Committed: " + committed +
+                           "M, Used: " + used + "M");
         Asserts.assertGT(max, 1024L);
         Asserts.assertGTE(max, committed);
         Asserts.assertGTE(committed, used);
-        root_array = null; // release
 
+        // check eden, survivor and old memory pool after alloc
+        get_memory_info();
+        System.out.println("After alloc -- Eden Max: " + edenMaxSize +
+                           "M, Survivor Max: " + survivorMaxSize +
+                           "M, Old Max: " + oldGenMaxSize + "M");
+        long orig_old = oldGenMaxSize;
+        long orig_eden = edenMaxSize;
+        Asserts.assertGT(edenMaxSize + survivorMaxSize + oldGenMaxSize, 1024L);
+        Asserts.assertGTE(max, oldGenMaxSize);
+        Asserts.assertGT(oldGenMaxSize, edenMaxSize);
+        Asserts.assertGT(oldGenMaxSize, survivorMaxSize);
+
+        root_array = null; // release
 
         // shrink to 500M should be fine for any GC
         String[] contains1 = {
@@ -70,10 +87,21 @@ public class MemoryPoolTest extends TestBase {
         max = usage.getMax() / M;
         committed = usage.getCommitted() / M;
         used = usage.getUsed() / M;
-        System.out.println("After resize -- Max: " + max + "M, Committed: " + committed + "M, Used : " + used + "M");
+        System.out.println("After resize -- Heap Max: " + max +
+                           "M, Committed: " + committed +
+                           "M, Used: " + used + "M");
         Asserts.assertLTE(max, 100L);
         Asserts.assertGTE(max, committed);
         Asserts.assertGTE(committed, used);
+
+        // check eden, survivor and old memory pool after resize
+        get_memory_info();
+        System.out.println("After resize -- Eden Max: " + edenMaxSize +
+                           "M, Survivor Max: " + survivorMaxSize +
+                           "M, Old Max: " + oldGenMaxSize + "M");
+        Asserts.assertLTE(edenMaxSize + survivorMaxSize + oldGenMaxSize, 100L);
+        Asserts.assertLT(oldGenMaxSize, orig_old);
+        Asserts.assertLTE(edenMaxSize, orig_eden);
     }
 
     static void alloc_and_free(long size) {
@@ -84,6 +112,22 @@ public class MemoryPoolTest extends TestBase {
         root_array = new Object[root_len];
         for (int i = 0; i < root_len; i++) {
             root_array[i] = new int[254];
+        }
+    }
+
+    static void get_memory_info() {
+        List<MemoryPoolMXBean> memoryPoolMXBeans = ManagementFactory.getMemoryPoolMXBeans();
+        for (MemoryPoolMXBean memoryPoolMXBean : memoryPoolMXBeans) {
+            String name = memoryPoolMXBean.getName();
+            MemoryUsage usage = memoryPoolMXBean.getUsage();
+            long max_size = usage.getMax() / M;
+            if (name.contains("Eden")) {
+                edenMaxSize = max_size;
+            } else if (name.contains("Survivor")) {
+                survivorMaxSize = max_size;
+            } else if (name.contains("Old")) {
+                oldGenMaxSize = max_size;
+            }
         }
     }
 }

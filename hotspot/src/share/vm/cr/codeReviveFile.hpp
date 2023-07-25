@@ -33,10 +33,8 @@
  * CodeReviveFile Layout:
  * -- Header
  *    -- magic
- *    -- offset & size to 1. class path entry table 2. first container 3. global metaspace
+ *    -- offset & size to 1. first container 2. global metaspace
  *    -- jvm idenitity information string
- *
- * -- ClassPathEntryTable
  *
  * -- CodeReviveContainer 1   // container is linked with next offset
  * -- CodeReviveContainer 2
@@ -50,11 +48,11 @@
  * Header to container is readonly when read file.
  * MetaSpace is read and write when read file.
  */
-class ClassPathEntryTable;
 class CodeReviveCodeSpace;
 class CodeReviveContainer;
 class CodeReviveLookupTable;
 class CodeReviveMetaSpace;
+class CodeReviveMergedMetaInfo;
 
 class CodeReviveFile : public CHeapObj<mtInternal> {
  public:
@@ -70,22 +68,20 @@ class CodeReviveFile : public CHeapObj<mtInternal> {
 
   // main operations
   bool                   save(const char* file_path);
-  bool                   save_merged(const char* file_path, GrowableArray<CodeReviveContainer*>* containers);
+  bool                   save_merged(const char* file_path, GrowableArray<CodeReviveContainer*>* containers, CodeReviveMergedMetaInfo* meta_info);
   bool                   map(const char* file_path, bool need_container, bool need_meta_sapce,
-                             bool select_container, bool check_classpath, uint32_t cr_kind);
+                             bool select_container, uint32_t cr_kind);
   // utilities
   void                   print();
   void                   print_opt();
   void                   print_file_info();
-  char*                  find_revive_code(Method* m); // get m's saved code address in file, return NULL if not found
+  char*                  find_revive_code(Method* m, bool only_use_name = false); // get m's saved code address in file, return NULL if not found
   char*                  offset_to_addr(int32_t offset) const { return _ro_addr + offset; } // map from file offset to mapped address
   static size_t          alignment() { return _alignment; }  // file write alignment between elemenets
 
  private:
   struct CodeReviveFileHeader {
     int    _magic;
-    size_t _cpe_table_offset;
-    size_t _cpe_table_size;
     size_t _code_container_offset;
     size_t _code_container_size;
     size_t _meta_space_offset;
@@ -103,7 +99,6 @@ class CodeReviveFile : public CHeapObj<mtInternal> {
 
   // file content
   CodeReviveFileHeader*     _header;
-  ClassPathEntryTable*      _cpe_table;
   CodeReviveContainer*      _container;   // first container for write, matched container for restore
   CodeReviveMetaSpace*      _meta_space;
 
@@ -112,7 +107,6 @@ class CodeReviveFile : public CHeapObj<mtInternal> {
 
   // save steps
   void setup_header();
-  bool setup_classpath_entry_table(bool is_merge);
   bool save_common_steps(const char* file_path);
   bool setup_meta_space();
   bool cleanup();

@@ -3229,6 +3229,9 @@ class CommandLineFlags {
   product(uintx, MaxHeapSize, ScaleForWordSize(96*M),                       \
           "Maximum heap size (in bytes)")                                   \
                                                                             \
+  product(uintx, ElasticMaxHeapSize, ScaleForWordSize(96*M),                \
+          "Elastic maximum heap size (in bytes)")                           \
+                                                                            \
   product(uintx, OldSize, ScaleForWordSize(4*M),                            \
           "Initial tenured generation size (in bytes)")                     \
                                                                             \

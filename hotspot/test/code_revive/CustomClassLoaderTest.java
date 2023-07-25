@@ -21,6 +21,7 @@
  * @test
  * @summary Test if custom classloader method meta causes emit fail
  * @library /testlibrary
+ * @compile test-classes/TestClassLoader.java
  * @compile test-classes/TestCustomClassLoader.java
  * @compile test-classes/TestBasic.java
  * @run main/othervm CustomClassLoaderTest

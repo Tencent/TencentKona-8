@@ -122,6 +122,9 @@
 // CodeRevive
 #include "cr/codeReviveMerge.hpp"
 #include "cr/revive.hpp"
+#include "cr/codeReviveCodeBlob.hpp"
+// ElasticMaxHeap
+#include "gc_implementation/shared/elasticMaxHeap.hpp"
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
@@ -3301,6 +3304,13 @@ CompilerThread::CompilerThread(CompileQueue* queue, CompilerCounters* counters)
 #ifndef PRODUCT
   _ideal_graph_printer = NULL;
 #endif
+  // in restore stage, allocate CodeReviveCodeBlob for each compiler thread,
+  // and reuse the codeblob in this compiler thread for code revive
+  if (CodeRevive::is_restore()) {
+    _aot_code_blob = new (ResourceObj::C_HEAP, mtCompiler) CodeReviveCodeBlob();
+  } else {
+    _aot_code_blob = NULL;
+  }
 }
 
 void CompilerThread::oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf) {
@@ -3493,6 +3503,10 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
 
   // Initialize Java-Level synchronization subsystem
   ObjectMonitor::Initialize() ;
+
+  // CodeRevive: identity only generated during save/restore
+  // option parsing and some init need to be done before class init.
+  CodeRevive::early_init();
 
   // Initialize global modules
   jint status = init_globals();
@@ -3794,6 +3808,23 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   if (CodeRevive::is_restore()) {
     // code restore needs global oop of ArrayIndexOutOfBoundsException in ciEnv
     initialize_class(vmSymbols::java_lang_ArrayIndexOutOfBoundsException(), CHECK_0);
+  }
+
+  // ElasticMaxHeap
+  if (ElasticMaxHeap && FLAG_IS_CMDLINE(ElasticMaxHeapSize)) {
+    // MaxHeapSize has been replaced with ElasticMaxHeapSize,
+    // need to shrink to initial MaxHeapSize
+    size_t initial_max_heap_size = ElasticMaxHeapConfig::initial_max_heap_size();
+    guarantee((size_t)MaxHeapSize > initial_max_heap_size, "should be");
+    bool success = Universe::heap()->update_elastic_max_heap(initial_max_heap_size,
+                                                             tty,
+                                                             true /* init_shrink */);
+    if (!success) {
+      jio_fprintf(defaultStream::error_stream(),
+                  "VM failed to initialize heap, \n"
+                  "try to use a larger Xmx\n");
+      vm_exit(1);
+    }
   }
 
   return JNI_OK;

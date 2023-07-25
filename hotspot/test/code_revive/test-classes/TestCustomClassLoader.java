@@ -23,44 +23,9 @@ import java.io.IOException;
 import java.io.InputStream;
 public class TestCustomClassLoader {
     public static void main(String[] args) throws Exception {
-        TestClassLoader loader = new TestClassLoader(TestCustomClassLoader.class.getClassLoader());
-        Class<?> clazz = loader.loadClass("TestBasic");
-        clazz.getMethod("invoke_foos").invoke(null);
-    }
-}
-
-class TestClassLoader extends ClassLoader {
-    public TestClassLoader(ClassLoader parent) {
-        super(parent);
-    }
-    @Override
-    public Class<?> loadClass(String name) throws ClassNotFoundException {
-        if (name.equals("TestBasic")) {
-            System.out.println(name);
-            return getClass(name);
-        } else {
-            return super.loadClass(name);
-        }
-    }
-    private Class<?> getClass(String name) throws ClassNotFoundException {
-        String file = name.replace('.', File.separatorChar) + ".class";
-        try {
-            byte[] byteArr = loadClassData(file);
-            Class<?> c = defineClass(name, byteArr, 0, byteArr.length);
-            resolveClass(c);
-            return c;
-        } catch (IOException e) {
-            return null;
-        }
-    }
-
-    private byte[] loadClassData(String file) throws IOException {
-        InputStream stream = getClass().getClassLoader().getResourceAsStream(file);
-        int size = stream.available();
-        byte buff[] = new byte[size];
-        DataInputStream in = new DataInputStream(stream);
-        in.readFully(buff);
-        in.close();
-        return buff;
+	ClassLoader loader1 = TestClassLoader.loadByCustomLoader("TestBasic", "invokeFoos", TestCustomClassLoader.class.getClassLoader());
+        ClassLoader loader2 = TestClassLoader.loadByCustomLoader("TestBasic", "invokeFoos", TestCustomClassLoader.class.getClassLoader());
+	ClassLoader loader3 = TestClassLoader.loadByCustomLoader("TestBasic", "invokeFoos", loader2);
+	ClassLoader loader4 = TestClassLoader.loadByCustomLoader("TestBasic", "invokeFoos", loader2);
     }
 }

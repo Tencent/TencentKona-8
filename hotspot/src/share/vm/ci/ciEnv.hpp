@@ -471,11 +471,13 @@ public:
   // CodeRevive
 private:
   CodeReviveOptRecords*     _opt_records;
+  bool is_revive_candidate(ciMethod* target, AbstractCompiler* compiler);
 
 public:
   CodeReviveOptRecords* opt_records() { return _opt_records; }
   void set_opt_records(CodeReviveOptRecords* r) { _opt_records = r; }
   void reset_revive_failure() { _failure_reason = NULL; }
+  bool validate_aot_metadata_identities(GrowableArray<ciBaseObject*>* meta_array, Method* self_method);
   void register_aot_method(ciMethod*            target,
                            int                  entry_bci,
                            char*                start,

@@ -102,6 +102,16 @@ void CodeReviveOptRecords::add_InlineRecord(ciMethod* caller, ciMethod* callee, 
          bci));
 }
 
+void CodeReviveOptRecords::add_ConstantReplaceRecord(ciKlass* klass, int field_offset, jshort field_type, jlong field_val) {
+  insert(new (_arena) OptConstantReplace(
+         OptRecord::COMPILE,
+         _oop_recorder,
+         _oop_recorder->find_index(klass->constant_encoding()),
+         field_offset,
+         field_type,
+         field_val));
+}
+
 size_t CodeReviveOptRecords::estimate_size_in_bytes() {
   size_t size = 100;
   for (int i = 0; i < _opts->length(); i++) {
@@ -166,6 +176,11 @@ OptRecord* OptStream::next() {
     }
     case OptRecord::Inline: {
       OptRecordInline* r = new OptRecordInline(_ctx_type, _ctx);
+      r->read_from_stream(&_bytes);
+      return r;
+    }
+    case OptRecord::ConstantReplace: {
+      OptConstantReplace* r = new OptConstantReplace(_ctx_type, _ctx);
       r->read_from_stream(&_bytes);
       return r;
     }
@@ -594,6 +609,101 @@ void OptRecordInline::print_on(outputStream* out, int indent) {
   out->print_cr("Inline at method=%s bci=%d callee: %s", get_meta_name(_method_idx), _bci, get_meta_name(_callee_idx));
 }
 
+void OptConstantReplace::read_from_stream(CompressedReadStream* in) {
+  _klass_idx    = in->read_short();
+  _field_offset = in->read_int();
+  _field_type   = in->read_short();
+  _field_val    = in->read_long();
+}
+
+void OptConstantReplace::write_to_stream(CompressedWriteStream* out) {
+  out->write_byte(ConstantReplace);
+  out->write_short(_klass_idx);
+  out->write_int(_field_offset);
+  out->write_short(_field_type);
+  out->write_long(_field_val);
+}
+
+void OptConstantReplace::print_on(outputStream* out, int indent) {
+  assert(_klass_idx >= 0, "must be");
+  print_indent(out, indent);
+  out->print_cr("ConstantReplace at klass: %s field offset: %d",
+                get_meta_name(_klass_idx), _field_offset);
+}
+
+void OptConstantReplace::nm_meta_index_to_meta_space_index(GrowableArray<int32_t>* dest) {
+  _klass_idx = dest->at(_klass_idx - 1);
+}
+
+bool OptConstantReplace::equal(OptRecord* other) {
+  if (other->opt_type() != OptRecord::ConstantReplace) {
+    return false;
+  }
+  OptConstantReplace* o = (OptConstantReplace*)other;
+  return o->_klass_idx == _klass_idx && o->_field_offset == _field_offset && o->_field_val == _field_val;
+}
+
+size_t OptConstantReplace::estimate_size_in_bytes() {
+  return 1 + 2 + 4 + 2 + 8;
+}
+
+jlong OptConstantReplace::get_field_val(ciConstant field_const) {
+  jlong field_val = 0;
+  jfloat f_val = 0;
+  jint i_val = 0;
+  jdouble d_val = 0;
+  switch (field_const.basic_type()) {
+    case T_BOOLEAN:
+    case T_CHAR:
+    case T_BYTE:
+    case T_SHORT:
+    case T_INT:
+        field_val = field_const.as_int();
+        break;
+    case T_LONG:
+        field_val = field_const.as_long();
+        break;
+    case T_FLOAT:
+        f_val = field_const.as_float();
+        i_val = *(jint*)&f_val;
+        field_val = i_val;
+        break;
+    case T_DOUBLE:
+        d_val = field_const.as_double();
+        field_val = *(jlong*)&d_val;
+        break;
+    case T_OBJECT:
+    case T_ARRAY:
+        ShouldNotReachHere();
+        break;
+    default:
+        fatal("illegal");
+  }
+  return field_val;
+}
+
+int OptConstantReplace::calc_opt_score() {
+  assert(_klass_idx >= 1 && _field_offset >= 1, "must be");
+  ciInstanceKlass* expected_kls = (ciInstanceKlass*)get_ci_meta(_klass_idx);
+  guarantee(expected_kls != NULL, "should be");
+  ciField* expected_fld = expected_kls->get_field_by_offset(_field_offset, true);
+  guarantee(expected_fld != NULL, "should be");
+  ciConstant expected_const = expected_fld->constant_value();
+  
+  jlong field_val = get_field_val(expected_const);
+  jshort field_type = (jshort)expected_const.basic_type();
+
+  int result = 0;
+  if (field_type == _field_type && field_val == _field_val) {
+    result = -1;
+  } else {
+    CR_LOG(cr_restore, cr_trace, "Fail for field consistency check, csa _field_type: %d, current field_type: %d\n", _field_type, field_type);
+    CR_LOG(cr_restore, cr_trace, "csa _field_val: " JLONG_FORMAT ", current field_val: " JLONG_FORMAT "\n", _field_val, field_val);
+    return max_jint;
+  }
+  return result;
+}
+
 int OptRecord::compare_meta_name(int idx1, int idx2) {
   char* name1 = get_meta_name(idx1);
   char* name2 = get_meta_name(idx2);
@@ -632,4 +742,24 @@ int OptRecordInline::compare_by_type_name(OptRecord* other) {
   int res = OptRecord::compare_by_type_name(other);
   OptRecordInline* other_inline = (OptRecordInline*)other;
   return res != 0 ? res : compare_meta_name(_callee_idx, other_inline->_callee_idx);
+}
+
+int OptConstantReplace::compare_by_type_name(OptRecord* other) {
+  // check if OptRecord is of type ConstantReplace
+  if (_opt_type != other->opt_type()) {
+    return (int)_opt_type - (int)other->opt_type();
+  }
+
+  OptConstantReplace* other_constant = (OptConstantReplace*)other;
+  if (_field_offset != other_constant->_field_offset) {
+    return _field_offset - other_constant->_field_offset;
+  }
+  if (_field_type != other_constant->_field_type) {
+    return _field_type - other_constant->_field_type;
+  }
+  if (_field_val != other_constant->_field_val) {
+    return _field_val - other_constant->_field_val;
+  }
+  int res = compare_meta_name(_klass_idx, other_constant->_klass_idx);
+  return res != 0 ? res : 0;
 }

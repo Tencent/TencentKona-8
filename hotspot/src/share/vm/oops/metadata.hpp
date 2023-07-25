@@ -86,6 +86,12 @@ class Metadata : public MetaspaceObj {
  public:
   virtual int csa_meta_index() const { return -1; }
   virtual void set_csa_meta_index(int index) { }
+
+  virtual int64_t cr_identity() { guarantee(false, "should not be called from Metadata"); return -1; }
+  virtual bool verify_cr_identity(int64_t identity) {
+    guarantee(false, "should not be called from Metadata");
+    return false;
+  }
 };
 
 #endif // SHARE_VM_OOPS_METADATA_HPP

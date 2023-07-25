@@ -49,6 +49,8 @@ class PS_ElasticMaxHeapOp : public VM_ElasticMaxHeapOp {
  public:
   PS_ElasticMaxHeapOp(size_t new_max_heap);
   virtual void doit();
+  bool ps_old_gen_can_shrink(size_t new_limit, bool print_logs);
+  bool ps_young_gen_can_shrink(size_t new_limit);
 };
 
 // For GenCollectedHeap
@@ -63,6 +65,10 @@ class G1_ElasticMaxHeapOp : public VM_ElasticMaxHeapOp {
  public:
   G1_ElasticMaxHeapOp(size_t new_max_heap);
   virtual void doit();
+  bool g1_can_shrink(size_t _new_max_heap,
+                   double maximum_used_percentage,
+                   size_t max_heap_size);
+  void g1_shrink_without_full_gc(size_t _new_max_heap);
 };
 
 class ElasticMaxHeapChecker: AllStatic {
@@ -71,5 +77,15 @@ class ElasticMaxHeapChecker: AllStatic {
   static void check_PS_opitons();
   static void check_G1_opitons();
   static void check_GenCollected_opitons();
+};
+
+class ElasticMaxHeapConfig: AllStatic {
+ private:
+  static size_t _initial_max_heap_size;
+ public:
+  static size_t initial_max_heap_size() { return _initial_max_heap_size; }
+  static void set_initial_max_heap_size(size_t new_size) {
+    _initial_max_heap_size = new_size;
+  }
 };
 #endif // SHARE_VM_GC_IMPLEMENTATION_SHARED_ELASTIC_MAX_HEAP_OPERATION_HPP

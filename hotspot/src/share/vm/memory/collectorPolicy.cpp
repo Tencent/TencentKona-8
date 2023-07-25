@@ -52,7 +52,6 @@ CollectorPolicy::CollectorPolicy() :
     _heap_alignment(0),
     _initial_heap_byte_size(InitialHeapSize),
     _max_heap_byte_size(MaxHeapSize),
-    _current_max_heap_byte_size(MaxHeapSize),
     _min_heap_byte_size(Arguments::min_heap_size()),
     _max_heap_size_cmdline(false),
     _size_policy(NULL),
@@ -353,7 +352,6 @@ void GenCollectorPolicy::initialize_flags() {
   if (SurvivorRatio < 1 || NewRatio < 1) {
     vm_exit_during_initialization("Invalid young gen ratio specified");
   }
-  _current_max_heap_byte_size = _max_heap_byte_size;
   DEBUG_ONLY(GenCollectorPolicy::assert_flags();)
 }
 
@@ -401,7 +399,6 @@ void TwoGenerationCollectorPolicy::initialize_flags() {
   }
 
   always_do_update_barrier = UseConcMarkSweepGC;
-  _current_max_heap_byte_size = _max_heap_byte_size;
   DEBUG_ONLY(TwoGenerationCollectorPolicy::assert_flags();)
 }
 

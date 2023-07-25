@@ -21,24 +21,21 @@
 #include "memory/resourceArea.hpp"
 #include "utilities/align.hpp"
 #include "cr/codeReviveFile.hpp"
+#include "cr/codeReviveMergedMetaInfo.hpp"
 #include "cr/codeReviveMetaSpace.hpp"
 #include "cr/revive.hpp"
 #include "cr/codeReviveHashTable.hpp"
 #include "classfile/systemDictionary.hpp"
 
-int CodeReviveMetaSpace::_resolve_method_count = 0;
-int CodeReviveMetaSpace::_unresolve_method_count = 0;
-int CodeReviveMetaSpace::_resolve_klass_count = 0;
-int CodeReviveMetaSpace::_unresolve_klass_count = 0;
-
-
-CodeReviveMetaSpace::CodeReviveMetaSpace(bool local) {
+CodeReviveMetaSpace::CodeReviveMetaSpace() {
   _start      = NULL;
   _limit      = NULL;
   _cur        = NULL;
   _alignment  = 8;
   _used_metas = new (ResourceObj::C_HEAP, mtInternal) GrowableArray<Metadata*>(1000, true); // heap allocate
-  _local      = local;
+  _used_meta_identities = new (ResourceObj::C_HEAP, mtInternal) GrowableArray<int64_t>(1000, true); // heap allocate
+  _used_meta_loader_types = new (ResourceObj::C_HEAP, mtInternal) GrowableArray<uint16_t>(1000, true); // heap allocate
+  _meta_info = NULL;
 }
 
 CodeReviveMetaSpace::CodeReviveMetaSpace(char* start, char* limit) {
@@ -47,8 +44,23 @@ CodeReviveMetaSpace::CodeReviveMetaSpace(char* start, char* limit) {
   _cur        = limit;
   _alignment  = 8;
   _used_metas = NULL;
-  _local      = false;
+  _used_meta_identities = NULL;
+  _used_meta_loader_types = NULL;
+  _meta_info = NULL;
 }
+
+// used in merge stage, and use CodeReviveMergedMetaInfo to store the meta information
+CodeReviveMetaSpace::CodeReviveMetaSpace(CodeReviveMergedMetaInfo* meta_info) {
+  _start      = NULL;
+  _limit      = NULL;
+  _cur        = NULL;
+  _alignment  = 8;
+  _used_metas = NULL;
+  _used_meta_identities = NULL;
+  _used_meta_loader_types = NULL;
+  _meta_info = meta_info;
+}
+
 
 static char* cr_metadata_name(Metadata* m) {
   if (m->is_klass()) {
@@ -79,9 +91,11 @@ void CodeReviveMetaSpace::save_metadatas(char* start, char* limit) {
   *((intptr_t*)_cur) = count;
   _cur += sizeof(intptr_t);
 
-  // reserver array for metadatas
-  intptr_t* content = (intptr_t*)_cur;
+  // reserver array for metadata + identity + loader type
+  MetaInfo* content = (MetaInfo*)_cur;
+
   _cur = (char*)(content + count);
+  _cur = align_up(_cur, 4);
 
   // emit content and string
   for (int i = 0; i < count; i++) {
@@ -89,12 +103,14 @@ void CodeReviveMetaSpace::save_metadatas(char* start, char* limit) {
     if (m->is_method()) {
       // LSB 1 means unresolved metadata name offset
       // use the second bit to mark method with 1
-      content[i] = ((intptr_t)(_cur - _start) << meta_unresovled_shift) | name_mask | method_mask;
+      content[i].metadata = ((intptr_t)(_cur - _start) << meta_unresovled_shift) | name_mask | method_mask;
     } else {
       // LSB 1 means unresolved metadata name offset
       // use the second bit to mark class with 0
-      content[i] = ((intptr_t)(_cur - _start) << meta_unresovled_shift) | name_mask;
+      content[i].metadata = ((intptr_t)(_cur - _start) << meta_unresovled_shift) | name_mask;
     }
+    content[i].identity = _used_meta_identities->at(i);
+    content[i].loader_type = _used_meta_loader_types->at(i);
     char* name = cr_metadata_name(m);
     save_str(name);
     if (m->is_method()) {
@@ -118,7 +134,8 @@ size_t CodeReviveMetaSpace::estimate_size() {
   int count = _used_metas->length();
   size_t size = 0;
   size += sizeof(intptr_t);
-  size += sizeof(intptr_t) * count;
+  // size of the array of MetaInfo
+  size += sizeof(MetaInfo) * count;
   // emit content and string
   for (int i = 0; i < count; i++) {
     Metadata* m = _used_metas->at(i);
@@ -133,20 +150,29 @@ size_t CodeReviveMetaSpace::estimate_size() {
   return size;
 }
 
-int CodeReviveMetaSpace::record_metadata(Metadata* m) {
-  guarantee(m->is_method() || m->is_klass(), "should be");
-  if (_local) {
-    for (int i = 0; i < _used_metas->length(); i++) {
-      if (m == _used_metas->at(i)) {
-        return i;
-      }
-    }
-    _used_metas->append(m);
-    return _used_metas->length() - 1;
+void CodeReviveMetaSpace::append_used_metadata(Metadata* m, bool with_identity, int64_t identity) {
+  _used_metas->append(m);
+  if (with_identity) {
+    _used_meta_identities->append(identity);
+  } else {
+    _used_meta_identities->append(m->cr_identity());
   }
+  // add loader type
+  if (m->is_method()) {
+    // for method, use the loader type of method holder
+    Method* method = (Method*)m;
+    _used_meta_loader_types->append(CodeRevive::loader_type(method->method_holder()->class_loader()));
+  } else {
+    // for class, use the loader type
+    _used_meta_loader_types->append(CodeRevive::klass_loader_type((Klass*)m));
+  }
+}
+
+int CodeReviveMetaSpace::record_metadata(Metadata* m, bool with_identity, int64_t identity) {
+  guarantee(m->is_method() || m->is_klass(), "should be");
   int result = m->csa_meta_index();
   if (result == -1) {
-    _used_metas->append(m);
+    append_used_metadata(m, with_identity, identity);
     result = _used_metas->length() - 1;
     m->set_csa_meta_index(result);
   }
@@ -155,52 +181,120 @@ int CodeReviveMetaSpace::record_metadata(Metadata* m) {
 
 char* CodeReviveMetaSpace::metadata_name(int index) {
   if (_start == NULL) {
-    return cr_metadata_name(_used_metas->at(index));
+    if (_meta_info != NULL) {
+      // use in merge
+      return _meta_info->metadata_name(index);
+    } else {
+      // use in save
+      return cr_metadata_name(_used_metas->at(index));
+    }
   }
   guarantee(_cur != NULL && _cur == _limit, "should be"); // must call after emit/map finish
 
-  intptr_t* content = ((intptr_t*)_start) + 1;
-  intptr_t v = content[index];
+  MetaInfo* content = (MetaInfo*)(((intptr_t*)_start) + 1);
+  intptr_t v = content[index].metadata;
   if (is_resolved(v)) { // resovled
     return cr_metadata_name((Method*)v);
   }
   return unresolved_meta_name(v);
 }
 
-Klass* CodeReviveMetaSpace::unresolved_name_or_klass(int32_t index, char** k_name) {
-  intptr_t* content = ((intptr_t*)_start) + 1;
-  intptr_t v = content[index];
-  if (is_resolved(v)) { // resovled
-    return (Klass*)v;
+int64_t CodeReviveMetaSpace::metadata_identity(int index) {
+  if (_start == NULL) {
+    if (_meta_info != NULL) {
+      // use in merge
+      return _meta_info->metadata_identity(index);
+    } else {
+      // use in save
+      return _used_meta_identities->at(index);
+    }
   }
-  // unresolved
-  *k_name = unresolved_meta_name(v);
-  return NULL;
+
+  MetaInfo* content = (MetaInfo*)(((intptr_t*)_start) + 1);
+  return content[index].identity;
 }
 
-Method* CodeReviveMetaSpace::unresolved_name_parts_or_method(int32_t index, char* name_parts[], int32_t** lens) {
-  intptr_t* content = ((intptr_t*)_start) + 1;
-  intptr_t v = content[index];
+uint16_t CodeReviveMetaSpace::metadata_loader_type(int index) {
+  if (_start == NULL) {
+    if (_meta_info != NULL) {
+      // use in merge
+      return _meta_info->metadata_loader_type(index);
+    } else {
+      // use in save
+      return _used_meta_loader_types->at(index);
+    }
+  }
+
+  MetaInfo* content = (MetaInfo*)(((intptr_t*)_start) + 1);
+  return content[index].loader_type;
+}
+
+bool CodeReviveMetaSpace::set_metadata(int index, Metadata* m) {
+  MetaInfo* content = (MetaInfo*)(((intptr_t*)_start) + 1);
+  if (m == NULL || m->cr_identity() != metadata_identity(index)) {
+    content[index].metadata = 0;
+    return m == NULL;
+  }
+
+  intptr_t v = content[index].metadata;
+  if (is_resolved(v)) {
+    guarantee(m == (Metadata*)v, "should be");
+    return true;
+  }
+  content[index].metadata = (intptr_t)m;
+  m->set_csa_meta_index(index);
+  return true;
+}
+
+bool CodeReviveMetaSpace::unresolved_name_or_klass(int32_t index, Klass** klass, char** k_name) {
+  MetaInfo* content = (MetaInfo*)(((intptr_t*)_start) + 1);
+  intptr_t v = content[index].metadata;
+  if (!is_valid(v)) {
+    return false;
+  }
+
   if (is_resolved(v)) { // resovled
-    return (Method*)v;
+    Klass* k = (Klass*)v;
+    if (k->cr_identity() == metadata_identity(index)) {
+      *klass = k;
+      return true;
+    }
+    CR_LOG(cr_restore, cr_fail, "Identity changed, set NULL to klass at index %d.\n", index);
+    set_metadata(index, NULL);
+    return false;
   }
   // unresolved
+  *klass = NULL;
+  *k_name = unresolved_meta_name(v);
+  return true;
+}
+
+bool CodeReviveMetaSpace::unresolved_name_parts_or_method(int32_t index, Method** method,
+                                                          char* name_parts[], int32_t** lens) {
+  MetaInfo* content = (MetaInfo*)(((intptr_t*)_start) + 1);
+  intptr_t v = content[index].metadata;
+  if (!is_valid(v)) {
+    return false;
+  }
+  if (is_resolved(v)) { // resovled
+    Method* m = (Method*)v;
+    if (m->cr_identity() == metadata_identity(index)) {
+      *method = m;
+      return true;
+    }
+    CR_LOG(cr_restore, cr_fail, "Identity changed, set NULL to method at index %d.\n", index);
+    set_metadata(index, NULL);
+    return false;
+  }
+  // unresolved
+  *method = NULL;
   char* name = unresolved_meta_name(v);
   *lens = (int32_t*)align_up((intptr_t)(name + strlen(name) + 1), 4);
 
   name_parts[0] = name;
   name_parts[1] = name_parts[0] + (*lens)[0] + 1;
   name_parts[2] = name_parts[1] + (*lens)[1];
-  return NULL;
-}
-
-Metadata* CodeReviveMetaSpace::resolved_metadata_or_null(int32_t index) {
-  intptr_t* content = ((intptr_t*)_start) + 1;
-  intptr_t v = content[index];
-  if (is_resolved(v)) {
-    return (Metadata*)v;
-  }
-  return NULL;
+  return true;
 }
 
 int CodeReviveMetaSpace::length() {
@@ -224,124 +318,32 @@ void CodeReviveMetaSpace::print() {
     }
     return;
   }
-  intptr_t* content = ((intptr_t*)_start) + 1;
+  MetaInfo* content = (MetaInfo*)(((intptr_t*)_start) + 1);
+
   for (int i = 0; i < count; i++) {
-    intptr_t v = content[i];
+    intptr_t v = content[i].metadata;
     if (!is_resolved(v)) {
       char* str = unresolved_meta_name(v);
-      CodeRevive::out()->print_cr("\t%10d unresolved %s %s", i, str, is_unresolved_class(v) ? "class" : "method");
+      CodeRevive::out()->print_cr("\t%10d unresolved %s %s (" INT64_FORMAT ")", i, str, is_unresolved_class(v) ? "class" : "method", content[i].identity);
     } else {
       Metadata* m = ((Metadata*)v);
-      CodeRevive::out()->print_cr("\t%10d   resovled %s %s", i, cr_metadata_name(m), m->is_klass() ? "class" : "method");
+      CodeRevive::out()->print_cr("\t%10d   resovled %s %s (" INT64_FORMAT ")", i, cr_metadata_name(m), m->is_klass() ? "class" : "method", content[i].identity);
     }
   }
 }
 
-void CodeReviveMetaSpace::resolve_metadata(CodeReviveMetaSpace* global_metadata) {
-  ResourceMark rm;
-  HandleMark   hm;
+// record the meta information into merged meta info from the metaspace
+void CodeReviveMetaSpace::record_metadata(CodeReviveMergedMetaInfo* global_metadata) {
   int count = 0;
   count = (int)(*((intptr_t*)_start));
-  intptr_t* content = ((intptr_t*)_start) + 1;
+  MetaInfo* content = (MetaInfo*)(((intptr_t*)_start) + 1);
+  // traverse all the meta in the metaspace
   for (int i = 0; i < count; i++) {
-    intptr_t v = content[i];
+    intptr_t v = content[i].metadata;
+    // the meta don't be resolved in merge
     guarantee(!is_resolved(v), "must be not resolved");
-    if (is_unresolved_class(v)) {
-      Klass* k = resolve_klass(i, global_metadata != NULL);
-      if (k != NULL) {
-        set_metadata(i, k);
-        if (global_metadata != NULL) {
-          global_metadata->record_metadata(k);
-          _resolve_klass_count++;
-        }
-      } else if (global_metadata != NULL) {
-        _unresolve_klass_count++;
-      }
-    } else {
-      Method* m = resolve_method(i, global_metadata != NULL);
-      if (m != NULL) {
-        set_metadata(i, m);
-        if (global_metadata != NULL) {
-          _resolve_method_count++;
-          global_metadata->record_metadata(m);
-        }
-      } else if (global_metadata != NULL) {
-        _unresolve_method_count++;
-      }
-    }
+    char* name = unresolved_meta_name(v);
+    // record the name, identity, loader type, method_or_not into global meta info
+    global_metadata->record_metadata(name, content[i].identity, content[i].loader_type, is_unresolved_method(v));
   }
-  if (global_metadata != NULL && CodeRevive::is_log_on(cr_merge, cr_info)) {
-    print();
-  }
-}
-
-Klass* CodeReviveMetaSpace::resolve_klass(int32_t index, bool add_to_global) {
-  Thread* THREAD = Thread::current();
-  char* name = NULL;
-  Klass* k = unresolved_name_or_klass(index, &name);
-  guarantee(k == NULL, "must be not resolved");
-  Symbol* class_name_symbol = SymbolTable::lookup(name, (int)strlen(name), THREAD);
-  // check whether the klass has been resolved
-  MergePhaseKlassResovleCacheEntry* entry = MergePhaseKlassResovleCacheTable::lookup_only(class_name_symbol);
-  if (entry != NULL) {
-    // klass can be NULL
-    return entry->klass();
-  }
-  k = SystemDictionary::resolve_or_null(class_name_symbol, SystemDictionary::java_system_loader(), Handle(), THREAD);
-  CLEAR_PENDING_EXCEPTION;
-  if (add_to_global) {
-    // Regardless of whether it is successful or not,
-    // add the result into klass resolve cache table
-    MergePhaseKlassResovleCacheTable::add_klass(class_name_symbol, k);
-  }
-  if (k == NULL) {
-    CR_LOG(cr_merge, cr_warning, "Fail to find klass with name %s\n", name);
-    return NULL;
-  }
-  return k;
-}
-
-Method* CodeReviveMetaSpace::resolve_method(int32_t index, bool add_to_global) {
-  Thread* THREAD = Thread::current();
-  char* names[3];
-  int32_t* lens;
-  Method* m = unresolved_name_parts_or_method(index, names, &lens);
-  guarantee(m == NULL, "must be not resolved");
-  Symbol* class_name_symbol = SymbolTable::lookup(names[0], lens[0], THREAD);
-  // check whether the klass has been resolved
-  MergePhaseKlassResovleCacheEntry* entry = MergePhaseKlassResovleCacheTable::lookup_only(class_name_symbol);
-  Klass* k = NULL;
-  if (entry != NULL) {
-    k = entry->klass();
-    // if the klass is NULL, directly return NULL to avoid printing duplicate error messages
-    if (k == NULL) {
-      return NULL;
-    }
-  } else {
-    k = SystemDictionary::resolve_or_null(class_name_symbol, SystemDictionary::java_system_loader(), Handle(), THREAD);
-    if (add_to_global) {
-      // add the result into global Klass table
-      MergePhaseKlassResovleCacheTable::add_klass(class_name_symbol, k);
-    }
-  }
-  CLEAR_PENDING_EXCEPTION;
-  if (k == NULL) {
-    CR_LOG(cr_merge, cr_warning, "Fail to find klass with name %s\n", names[0]);
-    return NULL;
-  }
-  Symbol* method_name_symbol = SymbolTable::lookup(names[1], lens[1], THREAD);
-  Symbol* sig_name_symbol = SymbolTable::lookup(names[2], lens[2], THREAD);
-  m = k->lookup_method(method_name_symbol, sig_name_symbol);
-  if (m == NULL) {
-    CR_LOG(cr_merge, cr_warning, "Fail to find method with name %s\n", names[0]);
-    return NULL;
-  }
-  return m;
-}
-
-void CodeReviveMetaSpace::print_resolve_info() {
-  outputStream* output = CodeRevive::out();
-  output->print_cr("Klass/Method resolve information: ");
-  output->print_cr("  Resolved klass  = %d      \tunresolved klass  = %d", _resolve_klass_count, _unresolve_klass_count);
-  output->print_cr("  Resolved method = %d      \tunresolved method = %d", _resolve_method_count, _unresolve_method_count);
 }

@@ -20,10 +20,10 @@
 public class TestBasic {
     static String s;
     public static void main(String[] args) {
-        invoke_foos();
+        invokeFoos();
     }
 
-    public static void invoke_foos() {
+    public static void invokeFoos() {
         for (int i = 0; i < 1000000; i++) {
             foo(i, new Object());
         }

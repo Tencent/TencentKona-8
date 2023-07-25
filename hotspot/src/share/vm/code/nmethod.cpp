@@ -487,6 +487,7 @@ void nmethod::init_defaults() {
   // CodeRevive
   _has_call_site_target_value = 0;
   _load_from_aot              = 0;
+  _record_compile_time_metadata = false;
 
 #ifdef ASSERT
   _oops_are_stale             = false;

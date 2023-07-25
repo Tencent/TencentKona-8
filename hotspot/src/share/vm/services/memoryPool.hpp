@@ -33,6 +33,7 @@
 #include "utilities/macros.hpp"
 #if INCLUDE_ALL_GCS
 #include "gc_implementation/concurrentMarkSweep/compactibleFreeListSpace.hpp"
+#include "gc_implementation/concurrentMarkSweep/concurrentMarkSweepGeneration.hpp"
 #endif // INCLUDE_ALL_GCS
 
 // A memory pool represents the memory area that the VM manages.
@@ -156,12 +157,22 @@ public:
 class ContiguousSpacePool : public CollectedMemoryPool {
 private:
   ContiguousSpace* _space;
+  DefNewGeneration* _gen;
 
 public:
-  ContiguousSpacePool(ContiguousSpace* space, const char* name, PoolType type, size_t max_size, bool support_usage_threshold);
+  ContiguousSpacePool(ContiguousSpace* space,
+                      DefNewGeneration* gen,
+                      const char* name,
+                      PoolType type,
+                      size_t max_size,
+                      bool support_usage_threshold);
 
   ContiguousSpace* space()              { return _space; }
   MemoryUsage get_memory_usage();
+  size_t max_size() const {
+    // Eden's max_size = max_size of Young Gen - the current committed size of survivor spaces
+    return _gen->Generation::max_capacity() - _gen->from()->capacity() - _gen->to()->capacity();
+  }
   size_t used_in_bytes()                { return space()->used(); }
 };
 
@@ -178,6 +189,10 @@ public:
 
   MemoryUsage get_memory_usage();
 
+  size_t max_size() const {
+    // Return current committed size of the from-space
+    return _gen->from()->capacity();
+  }
   size_t used_in_bytes() {
     return _gen->from()->used();
   }
@@ -190,14 +205,17 @@ public:
 class CompactibleFreeListSpacePool : public CollectedMemoryPool {
 private:
   CompactibleFreeListSpace* _space;
+  ConcurrentMarkSweepGeneration* _gen;
 public:
   CompactibleFreeListSpacePool(CompactibleFreeListSpace* space,
+                               ConcurrentMarkSweepGeneration* gen,
                                const char* name,
                                PoolType type,
                                size_t max_size,
                                bool support_usage_threshold);
 
   MemoryUsage get_memory_usage();
+  size_t max_size() const           { return _gen->max_capacity(); }
   size_t used_in_bytes()            { return _space->used_stable(); }
 };
 #endif // INCLUDE_ALL_GCS
@@ -210,6 +228,7 @@ public:
   GenerationPool(Generation* gen, const char* name, PoolType type, bool support_usage_threshold);
 
   MemoryUsage get_memory_usage();
+  size_t max_size() const               { return _gen->max_capacity(); }
   size_t used_in_bytes()                { return _gen->used(); }
 };
 

@@ -57,7 +57,7 @@ public class TestKlassInit {
              "-XX:-TieredCompilation",
              "-XX:CompileCommand=compileonly,*.bar",
              "-XX:CompileCommand=compileonly,*.foo",
-             "-XX:CodeReviveOptions=merge,disable_check_dir,file=merged.csa,input_list_file=input_file.list,log=merge=info",
+             "-XX:CodeReviveOptions=merge,file=merged.csa,input_list_file=input_file.list,log=merge=info",
              "-version");
 
         // Restore
@@ -65,7 +65,7 @@ public class TestKlassInit {
              "-XX:-TieredCompilation",
              "-XX:CompileCommand=compileonly,*.bar",
              "-XX:CompileCommand=compileonly,*.foo",
-             "-XX:CodeReviveOptions=restore,disable_check_dir,file=merged.csa,log=restore=info",
+             "-XX:CodeReviveOptions=restore,file=merged.csa,log=restore=info",
              "TestWrongKlassState", "1", "-1");
     }
 

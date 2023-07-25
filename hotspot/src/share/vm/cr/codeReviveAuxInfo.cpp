@@ -21,6 +21,7 @@
 #include "ci/ciUtilities.hpp"
 #include "ci/ciObjArrayKlass.hpp"
 #include "cr/codeReviveAuxInfo.hpp"
+#include "cr/codeReviveMergedMetaInfo.hpp"
 #include "cr/codeReviveMetaSpace.hpp"
 #include "cr/codeReviveMerge.hpp"
 #include "cr/revive.hpp"
@@ -54,18 +55,6 @@ static void skip_relocs_in_static_stub(RelocIterator& iter) {
 
 static bool is_non_oop(void* obj) {
   return obj == Universe::non_oop_word() || obj == NULL;
-}
-
-static oop get_loader(LoaderType type) {
-  if (type == boot_loader) {
-    return NULL;
-  } else if (type == app_loader) {
-    return SystemDictionary::java_system_loader();
-  } else if (type == ext_loader) {
-    return SystemDictionary::ext_loader();
-  }
-  guarantee(false, "unexpected");
-  return NULL;
 }
 
 static void debug_print_nmethod(nmethod* nm) {
@@ -125,25 +114,51 @@ void ReviveAuxInfoTask::emit_c_string(const char* str, bool with_align) {
   }
 }
 
-LoaderType ReviveAuxInfoTask::get_loader_type(Klass *k) {
-  LoaderType type = CodeRevive::klass_loader_type(k);
+oop ReviveAuxInfoTask::get_method_holder_loader() {
+  Method* method = _nm != NULL ? _nm->method() : _method;
+  guarantee(method, "should can find method");
+  return method->method_holder()->class_loader();
+}
+
+LoaderType ReviveAuxInfoTask::check_and_get_loader_type(Klass *k) {
+  oopDesc* loader = k->class_loader();
+  LoaderType type = CodeRevive::loader_type(loader);
+
   if (type == custom_loader) {
     fail();
+    return type;
   }
   return type;
 }
+
+oop ReviveAuxInfoTask::get_loader(LoaderType type) {
+  if (type == boot_loader) {
+    return NULL;
+  } else if (type == app_loader) {
+    return SystemDictionary::java_system_loader();
+  } else if (type == ext_loader) {
+    return SystemDictionary::ext_loader();
+  } else if (type == custom_loader) {
+    return get_method_holder_loader();
+  }
+  guarantee(false, "unexpected");
+  return NULL;
+}
+
 
 void ReviveAuxInfoTask::align() {
   _cur = align_up(_cur, _alignment);
 }
 
-int ReviveAuxInfoTask::get_global_meta_index(int old_index) {
+int ReviveAuxInfoTask::get_global_meta_index(int old_index, CodeReviveMergedMetaInfo* global_meta) {
   guarantee(_meta_space != NULL, "must be");
-  Metadata* metadata = _meta_space->resolved_metadata_or_null(old_index);
-  guarantee(metadata != NULL && (metadata->is_method() || metadata->is_klass()),
-            "Invalid unresolved metadata during update metadata index");
-
-  int32_t new_index = metadata->csa_meta_index();
+  // get name from meta space
+  char* name = _meta_space->metadata_name(old_index);
+  // get identity from meta space
+  int64_t identity = _meta_space->metadata_identity(old_index);
+  // get loader type from meta space
+  uint16_t loader_type = _meta_space->metadata_loader_type(old_index);
+  int32_t new_index = global_meta->get_meta_index(name, identity, loader_type);
   guarantee(new_index >= 0, "should be");
   return new_index;
 }
@@ -176,18 +191,18 @@ void ReviveAuxInfoTask::emit_tag_only(RelocTypeTag tag) {
 
 bool ReviveAuxInfoTask::emit_string(oop o) {
   emit_u2(tag_oop_str);
-  emit_u2(0);
+  emit_u2(0); // u2 for align padding
   emit_c_string(java_lang_String::as_utf8_string(o), true);
   return true;
 }
 
 bool ReviveAuxInfoTask::emit_class(RelocTypeTag tag, Klass* k) {
-  LoaderType type = get_loader_type(k);
-  if (type == custom_loader) {
+  LoaderType type = check_and_get_loader_type(k);
+  if (success() == false) {
     return false;
   }
   emit_u2(tag);
-  emit_u2((uint16_t)type);
+  emit_u2(0); // u2 for align padding
   int meta_index = _meta_space->record_metadata(k);
   emit_u4(meta_index);
   if (k->oop_is_instance()) {
@@ -202,12 +217,12 @@ bool ReviveAuxInfoTask::emit_class(RelocTypeTag tag, Klass* k) {
 
 bool ReviveAuxInfoTask::emit_method(RelocTypeTag tag, Method* m) {
   Klass* klass = m->method_holder();
-  LoaderType type = get_loader_type(klass);
-  if (type == custom_loader) {
+  LoaderType type = check_and_get_loader_type(klass);
+  if (success() == false) {
     return false;
   }
   emit_u2((uint16_t)tag);
-  emit_u2(type);
+  emit_u2(0); // u2 for align padding
   int meta_index = _meta_space->record_metadata(m);
   emit_u4(meta_index);
   align();
@@ -216,7 +231,7 @@ bool ReviveAuxInfoTask::emit_method(RelocTypeTag tag, Method* m) {
 
 void ReviveAuxInfoTask::emit_int_index(RelocTypeTag tag, int index) {
   emit_u2((uint16_t)tag);
-  emit_u2((uint16_t)0);
+  emit_u2((uint16_t)0); // u2 for align padding
   emit_u4((uint32_t)index);
   align();
 }
@@ -602,8 +617,7 @@ bool ReviveAuxInfoTask::revive_oop(oop_Relocation* r, GrowableArray<ciBaseObject
     return true;
   }
   RelocTypeTag tag = (RelocTypeTag)read_u2();
-  LoaderType loader_type = (LoaderType)read_u2();
-  oop loader = get_loader(loader_type);
+  read_u2(); // loader type for klass and method, dummy u2 for global_klass
   oop result = NULL;
   if (tag == tag_oop_str) {
     read_c_string();
@@ -873,23 +887,23 @@ void ReviveAuxInfoTask::iterate_reloc_aux_info() {
         break;
       }
       case tag_klass_by_name_classloader: {
-        LoaderType loader_type = (LoaderType)read_u2();
+        read_u2();
         int32_t meta_index = (int32_t)read_u4();
         int32_t min_state = (int32_t)read_u4();
-        process_klass_by_name_classloader(loader_type, meta_index, min_state);
+        process_klass_by_name_classloader(meta_index, min_state);
         break;
       }
       case tag_mirror_by_name_classloader: {
-        LoaderType loader_type = (LoaderType)read_u2();
+        read_u2();
         int32_t meta_index = (int32_t)read_u4();
         int32_t min_state = (int32_t)read_u4();
-        process_mirror_by_name_classloader(loader_type, meta_index, min_state);
+        process_mirror_by_name_classloader(meta_index, min_state);
         break;
       }
       case tag_method_by_name_classloader: {
-        LoaderType loader_type = (LoaderType)read_u2();
+        read_u2();
         int32_t meta_index = (int32_t)read_u4();
-        process_method_by_name_classloader(loader_type, meta_index);
+        process_method_by_name_classloader(meta_index);
         break;
       }
       case tag_meta_method_data: {
@@ -937,6 +951,18 @@ const char* class_state_name[] = {
 };
 
 bool PreReviveTask::check_instance_klass_state(InstanceKlass* k, int min_state) {
+  // If the klass is pure interface klass, which means no java field and default methods,
+  // 'linked' state is enough to ensure the safety.
+  if (k->is_interface() && k->java_fields_count() == 0 && !k->has_default_methods()) {
+    if (k->is_linked()) {
+      CR_LOG(cr_restore, cr_info, "Revive interface klass %s at state %s(%d)\n",
+             k->name()->as_C_string(),
+             class_state_name[((InstanceKlass*)k)->init_state()],
+             ((InstanceKlass*)k)->init_state());
+      return true;
+    }
+  }
+
   int state = (int)k->init_state();
   if (state < min_state) {
     CR_LOG(cr_restore, cr_warning, "Unexpected state %s(%d) for klass %s, which should be at least %s(%d)\n",
@@ -951,34 +977,21 @@ bool PreReviveTask::check_instance_klass_state(InstanceKlass* k, int min_state) 
   return true;
 }
 
-Klass* PreReviveTask::revive_get_klass(Symbol* name, oop loader, int min_state) {
+Klass* PreReviveTask::revive_get_klass(Symbol* name, LoaderType loader_type, int min_state) {
+  oop loader = get_loader(loader_type);
   Klass* k = SystemDictionary::find_instance_or_array_klass(name, Handle(loader), Handle(), Thread::current());
   if (k == NULL) {
     CR_LOG(cr_restore, cr_warning, "Fail to find klass with name %s\n", name->as_C_string());
     fail();
   } else if (k->oop_is_instance()) {
-    InstanceKlass* instance = (InstanceKlass*)k;
-
-    // If the klass is pure interface klass, which means no java field and default methods,
-    // 'linked' state is enough to ensure the safety.
-    if (instance->is_interface() && instance->java_fields_count() == 0 && !instance->has_default_methods()) {
-      if (instance->is_linked()) {
-        CR_LOG(cr_restore, cr_info, "Revive interface klass %s at state %s(%d)\n",
-               name->as_C_string(),
-               class_state_name[((InstanceKlass*)k)->init_state()],
-               ((InstanceKlass*)k)->init_state());
-        return k;
-      }
-    }
-
-    if (!check_instance_klass_state(instance, min_state)) {
+    if (!check_instance_klass_state((InstanceKlass*)k, min_state)) {
       return NULL;
     }
   }
   return k;
 }
 
-Klass* PreReviveTask::revive_get_klass(const char* name, oop loader, int min_state) {
+Klass* PreReviveTask::revive_get_klass(const char* name, LoaderType loader_type, int min_state) {
   uint32_t hash;
   Symbol* holder_symbol = SymbolTable::lookup_only(name, (int)strlen(name), hash);
   if (holder_symbol == NULL) {
@@ -986,12 +999,19 @@ Klass* PreReviveTask::revive_get_klass(const char* name, oop loader, int min_sta
     fail();
     return NULL;
   }
-  return revive_get_klass(holder_symbol, loader, min_state);
+  return revive_get_klass(holder_symbol, loader_type, min_state);
 }
 
-Klass* PreReviveTask::revive_get_klass(int32_t meta_index, oop loader, int min_state) {
+Klass* PreReviveTask::revive_get_klass(int32_t meta_index, int min_state) {
   char* name = NULL;
-  Klass* k = _meta_space->unresolved_name_or_klass(meta_index, &name);
+  LoaderType loader_type = (LoaderType)_meta_space->metadata_loader_type(meta_index);
+  Klass* k = NULL;
+  if (!_meta_space->unresolved_name_or_klass(meta_index, &k, &name)) {
+    // the meta is resolved, but the value is NULL since the identity is different
+    CR_LOG(cr_restore, cr_fail, "Fail to revive klass with index %d\n", meta_index);
+    fail();
+    return NULL;
+  }
   if (k != NULL) {
     guarantee(k->is_klass(), "should be");
     if (k->oop_is_instance() && !check_instance_klass_state((InstanceKlass*)k, min_state)) {
@@ -1001,17 +1021,27 @@ Klass* PreReviveTask::revive_get_klass(int32_t meta_index, oop loader, int min_s
   }
   // change to unresovle_name_or_method
   guarantee(name != NULL, "should be");
-  k = revive_get_klass(name, loader, min_state);
+  k = revive_get_klass(name, loader_type, min_state);
   if (k != NULL) {
-    _meta_space->set_metadata(meta_index, k);
+    if (!_meta_space->set_metadata(meta_index, k)) {
+      CR_LOG(cr_restore, cr_fail, "Identity for klass %s is different with index %d.\n", name, meta_index);
+      fail();
+      return NULL;
+    }
   }
   return k;
 }
 
-Method* PreReviveTask::revive_get_method(int32_t meta_index, oop loader) {
+Method* PreReviveTask::revive_get_method(int32_t meta_index) {
   char* names[3];
   int32_t* lens;
-  Method* m = _meta_space->unresolved_name_parts_or_method(meta_index, names, &lens);
+  LoaderType loader_type = (LoaderType)_meta_space->metadata_loader_type(meta_index);
+  Method* m = NULL;
+  if (!_meta_space->unresolved_name_parts_or_method(meta_index, &m, names, &lens)) {
+    CR_LOG(cr_restore, cr_fail, "Fail to revive method with index %d.\n", meta_index);
+    fail();
+    return NULL;
+  }
   if (m != NULL) {
     return m;
   }
@@ -1034,7 +1064,7 @@ Method* PreReviveTask::revive_get_method(int32_t meta_index, oop loader) {
     fail();
     return NULL;
   }
-  Klass* k = revive_get_klass(k_s, loader, InstanceKlass::loaded);
+  Klass* k = revive_get_klass(k_s, loader_type, InstanceKlass::loaded);
   if (k == NULL) {
     CR_LOG(cr_restore, cr_warning, "Miss klass %s\n", names[0]);
     fail();
@@ -1044,8 +1074,11 @@ Method* PreReviveTask::revive_get_method(int32_t meta_index, oop loader) {
   if (m == NULL) {
     CR_LOG(cr_restore, cr_warning, "Fail to find method for %s\n", names[0]);
     fail();
-  } else {
-    _meta_space->set_metadata(meta_index, m);
+  } else if (!_meta_space->set_metadata(meta_index, m)) {
+    CR_LOG(cr_restore, cr_fail, "Identity for method %s.%s(%s) is different with index %d.\n",
+           names[0], names[1], names[2], meta_index);
+    fail();
+    return NULL;
   }
   return m;
 }
@@ -1057,11 +1090,11 @@ ciObject* PreReviveTask::prepare_oop_str(char* str) {
   return ci_obj;
 }
 
-ciMetadata* PreReviveTask::prepare_klass_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) {
+ciMetadata* PreReviveTask::prepare_klass_by_name_classloader(int32_t meta_index, int32_t min_state) {
   guarantee(JavaThread::current()->thread_state() == _thread_in_vm, "must be in vm state");
-  oop loader = get_loader(loader_type);
-  Klass* k = revive_get_klass(meta_index, loader, min_state);
+  Klass* k = revive_get_klass(meta_index, min_state);
   if (k == NULL) {
+    fail();
     return NULL;
   }
 
@@ -1072,9 +1105,9 @@ ciMetadata* PreReviveTask::prepare_klass_by_name_classloader(LoaderType loader_t
   return result;
 }
 
-ciObject* PreReviveTask::prepare_mirror_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) {
+ciObject* PreReviveTask::prepare_mirror_by_name_classloader(int32_t meta_index, int32_t min_state) {
   guarantee(JavaThread::current()->thread_state() == _thread_in_vm, "must be in vm state");
-  ciKlass* k = (ciKlass*)prepare_klass_by_name_classloader(loader_type, meta_index, min_state);
+  ciKlass* k = (ciKlass*)prepare_klass_by_name_classloader(meta_index, min_state);
   if (k == NULL) {
     fail();
     return NULL;
@@ -1087,10 +1120,9 @@ ciObject* PreReviveTask::prepare_mirror_by_name_classloader(LoaderType loader_ty
   return result;
 }
 
-ciMetadata* PreReviveTask::prepare_method_by_name_classloader(LoaderType loader_type, int32_t meta_index) {
+ciMetadata* PreReviveTask::prepare_method_by_name_classloader(int32_t meta_index) {
   guarantee(JavaThread::current()->thread_state() == _thread_in_vm, "must be in vm state");
-  oop loader = get_loader(loader_type);
-  Method* m = revive_get_method(meta_index, loader);
+  Method* m = revive_get_method(meta_index);
   if (m == NULL) {
     fail();
     return NULL;
@@ -1137,16 +1169,16 @@ void PreReviveTask::process_meta_self_method() {
   _oops_and_metas->append(CURRENT_ENV->get_metadata(_method));
 }
 
-void PreReviveTask::process_klass_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) {
-  _oops_and_metas->append(prepare_klass_by_name_classloader(loader_type, meta_index, min_state));
+void PreReviveTask::process_klass_by_name_classloader(int32_t meta_index, int32_t min_state) {
+  _oops_and_metas->append(prepare_klass_by_name_classloader(meta_index, min_state));
 }
 
-void PreReviveTask::process_mirror_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) {
-  _oops_and_metas->append(prepare_mirror_by_name_classloader(loader_type, meta_index, min_state));
+void PreReviveTask::process_mirror_by_name_classloader(int32_t meta_index, int32_t min_state) {
+  _oops_and_metas->append(prepare_mirror_by_name_classloader(meta_index, min_state));
 }
 
-void PreReviveTask::process_method_by_name_classloader(LoaderType loader_type, int32_t meta_index) {
-  _oops_and_metas->append(prepare_method_by_name_classloader(loader_type, meta_index));
+void PreReviveTask::process_method_by_name_classloader(int32_t meta_index) {
+  _oops_and_metas->append(prepare_method_by_name_classloader(meta_index));
 }
 
 void PreReviveTask::process_oop_classloader(LoaderType type) {
@@ -1176,19 +1208,22 @@ void PrintAuxInfoTask::process_meta_self_method() {
   _out->print_cr("method self");
 }
 
-void PrintAuxInfoTask::process_klass_by_name_classloader(LoaderType type, int32_t meta_index, int32_t init_status) {
+void PrintAuxInfoTask::process_klass_by_name_classloader(int32_t meta_index, int32_t init_status) {
   _out->print_cr("klass by name and classloader : tag =%d, kls = %s, loader = %d, meta_index = %d, init_status %d",
-                  tag_klass_by_name_classloader, _meta_space->metadata_name(meta_index), type, meta_index, init_status);
+                  tag_klass_by_name_classloader, _meta_space->metadata_name(meta_index), _meta_space->metadata_loader_type(meta_index),
+                  meta_index, init_status);
 }
 
-void PrintAuxInfoTask::process_mirror_by_name_classloader(LoaderType type, int32_t meta_index, int32_t init_status) {
+void PrintAuxInfoTask::process_mirror_by_name_classloader(int32_t meta_index, int32_t init_status) {
   _out->print_cr("mirror by name and classloader : tag =%d, kls = %s, loader = %d, meta_index = %d, init_status %d",
-                  tag_mirror_by_name_classloader, _meta_space->metadata_name(meta_index), type, meta_index, init_status);
+                  tag_mirror_by_name_classloader, _meta_space->metadata_name(meta_index), _meta_space->metadata_loader_type(meta_index),
+                  meta_index, init_status);
 }
 
-void PrintAuxInfoTask::process_method_by_name_classloader(LoaderType type, int32_t meta_index) {
+void PrintAuxInfoTask::process_method_by_name_classloader(int32_t meta_index) {
   _out->print_cr("method by name and classloader : tag =%d, method = %s, loader = %d, meta_index = %d",
-                  tag_method_by_name_classloader, _meta_space->metadata_name(meta_index), type, meta_index);
+                  tag_method_by_name_classloader, _meta_space->metadata_name(meta_index),
+                  _meta_space->metadata_loader_type(meta_index), meta_index);
 }
 
 void PrintAuxInfoTask::process_internal_word(uint32_t offset) {
@@ -1211,47 +1246,46 @@ void PrintAuxInfoTask::process_non_oop() {
   _out->print_cr("non oop");
 }
 
-void CheckMetaResolveTask::process_klass_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) {
+void CheckMetaResolveTask::process_klass_by_name_classloader(int32_t meta_index, int32_t min_state) {
   if (!_meta_space->is_resolved_meta(meta_index)) {
     fail();
   }
 }
 
-void CheckMetaResolveTask::process_mirror_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) {
+void CheckMetaResolveTask::process_mirror_by_name_classloader(int32_t meta_index, int32_t min_state) {
   if (!_meta_space->is_resolved_meta(meta_index)) {
     fail();
   }
 }
 
-void CheckMetaResolveTask::process_method_by_name_classloader(LoaderType loader_type, int32_t meta_index) {
+void CheckMetaResolveTask::process_method_by_name_classloader(int32_t meta_index) {
   if (!_meta_space->is_resolved_meta(meta_index)) {
     fail();
   }
 }
 
 int32_t UpdateMetaIndexTask::update_one_meta_index(int32_t old_index, char* index_address) {
-  int32_t new_index = get_global_meta_index(old_index);
+  int32_t new_index = get_global_meta_index(old_index, _global_meta_info);
   set_u4(new_index, index_address);
 
   if (CodeRevive::is_log_on(cr_merge, cr_info)) {
     CR_LOG(cr_merge, cr_info, "Reset index from %d to %d in %s\n", old_index, new_index, CodeReviveMerge::metadata_name(new_index));
-    guarantee(!strcmp(_meta_space->metadata_name(old_index), CodeReviveMerge::metadata_name(new_index)), "should be");
   }
   return old_index;
 }
 
-void UpdateMetaIndexTask::process_klass_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) {
+void UpdateMetaIndexTask::process_klass_by_name_classloader(int32_t meta_index, int32_t min_state) {
   char* index_address = get_retral_address(2 * sizeof(uint32_t));
   update_one_meta_index(meta_index, index_address);
 }
 
-void UpdateMetaIndexTask::process_mirror_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) {
+void UpdateMetaIndexTask::process_mirror_by_name_classloader(int32_t meta_index, int32_t min_state) {
   char* index_address = get_retral_address(2 * sizeof(uint32_t));
   update_one_meta_index(meta_index, index_address);
 }
 
-void UpdateMetaIndexTask::process_method_by_name_classloader(LoaderType loader_type, int32_t meta_index) {
-  char* index_address = get_retral_address(sizeof(uint32_t));
+void UpdateMetaIndexTask::process_method_by_name_classloader(int32_t meta_index) {
+  char* index_address = get_retral_address(sizeof(uint32_t)); 
   update_one_meta_index(meta_index, index_address);
 }
 
@@ -1267,11 +1301,11 @@ void CollectMetadataArrayNameTask::process_meta_self_method() {
   _names->append(_method_name);
 }
 
-void CollectMetadataArrayNameTask::process_klass_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) {
+void CollectMetadataArrayNameTask::process_klass_by_name_classloader(int32_t meta_index, int32_t min_state) {
   _names->append(_meta_space->metadata_name(meta_index));
 }
 
-void CollectMetadataArrayNameTask::process_method_by_name_classloader(LoaderType loader_type, int32_t meta_index) {
+void CollectMetadataArrayNameTask::process_method_by_name_classloader(int32_t meta_index) {
   _names->append(_meta_space->metadata_name(meta_index));
 }
 
@@ -1283,12 +1317,12 @@ void CollectKlassAndMethodIndexTask::process_meta_self_method() {
   _indexes->append(_self_method);
 }
 
-void CollectKlassAndMethodIndexTask::process_klass_by_name_classloader(LoaderType loader_type, int32_t meta_index, int32_t min_state) {
-  _indexes->append(get_global_meta_index(meta_index));
+void CollectKlassAndMethodIndexTask::process_klass_by_name_classloader(int32_t meta_index, int32_t min_state) {
+  _indexes->append(get_global_meta_index(meta_index, _global_meta_info));
 }
 
-void CollectKlassAndMethodIndexTask::process_method_by_name_classloader(LoaderType loader_type, int32_t meta_index) {
-  _indexes->append(get_global_meta_index(meta_index));
+void CollectKlassAndMethodIndexTask::process_method_by_name_classloader(int32_t meta_index) {
+  _indexes->append(get_global_meta_index(meta_index, _global_meta_info));
 }
 
 void CollectKlassAndMethodIndexTask::process_non_oop() {

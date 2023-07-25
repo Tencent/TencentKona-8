@@ -81,7 +81,8 @@ class CodeReviveLookupTable : public CHeapObj<mtInternal> {
   }
   Entry* new_entry(Method* m, int meta_index, bool allow_dup = false);
   Entry* new_entry(const char* name, int meta_index, bool allow_dup = false);
-  Entry* find_entry(Method* m);
+  Entry* find_entry(Method* m, bool only_use_name = false);
+  Entry* find_entry(char* name, int64_t identity, uint16_t load_type);
   Entry* find_entry(char* name);
   Entry* next(Entry* e) {
     if (e->_meta_index == -1 || e->_next_offset == 0) {

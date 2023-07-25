@@ -83,6 +83,8 @@ class GCTaskQueue;
 class ThreadClosure;
 class IdealGraphPrinter;
 
+class CodeReviveCodeBlob;
+
 class Metadata;
 template <class T, MEMFLAGS F> class ChunkedList;
 typedef ChunkedList<Metadata*, mtInternal> MetadataOnStackBuffer;
@@ -514,7 +516,7 @@ public:
   }
 
   // Sweeper support
-  void nmethods_do(CodeBlobClosure* cf);
+  virtual void nmethods_do(CodeBlobClosure* cf);
 
   // jvmtiRedefineClasses support
   void metadata_do(void f(Metadata*));
@@ -1489,10 +1491,10 @@ class JavaThread: public Thread {
   void frames_do(void f(frame*, const RegisterMap*));
 
   // Memory operations
-  void oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf);
+  virtual void oops_do(OopClosure* f, CLDClosure* cld_f, CodeBlobClosure* cf);
 
   // Sweeper operations
-  void nmethods_do(CodeBlobClosure* cf);
+  virtual void nmethods_do(CodeBlobClosure* cf);
 
   // RedefineClasses Support
   void metadata_do(void f(Metadata*));
@@ -1882,6 +1884,7 @@ class CompilerThread : public JavaThread {
   CompileTask*      _task;
   CompileQueue*     _queue;
   BufferBlob*       _buffer_blob;
+  CodeReviveCodeBlob* _aot_code_blob;  // used for code revive
 
   nmethod*          _scanned_nmethod;  // nmethod being scanned by the sweeper
   AbstractCompiler* _compiler;
@@ -1916,6 +1919,8 @@ class CompilerThread : public JavaThread {
     assert(_log == NULL, "set only once");
     _log = log;
   }
+
+  CodeReviveCodeBlob* get_code_blob() const       { return _aot_code_blob; }
 
   // GC support
   // Apply "f->do_oop" to all root oops in "this".

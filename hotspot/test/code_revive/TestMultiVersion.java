@@ -75,7 +75,7 @@ public class TestMultiVersion {
              "-XX:-TieredCompilation",
              "-XX:CompileOnly=MultiVersion.foo",
              "-XX:-BackgroundCompilation",
-             "-XX:CodeReviveOptions=merge,disable_check_dir,file=merged.csa,input_files=.,log=merge=info",
+             "-XX:CodeReviveOptions=merge,file=merged.csa,input_files=.,log=merge=info",
              "-version");
 
         String[] expect_outputs_save4 = {
@@ -85,7 +85,7 @@ public class TestMultiVersion {
              "-XX:-TieredCompilation",
              "-XX:CompileOnly=MultiVersion.foo",
              "-XX:-BackgroundCompilation",
-             "-XX:CodeReviveOptions=save,disable_check_dir,file=4.csa",
+             "-XX:CodeReviveOptions=save,file=4.csa",
              "MultiVersion",
              "0", "1", "-1");
 
@@ -101,7 +101,7 @@ public class TestMultiVersion {
              "-XX:-TieredCompilation",
              "-XX:CompileOnly=MultiVersion.foo",
              "-XX:-BackgroundCompilation",
-             "-XX:CodeReviveOptions=merge,disable_check_dir,file=merged2.csa,input_list_file=input_file.list,log=merge=info",
+             "-XX:CodeReviveOptions=merge,file=merged2.csa,input_list_file=input_file.list,log=merge=info",
              "-version");
 
         String[] expect_outputs_restore = {
@@ -113,7 +113,7 @@ public class TestMultiVersion {
              "-XX:-TieredCompilation",
              "-XX:CompileOnly=MultiVersion.foo",
              "-XX:-BackgroundCompilation",
-             "-XX:CodeReviveOptions=restore,disable_check_dir,file=merged.csa,log=restore=info",
+             "-XX:CodeReviveOptions=restore,file=merged.csa,log=restore=info",
              "MultiVersion",
              "1", "-1");
 
@@ -121,7 +121,7 @@ public class TestMultiVersion {
         String output1 = TestAndGetOutput("-XX:-TieredCompilation",
              "-XX:CompileOnly=MultiVersion.foo",
              "-XX:-BackgroundCompilation",
-             "-XX:CodeReviveOptions=restore,disable_check_dir,file=merged2.csa,log=restore=info,revive_policy=first",
+             "-XX:CodeReviveOptions=restore,file=merged2.csa,log=restore=info,revive_policy=first",
              "MultiVersion",
              "1", "1", "1");
         int count1 = CountString(output1, 4, "Candidate Version ");
@@ -137,7 +137,7 @@ public class TestMultiVersion {
              output2 = TestAndGetOutput("-XX:-TieredCompilation",
                  "-XX:CompileOnly=MultiVersion.foo",
                  "-XX:-BackgroundCompilation",
-                 "-XX:CodeReviveOptions=restore,disable_check_dir,file=merged2.csa,log=restore=info,revive_policy=random",
+                 "-XX:CodeReviveOptions=restore,file=merged2.csa,log=restore=info,revive_policy=random",
                  "MultiVersion",
                  "1", "1", "1");
              // expect two candidate versions and both versions should be covered in 16 runs
@@ -159,7 +159,7 @@ public class TestMultiVersion {
              output3 = TestAndGetOutput("-XX:-TieredCompilation",
                  "-XX:CompileOnly=MultiVersion.foo",
                  "-XX:-BackgroundCompilation",
-                 "-XX:CodeReviveOptions=restore,disable_check_dir,file=merged2.csa,log=restore=info,revive_policy=appoint=" + i,
+                 "-XX:CodeReviveOptions=restore,file=merged2.csa,log=restore=info,revive_policy=appoint=" + i,
                  "MultiVersion",
                  "1", "1", "1");
              int ver = GetSelectedVersion(output3, 4);

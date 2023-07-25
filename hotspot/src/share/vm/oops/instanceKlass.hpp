@@ -1208,6 +1208,27 @@ public:
   void verify_on(outputStream* st);
 
   void oop_verify_on(oop obj, outputStream* st);
+
+  // CodeRevive
+ private:
+  // Epoch of CodeRevive identity.
+  volatile int32_t _redefine_epoch;
+ public:
+  void generate_classfile_crc32(const char* buf, int len);
+  void generate_cr_identity();
+  void verify_redefined_identity();
+  virtual int64_t cr_identity();
+  virtual bool verify_cr_identity(int64_t identity) {
+    return cr_identity() == identity;
+  }
+  void set_cr_identity_with_shared_class();
+
+  int32_t redefine_epoch();
+  void set_redefine_epoch(int32_t new_epoch);
+  void set_redefine_epoch_invalid();
+  bool is_redefine_epoch_valid();
+  void set_redefine_epoch_invalid_with_subclass();
+  bool is_transitive_interfaces_redefined(int32_t epoch);
 };
 
 inline Method* InstanceKlass::method_at_vtable(int index)  {

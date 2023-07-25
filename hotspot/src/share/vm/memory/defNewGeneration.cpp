@@ -30,6 +30,7 @@
 #include "gc_implementation/shared/gcTraceTime.hpp"
 #include "gc_implementation/shared/gcTrace.hpp"
 #include "gc_implementation/shared/spaceDecorator.hpp"
+#include "gc_implementation/shared/elasticMaxHeap.hpp"
 #include "memory/defNewGeneration.inline.hpp"
 #include "memory/gcLocker.inline.hpp"
 #include "memory/genCollectedHeap.hpp"
@@ -426,7 +427,7 @@ void DefNewGeneration::compute_new_size() {
     guarantee(exp_size <= max_new_size, "must be");
     guarantee(to()->is_empty() && from()->is_empty() && eden()->is_empty(), "must be");
     desired_new_size = exp_size;
-    gclog_or_tty->print_cr("CardGeneration: shrink according to ElasticMaxHeap");
+    EMH_LOG("CardGeneration: shrink according to ElasticMaxHeap");
   }
 
   // Adjust new generation size
@@ -481,13 +482,13 @@ void DefNewGeneration::compute_new_size() {
   // ElasticMaxHeap
   if (ElasticMaxHeap && exp_size > 0) {
     size_t current_byte_size = _virtual_space.committed_size();
-    gclog_or_tty->print_cr("DefNewGeneration ElasticMaxHeap adjust %s, expect "
-                           SIZE_FORMAT "K, actual " SIZE_FORMAT "K, min "
-                           SIZE_FORMAT "K",
-                           (exp_size >= current_byte_size) ? "success" : "fail",
-                           exp_size / K,
-                           current_byte_size / K,
-                           min_new_size / K);
+    EMH_LOG("DefNewGeneration ElasticMaxHeap adjust %s, expect "
+            SIZE_FORMAT "K, actual " SIZE_FORMAT "K, min "
+            SIZE_FORMAT "K",
+            (exp_size >= current_byte_size) ? "success" : "fail",
+            exp_size / K,
+            current_byte_size / K,
+            min_new_size / K);
   }
 }
 

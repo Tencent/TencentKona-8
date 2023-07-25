@@ -51,12 +51,14 @@ class MergedCodeBlob : public ResourceObj {
   int32_t _file_offset;
   int32_t _code_size;
   int32_t _code_offset;
+  int32_t _next_offset;  // the offset of next version
+  int32_t _first_offset; // the offset of the first version
   MergedCodeBlob* _next;
 
  public:
   MergedCodeBlob(int32_t file_index, int32_t meta_index, int32_t file_offset, int32_t code_size, int32_t code_offset) :
     _file_index(file_index), _meta_index(meta_index), _file_offset(file_offset), _code_size(code_size),
-    _code_offset(code_offset), _next(NULL) { }
+    _code_offset(code_offset), _next_offset(-1), _first_offset(-1), _next(NULL) { }
   void set_next(MergedCodeBlob* codeblob) { _next = codeblob; }
   MergedCodeBlob* next() { return _next; }
   int32_t file_index()   { return _file_index; }
@@ -64,6 +66,10 @@ class MergedCodeBlob : public ResourceObj {
   int32_t file_offset()  { return _file_offset; }
   int32_t code_size()    { return _code_size; }
   int32_t code_offset()  { return _code_offset; }
+  int32_t first_offset() { return _first_offset; }
+  int32_t next_offset()  { return _next_offset; }
+  void set_next_offset(int32 next_offset) { _next_offset = next_offset; }
+  void set_first_offset(int32 first_offset) { _first_offset = first_offset; }
 };
 
 /*
@@ -86,6 +92,7 @@ class MergedCodeBlob : public ResourceObj {
 class CodeReviveMerge : AllStatic {
  private:
   static CodeReviveMetaSpace*            _global_meta_space;
+  static CodeReviveMergedMetaInfo*       _global_meta_info;
   static GrowableArray<char*>*           _csa_filenames;
   static GrowableArray<const char*>*     _cp_array;
   static Arena*                          _arena;
@@ -94,7 +101,7 @@ class CodeReviveMerge : AllStatic {
   static int _cp_array_size;
   static int _valid_csa_count;
 
-  static void init(Arena* arena);
+  static bool init(Arena* arena);
   static bool acquire_input_files();
   static GrowableArray<CodeReviveContainer*>* check_and_group_files_by_fingerprint();
   static void preprocess_candidate_nmethods(CodeReviveContainer* container, Arena* arena);

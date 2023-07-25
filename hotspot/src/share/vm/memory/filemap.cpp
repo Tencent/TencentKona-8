@@ -39,9 +39,6 @@
 #include "services/memTracker.hpp"
 #include "utilities/defaultStream.hpp"
 
-// CodeRevive
-#include "cr/classPathEntryTable.hpp"
-
 # include <sys/stat.h>
 # include <errno.h>
 
@@ -1128,6 +1125,27 @@ bool FileMapInfo::classpath_failure(const char* msg, const char* name) {
   return false;
 }
 
+static int compare_jarfile_name(const char** str1, const char** str2) {
+  return strcmp(*str1, *str2);
+}
+
+// check whether the jar files in wildcard directory are the same as the jar files in class path
+static bool compare_jar_array(GrowableArray<const char*>* jsa_jarfiles, GrowableArray<const char*>* cp_jarfiles) {
+  jsa_jarfiles->sort(compare_jarfile_name);
+  cp_jarfiles->sort(compare_jarfile_name);
+  for (int i = 0; i < jsa_jarfiles->length(); i++) {
+    if (strcmp(jsa_jarfiles->at(i), cp_jarfiles->at(i)) != 0) {
+      if (TraceClassPaths) {
+        tty->print_cr("APP classpath mismatch:");
+        ClassLoader::trace_class_path(tty, "Expected: ", jsa_jarfiles->at(i));
+        ClassLoader::trace_class_path(tty, "Actual: ", cp_jarfiles->at(i));
+      }
+      return false;
+    }
+  }
+  return true;
+}
+
 bool FileMapInfo::check_paths(int shared_path_start_idx, int num_paths, GrowableArray<const char*>* rp_array) {
   int i = 0;
   int j = shared_path_start_idx;
@@ -1185,7 +1203,7 @@ bool FileMapInfo::check_paths(int shared_path_start_idx, int num_paths, Growable
     j++;
   }
   if (RelaxCheckForAppCDS && !mismatch && in_directory_with_wildcard) {
-    if (ClassPathEntryTable::compare_jar_array(jarfiles_in_jsa, jarfiles_in_dir_with_wildcard) == false) {
+    if (compare_jar_array(jarfiles_in_jsa, jarfiles_in_dir_with_wildcard) == false) {
       mismatch = true;
     }
   }
@@ -1251,3 +1269,6 @@ bool FileMapInfo::validate_app_class_paths(int shared_app_paths_len) {
   return true;
 }
 
+int FileMapInfo::get_region_crc(int i) {
+  return _header->_space[i]._crc;
+}

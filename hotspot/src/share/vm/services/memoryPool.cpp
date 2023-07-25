@@ -179,12 +179,13 @@ void MemoryPool::oops_do(OopClosure* f) {
 }
 
 ContiguousSpacePool::ContiguousSpacePool(ContiguousSpace* space,
+                                         DefNewGeneration* gen,
                                          const char* name,
                                          PoolType type,
                                          size_t max_size,
                                          bool support_usage_threshold) :
   CollectedMemoryPool(name, type, space->capacity(), max_size,
-                      support_usage_threshold), _space(space) {
+                      support_usage_threshold), _space(space), _gen(gen) {
 }
 
 MemoryUsage ContiguousSpacePool::get_memory_usage() {
@@ -214,12 +215,13 @@ MemoryUsage SurvivorContiguousSpacePool::get_memory_usage() {
 
 #if INCLUDE_ALL_GCS
 CompactibleFreeListSpacePool::CompactibleFreeListSpacePool(CompactibleFreeListSpace* space,
+                                                           ConcurrentMarkSweepGeneration* gen,
                                                            const char* name,
                                                            PoolType type,
                                                            size_t max_size,
                                                            bool support_usage_threshold) :
   CollectedMemoryPool(name, type, space->capacity(), max_size,
-                      support_usage_threshold), _space(space) {
+                      support_usage_threshold), _space(space), _gen(gen) {
 }
 
 MemoryUsage CompactibleFreeListSpacePool::get_memory_usage() {

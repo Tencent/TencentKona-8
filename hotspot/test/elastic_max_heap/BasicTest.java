@@ -40,7 +40,7 @@ public class BasicTest extends TestBase {
     }
 
     private static void test(String heap_type) throws Exception {
-        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(true, heap_type, "-XX:+ElasticMaxHeap", "-Xms100M", "-Xmx1G", "NotActiveHeap");
+        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(true, heap_type, "-XX:+ElasticMaxHeap", "-Xms100M", "-Xmx600M", "-XX:ElasticMaxHeapSize=1G", "NotActiveHeap");
         Process p = pb.start();
         try {
             long pid = getPidOfProcess(p);
@@ -49,7 +49,7 @@ public class BasicTest extends TestBase {
             // shrink to 500M should be fine for any GC
             String[] contains1 = {
                 "GC.elastic_max_heap success",
-                "GC.elastic_max_heap (1048576K->512000K)(1048576K)",
+                "GC.elastic_max_heap (614400K->512000K)(1048576K)",
             };
             resizeAndCheck(pid, "500M", contains1, null);
 

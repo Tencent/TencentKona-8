@@ -76,7 +76,6 @@ public class FieldKlassRelocTest {
         // merge csa file
         output = TestCommon.testMergeCSA(null, "input_files=" + csa_file + ",log=merge=info", "-XX:-TieredCompilation");
         System.out.println(output.getOutput());
-        output.shouldContain("resovled java/lang/invoke");
         output.shouldContain("Add candidate code java/lang/invoke/MethodHandleImpl$2.<init>()V");
         output.shouldHaveExitValue(0);
     }

@@ -154,6 +154,13 @@ class ObjArrayKlass : public ArrayKlass {
   void verify_on(outputStream* st);
 
   void oop_verify_on(oop obj, outputStream* st);
+
+  // CodeRevive
+ private:
+  void generate_cr_identity(int dimension, KlassHandle element_klass);
+
+ public:
+  virtual int64_t cr_identity();
 };
 
 #endif // SHARE_VM_OOPS_OBJARRAYKLASS_HPP

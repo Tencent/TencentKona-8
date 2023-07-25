@@ -63,11 +63,25 @@ CodeReviveCodeBlob::CodeReviveCodeBlob(char* start, CodeReviveMetaSpace* meta_sp
   _cb = NULL;
 }
 
+// used in compiler thread initialization only
+CodeReviveCodeBlob::CodeReviveCodeBlob() {
+  init(NULL, NULL);
+  _cur = _limit = NULL;
+  _cb = NULL;
+}
+
 void CodeReviveCodeBlob::init(char* start, CodeReviveMetaSpace* meta_space) {
   _start = start;
   _header = (Header*)_start;
   _alignment = 8;
   _meta_space = meta_space;
+}
+
+// used in restore
+void CodeReviveCodeBlob::reset(char* start, CodeReviveMetaSpace* meta_space) {
+  init(start, meta_space);
+  _cur = _limit = (_start + _header->_size);
+  _cb = NULL;
 }
 
 bool CodeReviveCodeBlob::save() {

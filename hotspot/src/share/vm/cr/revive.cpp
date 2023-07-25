@@ -27,6 +27,8 @@
 #include "cr/codeReviveVMGlobals.hpp"
 #include "cr/codeReviveHashTable.hpp"
 #include "cr/revive.hpp"
+#include "memory/filemap.hpp"
+#include "memory/metaspaceShared.hpp"
 #include "utilities/defaultStream.hpp"
 #include "oops/method.hpp"
 
@@ -39,30 +41,33 @@ bool CodeRevive::_fatal_on_fail = false;
 bool CodeRevive::_perf_enable = false;
 bool CodeRevive::_validate_check = true;
 bool CodeRevive::_prepare_done = false;
-bool CodeRevive::_disable_check_dir = false;
+bool CodeRevive::_disable_constant_opt = false;
+bool CodeRevive::_verify_redefined_identity = false;
+bool CodeRevive::_make_revive_fail_at_nmethod = false;
 char* CodeRevive::_file_path = NULL;
 char* CodeRevive::_log_file_path = NULL;
 char* CodeRevive::_input_files = NULL;
 char* CodeRevive::_input_list_file = NULL;
-char* CodeRevive::_merge_wildcard_classpath = NULL;
 int32_t CodeRevive::_percent = 100;
 int32_t CodeRevive::_coverage = 100;
 int32_t CodeRevive::_max_container_count = INT_MAX;
 int32_t CodeRevive::_max_nmethod_versions = 16;
+volatile int32_t CodeRevive::_redefine_epoch = 1; // epoch = 0, is valid;
 uint32_t CodeRevive::_log_kind = cr_number;
 uint64_t CodeRevive::_max_file_size = G;
-CodeRevive::MergePolicy CodeRevive::_merge_policy = CodeRevive::M_COVERAGE;
+CodeRevive::MergePolicy CodeRevive::_merge_policy = CodeRevive::M_SIMPLE;
 outputStream* CodeRevive::_log_file = NULL;
 uint8_t CodeRevive::_log_ctrls[cr_number] = {0};
 CodeReviveFile* CodeRevive::_load_file = NULL;
 CodeReviveVMGlobals* CodeRevive::_vm_globals = NULL;
 elapsedTimer CodeRevive::_t_aot_timers[CodeRevive::T_TOTAL_TIMERS];
+int CodeRevive::_revive_counter[CodeRevive::REVIVE_TOTAL_STATUS] = {0};
 uint CodeRevive::_aot_size_counters[CodeRevive::S_TOTAL_COUNTERS];
 uint CodeRevive::_total_file_size = 0;
 CodeRevive::RevivePolicy CodeRevive::_revive_policy = CodeRevive::REVIVE_POLICY_FIRST;
 char* CodeRevive::_revive_policy_arg = NULL;
 const char* CodeRevive::_revive_policy_name[CodeRevive::REVIVE_POLICY_NUM]= { "first", "random", "appoint" };
-
+int64_t CodeRevive::_cds_identity = 0;
 
 /*
  * Parsing option CodeRevive and set according actions
@@ -134,23 +139,6 @@ static const char* parse_get_merge_policy(const char* cur_pos, const char* end_p
     jio_fprintf(defaultStream::error_stream(), "Invalid policy value: %s\n", cur_pos);
     vm_exit(1);
   }
-  return cur_pos + total_len;
-}
-
-/*
- * Extract string from cur_pos and update dest. Return value is end_pos.
- */
-static const char* parse_get_wildcard_classpath(const char* cur_pos, const char* end_pos, char** dest) {
-  size_t total_len = get_len_until_next_delimiter(cur_pos, end_pos);
-  if (*dest != NULL) {
-    jio_fprintf(defaultStream::error_stream(), "duplicate merge wildcard classpath specified, ignore previous %s\n", *dest);
-    FREE_C_HEAP_ARRAY(char, *dest, mtInternal);
-  }
-  char* classpath = (char*)memcpy(NEW_C_HEAP_ARRAY(char, total_len + 1, mtInternal),
-                                  cur_pos,
-                                  total_len);
-  classpath[total_len] = 0;
-  *dest = classpath;
   return cur_pos + total_len;
 }
 
@@ -321,6 +309,10 @@ void CodeRevive::parse_option_file() {
 }
 
 bool CodeRevive::parse_options() {
+  if (CodeReviveOptions == NULL) {
+    return false;
+  }
+
   const char* cur_pos = CodeReviveOptions;
   const char* end_pos = CodeReviveOptions + strlen(CodeReviveOptions);
   while (cur_pos < end_pos) {
@@ -360,9 +352,9 @@ bool CodeRevive::parse_options() {
     } else if (strncmp(cur_pos, "disable_validate_check", strlen("disable_validate_check")) == 0) {
       _validate_check = false;
       cur_pos += strlen("disable_validate_check");
-    } else if (strncmp(cur_pos, "disable_check_dir", strlen("disable_check_dir")) == 0) {
-      _disable_check_dir = true;
-      cur_pos += strlen("disable_check_dir");
+    } else if (strncmp(cur_pos, "disable_constant_opt", strlen("disable_constant_opt")) == 0) {
+      _disable_constant_opt = true;
+      cur_pos += strlen("disable_constant_opt");
     } else if (strncmp(cur_pos, "file=", strlen("file=")) == 0) {
       cur_pos = parse_get_file_name(cur_pos + strlen("file="), end_pos, &_file_path);
     } else if (strncmp(cur_pos, "logfile=", strlen("logfile=")) == 0) {
@@ -387,10 +379,12 @@ bool CodeRevive::parse_options() {
       cur_pos = parse_integer_value(cur_pos + strlen("max_nmethod_versions="), end_pos, &_max_nmethod_versions, 1, Method::aot_max_versions(), "max_nmethod_versions");
     } else if (strncmp(cur_pos, "max_file_size=", strlen("max_file_size=")) == 0) {
       cur_pos = parse_file_size(cur_pos + strlen("max_file_size="), end_pos, &_max_file_size);
-    } else if (strncmp(cur_pos, "wildcard_classpath=", strlen("wildcard_classpath=")) == 0) {
-      // During merging, if the classpath has wildcard and the order of jars in the directory with wildcard doesn't matter,
-      // pass the classpath with wildcard_classpath option, and the order in the directory will be ignore.
-      cur_pos = parse_get_wildcard_classpath(cur_pos + strlen("wildcard_classpath="), end_pos, &_merge_wildcard_classpath);
+    } else if (strncmp(cur_pos, "verify_redefined_identity", strlen("verify_redefined_identity")) == 0) {
+      _verify_redefined_identity = true;
+      cur_pos += strlen("verify_redefined_identity");
+    } else if (strncmp(cur_pos, "make_revive_fail_at_nmethod", strlen("make_revive_fail_at_nmethod")) == 0) {
+      _make_revive_fail_at_nmethod = true;
+      cur_pos += strlen("make_revive_fail_at_nmethod");
     } else {
       break;
     }
@@ -406,7 +400,6 @@ bool CodeRevive::parse_options() {
   // parsing fail
   if (cur_pos < end_pos) {
     jio_fprintf(defaultStream::error_stream(), "Incorrect CodeReviveOptions: starting from \"%s\"\n", cur_pos);
-    CodeRevive::set_should_disable();
     return false;
   }
   return true;
@@ -430,27 +423,19 @@ void CodeRevive::disable() {
   _is_restore = false;
   _is_merge = false;
   _perf_enable = false;
+  _print_opt = false;
 }
 
-void CodeRevive::on_vm_start() {
-  if (CodeReviveOptions == NULL) {
-    return;
-  }
-#if !defined(X86) || !defined(LINUX) || defined(ZERO)
-  jio_fprintf(defaultStream::error_stream(), "CodeRevive isn't supported on this platform yet.\n");
-  return;
-#endif
+bool CodeRevive::is_disabled() {
+   return !_is_save && !_is_restore && !_is_merge && !_perf_enable && !_print_opt;
+}
 
-  if (JvmtiExport::should_post_class_file_load_hook()) {
-    return;
-  }
-  if (ExtendedDTraceProbes || DTraceMonitorProbes || DTraceMethodProbes || DTraceAllocProbes) {
-    return;
-  }
-  if (parse_options() == false) {
+void CodeRevive::early_init() {
+  if (!UseCompiler || !CodeRevive::parse_options()) {
     disable();
     return;
   }
+
   /*
    * Rules:
    * 1. must have file
@@ -470,6 +455,8 @@ void CodeRevive::on_vm_start() {
       return;
     }
   }
+
+  // log_file is used by cr identity, need to be created earlier.
   _log_file = tty;
   if (_log_file_path != NULL) {
     fileStream* cr_log_file = new (ResourceObj::C_HEAP, mtInternal) fileStream(_log_file_path);
@@ -481,9 +468,27 @@ void CodeRevive::on_vm_start() {
       }
     }
   }
+}
+
+void CodeRevive::on_vm_start() {
+  if (CodeReviveOptions == NULL) {
+    return;
+  }
+#if !defined(X86) || !defined(LINUX) || defined(ZERO)
+  jio_fprintf(defaultStream::error_stream(), "CodeRevive isn't supported on this platform yet.\n");
+  disable();
+  return;
+#endif
+
+  if (is_disabled() ||
+      JvmtiExport::should_post_class_file_load_hook() ||
+      ExtendedDTraceProbes || DTraceMonitorProbes || DTraceMethodProbes || DTraceAllocProbes) {
+    disable();
+    return;
+  }
+
   if (_is_save || _is_restore) {
     _vm_globals = new CodeReviveVMGlobals();
-    DirWithClassTable::create_table();
   }
   // init global dummy oopMap and oopMapSet
   CodeReviveCodeBlob::init_dummy_oopmap();
@@ -491,14 +496,14 @@ void CodeRevive::on_vm_start() {
   if (_is_restore || _print_opt) {
     _load_file = new CodeReviveFile();
     // _print_opt means only print, it will iterator all containers, no need get container now
-    if(_load_file->map(_file_path, _print_opt == false /* need container*/, true, true, true, cr_restore) == false) {
+    if(_load_file->map(_file_path, _print_opt == false /* need container*/, true, true, cr_restore) == false) {
       CR_LOG(cr_restore, cr_none, "Fail to load CSA file %s\n", _file_path);
       delete _load_file;
       _load_file = NULL;
       _is_restore = false;
       FREE_C_HEAP_ARRAY(char, _file_path, mtInternal);
       _file_path = NULL;
-    } else if (is_log_on(cr_archive, cr_trace)) {
+    } else if (!_print_opt && is_log_on(cr_archive, cr_trace)) {
       _load_file->print();
     }
     // dump information for easy version compare
@@ -543,8 +548,13 @@ void CodeRevive::on_vm_shutdown() {
   }
 }
 
-char* CodeRevive::find_revive_code(Method* m) {
-  return _load_file->find_revive_code(m);
+/*
+ * Find the AOT method in csa file
+ * only_use_name = false: use name + identity + class loader type to find method
+ * only_use_name = true:  use name to find method, only used with perf
+ */
+char* CodeRevive::find_revive_code(Method* m, bool only_use_name) {
+  return _load_file->find_revive_code(m, only_use_name);
 }
 
 CodeReviveMetaSpace* CodeRevive::current_meta_space() {
@@ -607,6 +617,17 @@ void CodeRevive::print_statistics() {
     output->print_cr("        Revive time       : %6.3f ms", get_ms_time(T_REVIVE));
     // time for restore aot method failure
     output->print_cr("    Fail to restore time  : %6.3f ms", get_ms_time(T_RESTORE_FAIL));
+    // print the counter for code revive
+    output->print_cr("  AOT revive Information:");
+    output->print_cr("    Success revive   : %d", _revive_counter[REVIVE_SUCCESS]);
+    output->print_cr("    Fail to revive   : %d", _revive_counter[REVIVE_FAIL]);
+    output->print_cr("    Not found in csa : %d", _revive_counter[REVIVE_NOT_IN_CSA]);
+    output->print_cr("    Found by name    : %d", _revive_counter[REVIVE_FOUND_WITH_NAME]);
+    int total_count = 0;
+    for (int i = 0; i < REVIVE_TOTAL_STATUS; i++) {
+      total_count += _revive_counter[i];
+    }
+    output->print_cr("    Total revive     : %d", total_count);
   } else {
     output->cr();
     output->print_cr("  Compile Information:");
@@ -615,23 +636,41 @@ void CodeRevive::print_statistics() {
   }
 }
 
-void CodeRevive::collect_statistics(elapsedTimer time, bool success) {
-  if (success) {
+void CodeRevive::collect_statistics(Method* m, elapsedTimer time, int revive_status) {
+  if (revive_status == REVIVE_SUCCESS) {
     get_aot_timer(T_RESTORE)->add(time);
   } else {
     get_aot_timer(T_RESTORE_FAIL)->add(time);
   }
+  // the method is not found in csa file with name + identity + loader_type
+  if (revive_status == REVIVE_NOT_IN_CSA) {
+    // search the method with name
+    if (find_revive_code(m, true) != NULL) {
+      // if find the method, it means that the class is changed for the method
+      revive_status = REVIVE_FOUND_WITH_NAME;
+    }
+  }
+  _revive_counter[revive_status]++;
 }
 
 bool CodeRevive::is_expected_level(int level) {
   return level == CompLevel_full_optimization;
 }
 
+// ------------------------------------------------------------------
+// CodeRevive::is_save_candidate
+//
+/***** SHOULD BE IN SYNC!!!!!!! *****/
+// !!!!! Significant synchronization needs!
+// !!!!! Update ciEnv::is_revive_candidate - when this method changes
 bool CodeRevive::is_save_candidate(CodeBlob* cb) {
   if (cb->is_nmethod() == false) {
     return false;
   }
   nmethod* nm = (nmethod*)cb;
+  if (nm->record_compile_time_metadata() == false) {
+    return false;
+  }
   if (nm->is_java_method() == false) {
     return false;
   }
@@ -663,23 +702,6 @@ bool CodeRevive::is_save_candidate(CodeBlob* cb) {
   return true;
 }
 
-void CodeRevive::check_class_dir_path(const char* dir_path, size_t len, TRAPS) {
-  DirWithClassEntry* entry = DirWithClassTable::lookup(dir_path, len, false, THREAD);
-  if (entry->is_in_classpath()) {
-    CR_LOG(cr_restore, cr_fail, "Load class from directory: %s\n", dir_path);
-    // disable aot
-    _is_restore = false;
-  }
-}
-
-void CodeRevive::add_class_dir_path(const char* dir_path, size_t len, TRAPS) {
-  DirWithClassTable::lookup(dir_path, len, true, THREAD);
-}
-
-bool CodeRevive::read_class_from_path(const char* dir_path, size_t len, TRAPS) {
-  return DirWithClassTable::lookup_only(dir_path, len);
-}
-
 bool CodeRevive::is_revive_candidate(Method* target, int task_level) {
   if (!_is_restore) {
     return false;
@@ -703,8 +725,7 @@ bool CodeRevive::is_revive_candidate(Method* target, int task_level) {
 }
 
 bool CodeRevive::is_unsupported(ciEnv* env) {
-  if (env->should_retain_local_variables() || env->jvmti_can_hotswap_or_post_breakpoint() ||
-      env->jvmti_can_post_on_exceptions()) {
+  if (env->should_retain_local_variables() || env->jvmti_can_post_on_exceptions()) {
     return true;
   }
   if (env->dtrace_extended_probes() || env->dtrace_monitor_probes() ||
@@ -714,25 +735,15 @@ bool CodeRevive::is_unsupported(ciEnv* env) {
   return false;
 }
 
-// check whether the class files are in directory
-void CodeRevive::check_dir_path(const char* source_path, TRAPS) {
-  if (CodeRevive::disable_check_dir()) {
-    return;
-  }
-  size_t len = strlen(source_path);
-  // check whether the source is directory
-  // the source format is:
-  // file:directory end with /
-  // file:<name>.jar
-  if ((source_path[len - 1] == os::file_separator()[0]) && strncmp(source_path, "file:", 5) == 0) {
-    const char* dir_path = source_path + 5;
-    len = len - 5;
-    if (CodeRevive::is_save()) {
-      // record the directory
-      CodeRevive::add_class_dir_path(dir_path, len, THREAD);
-    } else {
-      // check whether the directory is in the AOT class path
-      CodeRevive::check_class_dir_path(dir_path, len, THREAD);
-    }
-  }
+void CodeRevive::compute_cds_identity(FileMapInfo* mapinfo) {
+  int crc_array[5];
+  // crc for FileMapHeader
+  crc_array[0] = mapinfo->get_header_crc();
+  // crc for each region
+  crc_array[1] = mapinfo->get_region_crc(MetaspaceShared::ro);
+  crc_array[2] = mapinfo->get_region_crc(MetaspaceShared::rw);
+  crc_array[3] = mapinfo->get_region_crc(MetaspaceShared::md);
+  crc_array[4] = mapinfo->get_region_crc(MetaspaceShared::mc);
+  // compute the identity for the archive file
+  _cds_identity = ClassLoader::crc32(0, (const char*)crc_array, sizeof(int) * 5);
 }

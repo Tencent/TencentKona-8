@@ -42,6 +42,7 @@
 #include "gc_implementation/shared/gcTraceTime.hpp"
 #include "gc_implementation/shared/isGCActiveMark.hpp"
 #include "gc_implementation/shared/owstTaskTerminator.hpp"
+#include "gc_implementation/shared/elasticMaxHeap.hpp"
 #include "gc_interface/collectedHeap.inline.hpp"
 #include "memory/allocation.hpp"
 #include "memory/cardTableRS.hpp"
@@ -3514,11 +3515,11 @@ bool ConcurrentMarkSweepGeneration::grow_by(size_t bytes) {
     guarantee(EMH_size() <= _virtual_space.reserved_size(), "must be");
     const size_t remaining_bytes = EMH_size() - _virtual_space.committed_size();
     if (bytes > remaining_bytes) {
-      gclog_or_tty->print_cr("ConcurrentMarkSweepGeneration::grow_by abort: "
-                             "EMH " SIZE_FORMAT "K, "
-                             "Committed " SIZE_FORMAT "K, "
-                             "Grow " SIZE_FORMAT "K",
-                             EMH_size() / K, _virtual_space.committed_size() / K, bytes / K);
+      EMH_LOG("ConcurrentMarkSweepGeneration::grow_by abort: "
+              "EMH " SIZE_FORMAT "K, "
+              "Committed " SIZE_FORMAT "K, "
+              "Grow " SIZE_FORMAT "K",
+              EMH_size() / K, _virtual_space.committed_size() / K, bytes / K);
       return false;
     }
   }
@@ -6847,6 +6848,7 @@ bool CMSBitMap::allocate(MemRegion mr) {
     warning("CMS bit map allocation failure");
     return false;
   }
+  MemTracker::record_virtual_memory_type((address)brs.base(), mtGC);
   // For now we'll just commit all of the bit map up fromt.
   // Later on we'll try to be more parsimonious with swap.
   if (!_virtual_space.initialize(brs, brs.size())) {
@@ -6939,6 +6941,7 @@ bool CMSMarkStack::allocate(size_t size) {
     warning("CMSMarkStack allocation failure");
     return false;
   }
+  MemTracker::record_virtual_memory_type((address)rs.base(), mtGC);
   if (!_virtual_space.initialize(rs, rs.size())) {
     warning("CMSMarkStack backing store failure");
     return false;
@@ -6975,6 +6978,7 @@ void CMSMarkStack::expand() {
   ReservedSpace rs(ReservedSpace::allocation_align_size_up(
                    new_capacity * sizeof(oop)));
   if (rs.is_reserved()) {
+    MemTracker::record_virtual_memory_type((address)rs.base(), mtGC);
     // Release the backing store associated with old stack
     _virtual_space.release();
     // Reinitialize virtual space for new stack
