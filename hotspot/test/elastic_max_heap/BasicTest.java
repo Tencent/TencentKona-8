@@ -40,7 +40,9 @@ public class BasicTest extends TestBase {
     }
 
     private static void test(String heap_type) throws Exception {
-        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(true, heap_type, "-XX:+ElasticMaxHeap", "-Xms100M", "-Xmx600M", "-XX:ElasticMaxHeapSize=1G", "NotActiveHeap");
+        // Xms = 100M - 1B, Xmx = 600M - 1B, ElasticMaxHeapSize = 1G - 1B
+        // unaligned arguments should be fine
+        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(true, heap_type, "-XX:+ElasticMaxHeap", "-Xms104857599", "-Xmx629145599", "-XX:ElasticMaxHeapSize=1073741823", "NotActiveHeap");
         Process p = pb.start();
         try {
             long pid = getPidOfProcess(p);
@@ -75,11 +77,12 @@ public class BasicTest extends TestBase {
             resizeAndCheck(pid, "1G", contains4, null);
 
             // shrink to 300M should be fine
+            // unaligned arguments should be fine, new_size = 300M -1B
             String[] contains5 = {
                 "GC.elastic_max_heap success",
                 "GC.elastic_max_heap (1048576K->307200K)(1048576K)",
             };
-            resizeAndCheck(pid, "300M", contains5, null);
+            resizeAndCheck(pid, "314572799", contains5, null);
         } finally {
             p.destroy();
         }

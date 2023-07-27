@@ -61,6 +61,10 @@ jint ParallelScavengeHeap::initialize() {
   _collector_policy = new GenerationSizer();
   _collector_policy->initialize_all();
 
+  // ElasticMaxHeap
+  // update _current_max_heap_size after collector_policy initialization
+  _current_max_heap_size = MaxHeapSize;
+
   const size_t heap_size = _collector_policy->max_heap_byte_size();
 
   ReservedSpace heap_rs = Universe::reserve_heap(heap_size, _collector_policy->heap_alignment());

@@ -23,22 +23,22 @@ import com.oracle.java.testlibrary.ProcessTools;
 import com.oracle.java.testlibrary.Asserts;
 
 /**
- * @test TestAlignment
+ * @test TestInitShrink
  * @key gc
- * @summary test alignment for ElasticMaxHeapSize
+ * @summary test init shrink for ElasticMaxHeapSize with unaligned arguments
  * @requires (os.family == "linux")
  * @library /testlibrary
- * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483648 -XX:+UseParallelGC TestAlignment
- * @run main/othervm -Xms50M -Xmx2147483648 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseParallelGC TestAlignment
- * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseParallelGC TestAlignment
- * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483648 -XX:+UseG1GC TestAlignment
- * @run main/othervm -Xms50M -Xmx2147483648 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseG1GC TestAlignment
- * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseG1GC TestAlignment
- * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483648 -XX:+UseConcMarkSweepGC TestAlignment
- * @run main/othervm -Xms50M -Xmx2147483648 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseConcMarkSweepGC TestAlignment
- * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseConcMarkSweepGC TestAlignment
+ * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483648 -XX:+UseParallelGC TestInitShrink
+ * @run main/othervm -Xms50M -Xmx2147483648 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseParallelGC TestInitShrink
+ * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseParallelGC TestInitShrink
+ * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483648 -XX:+UseG1GC TestInitShrink
+ * @run main/othervm -Xms50M -Xmx2147483648 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseG1GC TestInitShrink
+ * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseG1GC TestInitShrink
+ * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483648 -XX:+UseConcMarkSweepGC TestInitShrink
+ * @run main/othervm -Xms50M -Xmx2147483648 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseConcMarkSweepGC TestInitShrink
+ * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseConcMarkSweepGC TestInitShrink
  */
-public class TestAlignment {
+public class TestInitShrink {
     public static void main(String[] args) throws Exception {
         int pid = ProcessTools.getProcessId();
         /*
