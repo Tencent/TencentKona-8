@@ -23,18 +23,18 @@
 
 /**
  * @test
+ * @run testng/othervm -Djdk.virtualThreadScheduler.maxPoolSize=1 YieldQueuing
  * @summary Test Thread.yield submits the virtual thread task to the expected queue
- * @requires vm.continuations
- * @run junit/othervm -Djdk.virtualThreadScheduler.maxPoolSize=1 YieldQueuing
  */
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
 
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import org.testng.annotations.Test;
+import static org.testng.Assert.*;
 
 class YieldQueuing {
 
@@ -44,14 +44,16 @@ class YieldQueuing {
      */
     @Test
     void testYieldWithEmptyLocalQueue() throws Exception {
-        var list = new CopyOnWriteArrayList<String>();
+        List<String> list = new CopyOnWriteArrayList<String>();
 
-        var threadsStarted = new AtomicBoolean();
+        AtomicBoolean threadsStarted = new AtomicBoolean();
 
-        var threadA = Thread.ofVirtual().unstarted(() -> {
+        Thread threadA = Thread.ofVirtual().unstarted(() -> {
             // pin thread until task for B is in submission queue
             while (!threadsStarted.get()) {
-                Thread.onSpinWait();
+                // Just an optimization hint and could be safely
+                // removed till we implement it
+                // Thread.onSpinWait();
             }
 
             list.add("A");
@@ -59,7 +61,7 @@ class YieldQueuing {
             list.add("A");
         });
 
-        var threadB = Thread.ofVirtual().unstarted(() -> {
+        Thread threadB = Thread.ofVirtual().unstarted(() -> {
             list.add("B");
         });
 
@@ -73,7 +75,7 @@ class YieldQueuing {
         // wait for result
         threadA.join();
         threadB.join();
-        assertEquals(list, List.of("A", "B", "A"));
+        assertEquals(list, Arrays.asList("A", "B", "A"));
     }
 
     /**
@@ -82,14 +84,15 @@ class YieldQueuing {
      */
     @Test
     void testYieldWithNonEmptyLocalQueue() throws Exception {
-        var list = new CopyOnWriteArrayList<String>();
+        List<String> list = new CopyOnWriteArrayList<String>();
 
-        var threadsStarted = new AtomicBoolean();
+        AtomicBoolean threadsStarted = new AtomicBoolean();
 
-        var threadA = Thread.ofVirtual().unstarted(() -> {
+        Thread threadA = Thread.ofVirtual().unstarted(() -> {
             // pin thread until tasks for B and C are in submission queue
             while (!threadsStarted.get()) {
-                Thread.onSpinWait();
+                // An optimization hint, not implemented yet
+                // Thread.onSpinWait();
             }
 
             list.add("A");
@@ -97,14 +100,14 @@ class YieldQueuing {
             list.add("A");
         });
 
-        var threadB = Thread.ofVirtual().unstarted(() -> {
+        Thread threadB = Thread.ofVirtual().unstarted(() -> {
             list.add("B");
             LockSupport.unpark(threadA);  // push task for A to local queue
             Thread.yield();               // push task for B to local queue, A should run
             list.add("B");
         });
 
-        var threadC = Thread.ofVirtual().unstarted(() -> {
+        Thread threadC = Thread.ofVirtual().unstarted(() -> {
             list.add("C");
         });
 
@@ -120,6 +123,6 @@ class YieldQueuing {
         threadA.join();
         threadB.join();
         threadC.join();
-        assertEquals(list, List.of("A", "B", "A", "B", "C"));
+        assertEquals(list, Arrays.asList("A", "B", "A", "B", "C"));
     }
 }
