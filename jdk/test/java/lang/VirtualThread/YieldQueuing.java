@@ -23,13 +23,15 @@
 
 /**
  * @test
- * @run testng/othervm -Djdk.virtualThreadScheduler.maxPoolSize=1 YieldQueuing
+ * @run testng/othervm YieldQueuing
  * @summary Test Thread.yield submits the virtual thread task to the expected queue
  */
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
 
@@ -48,7 +50,9 @@ public class YieldQueuing {
 
         AtomicBoolean threadsStarted = new AtomicBoolean();
 
-        Thread threadA = Thread.ofVirtual().unstarted(() -> {
+        Executor executor = Executors.newSingleThreadExecutor();
+
+        Thread threadA = Thread.ofVirtual().scheduler(executor).unstarted(() -> {
             // pin thread until task for B is in submission queue
             while (!threadsStarted.get()) {
                 // Just an optimization hint and could be safely
@@ -61,7 +65,7 @@ public class YieldQueuing {
             list.add("A");
         });
 
-        Thread threadB = Thread.ofVirtual().unstarted(() -> {
+        Thread threadB = Thread.ofVirtual().scheduler(executor).unstarted(() -> {
             list.add("B");
         });
 
