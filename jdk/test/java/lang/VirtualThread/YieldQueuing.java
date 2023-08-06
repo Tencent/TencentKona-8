@@ -36,14 +36,14 @@ import java.util.concurrent.locks.LockSupport;
 import org.testng.annotations.Test;
 import static org.testng.Assert.*;
 
-class YieldQueuing {
+public class YieldQueuing {
 
     /**
      * Test Thread.yield submits the task for the current virtual thread to a scheduler
      * submission queue when there are no tasks in the local queue.
      */
     @Test
-    void testYieldWithEmptyLocalQueue() throws Exception {
+    public void testYieldWithEmptyLocalQueue() throws Exception {
         List<String> list = new CopyOnWriteArrayList<String>();
 
         AtomicBoolean threadsStarted = new AtomicBoolean();
@@ -83,7 +83,7 @@ class YieldQueuing {
      * queue when there are tasks in the local queue.
      */
     @Test
-    void testYieldWithNonEmptyLocalQueue() throws Exception {
+    public void testYieldWithNonEmptyLocalQueue() throws Exception {
         List<String> list = new CopyOnWriteArrayList<String>();
 
         AtomicBoolean threadsStarted = new AtomicBoolean();
