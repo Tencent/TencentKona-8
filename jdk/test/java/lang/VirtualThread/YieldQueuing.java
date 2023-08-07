@@ -92,7 +92,9 @@ public class YieldQueuing {
 
         AtomicBoolean threadsStarted = new AtomicBoolean();
 
-        Thread threadA = Thread.ofVirtual().unstarted(() -> {
+        Executor executor = Executors.newSingleThreadExecutor();
+
+        Thread threadA = Thread.ofVirtual().scheduler(executor).unstarted(() -> {
             // pin thread until tasks for B and C are in submission queue
             while (!threadsStarted.get()) {
                 // An optimization hint, not implemented yet
@@ -104,14 +106,14 @@ public class YieldQueuing {
             list.add("A");
         });
 
-        Thread threadB = Thread.ofVirtual().unstarted(() -> {
+        Thread threadB = Thread.ofVirtual().scheduler(executor).unstarted(() -> {
             list.add("B");
             LockSupport.unpark(threadA);  // push task for A to local queue
             Thread.yield();               // push task for B to local queue, A should run
             list.add("B");
         });
 
-        Thread threadC = Thread.ofVirtual().unstarted(() -> {
+        Thread threadC = Thread.ofVirtual().scheduler(executor).unstarted(() -> {
             list.add("C");
         });
 
@@ -127,6 +129,6 @@ public class YieldQueuing {
         threadA.join();
         threadB.join();
         threadC.join();
-        assertEquals(list, Arrays.asList("A", "B", "A", "B", "C"));
+        assertEquals(list, Arrays.asList("A", "B", "C", "A", "B"));
     }
 }
