@@ -73,10 +73,10 @@ class G1_ElasticMaxHeapOp : public VM_ElasticMaxHeapOp {
 
 class ElasticMaxHeapChecker: AllStatic {
  public:
-  static void check_common_opitons();
-  static void check_PS_opitons();
-  static void check_G1_opitons();
-  static void check_GenCollected_opitons();
+  static void check_common_options();
+  static void check_PS_options();
+  static void check_G1_options();
+  static void check_GenCollected_options();
 };
 
 class ElasticMaxHeapConfig: AllStatic {

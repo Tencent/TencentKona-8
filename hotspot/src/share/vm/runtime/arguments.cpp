@@ -1762,7 +1762,7 @@ static bool verify_serial_gc_flags() {
 
 void Arguments::set_gc_specific_flags() {
 #if INCLUDE_ALL_GCS
-  ElasticMaxHeapChecker::check_common_opitons();
+  ElasticMaxHeapChecker::check_common_options();
   // Set per-collector flags
   if (UseParallelGC || UseParallelOldGC) {
     set_parallel_gc_flags();
