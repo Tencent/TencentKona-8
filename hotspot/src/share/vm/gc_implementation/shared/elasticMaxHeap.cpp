@@ -659,7 +659,7 @@ void G1_ElasticMaxHeapOp::g1_shrink_without_full_gc(size_t _new_max_heap) {
  *
  * some check has been done before heap initialize in cased of FLAG is made ergonomic.
  */
-void ElasticMaxHeapChecker::check_common_opitons() {
+void ElasticMaxHeapChecker::check_common_options() {
   if (!ElasticMaxHeap) {
     return;
   }
@@ -677,13 +677,13 @@ void ElasticMaxHeapChecker::check_common_opitons() {
   MUST_BE_TRUE_CHECK(UseAdaptiveSizePolicy);
 }
 
-void ElasticMaxHeapChecker::check_PS_opitons() {
+void ElasticMaxHeapChecker::check_PS_options() {
 }
 
-void ElasticMaxHeapChecker::check_G1_opitons() {
+void ElasticMaxHeapChecker::check_G1_options() {
 }
 
-void ElasticMaxHeapChecker::check_GenCollected_opitons() {
+void ElasticMaxHeapChecker::check_GenCollected_options() {
   if (!ElasticMaxHeap) {
     return;
   }

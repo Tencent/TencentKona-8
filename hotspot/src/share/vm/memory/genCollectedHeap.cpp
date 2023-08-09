@@ -165,7 +165,7 @@ jint GenCollectedHeap::initialize() {
 #endif // INCLUDE_ALL_GCS
 
   // Elastic Max Heap
-  ElasticMaxHeapChecker::check_GenCollected_opitons();
+  ElasticMaxHeapChecker::check_GenCollected_options();
   return JNI_OK;
 }
 
