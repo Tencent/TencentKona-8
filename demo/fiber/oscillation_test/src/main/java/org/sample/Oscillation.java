@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 @Fork(1)
 public class Oscillation {
-    static final ContinuationScope SCOPE = new ContinuationScope("scope");
+    static final ContinuationScope SCOPE = new ContinuationScope(){};
 
     /**
      * A task that oscillates between a minimum and maximum stack depth, yielding
