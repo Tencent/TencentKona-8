@@ -45,7 +45,7 @@ import java.util.concurrent.TimeUnit;
 @SuppressWarnings("preview")
 public class Skynet {
 
-    @Param({"100"})
+    @Param({"1000000"})  //The default value of this parameter in the original file is 1,000,000
     public int num;
 
     static class Channel<T> {
