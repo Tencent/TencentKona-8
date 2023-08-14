@@ -803,7 +803,7 @@ class StubGenerator: public StubCodeGenerator {
           const Register end = count;
 
           if (UseConcMarkSweepGC) {
-            __ membar(__ StoreLoad);
+            __ membar(__ StoreStore);
           }
 
           int64_t disp = (int64_t) ct->byte_map_base;

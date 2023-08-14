@@ -10631,14 +10631,25 @@ instruct cmpFastUnlock(FlagsReg cr, mRegP object, mRegP box, mRegI tmp, mRegI sc
 %}
 
 // Store CMS card-mark Immediate 0
+instruct storeImmCM_order(memory mem, immI_0 zero) %{
+  match(Set mem (StoreCM mem zero));
+  predicate(UseConcMarkSweepGC && !UseCondCardMark);
+  ins_cost(100);
+  format %{ "StoreCM MEMBAR storestore\n\t"
+            "st_b   $mem, zero\t! card-mark imm0" %}
+  ins_encode %{
+    __ membar(__ StoreStore);
+    __ loadstore_enc(R0, $mem$$base, $mem$$index, $mem$$scale, $mem$$disp, MacroAssembler::STORE_BYTE);
+  %}
+  ins_pipe( ialu_storeI );
+%}
+
 instruct storeImmCM(memory mem, immI_0 zero) %{
   match(Set mem (StoreCM mem zero));
 
   ins_cost(150);
-  format %{ "StoreCM MEMBAR loadstore\n\t"
-            "st_b   $mem, zero\t! CMS card-mark imm0" %}
+  format %{ "st_b   $mem, zero\t! card-mark imm0" %}
   ins_encode %{
-    __ membar(__ StoreStore);
     __ loadstore_enc(R0, $mem$$base, $mem$$index, $mem$$scale, $mem$$disp, MacroAssembler::STORE_BYTE);
   %}
   ins_pipe( ialu_storeI );
