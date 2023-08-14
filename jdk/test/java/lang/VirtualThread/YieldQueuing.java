@@ -46,7 +46,7 @@ public class YieldQueuing {
      */
     @Test
     public void testYieldWithEmptyLocalQueue() throws Exception {
-        List<String> list = new CopyOnWriteArrayList<String>();
+        List<String> list = new CopyOnWriteArrayList<>();
 
         AtomicBoolean threadsStarted = new AtomicBoolean();
 
@@ -88,7 +88,7 @@ public class YieldQueuing {
      */
     @Test
     public void testYieldWithNonEmptyLocalQueue() throws Exception {
-        List<String> list = new CopyOnWriteArrayList<String>();
+        List<String> list = new CopyOnWriteArrayList<>();
 
         AtomicBoolean threadsStarted = new AtomicBoolean();
 
