@@ -21,7 +21,7 @@
  * questions.
  */
 
-/**
+/*
  * @test
  * @run testng/othervm YieldQueuing
  * @summary Test Thread.yield submits the virtual thread task to the expected queue
