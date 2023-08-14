@@ -23,7 +23,7 @@
  * questions.
  */
 
-package org.sample;
+package org.example;
 
 import org.openjdk.jmh.annotations.*;
 
