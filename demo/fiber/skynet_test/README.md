@@ -12,6 +12,13 @@ The `@Benchmark` annotation is applied to the `skynet` method, indicating that t
 - Java version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
 - Device:Intel(R) Core(TM) i5-8400 CPU @ 2.80GHz   2.81 GHz 16GB
 
+## How to Run the Test
+
+1. Make sure Java 1.8.0_362_fiber is installed.
+1. Download and build the project.
+1. Run the command `mvn clean package`to build the project.
+1. Run the command `java -jar ./target/Skynet_test.jar` to run the JMH test.
+
 ## Test Setup
 
 - `@Fork(3)`: This is a JMH (Java Microbenchmark Harness) annotation that indicates the benchmark will be run with three independent process copies (forks). This helps reduce result deviations caused by external factors.
@@ -41,13 +48,6 @@ The `@Benchmark` annotation is applied to the `skynet` method, indicating that t
 
 - Based on the provided benchmark test results, the Skynet.skynet method has an average execution time of 555.224 milliseconds and a standard deviation of ±23.542 milliseconds when processing 100,000 elements. This indicates that the method demonstrates relatively stable and fast performance when handling a problem of size 100,000.
 - However, exceeding the parameter (num) beyond 100,000 may result in an insufficient memory error. Solutions to address memory limitations include optimizing algorithms, processing data in batches, increasing memory limits, using more efficient data structures, and considering distributed computing. These solutions can help improve memory consumption and enhance the ability to handle larger-scale problems.
-
-## How to Run the Test
-
-1. Make sure Java 1.8.0_362_fiber  is installed.
-1. Download and build the project.
-1. Run the command `mvn clean install` to build the project.
-1. Run the command `java -jar ./target/benchmark.jar` to run the JMH test.
 
 ## Notes
 

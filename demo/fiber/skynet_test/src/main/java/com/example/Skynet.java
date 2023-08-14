@@ -1,4 +1,4 @@
-package com.example;/*
+/*
  * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -20,6 +20,8 @@ package com.example;/*
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
+package com.example;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -88,7 +90,7 @@ public class Skynet {
 
     static void skynet(Channel<Long> result, int num, int size, int div) {
         if (size == 1) {
-            result.send((long)num);
+            result.send((long) num);
         } else {
             Channel<Long> chan = new Channel<>();
             for (int i = 0; i < div; i++) {
