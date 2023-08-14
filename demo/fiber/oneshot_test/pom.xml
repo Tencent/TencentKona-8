@@ -17,18 +17,18 @@
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
-            <version>1.23</version>
+            <version>1.37</version>
         </dependency>
 
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-generator-annprocess</artifactId>
-            <version>1.23</version>
+            <version>1.37</version>
         </dependency>
     </dependencies>
 
     <build>
-        <finalName>oneshot_test.jar</finalName><!-- 导出jar的名字 -->
+        <finalName>oneshot_test</finalName><!-- 导出jar的名字 -->
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
