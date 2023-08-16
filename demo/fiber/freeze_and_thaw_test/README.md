@@ -1,6 +1,6 @@
 ## Test Environment
 
-- JMH version: 1.19
+- JMH version: 1.37
 
 - Java version: 
 

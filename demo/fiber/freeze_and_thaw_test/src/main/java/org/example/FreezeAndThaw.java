@@ -23,8 +23,6 @@
 
 package org.example;
 
-//import jdk.internal.vm.Continuation;
-//import jdk.internal.vm.ContinuationScope;
 
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.results.format.ResultFormatType;
@@ -32,7 +30,6 @@ import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
-
 import java.util.concurrent.TimeUnit;
 
 @BenchmarkMode(Mode.AverageTime)
@@ -126,7 +123,6 @@ public class FreezeAndThaw {
 
     @Setup(Level.Invocation)
     public void setup() {
-        // System.out.println("pc = " + paramCount + " sd = " + stackDepth);
         cont = Yielder.continuation(paramCount, stackDepth, true);
         cont0 = Yielder.continuation(paramCount, stackDepth, false);
     }
@@ -136,7 +132,6 @@ public class FreezeAndThaw {
      */
     @Benchmark
     public void baseline() {
-        // Continuation cont0 = Yielder.continuation(paramCount, stackDepth, false);
         cont0.run();
         assert cont0.isDone();
     }
@@ -146,7 +141,6 @@ public class FreezeAndThaw {
      */
     @Benchmark
     public void yieldAndContinue() {
-        // Continuation cont = Yielder.continuation(paramCount, stackDepth, true);
         cont.run();
         assert !cont.isDone();
         cont.run();
@@ -162,3 +156,4 @@ public class FreezeAndThaw {
         new Runner(options).run();
     }
 }
+
