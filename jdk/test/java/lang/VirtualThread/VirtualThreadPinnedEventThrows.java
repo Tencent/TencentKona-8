@@ -21,14 +21,12 @@
  * questions.
  */
 
-/**
+/*
  * @test
  * @summary Test parking when pinned and emitting the JFR VirtualThreadPinnedEvent throws
  * @run junit VirtualThreadPinnedEventThrows
  */
 
-// @modules java.base/jdk.internal.event
-// @compile/module=java.base jdk/internal/event/VirtualThreadPinnedEvent.java
 import java.lang.ref.Reference;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
@@ -105,7 +103,6 @@ class VirtualThreadPinnedEventThrows {
             thread.join();
             assertTrue(completed.get());
         } finally {
-//            Reference.reachabilityFence(lock);
         }
     }
 }
