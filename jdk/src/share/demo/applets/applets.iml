@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/ArcTest" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/BarChart" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Blink" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/CardTest" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Clock" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/DitherTest" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/DrawTest" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Fractal" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/GraphicsTest" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/MoleculeViewer" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/NervousText" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/SimpleGraph" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/SortDemo" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/SpreadSheet" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/WireFrame" isTestSource="false" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="golden" level="project" />
+    <orderEntry type="module" module-name="share1" />
+    <orderEntry type="module" module-name="macosx" />
+    <orderEntry type="module" module-name="windows" />
+    <orderEntry type="module" module-name="solaris" />
+    <orderEntry type="module" module-name="jdk1" />
+    <orderEntry type="module" module-name="text" />
+  </component>
+</module>

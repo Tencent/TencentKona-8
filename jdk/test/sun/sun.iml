@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/java2d" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/management" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/misc" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/net" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/pisces" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/security" isTestSource="false" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="golden" level="project" />
+    <orderEntry type="module" module-name="tools3" />
+    <orderEntry type="module" module-name="share1" />
+    <orderEntry type="module" module-name="corba" />
+    <orderEntry type="module" module-name="jaxws" />
+    <orderEntry type="module" module-name="javadoc" />
+    <orderEntry type="module" module-name="dependencies" />
+    <orderEntry type="module" module-name="text" />
+    <orderEntry type="module" module-name="data" />
+    <orderEntry type="module" module-name="macosx" />
+    <orderEntry type="module" module-name="windows" />
+    <orderEntry type="module" module-name="solaris" />
+    <orderEntry type="module" module-name="aix" />
+    <orderEntry type="module" module-name="jdk1" />
+  </component>
+</module>

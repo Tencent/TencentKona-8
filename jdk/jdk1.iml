@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/test" isTestSource="true" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="test" level="project" />
+    <orderEntry type="library" name="rbcontrolprovider" level="project" />
+    <orderEntry type="library" name="broken" level="project" />
+    <orderEntry type="library" name="test6" level="project" />
+    <orderEntry type="library" name="PluggableLocale" level="project" />
+    <orderEntry type="library" name="golden" level="project" />
+    <orderEntry type="library" name="javax.mail" level="project" />
+    <orderEntry type="module" module-name="doc" />
+    <orderEntry type="module" module-name="tools3" />
+    <orderEntry type="module" module-name="share1" />
+    <orderEntry type="module" module-name="corba" />
+    <orderEntry type="module" module-name="share" />
+    <orderEntry type="module" module-name="jaxp" />
+    <orderEntry type="module" module-name="tools1" />
+    <orderEntry type="module" module-name="jaxws" />
+    <orderEntry type="module" module-name="javadoc" />
+    <orderEntry type="module" module-name="runtime1" />
+    <orderEntry type="module" module-name="text" />
+    <orderEntry type="module" module-name="linux" />
+    <orderEntry type="module" module-name="data" />
+    <orderEntry type="module" module-name="TencentKona-8" />
+    <orderEntry type="module" module-name="macosx" />
+    <orderEntry type="module" module-name="windows" />
+    <orderEntry type="module" module-name="solaris" />
+    <orderEntry type="module" module-name="aix" />
+    <orderEntry type="module" module-name="sun" />
+    <orderEntry type="module" module-name="nashorn" />
+  </component>
+</module>

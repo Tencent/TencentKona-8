@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/bmi" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/clone" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/hashcode" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/klass" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/mathexact" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/montgomerymultiply" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/muladd" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/multiplytolen" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/sha" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/squaretolen" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/stringequals" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/unsafe" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/utf8" isTestSource="false" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="golden" level="project" />
+    <orderEntry type="module" module-name="share1" />
+    <orderEntry type="module" module-name="macosx" />
+    <orderEntry type="module" module-name="windows" />
+    <orderEntry type="module" module-name="corba" />
+    <orderEntry type="module" module-name="solaris" />
+    <orderEntry type="module" module-name="test1" />
+    <orderEntry type="module" module-name="jdk1" />
+    <orderEntry type="module" module-name="compiler" />
+    <orderEntry type="module" module-name="javadoc" />
+    <orderEntry type="module" module-name="dependencies" />
+  </component>
+</module>
