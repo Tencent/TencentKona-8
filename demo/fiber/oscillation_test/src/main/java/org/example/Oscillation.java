@@ -37,7 +37,8 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 @Fork(1)
 public class Oscillation {
-    static final ContinuationScope SCOPE = new ContinuationScope(){};
+    static final ContinuationScope SCOPE = new ContinuationScope() {
+    };
 
     /**
      * A task that oscillates between a minimum and maximum stack depth, yielding
@@ -47,8 +48,10 @@ public class Oscillation {
         private final int min;
         private final int max;
 
-        private enum Mode { GROW, SHRINK }
+        private enum Mode {GROW, SHRINK}
+
         private Mode mode;
+        private boolean terminate;
 
         Wave(int min, int max) {
             if (min < 0)
@@ -57,6 +60,7 @@ public class Oscillation {
                 throw new IllegalArgumentException("max must be greater than min");
             this.min = min;
             this.max = max;
+            this.terminate = false;
             this.mode = Mode.GROW;
         }
 
@@ -68,6 +72,9 @@ public class Oscillation {
                 while (true) {
                     mode = Mode.GROW;
                     run(depth + 1);
+                    if (this.terminate) {
+                        break;
+                    }
                 }
             } else if (mode == Mode.GROW) {
                 run(depth + 1);
@@ -78,6 +85,10 @@ public class Oscillation {
         public void run() {
             run(0);
         }
+
+        public void terminateNow() {
+            this.terminate = true;
+        }
     }
 
     @Param({"2", "3", "4"})
@@ -86,20 +97,23 @@ public class Oscillation {
     @Param({"5", "6", "7", "8"})
     public int maxDepth;
 
-    @Param({"10", "100","1000"})
+    @Param({"10", "100", "1000"})
     public int repeat;
 
     /**
      * Creates and runs a continuation that oscillates between a minimum and
      * maximum stack depth, yielding at the maximum stack until continued.
-     *
+     * <p>
      * Useful to measure freeze and thaw, also to compare full stack vs. lazy copy.
      */
     @Benchmark
     public void oscillate() {
-        Continuation cont = new Continuation(SCOPE, new Wave(minDepth, maxDepth));
-        for (int i=0; i<repeat; i++) {
+        Wave wave = new Wave(minDepth, maxDepth);
+        Continuation cont = new Continuation(SCOPE, wave);
+        for (int i = 0; i < repeat; i++) {
             cont.run();
         }
+        wave.terminateNow();
+        cont.run();
     }
 }
