@@ -18,6 +18,7 @@
  */
 
 import com.oracle.java.testlibrary.ProcessTools;
+import com.oracle.java.testlibrary.JDKToolFinder;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -46,7 +47,7 @@ public class ShrinkGCTestBasic extends TestBase{
     }
     static void resize(int pid, String new_size) {
         try {
-            Process process = Runtime.getRuntime().exec("jcmd " + pid + " GC.elastic_max_heap " + new_size);
+            Process process = Runtime.getRuntime().exec(JDKToolFinder.getJDKTool("jcmd") + " " + pid + " GC.elastic_max_heap " + new_size);
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null) {
