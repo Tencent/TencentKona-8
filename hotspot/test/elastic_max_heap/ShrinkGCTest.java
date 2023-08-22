@@ -87,6 +87,7 @@ public class ShrinkGCTest extends TestBase {
 
     private static void Test(String heap_type, String new_size, String young_gen_larger, String[] contains, String[] not_contains) throws Exception {
         ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(heap_type,
+                                                                  "-Dtest.jdk=" + System.getProperty("test.jdk"),
                                                                   "-XX:+ElasticMaxHeap",
                                                                   "-XX:+TraceElasticMaxHeap",
                                                                   "-Xms50M",
