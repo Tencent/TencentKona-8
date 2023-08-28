@@ -296,6 +296,8 @@ class UTF_8 extends Unicode
             return (((long)dp) << 32 | sp);
         }
 
+        private static final boolean enableFast = System.getProperty("os.arch").equals("amd64");
+
         private CoderResult decodeArrayLoop(ByteBuffer src,
                                             CharBuffer dst)
         {
@@ -307,11 +309,22 @@ class UTF_8 extends Unicode
             char[] da = dst.array();
             int dp = dst.arrayOffset() + dst.position();
             int dl = dst.arrayOffset() + dst.limit();
-            if ((dl - dp) >= (sl - sp)) {
-                long p = decodeArrayLoopFast(sa, sp, sl, da, dp);
-                dp = (int)(p >> 32);
-                sp = (int)p;
+
+            // only enable fast path for x86_64 arch
+            if (enableFast) {
+                if ((dl - dp) >= (sl - sp)) {
+                    long p = decodeArrayLoopFast(sa, sp, sl, da, dp);
+                    dp = (int)(p >> 32);
+                    sp = (int)p;
+                }
+            } else {
+                int dlASCII = dp + Math.min(sl - sp, dl - dp);
+
+                // ASCII only loop
+                while (dp < dlASCII && sa[sp] >= 0)
+                    da[dp++] = (char) sa[sp++];
             }
+
             while (sp < sl) {
                 int b1 = sa[sp];
                 if (b1 >= 0) {
