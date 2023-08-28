@@ -1,5 +1,7 @@
 ## Test Environment
 
+- TestTime：2023-08-28
+
 - JMH version: 1.37
 
 - Java version: 
@@ -15,7 +17,10 @@
 1. Make sure Java 1.8.0_362_fiber is installed.
 1. Run the command `mvn clean package`to build the project.
 1. Run the command `java -jar ./target/freeze_and_thaw_test.jar` to run the JMH test.
-1. See the result in the file `result.text` 
+
+## Result
+
+you can see the result of kona fiber in file`kona_fiber_result.text`， and see the  result of loom in file `loom_result.text`
 
 ## Notes
 
