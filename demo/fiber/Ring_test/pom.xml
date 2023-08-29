@@ -12,7 +12,7 @@
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
-            <version>1.23</version>
+            <version>1.37</version>
         </dependency>
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
