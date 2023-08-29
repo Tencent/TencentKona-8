@@ -22,16 +22,30 @@
  */
 package org.example;
 
-import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.results.format.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-
 
 @Fork(3)
 @Warmup(iterations = 20, time = 1)
@@ -64,9 +78,10 @@ public class Ring {
 		}
 	}
 
-	@Param({"10"})
-	int THREADS;
+	@Param({"1000"})
+	int threads;
 
+	//    @Param({"lbq", "abq", "sq"})
 	@Param({"sq"})
 	public String queue;
 
@@ -82,11 +97,12 @@ public class Ring {
 	@Param({"true", "false"})
 	public boolean singleshot;
 
+
 	@Setup
 	@SuppressWarnings("unchecked")
 	public void setup() {
 		msg = 42;
-		Channel<Integer>[] chans = new Channel[THREADS + 1];
+		Channel<Integer>[] chans = new Channel[threads + 1];
 		for (int i = 0; i < chans.length; i++) {
 			chans[i] = getChannel();
 		}
@@ -95,16 +111,16 @@ public class Ring {
 		Predicate<Integer> finalCondition = singleshot ? (x -> true) : (x -> (x < 0));
 		workers = new Worker[chans.length - 1];
 		for (int i = 0; i < chans.length - 1; i++) {
-			workers[i] = new Worker<>(chans[i], chans[i + 1], finalCondition);
+			workers[i] = new Worker<>(chans[i], chans[i+1], finalCondition);
 		}
-		if (!singleshot) {
+		if(!singleshot) {
 			startAll();
 		}
 	}
 
 	private void startAll() {
 		for (Worker<Integer> w : workers) {
-			Thread.ofVirtual().scheduler(Executors.newSingleThreadExecutor()).start(w);
+			Thread.startVirtualThread(w);
 		}
 	}
 
@@ -115,15 +131,15 @@ public class Ring {
 
 	@TearDown
 	public void tearDown() {
-		if (!singleshot) {
+		if(!singleshot) {
 			head.send(-1);
 			tail.receive();
 		}
 	}
 
 	@Benchmark
-	public Object trip() {
-		if (singleshot) {
+	public Object trip(){
+		if(singleshot) {
 			startAll();
 		}
 		head.send(msg);
@@ -158,13 +174,4 @@ public class Ring {
 	}
 
 
-	public static void main(String[] args) throws RunnerException {
-		Options opt = new OptionsBuilder()
-				.include(Ring.class.getSimpleName())
-				.result("res.json")
-				.resultFormat(ResultFormatType.JSON)
-				.build();
-
-		new Runner(opt).run();
-	}
 }
