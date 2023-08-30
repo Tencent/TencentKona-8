@@ -16,7 +16,7 @@
 
 1. Make sure Java 1.8.0_362_fiber is installed.
 1. Run the command `mvn clean package`to build the project.
-1. Run the command `java -jar ./target/freeze_and_thaw_test.jar` to run the JMH test.
+1. Run the command `java -jar ./target/freeze_and_thaw.jar` to run the JMH test.
 
 ## Comparison of results
 
