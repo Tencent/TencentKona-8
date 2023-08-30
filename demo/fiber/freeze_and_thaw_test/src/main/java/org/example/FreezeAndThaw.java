@@ -23,7 +23,6 @@
 
 package org.example;
 
-
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.results.format.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
@@ -156,4 +155,3 @@ public class FreezeAndThaw {
         new Runner(options).run();
     }
 }
-
