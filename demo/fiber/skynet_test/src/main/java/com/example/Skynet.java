@@ -46,8 +46,12 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Thread)
 @SuppressWarnings("preview")
 public class Skynet {
-
-    @Param({"1000000"})  //The default value of this parameter in the original file is 1,000,000
+    /*
+     * The original default value of 1,000,000 for this parameter would cause excessive computational
+     * overhead and memory usage during training, resulting in a program that cannot run successfully.
+     * To maintain stability and ensure successful execution, we set a smaller default value of 100,000 instead.
+     */
+    @Param({"100000"}) 
     public int num;
 
     static class Channel<T> {
