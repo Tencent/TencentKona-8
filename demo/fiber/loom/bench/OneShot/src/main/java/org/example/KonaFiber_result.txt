@@ -1,0 +1,2049 @@
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.noYield
+# Parameters: (paramCount = 1, stackDepth = 5)
+
+# Run progress: 0.00% complete, ETA 00:10:00
+# Fork: 1 of 1
+# Warmup Iteration   1: 183.530 ns/op
+# Warmup Iteration   2: 175.869 ns/op
+# Warmup Iteration   3: 186.089 ns/op
+# Warmup Iteration   4: 191.532 ns/op
+# Warmup Iteration   5: 204.310 ns/op
+Iteration   1: 203.763 ns/op
+Iteration   2: 192.537 ns/op
+Iteration   3: 192.667 ns/op
+Iteration   4: 187.708 ns/op
+Iteration   5: 190.063 ns/op
+
+
+Result "org.example.OneShot.noYield":
+  193.347 ±(99.9%) 23.752 ns/op [Average]
+  (min, avg, max) = (187.708, 193.347, 203.763), stdev = 6.168
+  CI (99.9%): [169.595, 217.100] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.noYield
+# Parameters: (paramCount = 1, stackDepth = 10)
+
+# Run progress: 1.67% complete, ETA 00:10:14
+# Fork: 1 of 1
+# Warmup Iteration   1: 196.154 ns/op
+# Warmup Iteration   2: 189.412 ns/op
+# Warmup Iteration   3: 184.654 ns/op
+# Warmup Iteration   4: 185.829 ns/op
+# Warmup Iteration   5: 179.676 ns/op
+Iteration   1: 192.163 ns/op
+Iteration   2: 186.343 ns/op
+Iteration   3: 186.882 ns/op
+Iteration   4: 194.482 ns/op
+Iteration   5: 194.099 ns/op
+
+
+Result "org.example.OneShot.noYield":
+  190.794 ±(99.9%) 15.101 ns/op [Average]
+  (min, avg, max) = (186.343, 190.794, 194.482), stdev = 3.922
+  CI (99.9%): [175.693, 205.895] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.noYield
+# Parameters: (paramCount = 1, stackDepth = 20)
+
+# Run progress: 3.33% complete, ETA 00:10:03
+# Fork: 1 of 1
+# Warmup Iteration   1: 211.337 ns/op
+# Warmup Iteration   2: 206.527 ns/op
+# Warmup Iteration   3: 205.787 ns/op
+# Warmup Iteration   4: 206.720 ns/op
+# Warmup Iteration   5: 199.886 ns/op
+Iteration   1: 201.900 ns/op
+Iteration   2: 197.578 ns/op
+Iteration   3: 205.150 ns/op
+Iteration   4: 203.752 ns/op
+Iteration   5: 199.175 ns/op
+
+
+Result "org.example.OneShot.noYield":
+  201.511 ±(99.9%) 12.077 ns/op [Average]
+  (min, avg, max) = (197.578, 201.511, 205.150), stdev = 3.136
+  CI (99.9%): [189.435, 213.588] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.noYield
+# Parameters: (paramCount = 1, stackDepth = 100)
+
+# Run progress: 5.00% complete, ETA 00:09:53
+# Fork: 1 of 1
+# Warmup Iteration   1: 538.501 ns/op
+# Warmup Iteration   2: 533.792 ns/op
+# Warmup Iteration   3: 513.321 ns/op
+# Warmup Iteration   4: 519.327 ns/op
+# Warmup Iteration   5: 503.315 ns/op
+Iteration   1: 495.340 ns/op
+Iteration   2: 516.305 ns/op
+Iteration   3: 503.650 ns/op
+Iteration   4: 523.679 ns/op
+Iteration   5: 518.093 ns/op
+
+
+Result "org.example.OneShot.noYield":
+  511.413 ±(99.9%) 44.641 ns/op [Average]
+  (min, avg, max) = (495.340, 511.413, 523.679), stdev = 11.593
+  CI (99.9%): [466.772, 556.055] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.noYield
+# Parameters: (paramCount = 2, stackDepth = 5)
+
+# Run progress: 6.67% complete, ETA 00:09:42
+# Fork: 1 of 1
+# Warmup Iteration   1: 234.571 ns/op
+# Warmup Iteration   2: 229.260 ns/op
+# Warmup Iteration   3: 225.292 ns/op
+# Warmup Iteration   4: 226.777 ns/op
+# Warmup Iteration   5: 220.710 ns/op
+Iteration   1: 224.004 ns/op
+Iteration   2: 228.223 ns/op
+Iteration   3: 220.812 ns/op
+Iteration   4: 228.885 ns/op
+Iteration   5: 230.652 ns/op
+
+
+Result "org.example.OneShot.noYield":
+  226.515 ±(99.9%) 15.460 ns/op [Average]
+  (min, avg, max) = (220.812, 226.515, 230.652), stdev = 4.015
+  CI (99.9%): [211.055, 241.975] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.noYield
+# Parameters: (paramCount = 2, stackDepth = 10)
+
+# Run progress: 8.33% complete, ETA 00:09:32
+# Fork: 1 of 1
+# Warmup Iteration   1: 276.897 ns/op
+# Warmup Iteration   2: 259.755 ns/op
+# Warmup Iteration   3: 266.779 ns/op
+# Warmup Iteration   4: 260.052 ns/op
+# Warmup Iteration   5: 270.747 ns/op
+Iteration   1: 273.654 ns/op
+Iteration   2: 268.863 ns/op
+Iteration   3: 271.901 ns/op
+Iteration   4: 271.025 ns/op
+Iteration   5: 269.981 ns/op
+
+
+Result "org.example.OneShot.noYield":
+  271.085 ±(99.9%) 7.055 ns/op [Average]
+  (min, avg, max) = (268.863, 271.085, 273.654), stdev = 1.832
+  CI (99.9%): [264.030, 278.140] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.noYield
+# Parameters: (paramCount = 2, stackDepth = 20)
+
+# Run progress: 10.00% complete, ETA 00:09:21
+# Fork: 1 of 1
+# Warmup Iteration   1: 371.067 ns/op
+# Warmup Iteration   2: 367.575 ns/op
+# Warmup Iteration   3: 336.772 ns/op
+# Warmup Iteration   4: 363.537 ns/op
+# Warmup Iteration   5: 351.877 ns/op
+Iteration   1: 356.266 ns/op
+Iteration   2: 359.751 ns/op
+Iteration   3: 373.018 ns/op
+Iteration   4: 370.802 ns/op
+Iteration   5: 385.111 ns/op
+
+
+Result "org.example.OneShot.noYield":
+  368.990 ±(99.9%) 44.183 ns/op [Average]
+  (min, avg, max) = (356.266, 368.990, 385.111), stdev = 11.474
+  CI (99.9%): [324.806, 413.173] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.noYield
+# Parameters: (paramCount = 2, stackDepth = 100)
+
+# Run progress: 11.67% complete, ETA 00:09:11
+# Fork: 1 of 1
+# Warmup Iteration   1: 1032.733 ns/op
+# Warmup Iteration   2: 1026.362 ns/op
+# Warmup Iteration   3: 1019.331 ns/op
+# Warmup Iteration   4: 1020.523 ns/op
+# Warmup Iteration   5: 969.350 ns/op
+Iteration   1: 1026.320 ns/op
+Iteration   2: 1021.395 ns/op
+Iteration   3: 1014.788 ns/op
+Iteration   4: 1017.552 ns/op
+Iteration   5: 995.400 ns/op
+
+
+Result "org.example.OneShot.noYield":
+  1015.091 ±(99.9%) 45.551 ns/op [Average]
+  (min, avg, max) = (995.400, 1015.091, 1026.320), stdev = 11.829
+  CI (99.9%): [969.540, 1060.642] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.noYield
+# Parameters: (paramCount = 3, stackDepth = 5)
+
+# Run progress: 13.33% complete, ETA 00:09:01
+# Fork: 1 of 1
+# Warmup Iteration   1: 255.110 ns/op
+# Warmup Iteration   2: 251.558 ns/op
+# Warmup Iteration   3: 244.999 ns/op
+# Warmup Iteration   4: 242.475 ns/op
+# Warmup Iteration   5: 245.461 ns/op
+Iteration   1: 253.287 ns/op
+Iteration   2: 243.246 ns/op
+Iteration   3: 247.401 ns/op
+Iteration   4: 258.417 ns/op
+Iteration   5: 243.539 ns/op
+
+
+Result "org.example.OneShot.noYield":
+  249.178 ±(99.9%) 25.278 ns/op [Average]
+  (min, avg, max) = (243.246, 249.178, 258.417), stdev = 6.565
+  CI (99.9%): [223.900, 274.456] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.noYield
+# Parameters: (paramCount = 3, stackDepth = 10)
+
+# Run progress: 15.00% complete, ETA 00:08:50
+# Fork: 1 of 1
+# Warmup Iteration   1: 321.069 ns/op
+# Warmup Iteration   2: 309.766 ns/op
+# Warmup Iteration   3: 322.020 ns/op
+# Warmup Iteration   4: 333.512 ns/op
+# Warmup Iteration   5: 317.415 ns/op
+Iteration   1: 321.661 ns/op
+Iteration   2: 317.342 ns/op
+Iteration   3: 337.892 ns/op
+Iteration   4: 335.542 ns/op
+Iteration   5: 335.282 ns/op
+
+
+Result "org.example.OneShot.noYield":
+  329.544 ±(99.9%) 36.000 ns/op [Average]
+  (min, avg, max) = (317.342, 329.544, 337.892), stdev = 9.349
+  CI (99.9%): [293.544, 365.543] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.noYield
+# Parameters: (paramCount = 3, stackDepth = 20)
+
+# Run progress: 16.67% complete, ETA 00:08:40
+# Fork: 1 of 1
+# Warmup Iteration   1: 465.874 ns/op
+# Warmup Iteration   2: 467.371 ns/op
+# Warmup Iteration   3: 471.530 ns/op
+# Warmup Iteration   4: 456.637 ns/op
+# Warmup Iteration   5: 447.067 ns/op
+Iteration   1: 462.873 ns/op
+Iteration   2: 469.568 ns/op
+Iteration   3: 473.967 ns/op
+Iteration   4: 474.572 ns/op
+Iteration   5: 465.855 ns/op
+
+
+Result "org.example.OneShot.noYield":
+  469.367 ±(99.9%) 19.522 ns/op [Average]
+  (min, avg, max) = (462.873, 469.367, 474.572), stdev = 5.070
+  CI (99.9%): [449.845, 488.889] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.noYield
+# Parameters: (paramCount = 3, stackDepth = 100)
+
+# Run progress: 18.33% complete, ETA 00:08:29
+# Fork: 1 of 1
+# Warmup Iteration   1: 1550.774 ns/op
+# Warmup Iteration   2: 1460.484 ns/op
+# Warmup Iteration   3: 1555.778 ns/op
+# Warmup Iteration   4: 1557.748 ns/op
+# Warmup Iteration   5: 1501.706 ns/op
+Iteration   1: 1536.644 ns/op
+Iteration   2: 1538.024 ns/op
+Iteration   3: 1539.794 ns/op
+Iteration   4: 1530.784 ns/op
+Iteration   5: 1505.565 ns/op
+
+
+Result "org.example.OneShot.noYield":
+  1530.162 ±(99.9%) 54.525 ns/op [Average]
+  (min, avg, max) = (1505.565, 1530.162, 1539.794), stdev = 14.160
+  CI (99.9%): [1475.637, 1584.687] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldAfterEachCall
+# Parameters: (paramCount = 1, stackDepth = 5)
+
+# Run progress: 20.00% complete, ETA 00:08:19
+# Fork: 1 of 1
+# Warmup Iteration   1: 419.773 ns/op
+# Warmup Iteration   2: 399.167 ns/op
+# Warmup Iteration   3: 410.087 ns/op
+# Warmup Iteration   4: 400.082 ns/op
+# Warmup Iteration   5: 395.456 ns/op
+Iteration   1: 396.634 ns/op
+Iteration   2: 407.362 ns/op
+Iteration   3: 417.490 ns/op
+Iteration   4: 407.722 ns/op
+Iteration   5: 387.826 ns/op
+
+
+Result "org.example.OneShot.yieldAfterEachCall":
+  403.407 ±(99.9%) 43.957 ns/op [Average]
+  (min, avg, max) = (387.826, 403.407, 417.490), stdev = 11.416
+  CI (99.9%): [359.450, 447.364] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldAfterEachCall
+# Parameters: (paramCount = 1, stackDepth = 10)
+
+# Run progress: 21.67% complete, ETA 00:08:09
+# Fork: 1 of 1
+# Warmup Iteration   1: 646.982 ns/op
+# Warmup Iteration   2: 620.911 ns/op
+# Warmup Iteration   3: 634.413 ns/op
+# Warmup Iteration   4: 608.418 ns/op
+# Warmup Iteration   5: 617.956 ns/op
+Iteration   1: 595.551 ns/op
+Iteration   2: 591.933 ns/op
+Iteration   3: 622.414 ns/op
+Iteration   4: 626.758 ns/op
+Iteration   5: 617.246 ns/op
+
+
+Result "org.example.OneShot.yieldAfterEachCall":
+  610.780 ±(99.9%) 61.477 ns/op [Average]
+  (min, avg, max) = (591.933, 610.780, 626.758), stdev = 15.965
+  CI (99.9%): [549.304, 672.257] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldAfterEachCall
+# Parameters: (paramCount = 1, stackDepth = 20)
+
+# Run progress: 23.33% complete, ETA 00:07:58
+# Fork: 1 of 1
+# Warmup Iteration   1: 1106.420 ns/op
+# Warmup Iteration   2: 1066.532 ns/op
+# Warmup Iteration   3: 1068.506 ns/op
+# Warmup Iteration   4: 1041.816 ns/op
+# Warmup Iteration   5: 1048.924 ns/op
+Iteration   1: 1067.229 ns/op
+Iteration   2: 1048.068 ns/op
+Iteration   3: 1099.427 ns/op
+Iteration   4: 1027.780 ns/op
+Iteration   5: 1108.724 ns/op
+
+
+Result "org.example.OneShot.yieldAfterEachCall":
+  1070.246 ±(99.9%) 131.096 ns/op [Average]
+  (min, avg, max) = (1027.780, 1070.246, 1108.724), stdev = 34.045
+  CI (99.9%): [939.149, 1201.342] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldAfterEachCall
+# Parameters: (paramCount = 1, stackDepth = 100)
+
+# Run progress: 25.00% complete, ETA 00:07:48
+# Fork: 1 of 1
+# Warmup Iteration   1: 4789.777 ns/op
+# Warmup Iteration   2: 4735.030 ns/op
+# Warmup Iteration   3: 4624.935 ns/op
+# Warmup Iteration   4: 4680.530 ns/op
+# Warmup Iteration   5: 4579.603 ns/op
+Iteration   1: 4498.869 ns/op
+Iteration   2: 4653.350 ns/op
+Iteration   3: 4704.845 ns/op
+Iteration   4: 5037.313 ns/op
+Iteration   5: 4563.598 ns/op
+
+
+Result "org.example.OneShot.yieldAfterEachCall":
+  4691.595 ±(99.9%) 804.697 ns/op [Average]
+  (min, avg, max) = (4498.869, 4691.595, 5037.313), stdev = 208.977
+  CI (99.9%): [3886.898, 5496.292] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldAfterEachCall
+# Parameters: (paramCount = 2, stackDepth = 5)
+
+# Run progress: 26.67% complete, ETA 00:07:37
+# Fork: 1 of 1
+# Warmup Iteration   1: 425.550 ns/op
+# Warmup Iteration   2: 417.003 ns/op
+# Warmup Iteration   3: 406.077 ns/op
+# Warmup Iteration   4: 419.450 ns/op
+# Warmup Iteration   5: 412.526 ns/op
+Iteration   1: 416.221 ns/op
+Iteration   2: 396.262 ns/op
+Iteration   3: 419.709 ns/op
+Iteration   4: 417.193 ns/op
+Iteration   5: 413.483 ns/op
+
+
+Result "org.example.OneShot.yieldAfterEachCall":
+  412.573 ±(99.9%) 36.146 ns/op [Average]
+  (min, avg, max) = (396.262, 412.573, 419.709), stdev = 9.387
+  CI (99.9%): [376.428, 448.719] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldAfterEachCall
+# Parameters: (paramCount = 2, stackDepth = 10)
+
+# Run progress: 28.33% complete, ETA 00:07:27
+# Fork: 1 of 1
+# Warmup Iteration   1: 658.652 ns/op
+# Warmup Iteration   2: 628.872 ns/op
+# Warmup Iteration   3: 615.427 ns/op
+# Warmup Iteration   4: 613.004 ns/op
+# Warmup Iteration   5: 607.661 ns/op
+Iteration   1: 594.007 ns/op
+Iteration   2: 592.286 ns/op
+Iteration   3: 643.006 ns/op
+Iteration   4: 614.112 ns/op
+Iteration   5: 621.200 ns/op
+
+
+Result "org.example.OneShot.yieldAfterEachCall":
+  612.922 ±(99.9%) 80.739 ns/op [Average]
+  (min, avg, max) = (592.286, 612.922, 643.006), stdev = 20.968
+  CI (99.9%): [532.183, 693.661] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldAfterEachCall
+# Parameters: (paramCount = 2, stackDepth = 20)
+
+# Run progress: 30.00% complete, ETA 00:07:16
+# Fork: 1 of 1
+# Warmup Iteration   1: 1065.654 ns/op
+# Warmup Iteration   2: 1058.429 ns/op
+# Warmup Iteration   3: 1071.276 ns/op
+# Warmup Iteration   4: 1066.734 ns/op
+# Warmup Iteration   5: 995.324 ns/op
+Iteration   1: 1073.386 ns/op
+Iteration   2: 1036.048 ns/op
+Iteration   3: 1052.869 ns/op
+Iteration   4: 1069.018 ns/op
+Iteration   5: 1092.471 ns/op
+
+
+Result "org.example.OneShot.yieldAfterEachCall":
+  1064.759 ±(99.9%) 82.276 ns/op [Average]
+  (min, avg, max) = (1036.048, 1064.759, 1092.471), stdev = 21.367
+  CI (99.9%): [982.482, 1147.035] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldAfterEachCall
+# Parameters: (paramCount = 2, stackDepth = 100)
+
+# Run progress: 31.67% complete, ETA 00:07:06
+# Fork: 1 of 1
+# Warmup Iteration   1: 4985.935 ns/op
+# Warmup Iteration   2: 4956.972 ns/op
+# Warmup Iteration   3: 4854.199 ns/op
+# Warmup Iteration   4: 4689.261 ns/op
+# Warmup Iteration   5: 4686.692 ns/op
+Iteration   1: 4637.396 ns/op
+Iteration   2: 4670.587 ns/op
+Iteration   3: 4803.703 ns/op
+Iteration   4: 4565.182 ns/op
+Iteration   5: 4731.575 ns/op
+
+
+Result "org.example.OneShot.yieldAfterEachCall":
+  4681.689 ±(99.9%) 349.937 ns/op [Average]
+  (min, avg, max) = (4565.182, 4681.689, 4803.703), stdev = 90.878
+  CI (99.9%): [4331.751, 5031.626] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldAfterEachCall
+# Parameters: (paramCount = 3, stackDepth = 5)
+
+# Run progress: 33.33% complete, ETA 00:06:55
+# Fork: 1 of 1
+# Warmup Iteration   1: 414.628 ns/op
+# Warmup Iteration   2: 419.038 ns/op
+# Warmup Iteration   3: 408.192 ns/op
+# Warmup Iteration   4: 421.337 ns/op
+# Warmup Iteration   5: 409.328 ns/op
+Iteration   1: 405.173 ns/op
+Iteration   2: 420.407 ns/op
+Iteration   3: 431.361 ns/op
+Iteration   4: 414.045 ns/op
+Iteration   5: 421.576 ns/op
+
+
+Result "org.example.OneShot.yieldAfterEachCall":
+  418.512 ±(99.9%) 37.332 ns/op [Average]
+  (min, avg, max) = (405.173, 418.512, 431.361), stdev = 9.695
+  CI (99.9%): [381.181, 455.844] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldAfterEachCall
+# Parameters: (paramCount = 3, stackDepth = 10)
+
+# Run progress: 35.00% complete, ETA 00:06:45
+# Fork: 1 of 1
+# Warmup Iteration   1: 677.688 ns/op
+# Warmup Iteration   2: 657.958 ns/op
+# Warmup Iteration   3: 632.706 ns/op
+# Warmup Iteration   4: 674.751 ns/op
+# Warmup Iteration   5: 643.823 ns/op
+Iteration   1: 650.932 ns/op
+Iteration   2: 654.669 ns/op
+Iteration   3: 658.307 ns/op
+Iteration   4: 640.761 ns/op
+Iteration   5: 672.064 ns/op
+
+
+Result "org.example.OneShot.yieldAfterEachCall":
+  655.347 ±(99.9%) 43.943 ns/op [Average]
+  (min, avg, max) = (640.761, 655.347, 672.064), stdev = 11.412
+  CI (99.9%): [611.404, 699.289] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldAfterEachCall
+# Parameters: (paramCount = 3, stackDepth = 20)
+
+# Run progress: 36.67% complete, ETA 00:06:35
+# Fork: 1 of 1
+# Warmup Iteration   1: 1108.156 ns/op
+# Warmup Iteration   2: 1092.221 ns/op
+# Warmup Iteration   3: 1063.934 ns/op
+# Warmup Iteration   4: 1100.177 ns/op
+# Warmup Iteration   5: 1070.555 ns/op
+Iteration   1: 1058.586 ns/op
+Iteration   2: 1108.766 ns/op
+Iteration   3: 1110.086 ns/op
+Iteration   4: 1089.341 ns/op
+Iteration   5: 1171.286 ns/op
+
+
+Result "org.example.OneShot.yieldAfterEachCall":
+  1107.613 ±(99.9%) 158.758 ns/op [Average]
+  (min, avg, max) = (1058.586, 1107.613, 1171.286), stdev = 41.229
+  CI (99.9%): [948.855, 1266.370] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldAfterEachCall
+# Parameters: (paramCount = 3, stackDepth = 100)
+
+# Run progress: 38.33% complete, ETA 00:06:24
+# Fork: 1 of 1
+# Warmup Iteration   1: 4730.393 ns/op
+# Warmup Iteration   2: 4678.695 ns/op
+# Warmup Iteration   3: 4690.274 ns/op
+# Warmup Iteration   4: 4549.787 ns/op
+# Warmup Iteration   5: 4514.138 ns/op
+Iteration   1: 4747.241 ns/op
+Iteration   2: 4535.939 ns/op
+Iteration   3: 4761.224 ns/op
+Iteration   4: 5471.328 ns/op
+Iteration   5: 4899.929 ns/op
+
+
+Result "org.example.OneShot.yieldAfterEachCall":
+  4883.132 ±(99.9%) 1361.582 ns/op [Average]
+  (min, avg, max) = (4535.939, 4883.132, 5471.328), stdev = 353.599
+  CI (99.9%): [3521.550, 6244.715] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeAndAfterEachCall
+# Parameters: (paramCount = 1, stackDepth = 5)
+
+# Run progress: 40.00% complete, ETA 00:06:14
+# Fork: 1 of 1
+# Warmup Iteration   1: 589.491 ns/op
+# Warmup Iteration   2: 560.279 ns/op
+# Warmup Iteration   3: 609.938 ns/op
+# Warmup Iteration   4: 590.807 ns/op
+# Warmup Iteration   5: 568.003 ns/op
+Iteration   1: 582.968 ns/op
+Iteration   2: 572.786 ns/op
+Iteration   3: 611.373 ns/op
+Iteration   4: 593.542 ns/op
+Iteration   5: 597.718 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeAndAfterEachCall":
+  591.677 ±(99.9%) 56.482 ns/op [Average]
+  (min, avg, max) = (572.786, 591.677, 611.373), stdev = 14.668
+  CI (99.9%): [535.195, 648.160] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeAndAfterEachCall
+# Parameters: (paramCount = 1, stackDepth = 10)
+
+# Run progress: 41.67% complete, ETA 00:06:04
+# Fork: 1 of 1
+# Warmup Iteration   1: 999.030 ns/op
+# Warmup Iteration   2: 993.215 ns/op
+# Warmup Iteration   3: 1054.355 ns/op
+# Warmup Iteration   4: 1015.505 ns/op
+# Warmup Iteration   5: 1040.845 ns/op
+Iteration   1: 1007.991 ns/op
+Iteration   2: 1044.413 ns/op
+Iteration   3: 1003.795 ns/op
+Iteration   4: 1047.191 ns/op
+Iteration   5: 1009.741 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeAndAfterEachCall":
+  1022.626 ±(99.9%) 81.977 ns/op [Average]
+  (min, avg, max) = (1003.795, 1022.626, 1047.191), stdev = 21.289
+  CI (99.9%): [940.649, 1104.603] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeAndAfterEachCall
+# Parameters: (paramCount = 1, stackDepth = 20)
+
+# Run progress: 43.33% complete, ETA 00:05:53
+# Fork: 1 of 1
+# Warmup Iteration   1: 1816.563 ns/op
+# Warmup Iteration   2: 1886.745 ns/op
+# Warmup Iteration   3: 1827.989 ns/op
+# Warmup Iteration   4: 1815.098 ns/op
+# Warmup Iteration   5: 1796.746 ns/op
+Iteration   1: 1835.988 ns/op
+Iteration   2: 1870.241 ns/op
+Iteration   3: 1820.755 ns/op
+Iteration   4: 1826.194 ns/op
+Iteration   5: 1801.580 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeAndAfterEachCall":
+  1830.952 ±(99.9%) 97.383 ns/op [Average]
+  (min, avg, max) = (1801.580, 1830.952, 1870.241), stdev = 25.290
+  CI (99.9%): [1733.569, 1928.335] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeAndAfterEachCall
+# Parameters: (paramCount = 1, stackDepth = 100)
+
+# Run progress: 45.00% complete, ETA 00:05:43
+# Fork: 1 of 1
+# Warmup Iteration   1: 8284.820 ns/op
+# Warmup Iteration   2: 8895.025 ns/op
+# Warmup Iteration   3: 8395.587 ns/op
+# Warmup Iteration   4: 8267.268 ns/op
+# Warmup Iteration   5: 8227.796 ns/op
+Iteration   1: 8913.385 ns/op
+Iteration   2: 8553.669 ns/op
+Iteration   3: 8423.413 ns/op
+Iteration   4: 8449.506 ns/op
+Iteration   5: 8187.522 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeAndAfterEachCall":
+  8505.499 ±(99.9%) 1018.192 ns/op [Average]
+  (min, avg, max) = (8187.522, 8505.499, 8913.385), stdev = 264.421
+  CI (99.9%): [7487.307, 9523.691] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeAndAfterEachCall
+# Parameters: (paramCount = 2, stackDepth = 5)
+
+# Run progress: 46.67% complete, ETA 00:05:32
+# Fork: 1 of 1
+# Warmup Iteration   1: 655.272 ns/op
+# Warmup Iteration   2: 631.303 ns/op
+# Warmup Iteration   3: 647.742 ns/op
+# Warmup Iteration   4: 677.691 ns/op
+# Warmup Iteration   5: 657.327 ns/op
+Iteration   1: 673.795 ns/op
+Iteration   2: 668.695 ns/op
+Iteration   3: 656.270 ns/op
+Iteration   4: 667.627 ns/op
+Iteration   5: 686.450 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeAndAfterEachCall":
+  670.567 ±(99.9%) 42.148 ns/op [Average]
+  (min, avg, max) = (656.270, 670.567, 686.450), stdev = 10.946
+  CI (99.9%): [628.419, 712.716] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeAndAfterEachCall
+# Parameters: (paramCount = 2, stackDepth = 10)
+
+# Run progress: 48.33% complete, ETA 00:05:22
+# Fork: 1 of 1
+# Warmup Iteration   1: 1052.241 ns/op
+# Warmup Iteration   2: 1014.477 ns/op
+# Warmup Iteration   3: 957.839 ns/op
+# Warmup Iteration   4: 964.557 ns/op
+# Warmup Iteration   5: 981.674 ns/op
+Iteration   1: 941.991 ns/op
+Iteration   2: 996.331 ns/op
+Iteration   3: 997.654 ns/op
+Iteration   4: 979.529 ns/op
+Iteration   5: 1001.714 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeAndAfterEachCall":
+  983.444 ±(99.9%) 95.015 ns/op [Average]
+  (min, avg, max) = (941.991, 983.444, 1001.714), stdev = 24.675
+  CI (99.9%): [888.429, 1078.459] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeAndAfterEachCall
+# Parameters: (paramCount = 2, stackDepth = 20)
+
+# Run progress: 50.00% complete, ETA 00:05:12
+# Fork: 1 of 1
+# Warmup Iteration   1: 1873.992 ns/op
+# Warmup Iteration   2: 1850.341 ns/op
+# Warmup Iteration   3: 1784.780 ns/op
+# Warmup Iteration   4: 1927.619 ns/op
+# Warmup Iteration   5: 1798.571 ns/op
+Iteration   1: 1857.649 ns/op
+Iteration   2: 1840.655 ns/op
+Iteration   3: 1893.485 ns/op
+Iteration   4: 1931.601 ns/op
+Iteration   5: 1875.410 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeAndAfterEachCall":
+  1879.760 ±(99.9%) 134.950 ns/op [Average]
+  (min, avg, max) = (1840.655, 1879.760, 1931.601), stdev = 35.046
+  CI (99.9%): [1744.810, 2014.710] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeAndAfterEachCall
+# Parameters: (paramCount = 2, stackDepth = 100)
+
+# Run progress: 51.67% complete, ETA 00:05:01
+# Fork: 1 of 1
+# Warmup Iteration   1: 8956.296 ns/op
+# Warmup Iteration   2: 9015.140 ns/op
+# Warmup Iteration   3: 8482.774 ns/op
+# Warmup Iteration   4: 8601.406 ns/op
+# Warmup Iteration   5: 8276.188 ns/op
+Iteration   1: 8687.784 ns/op
+Iteration   2: 8803.656 ns/op
+Iteration   3: 8656.917 ns/op
+Iteration   4: 8718.723 ns/op
+Iteration   5: 8679.548 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeAndAfterEachCall":
+  8709.325 ±(99.9%) 220.228 ns/op [Average]
+  (min, avg, max) = (8656.917, 8709.325, 8803.656), stdev = 57.193
+  CI (99.9%): [8489.097, 8929.554] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeAndAfterEachCall
+# Parameters: (paramCount = 3, stackDepth = 5)
+
+# Run progress: 53.33% complete, ETA 00:04:51
+# Fork: 1 of 1
+# Warmup Iteration   1: 645.157 ns/op
+# Warmup Iteration   2: 618.376 ns/op
+# Warmup Iteration   3: 629.381 ns/op
+# Warmup Iteration   4: 621.088 ns/op
+# Warmup Iteration   5: 626.955 ns/op
+Iteration   1: 621.443 ns/op
+Iteration   2: 631.789 ns/op
+Iteration   3: 650.203 ns/op
+Iteration   4: 628.306 ns/op
+Iteration   5: 647.832 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeAndAfterEachCall":
+  635.915 ±(99.9%) 48.346 ns/op [Average]
+  (min, avg, max) = (621.443, 635.915, 650.203), stdev = 12.555
+  CI (99.9%): [587.569, 684.261] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeAndAfterEachCall
+# Parameters: (paramCount = 3, stackDepth = 10)
+
+# Run progress: 55.00% complete, ETA 00:04:40
+# Fork: 1 of 1
+# Warmup Iteration   1: 1007.552 ns/op
+# Warmup Iteration   2: 1014.872 ns/op
+# Warmup Iteration   3: 1018.751 ns/op
+# Warmup Iteration   4: 977.963 ns/op
+# Warmup Iteration   5: 982.812 ns/op
+Iteration   1: 1017.289 ns/op
+Iteration   2: 973.844 ns/op
+Iteration   3: 984.510 ns/op
+Iteration   4: 1004.604 ns/op
+Iteration   5: 1013.125 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeAndAfterEachCall":
+  998.674 ±(99.9%) 72.236 ns/op [Average]
+  (min, avg, max) = (973.844, 998.674, 1017.289), stdev = 18.760
+  CI (99.9%): [926.438, 1070.911] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeAndAfterEachCall
+# Parameters: (paramCount = 3, stackDepth = 20)
+
+# Run progress: 56.67% complete, ETA 00:04:30
+# Fork: 1 of 1
+# Warmup Iteration   1: 1914.173 ns/op
+# Warmup Iteration   2: 1822.635 ns/op
+# Warmup Iteration   3: 1833.283 ns/op
+# Warmup Iteration   4: 1809.697 ns/op
+# Warmup Iteration   5: 1769.325 ns/op
+Iteration   1: 2073.314 ns/op
+Iteration   2: 1916.477 ns/op
+Iteration   3: 1850.833 ns/op
+Iteration   4: 1844.585 ns/op
+Iteration   5: 1771.229 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeAndAfterEachCall":
+  1891.288 ±(99.9%) 439.041 ns/op [Average]
+  (min, avg, max) = (1771.229, 1891.288, 2073.314), stdev = 114.017
+  CI (99.9%): [1452.247, 2330.328] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeAndAfterEachCall
+# Parameters: (paramCount = 3, stackDepth = 100)
+
+# Run progress: 58.33% complete, ETA 00:04:20
+# Fork: 1 of 1
+# Warmup Iteration   1: 8562.796 ns/op
+# Warmup Iteration   2: 8829.066 ns/op
+# Warmup Iteration   3: 8775.297 ns/op
+# Warmup Iteration   4: 8931.894 ns/op
+# Warmup Iteration   5: 8357.396 ns/op
+Iteration   1: 8819.912 ns/op
+Iteration   2: 8815.652 ns/op
+Iteration   3: 8937.933 ns/op
+Iteration   4: 8992.408 ns/op
+Iteration   5: 8900.866 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeAndAfterEachCall":
+  8893.354 ±(99.9%) 293.804 ns/op [Average]
+  (min, avg, max) = (8815.652, 8893.354, 8992.408), stdev = 76.300
+  CI (99.9%): [8599.550, 9187.158] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeEachCall
+# Parameters: (paramCount = 1, stackDepth = 5)
+
+# Run progress: 60.00% complete, ETA 00:04:09
+# Fork: 1 of 1
+# Warmup Iteration   1: 497.532 ns/op
+# Warmup Iteration   2: 435.926 ns/op
+# Warmup Iteration   3: 430.438 ns/op
+# Warmup Iteration   4: 432.977 ns/op
+# Warmup Iteration   5: 428.161 ns/op
+Iteration   1: 428.596 ns/op
+Iteration   2: 431.523 ns/op
+Iteration   3: 430.387 ns/op
+Iteration   4: 424.795 ns/op
+Iteration   5: 438.661 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeEachCall":
+  430.792 ±(99.9%) 19.579 ns/op [Average]
+  (min, avg, max) = (424.795, 430.792, 438.661), stdev = 5.085
+  CI (99.9%): [411.213, 450.371] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeEachCall
+# Parameters: (paramCount = 1, stackDepth = 10)
+
+# Run progress: 61.67% complete, ETA 00:03:59
+# Fork: 1 of 1
+# Warmup Iteration   1: 702.327 ns/op
+# Warmup Iteration   2: 665.265 ns/op
+# Warmup Iteration   3: 669.136 ns/op
+# Warmup Iteration   4: 661.375 ns/op
+# Warmup Iteration   5: 664.883 ns/op
+Iteration   1: 656.085 ns/op
+Iteration   2: 649.436 ns/op
+Iteration   3: 660.542 ns/op
+Iteration   4: 650.515 ns/op
+Iteration   5: 673.758 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeEachCall":
+  658.067 ±(99.9%) 37.914 ns/op [Average]
+  (min, avg, max) = (649.436, 658.067, 673.758), stdev = 9.846
+  CI (99.9%): [620.153, 695.982] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeEachCall
+# Parameters: (paramCount = 1, stackDepth = 20)
+
+# Run progress: 63.33% complete, ETA 00:03:48
+# Fork: 1 of 1
+# Warmup Iteration   1: 1222.872 ns/op
+# Warmup Iteration   2: 1167.072 ns/op
+# Warmup Iteration   3: 1191.910 ns/op
+# Warmup Iteration   4: 1188.040 ns/op
+# Warmup Iteration   5: 1154.321 ns/op
+Iteration   1: 1212.769 ns/op
+Iteration   2: 1199.129 ns/op
+Iteration   3: 1202.656 ns/op
+Iteration   4: 1166.971 ns/op
+Iteration   5: 1201.169 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeEachCall":
+  1196.539 ±(99.9%) 66.785 ns/op [Average]
+  (min, avg, max) = (1166.971, 1196.539, 1212.769), stdev = 17.344
+  CI (99.9%): [1129.754, 1263.324] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeEachCall
+# Parameters: (paramCount = 1, stackDepth = 100)
+
+# Run progress: 65.00% complete, ETA 00:03:38
+# Fork: 1 of 1
+# Warmup Iteration   1: 5160.037 ns/op
+# Warmup Iteration   2: 5153.102 ns/op
+# Warmup Iteration   3: 5001.803 ns/op
+# Warmup Iteration   4: 4988.762 ns/op
+# Warmup Iteration   5: 4648.257 ns/op
+Iteration   1: 4675.721 ns/op
+Iteration   2: 4806.954 ns/op
+Iteration   3: 4734.920 ns/op
+Iteration   4: 4595.672 ns/op
+Iteration   5: 4664.023 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeEachCall":
+  4695.458 ±(99.9%) 306.384 ns/op [Average]
+  (min, avg, max) = (4595.672, 4695.458, 4806.954), stdev = 79.567
+  CI (99.9%): [4389.074, 5001.842] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeEachCall
+# Parameters: (paramCount = 2, stackDepth = 5)
+
+# Run progress: 66.67% complete, ETA 00:03:28
+# Fork: 1 of 1
+# Warmup Iteration   1: 420.892 ns/op
+# Warmup Iteration   2: 421.277 ns/op
+# Warmup Iteration   3: 421.194 ns/op
+# Warmup Iteration   4: 435.966 ns/op
+# Warmup Iteration   5: 411.471 ns/op
+Iteration   1: 425.967 ns/op
+Iteration   2: 424.458 ns/op
+Iteration   3: 436.825 ns/op
+Iteration   4: 426.058 ns/op
+Iteration   5: 437.038 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeEachCall":
+  430.069 ±(99.9%) 24.247 ns/op [Average]
+  (min, avg, max) = (424.458, 430.069, 437.038), stdev = 6.297
+  CI (99.9%): [405.822, 454.316] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeEachCall
+# Parameters: (paramCount = 2, stackDepth = 10)
+
+# Run progress: 68.33% complete, ETA 00:03:17
+# Fork: 1 of 1
+# Warmup Iteration   1: 673.807 ns/op
+# Warmup Iteration   2: 633.793 ns/op
+# Warmup Iteration   3: 647.094 ns/op
+# Warmup Iteration   4: 667.564 ns/op
+# Warmup Iteration   5: 642.529 ns/op
+Iteration   1: 655.108 ns/op
+Iteration   2: 670.393 ns/op
+Iteration   3: 649.887 ns/op
+Iteration   4: 648.550 ns/op
+Iteration   5: 685.100 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeEachCall":
+  661.808 ±(99.9%) 60.241 ns/op [Average]
+  (min, avg, max) = (648.550, 661.808, 685.100), stdev = 15.644
+  CI (99.9%): [601.567, 722.049] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeEachCall
+# Parameters: (paramCount = 2, stackDepth = 20)
+
+# Run progress: 70.00% complete, ETA 00:03:07
+# Fork: 1 of 1
+# Warmup Iteration   1: 1108.457 ns/op
+# Warmup Iteration   2: 1069.532 ns/op
+# Warmup Iteration   3: 1117.210 ns/op
+# Warmup Iteration   4: 1090.881 ns/op
+# Warmup Iteration   5: 1087.992 ns/op
+Iteration   1: 1070.066 ns/op
+Iteration   2: 1090.164 ns/op
+Iteration   3: 1124.437 ns/op
+Iteration   4: 1122.641 ns/op
+Iteration   5: 1086.616 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeEachCall":
+  1098.785 ±(99.9%) 91.818 ns/op [Average]
+  (min, avg, max) = (1070.066, 1098.785, 1124.437), stdev = 23.845
+  CI (99.9%): [1006.967, 1190.603] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeEachCall
+# Parameters: (paramCount = 2, stackDepth = 100)
+
+# Run progress: 71.67% complete, ETA 00:02:56
+# Fork: 1 of 1
+# Warmup Iteration   1: 4942.176 ns/op
+# Warmup Iteration   2: 4711.566 ns/op
+# Warmup Iteration   3: 4523.146 ns/op
+# Warmup Iteration   4: 4754.685 ns/op
+# Warmup Iteration   5: 4590.989 ns/op
+Iteration   1: 4658.331 ns/op
+Iteration   2: 4537.258 ns/op
+Iteration   3: 4623.861 ns/op
+Iteration   4: 4976.510 ns/op
+Iteration   5: 4667.308 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeEachCall":
+  4692.654 ±(99.9%) 642.248 ns/op [Average]
+  (min, avg, max) = (4537.258, 4692.654, 4976.510), stdev = 166.790
+  CI (99.9%): [4050.406, 5334.902] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeEachCall
+# Parameters: (paramCount = 3, stackDepth = 5)
+
+# Run progress: 73.33% complete, ETA 00:02:46
+# Fork: 1 of 1
+# Warmup Iteration   1: 430.474 ns/op
+# Warmup Iteration   2: 415.795 ns/op
+# Warmup Iteration   3: 401.261 ns/op
+# Warmup Iteration   4: 426.882 ns/op
+# Warmup Iteration   5: 411.889 ns/op
+Iteration   1: 411.520 ns/op
+Iteration   2: 407.304 ns/op
+Iteration   3: 432.669 ns/op
+Iteration   4: 414.293 ns/op
+Iteration   5: 430.939 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeEachCall":
+  419.345 ±(99.9%) 44.892 ns/op [Average]
+  (min, avg, max) = (407.304, 419.345, 432.669), stdev = 11.658
+  CI (99.9%): [374.452, 464.237] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeEachCall
+# Parameters: (paramCount = 3, stackDepth = 10)
+
+# Run progress: 75.00% complete, ETA 00:02:36
+# Fork: 1 of 1
+# Warmup Iteration   1: 645.148 ns/op
+# Warmup Iteration   2: 655.573 ns/op
+# Warmup Iteration   3: 634.285 ns/op
+# Warmup Iteration   4: 641.131 ns/op
+# Warmup Iteration   5: 623.019 ns/op
+Iteration   1: 625.693 ns/op
+Iteration   2: 626.789 ns/op
+Iteration   3: 639.807 ns/op
+Iteration   4: 628.683 ns/op
+Iteration   5: 633.096 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeEachCall":
+  630.814 ±(99.9%) 22.209 ns/op [Average]
+  (min, avg, max) = (625.693, 630.814, 639.807), stdev = 5.768
+  CI (99.9%): [608.605, 653.022] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeEachCall
+# Parameters: (paramCount = 3, stackDepth = 20)
+
+# Run progress: 76.67% complete, ETA 00:02:25
+# Fork: 1 of 1
+# Warmup Iteration   1: 1114.478 ns/op
+# Warmup Iteration   2: 1117.140 ns/op
+# Warmup Iteration   3: 1054.933 ns/op
+# Warmup Iteration   4: 1074.856 ns/op
+# Warmup Iteration   5: 1070.417 ns/op
+Iteration   1: 1059.791 ns/op
+Iteration   2: 1071.128 ns/op
+Iteration   3: 1145.555 ns/op
+Iteration   4: 1149.367 ns/op
+Iteration   5: 1063.704 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeEachCall":
+  1097.909 ±(99.9%) 174.964 ns/op [Average]
+  (min, avg, max) = (1059.791, 1097.909, 1149.367), stdev = 45.438
+  CI (99.9%): [922.945, 1272.873] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldBeforeEachCall
+# Parameters: (paramCount = 3, stackDepth = 100)
+
+# Run progress: 78.33% complete, ETA 00:02:15
+# Fork: 1 of 1
+# Warmup Iteration   1: 4890.897 ns/op
+# Warmup Iteration   2: 4812.172 ns/op
+# Warmup Iteration   3: 4822.917 ns/op
+# Warmup Iteration   4: 4685.074 ns/op
+# Warmup Iteration   5: 4591.855 ns/op
+Iteration   1: 4790.287 ns/op
+Iteration   2: 4600.196 ns/op
+Iteration   3: 5089.382 ns/op
+Iteration   4: 4776.302 ns/op
+Iteration   5: 4809.214 ns/op
+
+
+Result "org.example.OneShot.yieldBeforeEachCall":
+  4813.076 ±(99.9%) 676.743 ns/op [Average]
+  (min, avg, max) = (4600.196, 4813.076, 5089.382), stdev = 175.748
+  CI (99.9%): [4136.334, 5489.819] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldThenContinue
+# Parameters: (paramCount = 1, stackDepth = 5)
+
+# Run progress: 80.00% complete, ETA 00:02:04
+# Fork: 1 of 1
+# Warmup Iteration   1: 245.424 ns/op
+# Warmup Iteration   2: 239.484 ns/op
+# Warmup Iteration   3: 224.958 ns/op
+# Warmup Iteration   4: 215.569 ns/op
+# Warmup Iteration   5: 240.470 ns/op
+Iteration   1: 227.698 ns/op
+Iteration   2: 223.983 ns/op
+Iteration   3: 232.554 ns/op
+Iteration   4: 231.845 ns/op
+Iteration   5: 241.845 ns/op
+
+
+Result "org.example.OneShot.yieldThenContinue":
+  231.585 ±(99.9%) 25.771 ns/op [Average]
+  (min, avg, max) = (223.983, 231.585, 241.845), stdev = 6.693
+  CI (99.9%): [205.814, 257.356] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldThenContinue
+# Parameters: (paramCount = 1, stackDepth = 10)
+
+# Run progress: 81.67% complete, ETA 00:01:54
+# Fork: 1 of 1
+# Warmup Iteration   1: 253.578 ns/op
+# Warmup Iteration   2: 248.155 ns/op
+# Warmup Iteration   3: 252.641 ns/op
+# Warmup Iteration   4: 236.974 ns/op
+# Warmup Iteration   5: 246.379 ns/op
+Iteration   1: 250.738 ns/op
+Iteration   2: 246.581 ns/op
+Iteration   3: 242.079 ns/op
+Iteration   4: 246.029 ns/op
+Iteration   5: 254.681 ns/op
+
+
+Result "org.example.OneShot.yieldThenContinue":
+  248.022 ±(99.9%) 18.576 ns/op [Average]
+  (min, avg, max) = (242.079, 248.022, 254.681), stdev = 4.824
+  CI (99.9%): [229.446, 266.598] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldThenContinue
+# Parameters: (paramCount = 1, stackDepth = 20)
+
+# Run progress: 83.33% complete, ETA 00:01:44
+# Fork: 1 of 1
+# Warmup Iteration   1: 273.760 ns/op
+# Warmup Iteration   2: 258.037 ns/op
+# Warmup Iteration   3: 253.211 ns/op
+# Warmup Iteration   4: 244.731 ns/op
+# Warmup Iteration   5: 252.802 ns/op
+Iteration   1: 245.489 ns/op
+Iteration   2: 255.213 ns/op
+Iteration   3: 255.084 ns/op
+Iteration   4: 268.811 ns/op
+Iteration   5: 260.998 ns/op
+
+
+Result "org.example.OneShot.yieldThenContinue":
+  257.119 ±(99.9%) 33.057 ns/op [Average]
+  (min, avg, max) = (245.489, 257.119, 268.811), stdev = 8.585
+  CI (99.9%): [224.062, 290.175] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldThenContinue
+# Parameters: (paramCount = 1, stackDepth = 100)
+
+# Run progress: 85.00% complete, ETA 00:01:33
+# Fork: 1 of 1
+# Warmup Iteration   1: 594.791 ns/op
+# Warmup Iteration   2: 575.865 ns/op
+# Warmup Iteration   3: 580.895 ns/op
+# Warmup Iteration   4: 582.673 ns/op
+# Warmup Iteration   5: 576.637 ns/op
+Iteration   1: 582.925 ns/op
+Iteration   2: 580.325 ns/op
+Iteration   3: 578.503 ns/op
+Iteration   4: 572.865 ns/op
+Iteration   5: 614.499 ns/op
+
+
+Result "org.example.OneShot.yieldThenContinue":
+  585.823 ±(99.9%) 63.343 ns/op [Average]
+  (min, avg, max) = (572.865, 585.823, 614.499), stdev = 16.450
+  CI (99.9%): [522.480, 649.167] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldThenContinue
+# Parameters: (paramCount = 2, stackDepth = 5)
+
+# Run progress: 86.67% complete, ETA 00:01:23
+# Fork: 1 of 1
+# Warmup Iteration   1: 284.682 ns/op
+# Warmup Iteration   2: 274.462 ns/op
+# Warmup Iteration   3: 249.203 ns/op
+# Warmup Iteration   4: 270.433 ns/op
+# Warmup Iteration   5: 261.667 ns/op
+Iteration   1: 265.690 ns/op
+Iteration   2: 278.921 ns/op
+Iteration   3: 278.539 ns/op
+Iteration   4: 276.817 ns/op
+Iteration   5: 263.139 ns/op
+
+
+Result "org.example.OneShot.yieldThenContinue":
+  272.621 ±(99.9%) 29.215 ns/op [Average]
+  (min, avg, max) = (263.139, 272.621, 278.921), stdev = 7.587
+  CI (99.9%): [243.406, 301.836] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldThenContinue
+# Parameters: (paramCount = 2, stackDepth = 10)
+
+# Run progress: 88.33% complete, ETA 00:01:12
+# Fork: 1 of 1
+# Warmup Iteration   1: 328.319 ns/op
+# Warmup Iteration   2: 309.805 ns/op
+# Warmup Iteration   3: 292.060 ns/op
+# Warmup Iteration   4: 311.365 ns/op
+# Warmup Iteration   5: 287.839 ns/op
+Iteration   1: 299.169 ns/op
+Iteration   2: 313.573 ns/op
+Iteration   3: 307.651 ns/op
+Iteration   4: 313.453 ns/op
+Iteration   5: 310.601 ns/op
+
+
+Result "org.example.OneShot.yieldThenContinue":
+  308.889 ±(99.9%) 22.920 ns/op [Average]
+  (min, avg, max) = (299.169, 308.889, 313.573), stdev = 5.952
+  CI (99.9%): [285.969, 331.809] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldThenContinue
+# Parameters: (paramCount = 2, stackDepth = 20)
+
+# Run progress: 90.00% complete, ETA 00:01:02
+# Fork: 1 of 1
+# Warmup Iteration   1: 399.135 ns/op
+# Warmup Iteration   2: 390.840 ns/op
+# Warmup Iteration   3: 383.467 ns/op
+# Warmup Iteration   4: 380.289 ns/op
+# Warmup Iteration   5: 383.029 ns/op
+Iteration   1: 386.040 ns/op
+Iteration   2: 385.314 ns/op
+Iteration   3: 381.153 ns/op
+Iteration   4: 388.078 ns/op
+Iteration   5: 377.731 ns/op
+
+
+Result "org.example.OneShot.yieldThenContinue":
+  383.663 ±(99.9%) 16.034 ns/op [Average]
+  (min, avg, max) = (377.731, 383.663, 388.078), stdev = 4.164
+  CI (99.9%): [367.629, 399.697] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldThenContinue
+# Parameters: (paramCount = 2, stackDepth = 100)
+
+# Run progress: 91.67% complete, ETA 00:00:52
+# Fork: 1 of 1
+# Warmup Iteration   1: 930.176 ns/op
+# Warmup Iteration   2: 901.276 ns/op
+# Warmup Iteration   3: 887.991 ns/op
+# Warmup Iteration   4: 882.405 ns/op
+# Warmup Iteration   5: 905.881 ns/op
+Iteration   1: 869.843 ns/op
+Iteration   2: 887.922 ns/op
+Iteration   3: 901.250 ns/op
+Iteration   4: 881.385 ns/op
+Iteration   5: 912.654 ns/op
+
+
+Result "org.example.OneShot.yieldThenContinue":
+  890.611 ±(99.9%) 64.512 ns/op [Average]
+  (min, avg, max) = (869.843, 890.611, 912.654), stdev = 16.754
+  CI (99.9%): [826.098, 955.123] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldThenContinue
+# Parameters: (paramCount = 3, stackDepth = 5)
+
+# Run progress: 93.33% complete, ETA 00:00:41
+# Fork: 1 of 1
+# Warmup Iteration   1: 306.803 ns/op
+# Warmup Iteration   2: 277.576 ns/op
+# Warmup Iteration   3: 285.499 ns/op
+# Warmup Iteration   4: 288.436 ns/op
+# Warmup Iteration   5: 283.285 ns/op
+Iteration   1: 311.891 ns/op
+Iteration   2: 293.598 ns/op
+Iteration   3: 282.937 ns/op
+Iteration   4: 292.999 ns/op
+Iteration   5: 296.318 ns/op
+
+
+Result "org.example.OneShot.yieldThenContinue":
+  295.548 ±(99.9%) 40.249 ns/op [Average]
+  (min, avg, max) = (282.937, 295.548, 311.891), stdev = 10.453
+  CI (99.9%): [255.299, 335.798] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldThenContinue
+# Parameters: (paramCount = 3, stackDepth = 10)
+
+# Run progress: 95.00% complete, ETA 00:00:31
+# Fork: 1 of 1
+# Warmup Iteration   1: 347.495 ns/op
+# Warmup Iteration   2: 340.763 ns/op
+# Warmup Iteration   3: 349.127 ns/op
+# Warmup Iteration   4: 348.113 ns/op
+# Warmup Iteration   5: 358.341 ns/op
+Iteration   1: 356.542 ns/op
+Iteration   2: 350.991 ns/op
+Iteration   3: 357.678 ns/op
+Iteration   4: 350.683 ns/op
+Iteration   5: 347.951 ns/op
+
+
+Result "org.example.OneShot.yieldThenContinue":
+  352.769 ±(99.9%) 16.000 ns/op [Average]
+  (min, avg, max) = (347.951, 352.769, 357.678), stdev = 4.155
+  CI (99.9%): [336.769, 368.769] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldThenContinue
+# Parameters: (paramCount = 3, stackDepth = 20)
+
+# Run progress: 96.67% complete, ETA 00:00:20
+# Fork: 1 of 1
+# Warmup Iteration   1: 482.327 ns/op
+# Warmup Iteration   2: 469.821 ns/op
+# Warmup Iteration   3: 492.060 ns/op
+# Warmup Iteration   4: 477.711 ns/op
+# Warmup Iteration   5: 467.002 ns/op
+Iteration   1: 471.425 ns/op
+Iteration   2: 472.509 ns/op
+Iteration   3: 489.438 ns/op
+Iteration   4: 484.559 ns/op
+Iteration   5: 488.464 ns/op
+
+
+Result "org.example.OneShot.yieldThenContinue":
+  481.279 ±(99.9%) 33.512 ns/op [Average]
+  (min, avg, max) = (471.425, 481.279, 489.438), stdev = 8.703
+  CI (99.9%): [447.767, 514.791] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 1.8.0_362_fiber, OpenJDK 64-Bit Server VM, 25.362-b1
+# VM invoker: C:\TencentKona\TencentKona-8.0.13-362\jre\bin\java.exe
+# VM options: <none>
+# Blackhole mode: full + dont-inline hint (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 1 s each
+# Measurement: 5 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.example.OneShot.yieldThenContinue
+# Parameters: (paramCount = 3, stackDepth = 100)
+
+# Run progress: 98.33% complete, ETA 00:00:10
+# Fork: 1 of 1
+# Warmup Iteration   1: 1504.973 ns/op
+# Warmup Iteration   2: 1357.623 ns/op
+# Warmup Iteration   3: 1417.031 ns/op
+# Warmup Iteration   4: 1431.621 ns/op
+# Warmup Iteration   5: 1404.878 ns/op
+Iteration   1: 1444.303 ns/op
+Iteration   2: 1443.860 ns/op
+Iteration   3: 1448.521 ns/op
+Iteration   4: 1434.081 ns/op
+Iteration   5: 1446.787 ns/op
+
+
+Result "org.example.OneShot.yieldThenContinue":
+  1443.510 ±(99.9%) 21.570 ns/op [Average]
+  (min, avg, max) = (1434.081, 1443.510, 1448.521), stdev = 5.602
+  CI (99.9%): [1421.941, 1465.080] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:10:24
+
+REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
+why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
+experiments, perform baseline and negative tests that provide experimental control, make sure
+the benchmarking environment is safe on JVM/OS/HW level, ask for reviews from the domain experts.
+Do not assume the numbers tell you what you want them to tell.
+
+Benchmark                            (paramCount)  (stackDepth)  Mode  Cnt     Score      Error  Units
+OneShot.noYield                                 1             5  avgt    5   193.347 ±   23.752  ns/op
+OneShot.noYield                                 1            10  avgt    5   190.794 ±   15.101  ns/op
+OneShot.noYield                                 1            20  avgt    5   201.511 ±   12.077  ns/op
+OneShot.noYield                                 1           100  avgt    5   511.413 ±   44.641  ns/op
+OneShot.noYield                                 2             5  avgt    5   226.515 ±   15.460  ns/op
+OneShot.noYield                                 2            10  avgt    5   271.085 ±    7.055  ns/op
+OneShot.noYield                                 2            20  avgt    5   368.990 ±   44.183  ns/op
+OneShot.noYield                                 2           100  avgt    5  1015.091 ±   45.551  ns/op
+OneShot.noYield                                 3             5  avgt    5   249.178 ±   25.278  ns/op
+OneShot.noYield                                 3            10  avgt    5   329.544 ±   36.000  ns/op
+OneShot.noYield                                 3            20  avgt    5   469.367 ±   19.522  ns/op
+OneShot.noYield                                 3           100  avgt    5  1530.162 ±   54.525  ns/op
+OneShot.yieldAfterEachCall                      1             5  avgt    5   403.407 ±   43.957  ns/op
+OneShot.yieldAfterEachCall                      1            10  avgt    5   610.780 ±   61.477  ns/op
+OneShot.yieldAfterEachCall                      1            20  avgt    5  1070.246 ±  131.096  ns/op
+OneShot.yieldAfterEachCall                      1           100  avgt    5  4691.595 ±  804.697  ns/op
+OneShot.yieldAfterEachCall                      2             5  avgt    5   412.573 ±   36.146  ns/op
+OneShot.yieldAfterEachCall                      2            10  avgt    5   612.922 ±   80.739  ns/op
+OneShot.yieldAfterEachCall                      2            20  avgt    5  1064.759 ±   82.276  ns/op
+OneShot.yieldAfterEachCall                      2           100  avgt    5  4681.689 ±  349.937  ns/op
+OneShot.yieldAfterEachCall                      3             5  avgt    5   418.512 ±   37.332  ns/op
+OneShot.yieldAfterEachCall                      3            10  avgt    5   655.347 ±   43.943  ns/op
+OneShot.yieldAfterEachCall                      3            20  avgt    5  1107.613 ±  158.758  ns/op
+OneShot.yieldAfterEachCall                      3           100  avgt    5  4883.132 ± 1361.582  ns/op
+OneShot.yieldBeforeAndAfterEachCall             1             5  avgt    5   591.677 ±   56.482  ns/op
+OneShot.yieldBeforeAndAfterEachCall             1            10  avgt    5  1022.626 ±   81.977  ns/op
+OneShot.yieldBeforeAndAfterEachCall             1            20  avgt    5  1830.952 ±   97.383  ns/op
+OneShot.yieldBeforeAndAfterEachCall             1           100  avgt    5  8505.499 ± 1018.192  ns/op
+OneShot.yieldBeforeAndAfterEachCall             2             5  avgt    5   670.567 ±   42.148  ns/op
+OneShot.yieldBeforeAndAfterEachCall             2            10  avgt    5   983.444 ±   95.015  ns/op
+OneShot.yieldBeforeAndAfterEachCall             2            20  avgt    5  1879.760 ±  134.950  ns/op
+OneShot.yieldBeforeAndAfterEachCall             2           100  avgt    5  8709.325 ±  220.228  ns/op
+OneShot.yieldBeforeAndAfterEachCall             3             5  avgt    5   635.915 ±   48.346  ns/op
+OneShot.yieldBeforeAndAfterEachCall             3            10  avgt    5   998.674 ±   72.236  ns/op
+OneShot.yieldBeforeAndAfterEachCall             3            20  avgt    5  1891.288 ±  439.041  ns/op
+OneShot.yieldBeforeAndAfterEachCall             3           100  avgt    5  8893.354 ±  293.804  ns/op
+OneShot.yieldBeforeEachCall                     1             5  avgt    5   430.792 ±   19.579  ns/op
+OneShot.yieldBeforeEachCall                     1            10  avgt    5   658.067 ±   37.914  ns/op
+OneShot.yieldBeforeEachCall                     1            20  avgt    5  1196.539 ±   66.785  ns/op
+OneShot.yieldBeforeEachCall                     1           100  avgt    5  4695.458 ±  306.384  ns/op
+OneShot.yieldBeforeEachCall                     2             5  avgt    5   430.069 ±   24.247  ns/op
+OneShot.yieldBeforeEachCall                     2            10  avgt    5   661.808 ±   60.241  ns/op
+OneShot.yieldBeforeEachCall                     2            20  avgt    5  1098.785 ±   91.818  ns/op
+OneShot.yieldBeforeEachCall                     2           100  avgt    5  4692.654 ±  642.248  ns/op
+OneShot.yieldBeforeEachCall                     3             5  avgt    5   419.345 ±   44.892  ns/op
+OneShot.yieldBeforeEachCall                     3            10  avgt    5   630.814 ±   22.209  ns/op
+OneShot.yieldBeforeEachCall                     3            20  avgt    5  1097.909 ±  174.964  ns/op
+OneShot.yieldBeforeEachCall                     3           100  avgt    5  4813.076 ±  676.743  ns/op
+OneShot.yieldThenContinue                       1             5  avgt    5   231.585 ±   25.771  ns/op
+OneShot.yieldThenContinue                       1            10  avgt    5   248.022 ±   18.576  ns/op
+OneShot.yieldThenContinue                       1            20  avgt    5   257.119 ±   33.057  ns/op
+OneShot.yieldThenContinue                       1           100  avgt    5   585.823 ±   63.343  ns/op
+OneShot.yieldThenContinue                       2             5  avgt    5   272.621 ±   29.215  ns/op
+OneShot.yieldThenContinue                       2            10  avgt    5   308.889 ±   22.920  ns/op
+OneShot.yieldThenContinue                       2            20  avgt    5   383.663 ±   16.034  ns/op
+OneShot.yieldThenContinue                       2           100  avgt    5   890.611 ±   64.512  ns/op
+OneShot.yieldThenContinue                       3             5  avgt    5   295.548 ±   40.249  ns/op
+OneShot.yieldThenContinue                       3            10  avgt    5   352.769 ±   16.000  ns/op
+OneShot.yieldThenContinue                       3            20  avgt    5   481.279 ±   33.512  ns/op
+OneShot.yieldThenContinue                       3           100  avgt    5  1443.510 ±   21.570  ns/op

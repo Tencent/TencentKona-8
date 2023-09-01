@@ -23,14 +23,8 @@
 
 package org.example;
 
-//import jdk.internal.vm.Continuation;
-//import jdk.internal.vm.ContinuationScope;
-
 import java.util.concurrent.TimeUnit;
 import org.openjdk.jmh.annotations.*;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
-import org.openjdk.jmh.runner.*;
 
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
@@ -38,8 +32,9 @@ import org.openjdk.jmh.runner.*;
 @Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 @Fork(1)
-public class Main {
-    static final ContinuationScope SCOPE = new ContinuationScope() { };
+public class OneShot {
+    static final ContinuationScope SCOPE = new ContinuationScope() {
+    };
 
     static class Arg {
         volatile int field;
@@ -65,17 +60,25 @@ public class Main {
         @Override
         public void run() {
             switch (paramCount) {
-                case 1: run1(maxDepth); break;
-                case 2: run2(maxDepth, new Arg()); break;
-                case 3: run3(maxDepth, new Arg(), new Arg()); break;
-                default: throw new Error("should not happen");
+                case 1:
+                    run1(maxDepth);
+                    break;
+                case 2:
+                    run2(maxDepth, new Arg());
+                    break;
+                case 3:
+                    run3(maxDepth, new Arg(), new Arg());
+                    break;
+                default:
+                    throw new Error("should not happen");
             }
         }
 
         private void run1(int depth) {
             if (depth > 0) {
                 run1(depth - 1);
-            } if (depth == 0) {
+            }
+            if (depth == 0) {
                 if (yieldAtLimit) Continuation.yield(SCOPE);
             }
         }
@@ -83,7 +86,8 @@ public class Main {
         private void run2(int depth, Arg arg2) {
             if (depth > 0) {
                 run2(depth - 1, arg2);
-            } if (depth == 0) {
+            }
+            if (depth == 0) {
                 if (yieldAtLimit) Continuation.yield(SCOPE);
             } else {
                 // never executed
@@ -94,7 +98,8 @@ public class Main {
         private void run3(int depth, Arg arg2, Arg arg3) {
             if (depth > 0) {
                 run3(depth - 1, arg2, arg3);
-            } if (depth == 0) {
+            }
+            if (depth == 0) {
                 if (yieldAtLimit) Continuation.yield(SCOPE);
             } else {
                 // never executed
@@ -131,10 +136,17 @@ public class Main {
 
         public void run() {
             switch (paramCount) {
-                case 1: run1(maxDepth); break;
-                case 2: run2(maxDepth, new Arg()); break;
-                case 3: run3(maxDepth, new Arg(), new Arg()); break;
-                default: throw new Error("should not happen");
+                case 1:
+                    run1(maxDepth);
+                    break;
+                case 2:
+                    run2(maxDepth, new Arg());
+                    break;
+                case 3:
+                    run3(maxDepth, new Arg(), new Arg());
+                    break;
+                default:
+                    throw new Error("should not happen");
             }
         }
 
@@ -194,15 +206,21 @@ public class Main {
     }
 
     /**
-     * Creates and runs a continuation that yields at a given stack depth.
+    This benchmark will continue to create coroutines, and in KonaFiberthis means that
+    the JVM will keep applying native memory space, which will eventually cause memory
+    to be run out of so that failed to allocate native memory space for new coroutines,
+    resulting in benchmark execution failure. So we comment this benchmark
      */
-    @Benchmark
-    public void yield() {
-        Continuation cont = Yielder.continuation(paramCount, stackDepth, true);
-        cont.run();
-        if (cont.isDone())
-            throw new RuntimeException("continuation done???");
-    }
+//    /**
+//     * Creates and runs a continuation that yields at a given stack depth.
+//     */
+//    @Benchmark
+//    public void yield() {
+//        Continuation cont = Yielder.continuation(paramCount, stackDepth, true);
+//        cont.run();
+//        if (cont.isDone())
+//            throw new RuntimeException("continuation done???");
+//    }
 
     /**
      * Creates and runs a continuation that yields at a given stack depth, it is
@@ -251,14 +269,5 @@ public class Main {
         while (!cont.isDone()) {
             cont.run();
         }
-    }
-
-    public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder()
-                .include(Main.class.getSimpleName())
-                .forks(1)
-                .build();
-
-        new Runner(opt).run();
     }
 }
