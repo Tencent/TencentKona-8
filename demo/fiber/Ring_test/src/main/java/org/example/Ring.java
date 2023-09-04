@@ -22,6 +22,8 @@
  */
 package org.example;
 
+import org.example.Channel;
+import org.example.Channels;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -34,11 +36,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
-import org.openjdk.jmh.results.format.ResultFormatType;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -56,122 +53,120 @@ import java.util.function.Predicate;
 @SuppressWarnings("preview")
 public class Ring {
 
-	public static class Worker<T> implements Runnable {
-		private final Channel<T> source;
-		private final Channel<T> sink;
-		private final Predicate<T> finisher;
+    public static class Worker<T> implements Runnable {
+        private final Channel<T> source;
+        private final Channel<T> sink;
+        private final Predicate<T> finisher;
 
-		public Worker(Channel<T> source, Channel<T> sink, Predicate<T> finisher) {
-			this.source = source;
-			this.sink = sink;
-			this.finisher = finisher;
-		}
+        public Worker(Channel<T> source, Channel<T> sink, Predicate<T> finisher) {
+            this.source = source;
+            this.sink = sink;
+            this.finisher = finisher;
+        }
 
-		@Override
-		public void run() {
-			boolean endOfWork = false;
-			do {
-				T msg = source.receive();
-				endOfWork = finisher.test(msg);
-				sink.send(msg);
-			} while (!endOfWork);
-		}
-	}
+        @Override
+        public void run() {
+            boolean endOfWork = false;
+            do {
+                T msg = source.receive();
+                endOfWork = finisher.test(msg);
+                sink.send(msg);
+            } while (!endOfWork);
+        }
+    }
 
-	@Param({"1000"})
-	int threads;
+    @Param({"1000"})
+    int threads;
 
-	//    @Param({"lbq", "abq", "sq"})
-	@Param({"sq"})
-	public String queue;
+    //    @Param({"lbq", "abq", "sq"})
+    @Param({"sq"})
+    public String queue;
 
-	@Param({"1", "4", "16", "64", "256"})
-	public int stackDepth;
+    @Param({"1", "4", "16", "64", "256"})
+    public int stackDepth;
 
-	@Param({"1", "4", "8"})
-	public int stackFrame;
+    @Param({"1", "4", "8"})
+    public int stackFrame;
 
-	@Param({"true", "false"})
-	public boolean allocalot;
+    @Param({"true", "false"})
+    public boolean allocalot;
 
-	@Param({"true", "false"})
-	public boolean singleshot;
+    @Param({"true", "false"})
+    public boolean singleshot;
 
+    @Setup
+    @SuppressWarnings("unchecked")
+    public void setup() {
+        msg = 42;
+        Channel<Integer>[] chans = new Channel[threads + 1];
+        for (int i = 0; i < chans.length; i++) {
+            chans[i] = getChannel();
+        }
+        head = chans[0];
+        tail = chans[chans.length - 1];
+        Predicate<Integer> finalCondition = singleshot ? (x -> true) : (x -> (x < 0));
+        workers = new Worker[chans.length - 1];
+        for (int i = 0; i < chans.length - 1; i++) {
+            workers[i] = new Worker<>(chans[i], chans[i+1], finalCondition);
+        }
+        if(!singleshot) {
+            startAll();
+        }
+    }
 
-	@Setup
-	@SuppressWarnings("unchecked")
-	public void setup() {
-		msg = 42;
-		Channel<Integer>[] chans = new Channel[threads + 1];
-		for (int i = 0; i < chans.length; i++) {
-			chans[i] = getChannel();
-		}
-		head = chans[0];
-		tail = chans[chans.length - 1];
-		Predicate<Integer> finalCondition = singleshot ? (x -> true) : (x -> (x < 0));
-		workers = new Worker[chans.length - 1];
-		for (int i = 0; i < chans.length - 1; i++) {
-			workers[i] = new Worker<>(chans[i], chans[i+1], finalCondition);
-		}
-		if(!singleshot) {
-			startAll();
-		}
-	}
+    private void startAll() {
+        for (Worker<Integer> w : workers) {
+            Thread.startVirtualThread(w);
+        }
+    }
 
-	private void startAll() {
-		for (Worker<Integer> w : workers) {
-			Thread.startVirtualThread(w);
-		}
-	}
+    Worker<Integer>[] workers;
+    Channel<Integer> head;
+    Channel<Integer> tail;
+    Integer msg;
 
-	Worker<Integer>[] workers;
-	Channel<Integer> head;
-	Channel<Integer> tail;
-	Integer msg;
+    @TearDown
+    public void tearDown() {
+        if(!singleshot) {
+            head.send(-1);
+            tail.receive();
+        }
+    }
 
-	@TearDown
-	public void tearDown() {
-		if(!singleshot) {
-			head.send(-1);
-			tail.receive();
-		}
-	}
+    @Benchmark
+    public Object trip(){
+        if(singleshot) {
+            startAll();
+        }
+        head.send(msg);
+        return tail.receive();
+    }
 
-	@Benchmark
-	public Object trip(){
-		if(singleshot) {
-			startAll();
-		}
-		head.send(msg);
-		return tail.receive();
-	}
+    public static <T> BlockingQueue<T> getQueue(String queue) {
+        switch (queue) {
+            case "lbq":
+                return new LinkedBlockingQueue<>();
+            case "abq":
+                return new ArrayBlockingQueue<>(1);
+            case "sq":
+                return new SynchronousQueue<>();
+        }
+        return null;
+    }
 
-	public static <T> BlockingQueue<T> getQueue(String queue) {
-		switch (queue) {
-			case "lbq":
-				return new LinkedBlockingQueue<>();
-			case "abq":
-				return new ArrayBlockingQueue<>(1);
-			case "sq":
-				return new SynchronousQueue<>();
-		}
-		return null;
-	}
-
-	Channel<Integer> getChannel() {
-		switch (stackFrame) {
-			case 1:
-				return new Channels.ChannelFixedStackR1<>(getQueue(queue), stackDepth, allocalot ? 4242 : 0);
-			case 2:
-				return new Channels.ChannelFixedStackR2<>(getQueue(queue), stackDepth, allocalot ? 4242 : 0);
-			case 4:
-				return new Channels.ChannelFixedStackR4<>(getQueue(queue), stackDepth, allocalot ? 4242 : 0);
-			case 8:
-				return new Channels.ChannelFixedStackR8<>(getQueue(queue), stackDepth, allocalot ? 4242 : 0);
-			default:
-				throw new RuntimeException("Illegal stack parameter value: " + stackFrame + " (allowed: 1,2,4,8)");
-		}
-	}
-
+    Channel<Integer> getChannel() {
+        switch (stackFrame) {
+            case 1:
+                return new Channels.ChannelFixedStackR1<>(getQueue(queue), stackDepth, allocalot ? 4242 : 0);
+            case 2:
+                return new Channels.ChannelFixedStackR2<>(getQueue(queue), stackDepth, allocalot ? 4242 : 0);
+            case 4:
+                return new Channels.ChannelFixedStackR4<>(getQueue(queue), stackDepth, allocalot ? 4242 : 0);
+            case 8:
+                return new Channels.ChannelFixedStackR8<>(getQueue(queue), stackDepth, allocalot ? 4242 : 0);
+            default:
+                throw new RuntimeException("Illegal stack parameter value: " + stackFrame + " (allowed: 1,2,4,8)");
+        }
+    }
 
 }
