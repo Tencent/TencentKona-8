@@ -22,7 +22,7 @@ import java.sql.*;
 public class ConnectionNode {
     private static String url = "jdbc:mysql://localhost:3306/zm?useSSL=false";
     private static String u = "root";
-    private static String p = "e6yhde32AR15@063";
+    private static String p = "Abc_12345678";
 
     ConnectionNode next = null;
     Connection con;
@@ -30,13 +30,9 @@ public class ConnectionNode {
 
     public ConnectionNode() {
         try {
-            System.out.println("hihihi");
             con = DriverManager.getConnection(url, u, p);
-            System.out.println("success!! ");
             stm = con.createStatement();
-            System.out.println("Statement object: " + stm);
         } catch (Exception e) {
-            System.out.println("failed");
         }
     }
 }
