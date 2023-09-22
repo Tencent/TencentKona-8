@@ -21,7 +21,7 @@
  * questions.
  */
 
-package org.example;
+package org.openjdk.bench.loom.obsolete;
 
 import java.util.concurrent.TimeUnit;
 
@@ -207,10 +207,11 @@ public class OneShot {
     }
 
     /**
-     This benchmark will continue to create coroutines, and in KonaFiberthis means that
-     the JVM will keep applying native memory space, which will eventually cause memory
-     to be run out of so that failed to allocate native memory space for new coroutines,
-     resulting in benchmark execution failure. So we comment this benchmark
+     This benchmark will continuously create new continuations, which in KonaFiber means that
+     the program will keep requesting native memory and eventually run out of native memory,
+     so the benchmark will get a runtime error in KonaFiber. While running the benchmark with Loom
+     does not have this problem, because Loom creates the continuation in the JVM heap space,
+     and the stacked continuation will be cleaned up by the GC mechanism.
      */
 //    /**
 //     * Creates and runs a continuation that yields at a given stack depth.
