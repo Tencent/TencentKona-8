@@ -84,7 +84,7 @@ CodeReviveLookupTable::Entry* CodeReviveLookupTable::find_entry(char* name, int6
       char* e_name = _meta_space->metadata_name(e->_meta_index);
       int64_t e_identity = _meta_space->metadata_identity(e->_meta_index);
       uint16_t e_loader_type = _meta_space->metadata_loader_type(e->_meta_index);
-      size_t e_name_len = strlen(e_name);
+      size_t e_name_len = e_name != NULL ? strlen(e_name) : 0;
       if (identity == e_identity && name_len == e_name_len && loader_type == e_loader_type
           &&strncmp(name, e_name, name_len) == 0) {
         return e;
@@ -108,7 +108,7 @@ CodeReviveLookupTable::Entry* CodeReviveLookupTable::find_entry(char* name) {
   while (e != NULL) {
     if (e->_hash == hash) {
       char* e_name = _meta_space->metadata_name(e->_meta_index);
-      size_t e_name_len = strlen(e_name);
+      size_t e_name_len = e_name != NULL ? strlen(e_name) : 0;
       if (name_len == e_name_len && strncmp(name, e_name, name_len) == 0) {
         return e;
       }

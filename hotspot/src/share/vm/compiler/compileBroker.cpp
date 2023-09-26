@@ -2454,7 +2454,7 @@ const char* CompileBroker::compiler_name(int comp_level) {
 
 // CodeRevive: print compilation info
 void CompileBroker::print_aot_times(outputStream* output) {
-  if (UsePerfData) {
+  if (UsePerfData && _initialized) {
     output->print_cr("    Standard Compilation info");
     output->print_cr("      Total compile method count   : " JLONG_FORMAT , CompileBroker::_perf_total_standard_compile_count->get_value());
     output->print_cr("      Total compile method time    : %6.3f ms", 
