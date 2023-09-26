@@ -193,6 +193,9 @@ char* CodeReviveMetaSpace::metadata_name(int index) {
 
   MetaInfo* content = (MetaInfo*)(((intptr_t*)_start) + 1);
   intptr_t v = content[index].metadata;
+  if (!is_valid(v)) {
+    return NULL;
+  }
   if (is_resolved(v)) { // resovled
     return cr_metadata_name((Method*)v);
   }
@@ -241,14 +244,14 @@ bool CodeReviveMetaSpace::set_metadata(int index, Metadata* m) {
     guarantee(m == (Metadata*)v, "should be");
     return true;
   }
-  content[index].metadata = (intptr_t)m;
   m->set_csa_meta_index(index);
+  OrderAccess::release_store(&content[index].metadata, (intptr_t)m);
   return true;
 }
 
 bool CodeReviveMetaSpace::unresolved_name_or_klass(int32_t index, Klass** klass, char** k_name) {
   MetaInfo* content = (MetaInfo*)(((intptr_t*)_start) + 1);
-  intptr_t v = content[index].metadata;
+  intptr_t v = OrderAccess::load_acquire(&content[index].metadata);
   if (!is_valid(v)) {
     return false;
   }
@@ -272,7 +275,7 @@ bool CodeReviveMetaSpace::unresolved_name_or_klass(int32_t index, Klass** klass,
 bool CodeReviveMetaSpace::unresolved_name_parts_or_method(int32_t index, Method** method,
                                                           char* name_parts[], int32_t** lens) {
   MetaInfo* content = (MetaInfo*)(((intptr_t*)_start) + 1);
-  intptr_t v = content[index].metadata;
+  intptr_t v = OrderAccess::load_acquire(&content[index].metadata);
   if (!is_valid(v)) {
     return false;
   }

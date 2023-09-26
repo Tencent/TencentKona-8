@@ -481,7 +481,6 @@ void CodeRevive::on_vm_start() {
 #endif
 
   if (is_disabled() ||
-      JvmtiExport::should_post_class_file_load_hook() ||
       ExtendedDTraceProbes || DTraceMonitorProbes || DTraceMethodProbes || DTraceAllocProbes) {
     disable();
     return;
