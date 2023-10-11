@@ -4997,7 +4997,9 @@ void os::Linux::check_signal_handler(int sig) {
   }
 
   if (thisHandler != jvmHandler) {
-    tty->print("Warning: %s handler ", exception_name(sig, buf, O_BUFLEN));
+    if (exception_name(sig, buf, O_BUFLEN) != NULL) {
+      tty->print("Warning: %s handler ", exception_name(sig, buf, O_BUFLEN));
+    }
     tty->print("expected:%s", get_signal_handler_name(jvmHandler, buf, O_BUFLEN));
     tty->print_cr("  found:%s", get_signal_handler_name(thisHandler, buf, O_BUFLEN));
     // No need to check this sig any longer
