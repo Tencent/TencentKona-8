@@ -647,8 +647,7 @@ size_t OptConstantReplace::estimate_size_in_bytes() {
   return 1 + 2 + 4 + 2 + 8;
 }
 
-jlong OptConstantReplace::get_field_val(ciConstant field_const) {
-  jlong field_val = 0;
+bool OptConstantReplace::get_field_val(ciConstant field_const, jlong &field_val) {
   jfloat f_val = 0;
   jint i_val = 0;
   jdouble d_val = 0;
@@ -672,14 +671,10 @@ jlong OptConstantReplace::get_field_val(ciConstant field_const) {
         d_val = field_const.as_double();
         field_val = *(jlong*)&d_val;
         break;
-    case T_OBJECT:
-    case T_ARRAY:
-        ShouldNotReachHere();
-        break;
     default:
-        fatal("illegal");
+        return false;
   }
-  return field_val;
+  return true;
 }
 
 int OptConstantReplace::calc_opt_score() {
@@ -689,9 +684,14 @@ int OptConstantReplace::calc_opt_score() {
   ciField* expected_fld = expected_kls->get_field_by_offset(_field_offset, true);
   guarantee(expected_fld != NULL, "should be");
   ciConstant expected_const = expected_fld->constant_value();
-  
-  jlong field_val = get_field_val(expected_const);
   jshort field_type = (jshort)expected_const.basic_type();
+
+  jlong field_val = 0;
+  bool field_status = get_field_val(expected_const, field_val);
+  if (field_status == false) {
+    CR_LOG(cr_restore, cr_fail, "Fail for get_field_val, illegal field_type: %d\n", field_type);
+    return max_jint;
+  }
 
   int result = 0;
   if (field_type == _field_type && field_val == _field_val) {
