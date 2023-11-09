@@ -186,7 +186,13 @@ void Parse::do_get_xxx(Node* obj, ciField* field, bool is_field) {
           // save for aot
           ciKlass* klass = field->holder();
           ciConstant field_const = field->constant_value();
-          env()->opt_records()->add_ConstantReplaceRecord(klass, field->offset(), (jshort)field_const.basic_type(), OptConstantReplace::get_field_val(field_const));
+          jlong field_val = 0;
+          bool field_status = OptConstantReplace::get_field_val(field_const, field_val);
+          if (field_status == false) {
+            CR_LOG(cr_save, cr_fail, "Fail for save klass %p, because of illegal field_type: %d\n", klass, (jshort)field_const.basic_type());
+            return;
+          }
+          env()->opt_records()->add_ConstantReplaceRecord(klass, field->offset(), (jshort)field_const.basic_type(), field_val);
           return;
         }
       }

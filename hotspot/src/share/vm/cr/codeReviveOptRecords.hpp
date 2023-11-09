@@ -219,7 +219,7 @@ class OptConstantReplace : public OptRecord {
   virtual size_t estimate_size_in_bytes();
   virtual void write_to_stream(CompressedWriteStream* out);
   virtual void read_from_stream(CompressedReadStream* in);
-  static jlong get_field_val(ciConstant field_const);
+  static bool get_field_val(ciConstant field_const, jlong &field_val);
   virtual int  calc_opt_score();
   virtual bool equal(OptRecord* other);
   virtual int  compare_by_type_name(OptRecord* other);
