@@ -212,21 +212,24 @@ static map_info* core_lookup(struct ps_prochandle *ph, uintptr_t addr) {
 // mapped.  This structure gets written to a file.  It is not a class,
 // so that the compilers don't add any compiler-private data to it.
 
-#define NUM_SHARED_MAPS 4
+#define NUM_SHARED_MAPS 9
 
 // Refer to FileMapInfo::_current_version in filemap.hpp
-#define CURRENT_ARCHIVE_VERSION 1
+#define CURRENT_ARCHIVE_VERSION 2
 
 struct FileMapHeader {
-  int   _magic;              // identify file type.
-  int   _version;            // (from enum, above.)
-  size_t _alignment;         // how shared archive should be aligned
+  int    _magic;                    // identify file type.
+  int    _crc;                      // header crc checksum.
+  int    _version;                  // (from enum, above.)
+  size_t _alignment;                // how shared archive should be aligned
+  int    _obj_alignment;            // value of ObjectAlignmentInBytes
 
   struct space_info {
-    int    _file_offset;     // sizeof(this) rounded to vm page size
-    char*  _base;            // copy-on-write base address
-    size_t _capacity;        // for validity checking
-    size_t _used;            // for setting space top on read
+    int    _crc;           // crc checksum of the current space
+    size_t _file_offset;   // sizeof(this) rounded to vm page size
+    char*  _base;          // copy-on-write base address
+    size_t _capacity;      // for validity checking
+    size_t _used;          // for setting space top on read
 
     // 4991491 NOTICE These are C++ bool's in filemap.hpp and must match up with
     // the C type matching the C++ bool type on any given platform.
