@@ -510,27 +510,28 @@ wrapper_fill_cframe_list(void *cd, const prgregset_t regs, uint_t argc,
 // mapped.  This structure gets written to a file.  It is not a class, so
 // that the compilers don't add any compiler-private data to it.
 
-const int NUM_SHARED_MAPS = 4;
+const int NUM_SHARED_MAPS = 9;
 
 // Refer to FileMapInfo::_current_version in filemap.hpp
-const int CURRENT_ARCHIVE_VERSION = 1;
+const int CURRENT_ARCHIVE_VERSION = 2;
 
 struct FileMapHeader {
- int   _magic;              // identify file type.
- int   _version;            // (from enum, above.)
- size_t _alignment;         // how shared archive should be aligned
+  int    _magic;                    // identify file type.
+  int    _crc;                      // header crc checksum.
+  int    _version;                  // (from enum, above.)
+  size_t _alignment;                // how shared archive should be aligned
+  int    _obj_alignment;            // value of ObjectAlignmentInBytes
 
+  struct space_info {
+    int    _crc;           // crc checksum of the current space
+    size_t _file_offset;   // sizeof(this) rounded to vm page size
+    char*  _base;          // copy-on-write base address
+    size_t _capacity;      // for validity checking
+    size_t _used;          // for setting space top on read
+    bool   _read_only;     // read only space?
+    bool   _allow_exec;    // executable code in space?
 
- struct space_info {
-   int    _file_offset;     // sizeof(this) rounded to vm page size
-   char*  _base;            // copy-on-write base address
-   size_t _capacity;        // for validity checking
-   size_t _used;            // for setting space top on read
-
-   bool   _read_only;       // read only space?
-   bool   _allow_exec;      // executable code in space?
-
- } _space[NUM_SHARED_MAPS];
+  } _space[NUM_SHARED_MAPS];
 
  // Ignore the rest of the FileMapHeader. We don't need those fields here.
 };
