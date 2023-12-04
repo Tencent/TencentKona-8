@@ -74,9 +74,11 @@ public final class SunEC extends Provider {
         // doPrivileged() call at the end to transfer the contents
         if (System.getSecurityManager() == null) {
             SunECEntries.putEntries(this, useFullImplementation);
+            SMEntries.putEntries(this);
         } else {
             Map<Object, Object> map = new HashMap<Object, Object>();
             SunECEntries.putEntries(map, useFullImplementation);
+            SMEntries.putEntries(map);
             AccessController.doPrivileged(new PutAllAction(this, map));
         }
     }

@@ -615,6 +615,10 @@ public class AlgorithmId implements Serializable, DerEncoder {
             return AlgorithmId.sha512WithECDSA_oid;
         }
 
+        if (name.equalsIgnoreCase("SM3withSM2")) {
+            return AlgorithmId.sm3WithSM2_oid;
+        }
+
         return oidTable().get(name.toUpperCase(Locale.ENGLISH));
     }
 
@@ -808,6 +812,8 @@ public class AlgorithmId implements Serializable, DerEncoder {
                                             oid(1, 2, 840, 10045, 4, 3, 4);
     public static final ObjectIdentifier specifiedWithECDSA_oid =
                                             oid(1, 2, 840, 10045, 4, 3);
+
+    public static final ObjectIdentifier sm3WithSM2_oid = oid(1, 2, 156, 10197, 1, 501);
 
     /**
      * Algorithm ID for the PBE encryption algorithms from PKCS#5 and
@@ -1022,6 +1028,8 @@ public class AlgorithmId implements Serializable, DerEncoder {
         nameTable.put(pbeWithSHA1AndDESede_oid, "PBEWithSHA1AndDESede");
         nameTable.put(pbeWithSHA1AndRC2_128_oid, "PBEWithSHA1AndRC2_128");
         nameTable.put(pbeWithSHA1AndRC2_40_oid, "PBEWithSHA1AndRC2_40");
+
+        nameTable.put(sm3WithSM2_oid, "SM3withSM2");
     }
 
     /**

@@ -1,0 +1,51 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            06:f7:10:17:1b:3d:15:4e:1d:8c:7f:fb:dc:4e:cc:be:90:7e:7d:f3
+        Signature Algorithm: SM2-with-SM3
+        Issuer: CN = ca-sm-alt
+        Validity
+            Not Before: Nov  9 03:32:45 2023 GMT
+            Not After : Nov  6 03:32:45 2033 GMT
+        Subject: CN = ca-sm-alt
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub:
+                    04:8c:ea:86:a5:7c:d0:06:f9:77:1d:26:2f:98:70:
+                    03:61:d7:f9:31:ae:78:ef:1d:30:ee:3f:61:dd:4c:
+                    56:dc:44:d1:5e:e5:ba:b1:55:b7:f0:8b:6b:46:78:
+                    e8:9c:ec:cb:84:65:46:50:52:43:cb:d6:ec:dd:e8:
+                    dd:49:8e:a3:57
+                ASN1 OID: SM2
+        X509v3 extensions:
+            X509v3 Subject Key Identifier: 
+                58:F8:35:B2:B9:FC:A6:AA:5A:BD:6C:FF:DF:1C:55:97:A8:30:E3:98
+            X509v3 Authority Key Identifier: 
+                DirName:/CN=ca-sm-alt
+                serial:06:F7:10:17:1B:3D:15:4E:1D:8C:7F:FB:DC:4E:CC:BE:90:7E:7D:F3
+            X509v3 Basic Constraints: critical
+                CA:TRUE
+            X509v3 Key Usage: critical
+                Digital Signature, Certificate Sign, CRL Sign
+            X509v3 Extended Key Usage: critical
+                OCSP Signing
+    Signature Algorithm: SM2-with-SM3
+    Signature Value:
+        30:45:02:20:68:e1:5e:5f:9e:ca:e1:99:5d:c2:c1:b5:a6:a7:
+        d4:5d:fe:c2:87:b0:67:26:a5:33:84:7e:d5:3e:76:1b:6a:f9:
+        02:21:00:b3:dd:20:92:b4:80:29:7b:12:7c:9d:e7:eb:56:e8:
+        79:35:9c:67:58:9c:98:8f:9f:2c:da:ab:2a:b5:b7:15:ef
+-----BEGIN CERTIFICATE-----
+MIIBwTCCAWegAwIBAgIUBvcQFxs9FU4djH/73E7MvpB+ffMwCgYIKoEcz1UBg3Uw
+FDESMBAGA1UEAwwJY2Etc20tYWx0MB4XDTIzMTEwOTAzMzI0NVoXDTMzMTEwNjAz
+MzI0NVowFDESMBAGA1UEAwwJY2Etc20tYWx0MFkwEwYHKoZIzj0CAQYIKoEcz1UB
+gi0DQgAEjOqGpXzQBvl3HSYvmHADYdf5Ma547x0w7j9h3UxW3ETRXuW6sVW38Itr
+RnjonOzLhGVGUFJDy9bs3ejdSY6jV6OBljCBkzAdBgNVHQ4EFgQUWPg1srn8pqpa
+vWz/3xxVl6gw45gwOQYDVR0jBDIwMKEYpBYwFDESMBAGA1UEAwwJY2Etc20tYWx0
+ghQG9xAXGz0VTh2Mf/vcTsy+kH598zAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB
+/wQEAwIBhjAWBgNVHSUBAf8EDDAKBggrBgEFBQcDCTAKBggqgRzPVQGDdQNIADBF
+AiBo4V5fnsrhmV3CwbWmp9Rd/sKHsGcmpTOEftU+dhtq+QIhALPdIJK0gCl7Enyd
+5+tW6Hk1nGdYnJiPnyzaqyq1txXv
+-----END CERTIFICATE-----
