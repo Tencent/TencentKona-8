@@ -31,12 +31,14 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateEncodingException;
 import java.security.*;
 import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.SM2ParameterSpec;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
 import sun.security.pkcs10.PKCS10;
+import sun.security.util.SMConst;
 import sun.security.x509.*;
 
 /**
@@ -148,7 +150,14 @@ public final class CertAndKeyGen {
             if (prng == null) {
                 prng = new SecureRandom();
             }
-            keyGen.initialize(keyBits, prng);
+            // When generate 256-bits EC key pair, the default curve is SPEC256R1.
+            // If prefer to curveSM2, need to initialize with SM2ParameterSpec.
+            if (keyBits == 256 && "EC".equalsIgnoreCase(keyGen.getAlgorithm())
+                    && SMConst.TOOLS_USE_CURVESM2) {
+                keyGen.initialize(SM2ParameterSpec.instance(), prng);
+            } else {
+                keyGen.initialize(keyBits, prng);
+            }
             pair = keyGen.generateKeyPair();
 
         } catch (Exception e) {

@@ -54,10 +54,12 @@ public final class Sun extends Provider {
         // doPrivileged() call at the end to transfer the contents
         if (System.getSecurityManager() == null) {
             SunEntries.putEntries(this);
+            SMEntries.putEntries(this);
         } else {
             // use LinkedHashMap to preserve the order of the PRNGs
             Map<Object, Object> map = new LinkedHashMap<>();
             SunEntries.putEntries(map);
+            SMEntries.putEntries(map);
             AccessController.doPrivileged(new PutAllAction(this, map));
         }
     }

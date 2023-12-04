@@ -1,0 +1,3 @@
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid,issuer
+authorityInfoAccess=OCSP;URI:http://127.0.0.1:9080

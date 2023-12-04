@@ -232,7 +232,13 @@ public class PKCS10 {
          */
         AlgorithmId algId = null;
         try {
-            AlgorithmParameters params = signature.getParameters();
+            AlgorithmParameters params = null;
+            try {
+                params = signature.getParameters();
+            } catch (UnsupportedOperationException e) {
+                // some provider does not support it
+                // SM2Signature also doesn't implement this method
+            }
             algId = params == null
                     ? AlgorithmId.get(signature.getAlgorithm())
                     : AlgorithmId.get(params);

@@ -33,6 +33,7 @@ import java.security.spec.ECGenParameterSpec;
 import java.security.spec.ECParameterSpec;
 import java.security.spec.ECPoint;
 import java.security.spec.InvalidParameterSpecException;
+import java.security.spec.SM2ParameterSpec;
 import java.util.Optional;
 
 import sun.security.jca.JCAUtil;
@@ -40,7 +41,6 @@ import sun.security.util.ECUtil;
 import sun.security.util.math.*;
 import sun.security.ec.point.*;
 import static sun.security.util.SecurityProviderConstants.DEF_EC_KEY_SIZE;
-import static sun.security.ec.ECOperations.IntermediateValueException;
 
 /**
  * EC keypair generator.
@@ -131,7 +131,8 @@ public final class ECKeyPairGenerator extends KeyPairGeneratorSpi {
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
-        if (!isCurveSupported(encodedParams)) {
+        if (!SM2ParameterSpec.isCurveSM2(encodedParams)
+                && !isCurveSupported(encodedParams)) {
             throw new InvalidAlgorithmParameterException(
                 "Unsupported curve: " + ecParams.toString());
         }
@@ -156,26 +157,6 @@ public final class ECKeyPairGenerator extends KeyPairGeneratorSpi {
         }
     }
 
-    private byte[] generatePrivateScalar(SecureRandom random,
-        ECOperations ecOps, int seedSize) {
-        // Attempt to create the private scalar in a loop that uses new random
-        // input each time. The chance of failure is very small assuming the
-        // implementation derives the nonce using extra bits
-        int numAttempts = 128;
-        byte[] seedArr = new byte[seedSize];
-        for (int i = 0; i < numAttempts; i++) {
-            random.nextBytes(seedArr);
-            try {
-                return ecOps.seedToScalar(seedArr);
-            } catch (IntermediateValueException ex) {
-                // try again in the next iteration
-            }
-        }
-
-        throw new ProviderException("Unable to produce private key after "
-                                         + numAttempts + " attempts");
-    }
-
     private Optional<KeyPair> generateKeyPairImpl(SecureRandom random)
         throws InvalidKeyException {
 
@@ -187,10 +168,7 @@ public final class ECKeyPairGenerator extends KeyPairGeneratorSpi {
         }
         ECOperations ops = opsOpt.get();
         IntegerFieldModuloP field = ops.getField();
-        int numBits = ecParams.getOrder().bitLength();
-        int seedBits = numBits + 64;
-        int seedSize = (seedBits + 7) / 8;
-        byte[] privArr = generatePrivateScalar(random, ops, seedSize);
+        byte[] privArr = ops.generatePrivateScalar(random);
 
         ECPoint genPoint = ecParams.getGenerator();
         ImmutableIntegerModuloP x = field.getElement(genPoint.getAffineX());

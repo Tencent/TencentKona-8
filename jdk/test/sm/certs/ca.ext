@@ -1,0 +1,5 @@
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=critical,CA:TRUE
+keyUsage=critical,keyCertSign,cRLSign,digitalSignature
+extendedKeyUsage=critical,OCSPSigning
