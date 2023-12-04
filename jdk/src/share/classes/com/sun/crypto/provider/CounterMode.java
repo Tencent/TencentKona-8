@@ -175,16 +175,31 @@ final class CounterMode extends FeedbackCipher {
 
         RangeUtil.nullAndBoundsCheck(in, inOff, len);
         RangeUtil.nullAndBoundsCheck(out, outOff, len);
+        return implCrypt(in, inOff, len, out, outOff);
+    }
 
+    private int implCrypt(byte[] in, int inOff, int len, byte[] out, int outOff) {
         int result = len;
-        while (len-- > 0) {
+
+        while (len > 0) {
+            int bufLen = Math.min(len, blockSize - used);
+
             if (used >= blockSize) {
                 embeddedCipher.encryptBlock(counter, 0, encryptedCounter, 0);
                 increment(counter);
                 used = 0;
             }
-            out[outOff++] = (byte)(in[inOff++] ^ encryptedCounter[used++]);
+
+            for (int i = 0; i < bufLen; i++) {
+                out[outOff + i] = (byte)(in[inOff + i] ^ encryptedCounter[used + i]);
+            }
+            outOff += bufLen;
+            inOff += bufLen;
+            used += bufLen;
+
+            len -= bufLen;
         }
+
         return result;
     }
 }

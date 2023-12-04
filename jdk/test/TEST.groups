@@ -69,7 +69,7 @@ jdk_skip = \
   java/text/Format/NumberFormat/NumberRegression.java \
   java/text/Format/NumberFormat/NumberTest.java \
   sun/text/IntHashtable/Bug4170614Test.sh
- 
+
 
 ###############################################################################
 #
@@ -178,7 +178,8 @@ jdk_security1 = \
 jdk_security2 = \
     javax/crypto \
     javax/xml/crypto \
-    com/sun/crypto
+    com/sun/crypto \
+    sm
 
 jdk_security3 = \
     javax/security  \

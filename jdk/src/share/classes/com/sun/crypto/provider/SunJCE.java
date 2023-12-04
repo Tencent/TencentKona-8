@@ -795,6 +795,8 @@ public final class SunJCE extends Provider {
                     put("Alg.Alias.KeyGenerator.SunTls12RsaPremasterSecret",
                         "SunTlsRsaPremasterSecret");
 
+                    SMEntries.putEntries(SunJCE.this);
+
                     return null;
                 }
             });

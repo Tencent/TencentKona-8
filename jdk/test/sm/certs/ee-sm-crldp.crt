@@ -1,0 +1,46 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            3e:85:17:32:32:70:69:ca:9b:a3:c7:41:c7:ef:8f:11:d2:df:e7:b7
+        Signature Algorithm: SM2-with-SM3
+        Issuer: CN = intca-sm
+        Validity
+            Not Before: Nov  8 08:04:58 2023 GMT
+            Not After : Nov  5 08:04:58 2033 GMT
+        Subject: CN = ee-sm-crldp
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub:
+                    04:f7:50:db:29:e4:0f:52:fa:71:46:9c:fc:5f:48:
+                    21:50:55:d2:68:59:bf:28:86:89:c4:9e:46:27:f6:
+                    77:6d:49:4b:84:c9:60:d6:9a:7e:94:d5:59:ac:9f:
+                    8c:5f:b9:66:9c:6f:27:0d:ab:e2:91:04:ec:aa:1f:
+                    13:a0:92:14:25
+                ASN1 OID: SM2
+        X509v3 extensions:
+            X509v3 Subject Key Identifier: 
+                FE:0C:68:E4:86:E6:B5:47:E8:E1:7C:CE:8E:70:FE:58:36:1E:1E:2B
+            X509v3 Authority Key Identifier: 
+                06:43:93:0F:3D:B0:84:49:C0:CB:39:D3:01:43:B1:D2:53:80:B2:4B
+            X509v3 CRL Distribution Points: 
+                Full Name:
+                  URI:file:certs/ee-sm-crldp.crl
+    Signature Algorithm: SM2-with-SM3
+    Signature Value:
+        30:46:02:21:00:f2:18:81:86:bb:2d:f8:f1:61:9f:55:7c:c7:
+        18:1e:01:49:9d:31:16:7a:c7:dd:ce:b4:95:6d:0b:70:c7:a9:
+        0b:02:21:00:89:44:03:9f:dc:68:96:45:75:05:1c:53:c7:cc:
+        7e:08:d4:d3:0b:ed:41:6d:15:43:a7:8d:16:31:38:ba:e2:ce
+-----BEGIN CERTIFICATE-----
+MIIBmzCCAUCgAwIBAgIUPoUXMjJwacqbo8dBx++PEdLf57cwCgYIKoEcz1UBg3Uw
+EzERMA8GA1UEAwwIaW50Y2Etc20wHhcNMjMxMTA4MDgwNDU4WhcNMzMxMTA1MDgw
+NDU4WjAWMRQwEgYDVQQDDAtlZS1zbS1jcmxkcDBZMBMGByqGSM49AgEGCCqBHM9V
+AYItA0IABPdQ2ynkD1L6cUac/F9IIVBV0mhZvyiGicSeRif2d21JS4TJYNaafpTV
+WayfjF+5ZpxvJw2r4pEE7KofE6CSFCWjbzBtMB0GA1UdDgQWBBT+DGjkhua1R+jh
+fM6OcP5YNh4eKzAfBgNVHSMEGDAWgBQGQ5MPPbCEScDLOdMBQ7HSU4CySzArBgNV
+HR8EJDAiMCCgHqAchhpmaWxlOmNlcnRzL2VlLXNtLWNybGRwLmNybDAKBggqgRzP
+VQGDdQNJADBGAiEA8hiBhrst+PFhn1V8xxgeAUmdMRZ6x93OtJVtC3DHqQsCIQCJ
+RAOf3GiWRXUFHFPHzH4I1NML7UFtFUOnjRYxOLrizg==
+-----END CERTIFICATE-----
