@@ -318,9 +318,9 @@ void RegisterSaver::restore_result_registers(MacroAssembler* masm) {
 }
 
 // Is vector's size (in bytes) bigger than a size saved by default?
-// 16 bytes XMM registers are saved by default using fxsave/fxrstor instructions.
+// 8 bytes registers are saved by default using fld/fst instructions.
 bool SharedRuntime::is_wide_vector(int size) {
-  return size > 16;
+  return size > 8;
 }
 
 // The java_calling_convention describes stack locations as ideal slots on
