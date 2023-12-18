@@ -803,7 +803,12 @@ Array<Klass*>* ClassFileParser::parse_interfaces(int length,
       }
 
       if (!interf()->is_interface()) {
-        THROW_MSG_(vmSymbols::java_lang_IncompatibleClassChangeError(), "Implementing class", NULL);
+        ResourceMark rm;
+        stringStream st;
+        st.print("class %s can not implement %s, because it is not an interface",
+                 _class_name->as_klass_external_name(),
+                 interf()->external_name());
+        THROW_MSG_(vmSymbols::java_lang_IncompatibleClassChangeError(), st.as_string(), NULL);
       }
       if (InstanceKlass::cast(interf())->has_default_methods()) {
         *has_default_methods = true;
