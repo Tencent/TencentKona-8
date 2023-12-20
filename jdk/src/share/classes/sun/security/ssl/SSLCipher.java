@@ -330,6 +330,23 @@ enum SSLCipher {
                 new T13GcmWriteCipherGenerator(),
                 ProtocolVersion.PROTOCOLS_OF_13
             )
+        })),
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    B_SM4_GCM_IV(CIPHER_SM4_GCM, AEAD_CIPHER, 16, 16, 12, 0, true, false,
+        (Map.Entry<ReadCipherGenerator,
+                ProtocolVersion[]>[])(new Map.Entry[] {
+            new SimpleImmutableEntry<ReadCipherGenerator, ProtocolVersion[]>(
+                new T13GcmReadCipherGenerator(),
+                ProtocolVersion.PROTOCOLS_OF_13
+            )
+        }),
+        (Map.Entry<WriteCipherGenerator,
+                ProtocolVersion[]>[])(new Map.Entry[] {
+            new SimpleImmutableEntry<WriteCipherGenerator, ProtocolVersion[]>(
+                new T13GcmWriteCipherGenerator(),
+                ProtocolVersion.PROTOCOLS_OF_13
+            )
         }));
 
     // descriptive name including key size, e.g. AES/128
@@ -2360,4 +2377,3 @@ enum SSLCipher {
         return results;
     }
 }
-

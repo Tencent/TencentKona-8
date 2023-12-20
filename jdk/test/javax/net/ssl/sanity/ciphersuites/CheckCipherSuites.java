@@ -41,6 +41,7 @@ public class CheckCipherSuites {
         // TLS 1.3 cipher suites
         "TLS_AES_256_GCM_SHA384",
         "TLS_AES_128_GCM_SHA256",
+        "TLS_SM4_GCM_SM3",
 
         // Suite B compliant cipher suites
         "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
@@ -130,6 +131,7 @@ public class CheckCipherSuites {
     // property is set to "limited".
     private final static String[] ENABLED_LIMITED = {
         "TLS_AES_128_GCM_SHA256",
+        "TLS_SM4_GCM_SM3",
         "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
         "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
         "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
@@ -160,6 +162,7 @@ public class CheckCipherSuites {
          // TLS 1.3 cipher suites
         "TLS_AES_256_GCM_SHA384",
         "TLS_AES_128_GCM_SHA256",
+        "TLS_SM4_GCM_SM3",
 
         // Suite B compliant cipher suites
         "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
@@ -249,6 +252,7 @@ public class CheckCipherSuites {
     // property is set to "limited".
     private final static String[] SUPPORTED_LIMITED = {
         "TLS_AES_128_GCM_SHA256",
+        "TLS_SM4_GCM_SM3",
         "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
         "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
         "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",

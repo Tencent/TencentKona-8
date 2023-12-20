@@ -60,6 +60,18 @@ final class SSLSecretDerivation implements SSLKeyDerivation {
         (byte)0x48, (byte)0x98, (byte)0xB9, (byte)0x5B
     };
 
+    // See above
+    private static final byte[] sm3EmptyDigest = new byte[] {
+        (byte)0x1A, (byte)0xB2, (byte)0x1D, (byte)0x83,
+        (byte)0x55, (byte)0xCF, (byte)0xA1, (byte)0x7F,
+        (byte)0x8E, (byte)0x61, (byte)0x19, (byte)0x48,
+        (byte)0x31, (byte)0xE8, (byte)0x1A, (byte)0x8F,
+        (byte)0x22, (byte)0xBE, (byte)0xC8, (byte)0xC7,
+        (byte)0x28, (byte)0xFE, (byte)0xFB, (byte)0x74,
+        (byte)0x7E, (byte)0xD0, (byte)0x35, (byte)0xEB,
+        (byte)0x50, (byte)0x82, (byte)0xAA, (byte)0x2B
+    };
+
     private final HandshakeContext context;
     private final String hkdfAlg;
     private final HashAlg hashAlg;
@@ -92,6 +104,8 @@ final class SSLSecretDerivation implements SSLKeyDerivation {
                     expandContext = sha256EmptyDigest;
                 } else if (hashAlg == HashAlg.H_SHA384) {
                     expandContext = sha384EmptyDigest;
+                } else if (hashAlg == HashAlg.H_SM3) {
+                    expandContext = sm3EmptyDigest;
                 } else {
                     // unlikely, but please update if more hash algorithm
                     // get supported in the future.
