@@ -276,6 +276,10 @@ final class SupportedGroupsExtension {
         FFDHE_8192  (0x0104, "ffdhe8192",  true,
                             ProtocolVersion.PROTOCOLS_TO_13),
 
+        // ShangMi curve defined by RFC 8998
+        CURVESM2    (0x0029, "curvesm2",   "1.2.156.10197.1.301", false,
+                            ProtocolVersion.PROTOCOLS_TO_13),
+
         // Elliptic Curves (RFC 4492)
         //
         // arbitrary prime and characteristic-2 curves
@@ -551,6 +555,9 @@ final class SupportedGroupsExtension {
                         NamedGroup.FFDHE_4096,
                         NamedGroup.FFDHE_6144,
                         NamedGroup.FFDHE_8192,
+
+                        // ShangMi curve last
+                        NamedGroup.CURVESM2
                     };
                 }
 

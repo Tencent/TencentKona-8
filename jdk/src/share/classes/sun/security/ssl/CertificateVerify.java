@@ -1001,7 +1001,7 @@ final class CertificateVerify {
 
             try {
                 Signature signer =
-                    signatureScheme.getVerifier(x509Credentials.popPublicKey);
+                    signatureScheme.getVerifier(x509Credentials.popPublicKey, true);
                 signer.update(contentCovered);
                 if (!signer.verify(signature)) {
                     throw context.conContext.fatal(Alert.HANDSHAKE_FAILURE,

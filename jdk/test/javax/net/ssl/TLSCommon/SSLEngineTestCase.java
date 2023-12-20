@@ -183,7 +183,8 @@ abstract public class SSLEngineTestCase {
 
     private static final String[] TLS13_CIPHERS = {
             "TLS_AES_256_GCM_SHA384",
-            "TLS_AES_128_GCM_SHA256"
+            "TLS_AES_128_GCM_SHA256",
+            "TLS_SM4_GCM_SM3"
     };
 
     private static final String[] SUPPORTED_NON_KRB_CIPHERS;
