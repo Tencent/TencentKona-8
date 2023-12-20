@@ -118,6 +118,8 @@ public enum CipherSuite {
             0x1302, null, Protocol.TLSV1_3, Protocol.TLSV1_3),
     TLS_AES_128_GCM_SHA256(
             0x1301, null, Protocol.TLSV1_3, Protocol.TLSV1_3),
+    TLS_SM4_GCM_SM3(
+            0x00C6, null, Protocol.TLSV1_3, Protocol.TLSV1_3),
     TLS_DH_anon_WITH_AES_256_GCM_SHA384(
             0x00A7, KeyExAlgorithm.DH_ANON, Protocol.TLSV1_2, Protocol.TLSV1_2),
     TLS_DH_anon_WITH_AES_128_GCM_SHA256(

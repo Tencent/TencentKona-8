@@ -154,6 +154,12 @@ final class JsseJce {
     static final String CIPHER_AES_GCM = "AES/GCM/NoPadding";
 
     /**
+     * JCE transformation string for SM4 in GCM mode
+     * without padding.
+     */
+    static final String CIPHER_SM4_GCM = "SM4/GCM/NoPadding";
+
+    /**
      * JCA identifier string for DSA, i.e. a DSA with SHA-1.
      */
     static final String SIGNATURE_DSA = "DSA";
