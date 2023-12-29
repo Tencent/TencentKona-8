@@ -181,7 +181,9 @@ void PS_ElasticMaxHeapOp::doit() {
         size_t shrink_bytes = old_high - new_old_high;
         guarantee((shrink_bytes > 0) && (shrink_bytes % os::vm_page_size() == 0), "should be");
         bool result = os::free_heap_physical_memory(new_old_high, shrink_bytes);
-        guarantee(result, "free heap physical memory should be successful");
+        if (!result) {
+          warning("Failed to free heap physical memory.");
+        }
       }
     }
 
@@ -205,7 +207,9 @@ void PS_ElasticMaxHeapOp::doit() {
         size_t shrink_bytes = young_high - new_young_high;
         guarantee((shrink_bytes > 0) && (shrink_bytes % os::vm_page_size() == 0), "should be");
         bool result = os::free_heap_physical_memory(new_young_high, shrink_bytes);
-        guarantee(result, "free heap physical memory should be successful");
+        if (!result) {
+          warning("Failed to free heap physical memory.");
+        }
       }
     }
   }
@@ -349,13 +353,17 @@ void Gen_ElasticMaxHeapOp::doit() {
       size_t shrink_bytes = (char*)young->reserved().end() - base;
       if (shrink_bytes > 0) {
         bool result = os::free_heap_physical_memory(base, shrink_bytes);
-        guarantee(result, "free heap physical memory should be successful");
+        if (!result) {
+          warning("Failed to free heap physical memory.");
+        }
       }
       base = (char*)old->reserved().start() + old_committed;
       shrink_bytes = (char*)old->reserved().end() - base;
       if (shrink_bytes > 0) {
         bool result = os::free_heap_physical_memory(base, shrink_bytes);
-        guarantee(result, "free heap physical memory should be successful");
+        if (!result) {
+          warning("Failed to free heap physical memory.");
+        }
       }
     }
     _resize_success = true;
