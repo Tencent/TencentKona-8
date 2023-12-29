@@ -1888,7 +1888,9 @@ void G1CollectedHeap::free_heap_physical_memory_after_fullgc() {
   for (int i = 0; i < reclaim_region_count && cur != NULL; i++) {
     _free_heap_physical_memory_total_byte_size += cur->capacity();
     bool result = os::free_heap_physical_memory(((char*)cur->bottom()), cur->capacity());
-    guarantee(result, "free heap physical memory should be successful");
+    if (!result) {
+      warning("Failed to free heap physical memory.");
+    }
     cur = cur->prev();
   }
   _reclaim_region_count = reclaim_region_count;
