@@ -9827,7 +9827,8 @@ instruct string_compare(a4_RegP str1, mA5RegI cnt1, a6_RegP str2,  mA7RegI cnt2,
    // Now the shorter length is in cnt1 and cnt2 can be used as a tmp register
    __ bind(Loop);                        // Loop begin
    __ beq(cnt1, R0, done);
-   __ delayed()->lhu(AT, str1, 0);;
+   __ delayed()->nop();
+   __ lhu(AT, str1, 0);
 
    // compare current character
    __ lhu(cnt2, str2, 0);

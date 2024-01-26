@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2016, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2023, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,24 @@
 // Inline functions for memory copy and fill.
 
 // Contains inline asm implementations
+
+// Template for atomic, element-wise copy.
+template <class T>
+static void copy_conjoint_atomic(const T* from, T* to, size_t count) {
+  if (from > to) {
+    while (count-- > 0) {
+      // Copy forwards
+      *to++ = *from++;
+    }
+  } else {
+    from += count - 1;
+    to   += count - 1;
+    while (count-- > 0) {
+      // Copy backwards
+      *to-- = *from--;
+    }
+  }
+}
 
 static void pd_fill_to_words(HeapWord* tohw, size_t count, juint value) {
   julong* to = (julong*) tohw;

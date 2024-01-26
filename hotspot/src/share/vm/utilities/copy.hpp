@@ -23,8 +23,8 @@
  */
 
 /*
- * This file has been modified by Loongson Technology in 2020. These
- * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * This file has been modified by Loongson Technology in 2023. These
+ * modifications are Copyright (c) 2015, 2023, Loongson Technology, and are made
  * available on the same license terms set forth above.
  */
 
@@ -336,27 +336,6 @@ class Copy : AllStatic {
     }
 #endif
   }
-
-
- // SAPJVM AS 2011-09-20. Template for atomic copy.
-  template <class T> static void copy_conjoint_atomic(T* from, T* to, size_t count)
-  {
-    if (from > to) {
-      while (count-- > 0) {
-        // Copy forwards
-        *to++ = *from++;
-      }
-    } else {
-      from += count - 1;
-      to   += count - 1;
-      while (count-- > 0) {
-        // Copy backwards
-        *to-- = *from--;
-      }
-    }
-  }
-
-
 
   // Platform dependent implementations of the above methods.
 #ifdef TARGET_ARCH_x86
