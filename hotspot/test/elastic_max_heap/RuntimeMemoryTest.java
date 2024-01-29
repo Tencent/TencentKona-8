@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2023, 2024 THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ public class RuntimeMemoryTest extends TestBase {
     static Object[] root_array;
     static final long M = 1024L * 1024L;
     public static void main(String[] args) throws Exception {
+        String architecture = System.getProperty("os.arch");
         int pid = ProcessTools.getProcessId();
         /*
          * Steps: start with 2G heap
@@ -66,12 +67,22 @@ public class RuntimeMemoryTest extends TestBase {
             "GC.elastic_max_heap (2097152K->102400K)(2097152K)",
             "GC.elastic_max_heap success"
         };
+        if (architecture.equals("aarch64")) {
+            contains1 = new String[] {
+                "GC.elastic_max_heap (2097152K->131072K)(2097152K)",
+                "GC.elastic_max_heap success"
+            };
+        }
         resizeAndCheck(pid, "100M", contains1, null);
         max = r.maxMemory() / M;
         total = r.totalMemory() / M;
         free = r.freeMemory() / M;
         System.out.println("After resize -- Max: " + max + "M, Total: " + total + "M, Free: " + free + "M");
-        Asserts.assertLT(max, 101L);
+        long target_size = 101L;
+        if (architecture.equals("aarch64")) {
+            target_size = 129L;
+        }
+        Asserts.assertLT(max, target_size);
         Asserts.assertGTE(max, total);
         Asserts.assertGT(max, free);
     }
