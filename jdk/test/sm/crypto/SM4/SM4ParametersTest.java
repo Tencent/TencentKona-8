@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -17,6 +17,13 @@
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+/*
+ * @test
+ * @summary Test SM4 parameters.
+ * @compile ../../Utils.java
+ * @run testng SM4ParametersTest
+ */
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
@@ -29,12 +36,6 @@ import org.testng.annotations.Test;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.expectThrows;
 
-/*
- * @test
- * @summary Test SM4 parameters.
- * @compile ../../Utils.java
- * @run testng SM4ParametersTest
- */
 public class SM4ParametersTest {
 
     private static final int SM4_GCM_TAG_LEN = 16;

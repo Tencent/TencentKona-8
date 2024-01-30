@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -15,6 +15,13 @@
  * You should have received a copy of the GNU General Public License version
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+/*
+ * @test
+ * @summary Test CertPathValidator on SM certificate.
+ * @compile ../Utils.java
+ * @run testng/othervm CertPathValidatorTest
  */
 
 import java.math.BigInteger;
@@ -46,12 +53,6 @@ import java.util.concurrent.TimeUnit;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
-/*
- * @test
- * @summary Test CertPathValidator on SM certificate.
- * @compile ../Utils.java
- * @run testng/othervm CertPathValidatorTest
- */
 public class CertPathValidatorTest {
 
     private static final String TEST_BASE = System.getProperty("test.src");

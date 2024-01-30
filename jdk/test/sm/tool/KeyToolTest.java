@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2023, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -17,34 +17,11 @@
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-import java.io.IOException;
-import java.math.BigInteger;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.security.KeyStore;
-import java.security.PublicKey;
-import java.security.cert.X509Certificate;
-import java.security.interfaces.ECPrivateKey;
-import java.security.interfaces.ECPublicKey;
-import java.security.spec.SM2ParameterSpec;
-import java.util.ArrayList;
-import java.util.List;
-
-import sun.security.tools.keytool.Main;
-
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
-
-import static org.testng.Assert.assertEquals;
-
 /*
  * @test
  * @summary Test keytool on SM algorithms.
  * @compile ../Utils.java
  *          ../crypto/SM2/ECOperator.java
- * @run testng KeyToolTest
  * @run testng/othervm -Duser.language=en
  *                     -Duser.country=US
  *                     -Djava.security.egd=file:/dev/./urandom
@@ -60,15 +37,32 @@ import static org.testng.Assert.assertEquals;
  *                     -Djdk.tools.useCurveSM2=true
  *                     KeyToolTest
  */
+
+import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.KeyStore;
+import java.security.PublicKey;
+import java.security.cert.X509Certificate;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.SM2ParameterSpec;
+import java.util.ArrayList;
+import java.util.List;
+
+import sun.security.tools.keytool.Main;
+
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
+
+import static org.testng.Assert.assertEquals;
+
 public class KeyToolTest {
 
-    private static final Path BASE_DIR = Paths.get("SM-KeyToolTest");
-
-    private static final Path KEYSTORE = path("keystore.ks");
-
-    private static final Path ROOT_KEYSTORE = path("root.ks");
-    private static final Path CA_KEYSTORE = path("ca.ks");
-    private static final Path EE_KEYSTORE = path("ee.ks");
+    private static final String USE_CURVE_SM2 = System.getProperty(
+            "jdk.tools.useCurveSM2", "None");
+    private static final Path BASE_DIR = Paths.get("UseCurveSM2-" + USE_CURVE_SM2);
 
     private static final String PASSWORD = "testpassword";
 
@@ -104,15 +98,9 @@ public class KeyToolTest {
                 ? SM2ParameterSpec.ORDER : ECOperator.SECP256R1.getOrder();
     }
 
-    @BeforeMethod
-    public void prepare() throws IOException {
-        Utils.deleteDirIfExists(BASE_DIR);
-        Files.createDirectory(BASE_DIR);
-    }
-
-    @AfterMethod
-    public void clean() throws IOException {
-        Utils.deleteDirIfExists(BASE_DIR);
+    @BeforeClass
+    public void prepare() throws Throwable {
+        Files.createDirectories(BASE_DIR);
     }
 
     @Test
@@ -126,9 +114,10 @@ public class KeyToolTest {
     }
 
     private void testGenKeyPair(String storeType) throws Throwable {
-        genKeyPair(KEYSTORE, storeType, "ec");
+        Path keystore = path("testGenKeyPair-" + storeType + ".ks");
+        genKeyPair(keystore, storeType, "ec");
         KeyStore keyStore = KeyStore.getInstance(storeType);
-        keyStore.load(Files.newInputStream(KEYSTORE), PASSWORD.toCharArray());
+        keyStore.load(Files.newInputStream(keystore), PASSWORD.toCharArray());
         ECPrivateKey privateKey
                 = (ECPrivateKey) keyStore.getKey("ec", PASSWORD.toCharArray());
         System.out.println("EC params: " + privateKey.getParams());
@@ -137,18 +126,19 @@ public class KeyToolTest {
 
     @Test
     public void testGenSelfSignedCertOnPKCS12() throws Throwable {
-        testGenSelfSignedCertr("PKCS12");
+        testGenSelfSignedCert("PKCS12");
     }
 
     @Test
-    public void testGenSelfSignedCertrOnJKS() throws Throwable {
-        testGenSelfSignedCertr("JKS");
+    public void testGenSelfSignedCertOnJKS() throws Throwable {
+        testGenSelfSignedCert("JKS");
     }
 
-    private void testGenSelfSignedCertr(String storeType) throws Throwable {
+    private void testGenSelfSignedCert(String storeType) throws Throwable {
+        Path keystore = path("testGenSelfSignedCert-" + storeType + ".ks");
         String alias = CURVE + "-" + SIG_ALGO;
-        genKeyPair(KEYSTORE, storeType, alias);
-        outputCert(KEYSTORE, storeType, alias, path(alias + ".crt"));
+        genKeyPair(keystore, storeType, alias);
+        outputCert(keystore, storeType, alias, path(alias + ".crt"));
     }
 
     @Test
@@ -162,8 +152,10 @@ public class KeyToolTest {
     }
 
     private void testGenCSR(String storeType) throws Throwable {
-        genKeyPair(ROOT_KEYSTORE, storeType, "ec-root");
-        genCSR(ROOT_KEYSTORE, storeType, "ec-root", path("ec-sm2-root.csr"));
+        Path keystore = path("testGenCSR-" + storeType + ".ks");
+        String alias = "ec-testGenCSR-" + storeType;
+        genKeyPair(keystore, storeType, alias);
+        genCSR(keystore, storeType, alias, path("ec-sm2-root.csr"));
     }
 
     @Test
@@ -178,6 +170,10 @@ public class KeyToolTest {
 
     private void genCertChain(String storeType)
             throws Throwable {
+        Path rootKeystore = path("genCertChain-" + storeType + "-root.ks");
+        Path caKeystore = path("genCertChain-" + storeType + "-ca.ks");
+        Path eeKeystore = path("genCertChain-" + storeType + "-ee.ks");
+
         String suffix = CURVE + "-" + SIG_ALGO;
         String rootAlias = "root-" + suffix;
         String caAlias = "ca-" + suffix;
@@ -186,21 +182,21 @@ public class KeyToolTest {
         Path caCSRPath = path(caAlias + ".csr");
         Path eeCSRPath = path(eeAlias + ".csr");
 
-        genKeyPair(ROOT_KEYSTORE, storeType, rootAlias);
-        genKeyPair(CA_KEYSTORE, storeType, caAlias);
-        genKeyPair(EE_KEYSTORE, storeType, eeAlias);
+        genKeyPair(rootKeystore, storeType, rootAlias);
+        genKeyPair(caKeystore, storeType, caAlias);
+        genKeyPair(eeKeystore, storeType, eeAlias);
 
-        outputCert(ROOT_KEYSTORE, storeType, rootAlias, path(rootAlias + ".crt"));
-        genCSR(CA_KEYSTORE, storeType, caAlias, caCSRPath);
+        outputCert(rootKeystore, storeType, rootAlias, path(rootAlias + ".crt"));
+        genCSR(caKeystore, storeType, caAlias, caCSRPath);
 
         Path caCertPath = path(caAlias + ".crt");
-        genCert(ROOT_KEYSTORE, storeType, rootAlias, caCSRPath, caCertPath);
+        genCert(rootKeystore, storeType, rootAlias, caCSRPath, caCertPath);
         checkCert(caCertPath);
 
-        genCSR(EE_KEYSTORE, storeType, eeAlias, eeCSRPath);
+        genCSR(eeKeystore, storeType, eeAlias, eeCSRPath);
 
         Path eeCertPath = path(eeAlias + ".crt");
-        genCert(CA_KEYSTORE, storeType, caAlias, eeCSRPath, eeCertPath);
+        genCert(caKeystore, storeType, caAlias, eeCSRPath, eeCertPath);
         checkCert(eeCertPath);
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -17,6 +17,13 @@
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+/*
+ * @test
+ * @summary Test CertStore on SM certificate.
+ * @compile ../Utils.java
+ * @run testng CertStoreTest
+ */
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.CertStore;
@@ -31,12 +38,6 @@ import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
 
-/*
- * @test
- * @summary Test CertStore on SM certificate.
- * @compile ../Utils.java
- * @run testng CertStoreTest
- */
 public class CertStoreTest {
 
     private static final String TEST_BASE = System.getProperty("test.src");
