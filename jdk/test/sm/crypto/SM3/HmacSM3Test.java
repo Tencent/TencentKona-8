@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -17,6 +17,13 @@
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+/*
+ * @test
+ * @summary Test HmacSM3.
+ * @compile ../../Utils.java
+ * @run testng HmacSM3Test
+ */
+
 import javax.crypto.Mac;
 import javax.crypto.ShortBufferException;
 import javax.crypto.spec.SecretKeySpec;
@@ -27,12 +34,6 @@ import org.testng.annotations.Test;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.expectThrows;
 
-/*
- * @test
- * @summary Test HmacSM3.
- * @compile ../../Utils.java
- * @run testng HmacSM3Test
- */
 public class HmacSM3Test {
 
     private static final byte[] KEY = Utils.hexToBytes("0123456789abcdef0123456789abcdef");

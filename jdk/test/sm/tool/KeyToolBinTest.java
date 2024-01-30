@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2023, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -17,7 +17,16 @@
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-import java.io.IOException;
+/*
+ * @test
+ * @summary Test keytool binary on SM algorithms.
+ *          jarsigner doesn't support these algorithms yet.
+ * @library /lib/testlibrary
+ * @compile ../Utils.java
+ *          ../crypto/SM2/ECOperator.java
+ * @run testng/timeout=600 KeyToolBinTest
+ */
+
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,43 +42,13 @@ import java.util.List;
 
 import jdk.testlibrary.SecurityTools;
 
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
 
-/*
- * @test
- * @summary Test keytool binary on SM algorithms.
- *          jarsigner doesn't support these algorithms yet.
- * @library /lib/testlibrary
- * @compile ../Utils.java
- *          ../crypto/SM2/ECOperator.java
- * @run testng KeyToolBinTest
- */
 public class KeyToolBinTest {
 
-    private static final Path BASE_DIR = Paths.get("SM-KeyToolBinTest");
-
-    private static final Path KEYSTORE = path("keystore.ks");
-
-    private static final Path ROOT_KEYSTORE = path("root.ks");
-    private static final Path CA_KEYSTORE = path("ca.ks");
-    private static final Path EE_KEYSTORE = path("ee.ks");
-
     private static final String PASSWORD = "testpassword";
-
-    @BeforeMethod
-    public void prepare() throws IOException {
-        Utils.deleteDirIfExists(BASE_DIR);
-        Files.createDirectory(BASE_DIR);
-    }
-
-    @AfterMethod
-    public void clean() throws IOException {
-        Utils.deleteDirIfExists(BASE_DIR);
-    }
 
     @Test
     public void testGenKeyPairOnPKCS12() throws Throwable {
@@ -103,9 +82,11 @@ public class KeyToolBinTest {
 
     private void testGenKeyPair(String toolsUseCurveSM2, String storeType,
             String sigAlg) throws Throwable {
-        genKeyPair(KEYSTORE, toolsUseCurveSM2, storeType, "ec", sigAlg);
+        Path keystore = Paths.get(String.join("-",
+                "testGenKeyPair", storeType, toolsUseCurveSM2 + ".ks"));
+        genKeyPair(keystore, toolsUseCurveSM2, storeType, "ec", sigAlg);
         KeyStore keyStore = KeyStore.getInstance(storeType);
-        keyStore.load(Files.newInputStream(KEYSTORE), PASSWORD.toCharArray());
+        keyStore.load(Files.newInputStream(keystore), PASSWORD.toCharArray());
         ECPrivateKey privateKey
                 = (ECPrivateKey) keyStore.getKey("ec", PASSWORD.toCharArray());
         System.out.println("EC params: " + privateKey.getParams());
@@ -115,39 +96,41 @@ public class KeyToolBinTest {
 
     @Test
     public void testGenSelfSignedCertOnPKCS12() throws Throwable {
-        testGenSelfSignedCertr(null, "PKCS12", null);
+        testGenSelfSignedCert(null, "PKCS12", null);
     }
 
     @Test
     public void testGenSelfSignedCertWithECOnPKCS12() throws Throwable {
-        testGenSelfSignedCertr("false", "PKCS12", "SHA256withECDSA");
+        testGenSelfSignedCert("false", "PKCS12", "SHA256withECDSA");
     }
 
     @Test
     public void testGenSelfSignedCertWithSMOnPKCS12() throws Throwable {
-        testGenSelfSignedCertr("true", "PKCS12", "SM3withSM2");
+        testGenSelfSignedCert("true", "PKCS12", "SM3withSM2");
     }
 
     @Test
-    public void testGenSelfSignedCertrOnJKS() throws Throwable {
-        testGenSelfSignedCertr(null, "JKS", null);
+    public void testGenSelfSignedCertOnJKS() throws Throwable {
+        testGenSelfSignedCert(null, "JKS", null);
     }
 
     @Test
-    public void testGenSelfSignedCertrWithECOnJKS() throws Throwable {
-        testGenSelfSignedCertr("false", "JKS", "SHA256withECDSA");
+    public void testGenSelfSignedCertWithECOnJKS() throws Throwable {
+        testGenSelfSignedCert("false", "JKS", "SHA256withECDSA");
     }
 
     @Test
-    public void testGenSelfSignedCertrWithSMOnJKS() throws Throwable {
-        testGenSelfSignedCertr("true", "JKS", "SM3withSM2");
+    public void testGenSelfSignedCertWithSMOnJKS() throws Throwable {
+        testGenSelfSignedCert("true", "JKS", "SM3withSM2");
     }
 
-    private void testGenSelfSignedCertr(String toolsUseCurveSM2,
+    private void testGenSelfSignedCert(String toolsUseCurveSM2,
             String storeType, String sigAlg) throws Throwable {
+        Path keystore = Paths.get(String.join("-",
+                "testGenSelfSignedCert", storeType, toolsUseCurveSM2 + ".ks"));
         String alias = curve(toolsUseCurveSM2) + "-" + sigAlg;
-        genKeyPair(KEYSTORE, toolsUseCurveSM2, storeType, alias, sigAlg);
-        outputCert(KEYSTORE, storeType, alias, path(alias + ".crt"));
+        genKeyPair(keystore, toolsUseCurveSM2, storeType, alias, sigAlg);
+        outputCert(keystore, storeType, alias, Paths.get(alias + ".crt"));
     }
 
     @Test
@@ -182,29 +165,36 @@ public class KeyToolBinTest {
 
     private void genCertChain(String toolsUseCurveSM2, String storeType,
             String sigAlg) throws Throwable {
+        Path rootKeystore = Paths.get(String.join("-",
+                "genCertChain", storeType, toolsUseCurveSM2, "root.ks"));
+        Path caKeystore = Paths.get(String.join("-",
+                "genCertChain", storeType, toolsUseCurveSM2, "ca.ks"));
+        Path eeKeystore = Paths.get(String.join("-",
+                "genCertChain", storeType, toolsUseCurveSM2, "ee.ks"));
+
         String suffix = curve(toolsUseCurveSM2) + "-" + sigAlg;
         String rootAlias = "root-" + suffix;
         String caAlias = "ca-" + suffix;
         String eeAlias = "ee-" + suffix;
 
-        Path caCSRPath = path(caAlias + ".csr");
-        Path eeCSRPath = path(eeAlias + ".csr");
+        Path caCSRPath = Paths.get(caAlias + ".csr");
+        Path eeCSRPath = Paths.get(eeAlias + ".csr");
 
-        genKeyPair(ROOT_KEYSTORE, toolsUseCurveSM2, storeType, rootAlias, sigAlg);
-        genKeyPair(CA_KEYSTORE, toolsUseCurveSM2, storeType, caAlias, sigAlg);
-        genKeyPair(EE_KEYSTORE, toolsUseCurveSM2, storeType, eeAlias, sigAlg);
+        genKeyPair(rootKeystore, toolsUseCurveSM2, storeType, rootAlias, sigAlg);
+        genKeyPair(caKeystore, toolsUseCurveSM2, storeType, caAlias, sigAlg);
+        genKeyPair(eeKeystore, toolsUseCurveSM2, storeType, eeAlias, sigAlg);
 
-        outputCert(ROOT_KEYSTORE, storeType, rootAlias, path(rootAlias + ".crt"));
-        genCSR(CA_KEYSTORE, toolsUseCurveSM2, storeType, caAlias, sigAlg, caCSRPath);
+        outputCert(rootKeystore, storeType, rootAlias, Paths.get(rootAlias + ".crt"));
+        genCSR(caKeystore, toolsUseCurveSM2, storeType, caAlias, sigAlg, caCSRPath);
 
-        Path caCertPath = path(caAlias + ".crt");
-        genCert(ROOT_KEYSTORE, toolsUseCurveSM2, storeType, rootAlias, sigAlg, caCSRPath, caCertPath);
+        Path caCertPath = Paths.get(caAlias + ".crt");
+        genCert(rootKeystore, toolsUseCurveSM2, storeType, rootAlias, sigAlg, caCSRPath, caCertPath);
         checkCert(caCertPath, expectedOrder(toolsUseCurveSM2), expectedSigAlg(toolsUseCurveSM2));
 
-        genCSR(EE_KEYSTORE, toolsUseCurveSM2, storeType, eeAlias, sigAlg, eeCSRPath);
+        genCSR(eeKeystore, toolsUseCurveSM2, storeType, eeAlias, sigAlg, eeCSRPath);
 
-        Path eeCertPath = path(eeAlias + ".crt");
-        genCert(CA_KEYSTORE, toolsUseCurveSM2, storeType, caAlias, sigAlg, eeCSRPath, eeCertPath);
+        Path eeCertPath = Paths.get(eeAlias + ".crt");
+        genCert(caKeystore, toolsUseCurveSM2, storeType, caAlias, sigAlg, eeCSRPath, eeCertPath);
         checkCert(eeCertPath, expectedOrder(toolsUseCurveSM2), expectedSigAlg(toolsUseCurveSM2));
     }
 
@@ -389,9 +379,5 @@ public class KeyToolBinTest {
         assertEquals(expectedOrder, ecPublicKey.getParams().getOrder());
 
         assertEquals(expectedSigAlg, cert.getSigAlgName());
-    }
-
-    private static Path path(String file) {
-        return BASE_DIR.resolve(Paths.get(file));
     }
 }

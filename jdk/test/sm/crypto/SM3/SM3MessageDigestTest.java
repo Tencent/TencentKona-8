@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -17,6 +17,13 @@
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+/*
+ * @test
+ * @summary Test SM3 message digest.
+ * @compile ../../Utils.java
+ * @run testng SM3MessageDigestTest
+ */
+
 import java.nio.ByteBuffer;
 import java.security.DigestException;
 import java.security.MessageDigest;
@@ -27,12 +34,6 @@ import org.testng.annotations.Test;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.expectThrows;
 
-/*
- * @test
- * @summary Test SM3 message digest.
- * @compile ../../Utils.java
- * @run testng SM3MessageDigestTest
- */
 public class SM3MessageDigestTest {
 
     private static final byte[] MESSAGE_SHORT = Utils.hexToBytes("616263");

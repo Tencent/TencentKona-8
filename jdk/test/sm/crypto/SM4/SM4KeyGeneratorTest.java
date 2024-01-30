@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2023, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -17,6 +17,12 @@
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+/*
+ * @test
+ * @summary Test SM4 key generator.
+ * @run testng SM4KeyGeneratorTest
+ */
+
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 
@@ -27,11 +33,6 @@ import org.testng.annotations.Test;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.expectThrows;
 
-/*
- * @test
- * @summary Test SM4 key generator.
- * @run testng SM4KeyGeneratorTest
- */
 public class SM4KeyGeneratorTest {
 
     @Test
