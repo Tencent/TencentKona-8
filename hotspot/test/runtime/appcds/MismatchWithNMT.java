@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.TimeUnit;
 
 public class MismatchWithNMT {
     // dump with hello.jsa, then
@@ -59,6 +60,10 @@ public class MismatchWithNMT {
         OutputAnalyzer output = TestCommon.execCommon(execArgs);
 
         TestCommon.checkExecReturn(output, 0, true, "Hello World");
+
+        // Wait for a while before changing the timestamp of hello.jar,
+        // then the timestamp difference can be more observiable.
+        TimeUnit.SECONDS.sleep(1);
 
         // modify the timestamp of hello.jar
         try {
