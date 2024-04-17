@@ -324,7 +324,10 @@ final class ServerHello {
 
                 if ((ke != null) &&
                         (shc.sslConfig.clientAuthType !=
-                                ClientAuthType.CLIENT_AUTH_NONE) &&
+                                ClientAuthType.CLIENT_AUTH_NONE
+                                // TLCP 1.1 ECDHE cipher suites must require client's certificates
+                                || shc.negotiatedCipherSuite == CipherSuite.TLCP_ECDHE_SM4_GCM_SM3
+                                || shc.negotiatedCipherSuite == CipherSuite.TLCP_ECDHE_SM4_CBC_SM3) &&
                         !shc.negotiatedCipherSuite.isAnonymous()) {
                     for (SSLHandshake hs :
                             ke.getRelatedHandshakers(shc)) {

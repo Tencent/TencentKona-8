@@ -40,6 +40,7 @@ import java.util.List;
 public enum ProtocolVersion {
     TLS13           (0x0304,    "TLSv1.3"),
     TLS12           (0x0303,    "TLSv1.2"),
+    TLCP11          (0x0101,    "TLCPv1.1"),
     TLS11           (0x0302,    "TLSv1.1"),
     TLS10           (0x0301,    "TLSv1"),
     SSL30           (0x0300,    "SSLv3"),
@@ -76,9 +77,19 @@ public enum ProtocolVersion {
             TLS12, TLS11, TLS10, SSL30
     };
 
+    // TLS ProtocolVersion array for TLS 1.2 and previous versions, including TLCP 1.1
+    static final ProtocolVersion[] PROTOCOLS_TO_12_TLCP11 = new ProtocolVersion[] {
+            TLS12, TLCP11, TLS11, TLS10, SSL30
+    };
+
     // TLS ProtocolVersion array for TLS 1.3 and previous versions.
     static final ProtocolVersion[] PROTOCOLS_TO_13 = new ProtocolVersion[] {
             TLS13, TLS12, TLS11, TLS10, SSL30
+        };
+
+    // TLS ProtocolVersion array for TLS 1.3 and previous versions, including TLCP 1.1
+    static final ProtocolVersion[] PROTOCOLS_TO_13_TLCP11 = new ProtocolVersion[] {
+            TLS13, TLS12, TLCP11, TLS11, TLS10, SSL30
         };
 
     // No protocol version specified.
@@ -99,6 +110,11 @@ public enum ProtocolVersion {
     // TLS ProtocolVersion array for TLS 1.2.
     static final ProtocolVersion[] PROTOCOLS_OF_12 = new ProtocolVersion[] {
             TLS12
+        };
+
+    // TLS ProtocolVersion array for TLCP 1.1.
+    static final ProtocolVersion[] PROTOCOLS_OF_TLCP11 = new ProtocolVersion[] {
+            TLCP11
         };
 
     // TLS ProtocolVersion array for TLS 1.3.
@@ -225,6 +241,12 @@ public enum ProtocolVersion {
     static boolean isNegotiable(
             byte major, byte minor, boolean allowSSL20Hello) {
         int v = ((major & 0xFF) << 8) | (minor & 0xFF);
+
+        // TLCP 1.1 must be negotiable
+        if (v == TLCP11.id) {
+            return true;
+        }
+
         if (v < SSL30.id) {
            if (!allowSSL20Hello || (v != SSL20Hello.id)) {
                return false;
@@ -352,6 +374,13 @@ public enum ProtocolVersion {
      */
     boolean useTLS10PlusSpec() {
         return this.id >= TLS10.id;
+    }
+
+    /**
+     * Return true if this ProtocolVersion object is of TLCP 1.1.
+     */
+    boolean isTLCP11() {
+        return this.id == TLCP11.id;
     }
 
     /**

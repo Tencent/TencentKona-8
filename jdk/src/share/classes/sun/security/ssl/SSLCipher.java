@@ -265,6 +265,31 @@ enum SSLCipher {
         })),
 
     @SuppressWarnings({"unchecked", "rawtypes"})
+    B_SM4(CIPHER_SM4, BLOCK_CIPHER, 16, 16, 16, 0, true, false,
+        (Map.Entry<ReadCipherGenerator,
+                ProtocolVersion[]>[])(new Map.Entry[] {
+            new SimpleImmutableEntry<ReadCipherGenerator, ProtocolVersion[]>(
+                new T11BlockReadCipherGenerator(),
+                ProtocolVersion.PROTOCOLS_OF_TLCP11
+            ),
+            new SimpleImmutableEntry<ReadCipherGenerator, ProtocolVersion[]>(
+                new T11BlockReadCipherGenerator(),
+                ProtocolVersion.PROTOCOLS_OF_TLCP11
+            )
+        }),
+        (Map.Entry<WriteCipherGenerator,
+                ProtocolVersion[]>[])(new Map.Entry[] {
+            new SimpleImmutableEntry<WriteCipherGenerator, ProtocolVersion[]>(
+                new T11BlockWriteCipherGenerator(),
+                ProtocolVersion.PROTOCOLS_OF_TLCP11
+            ),
+            new SimpleImmutableEntry<WriteCipherGenerator, ProtocolVersion[]>(
+                new T11BlockWriteCipherGenerator(),
+                ProtocolVersion.PROTOCOLS_OF_TLCP11
+            )
+        })),
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
     B_AES_128_GCM(CIPHER_AES_GCM, AEAD_CIPHER, 16, 16, 12, 4, true, false,
         (Map.Entry<ReadCipherGenerator,
                 ProtocolVersion[]>[])(new Map.Entry[] {
@@ -295,6 +320,23 @@ enum SSLCipher {
             new SimpleImmutableEntry<WriteCipherGenerator, ProtocolVersion[]>(
                 new T12GcmWriteCipherGenerator(),
                 ProtocolVersion.PROTOCOLS_OF_12
+            )
+        })),
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    B_SM4_GCM(CIPHER_SM4_GCM, AEAD_CIPHER, 16, 16, 12, 4, true, false,
+        (Map.Entry<ReadCipherGenerator,
+                ProtocolVersion[]>[])(new Map.Entry[] {
+            new SimpleImmutableEntry<ReadCipherGenerator, ProtocolVersion[]>(
+                new T12GcmReadCipherGenerator(),
+                ProtocolVersion.PROTOCOLS_OF_TLCP11
+            )
+        }),
+        (Map.Entry<WriteCipherGenerator,
+                ProtocolVersion[]>[])(new Map.Entry[] {
+            new SimpleImmutableEntry<WriteCipherGenerator, ProtocolVersion[]>(
+                new T12GcmWriteCipherGenerator(),
+                ProtocolVersion.PROTOCOLS_OF_TLCP11
             )
         })),
 

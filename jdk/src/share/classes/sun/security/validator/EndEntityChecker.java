@@ -273,7 +273,12 @@ class EndEntityChecker {
                         ("KeyUsage does not allow key encipherment",
                         ValidatorException.T_EE_EXTENSIONS, cert);
             }
-        } else if (KU_SERVER_SIGNATURE.contains(parameter)) {
+        } else if (KU_SERVER_SIGNATURE.contains(parameter)
+                // SM2 and SM2E are used on TLCP 1.1 only,
+                // and the first certificate, namely sign certificate,
+                // always has digitalSignature key usage.
+                || "SM2".equalsIgnoreCase(parameter)
+                || "SM2E".equalsIgnoreCase(parameter)) {
             if (checkKeyUsage(cert, KU_SIGNATURE) == false) {
                 throw new ValidatorException
                         ("KeyUsage does not allow digital signatures",

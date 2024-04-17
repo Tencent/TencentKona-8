@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2023, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
@@ -22,10 +22,13 @@ package sun.security.util;
 
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
+import java.security.cert.X509Certificate;
+import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECField;
 import java.security.spec.ECFieldFp;
 import java.security.spec.ECParameterSpec;
 import java.security.spec.ECPoint;
+import java.security.spec.SM2ParameterSpec;
 
 /**
  * The utilities for ShangMi features.
@@ -113,6 +116,21 @@ public final class SMUtil {
         return byteArr;
     }
 
+    public static byte[] encodePubPoint(ECPoint pubPoint) {
+        byte[] x = bigIntToBytes32(pubPoint.getAffineX());
+        byte[] y = bigIntToBytes32(pubPoint.getAffineY());
+
+        byte[] encoded = new byte[65];
+        encoded[0] = 0x04;
+        System.arraycopy(x, 0, encoded, 1, 32);
+        System.arraycopy(y, 0, encoded, 33, 32);
+        return encoded;
+    }
+
+    public static byte[] encodePrivKey(BigInteger privKeyValue) {
+        return bigIntToBytes32(privKeyValue);
+    }
+
     // Partial Public key validation as described in NIST SP 800-186 Appendix D.1.1.1.
     // The extra step in the full validation (described in Appendix D.1.1.2) is implemented
     // as sun.security.ec.ECOperations#checkOrder inside the jdk.crypto.ec module.
@@ -148,6 +166,44 @@ public final class SMUtil {
         if (!left.equals(right)) {
             throw new InvalidKeyException("Public point is not on the curve");
         }
+    }
+
+    // An SM certificate must use curveSM2 as ECC curve
+    // and SM2withSM3 as signature scheme.
+    public static boolean isSMCert(X509Certificate cert) {
+        if (!(cert.getPublicKey() instanceof ECPublicKey)) {
+            return false;
+        }
+
+        ECParameterSpec ecParams = ((ECPublicKey) cert.getPublicKey()).getParams();
+        return SM2ParameterSpec.ORDER.equals(ecParams.getOrder())
+                && KnownOIDs.SM3withSM2.value().equals(cert.getSigAlgOID());
+    }
+
+    // CA has basic constraints extension.
+    public static boolean isCA(X509Certificate certificate) {
+        return certificate.getBasicConstraints() != -1;
+    }
+
+    // If the key usage is critical, it must contain digitalSignature.
+    public static boolean isSignCert(X509Certificate certificate) {
+        if (certificate == null) {
+            return false;
+        }
+
+        boolean[] keyUsage = certificate.getKeyUsage();
+        return keyUsage == null || keyUsage[0];
+    }
+
+    // If the key usage is critical, it must contain one or more of
+    // keyEncipherment, dataEncipherment and keyAgreement.
+    public static boolean isEncCert(X509Certificate certificate) {
+        if (certificate == null) {
+            return false;
+        }
+
+        boolean[] keyUsage = certificate.getKeyUsage();
+        return keyUsage == null || keyUsage[2] || keyUsage[3] || keyUsage[4];
     }
 
     private SMUtil() { }

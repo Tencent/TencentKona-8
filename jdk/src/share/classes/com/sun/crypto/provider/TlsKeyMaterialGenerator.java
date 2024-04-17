@@ -69,9 +69,10 @@ public final class TlsKeyMaterialGenerator extends KeyGeneratorSpi {
         }
         protocolVersion = (spec.getMajorVersion() << 8)
             | spec.getMinorVersion();
-        if ((protocolVersion < 0x0300) || (protocolVersion > 0x0303)) {
+        if (((protocolVersion < 0x0300) || (protocolVersion > 0x0303))
+                && protocolVersion != 0x0101) {
             throw new InvalidAlgorithmParameterException(
-                "Only SSL 3.0, TLS 1.0/1.1/1.2 supported");
+                "Only SSL 3.0, TLS 1.0/1.1/1.2, TLCP 1.1 supported");
         }
     }
 
@@ -120,7 +121,7 @@ public final class TlsKeyMaterialGenerator extends KeyGeneratorSpi {
         MessageDigest sha = null;
 
         // generate key block
-        if (protocolVersion >= 0x0303) {
+        if (protocolVersion >= 0x0303 || protocolVersion == 0x0101) {
             // TLS 1.2
             byte[] seed = concat(serverRandom, clientRandom);
             keyBlock = doTLS12PRF(masterSecret, LABEL_KEY_EXPANSION, seed,

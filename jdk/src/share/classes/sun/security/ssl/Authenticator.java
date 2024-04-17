@@ -54,7 +54,7 @@ abstract class Authenticator {
     static Authenticator valueOf(ProtocolVersion protocolVersion) {
         if (protocolVersion.useTLS13PlusSpec()) {
             return new TLS13Authenticator(protocolVersion);
-        } else if (protocolVersion.useTLS10PlusSpec()) {
+        } else if (protocolVersion.useTLS10PlusSpec() || protocolVersion.isTLCP11()) {
             return new TLS10Authenticator(protocolVersion);
         } else {
             return new SSL30Authenticator();
@@ -68,7 +68,7 @@ abstract class Authenticator {
                         InvalidKeyException {
         if (protocolVersion.useTLS13PlusSpec()) {
             throw new RuntimeException("No MacAlg used in TLS 1.3");
-        } else if (protocolVersion.useTLS10PlusSpec()) {
+        } else if (protocolVersion.useTLS10PlusSpec() || protocolVersion.isTLCP11()) {
             return (T)(new TLS10Mac(protocolVersion, macAlg, key));
         } else {
             return (T)(new SSL30Mac(protocolVersion, macAlg, key));
@@ -340,6 +340,9 @@ abstract class Authenticator {
                     break;
                 case M_SHA384:
                     algorithm = "HmacSHA384";    // TLS 1.2+
+                    break;
+                case M_SM3:
+                    algorithm = "HmacSM3";       // TLS 1.2+ and TLCP 1.1
                     break;
                 default:
                     throw new RuntimeException("Unknown MacAlg " + macAlg);

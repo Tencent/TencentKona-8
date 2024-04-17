@@ -128,7 +128,7 @@ enum SignatureScheme {
                                      "SM3withSM2",
                                      "EC",
                                      NamedGroup.CURVESM2,
-                                     ProtocolVersion.PROTOCOLS_TO_13),
+                                     ProtocolVersion.PROTOCOLS_TO_13_TLCP11),
 
     // Legacy algorithms
     DSA_SHA256              (0x0402, "dsa_sha256", "SHA256withDSA",
@@ -159,7 +159,7 @@ enum SignatureScheme {
 
     final int id;                       // hash + signature
     final String name;                  // literal name
-    private final String algorithm;     // signature algorithm
+    final String algorithm;             // signature algorithm
     final String keyAlgorithm;          // signature key algorithm
     private final AlgorithmParameterSpec signAlgParameter;
     private final NamedGroup namedGroup;    // associated named group
@@ -592,7 +592,7 @@ enum SignatureScheme {
     // specific private key.  If the private key does not support the signature
     // scheme, {@code null} is returned, and the caller may fail back to next
     // available signature scheme.
-    private Signature getSigner(PrivateKey privateKey, PublicKey publicKey,
+    Signature getSigner(PrivateKey privateKey, PublicKey publicKey,
             boolean isTLS13) {
         if (!isAvailable) {
             return null;

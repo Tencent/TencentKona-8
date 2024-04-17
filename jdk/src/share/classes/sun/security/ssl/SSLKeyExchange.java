@@ -37,13 +37,14 @@ import sun.security.ssl.SupportedGroupsExtension.NamedGroup;
 import sun.security.ssl.SupportedGroupsExtension.NamedGroupType;
 import sun.security.ssl.SupportedGroupsExtension.SupportedGroups;
 import sun.security.ssl.X509Authentication.X509Possession;
+import sun.security.ssl.TLCPKeyExchange.TLCP11KeyAgreement;
 
 final class SSLKeyExchange implements SSLKeyAgreementGenerator,
         SSLHandshakeBinding {
     private final SSLAuthentication authentication;
     private final SSLKeyAgreement keyAgreement;
 
-    SSLKeyExchange(X509Authentication authentication,
+    SSLKeyExchange(SSLAuthentication authentication,
             SSLKeyAgreement keyAgreement) {
         this.authentication = authentication;
         this.keyAgreement = keyAgreement;
@@ -90,7 +91,8 @@ final class SSLKeyExchange implements SSLKeyAgreementGenerator,
             if (kaPossession == null) {
                 // special cases
                 if (keyAgreement == T12KeyAgreement.RSA ||
-                        keyAgreement == T12KeyAgreement.ECDH) {
+                        keyAgreement == T12KeyAgreement.ECDH ||
+                        keyAgreement == TLCP11KeyAgreement.SM2) {
                     return authentication != null ?
                             new SSLPossession[] {authPossession} :
                             new SSLPossession[0];
@@ -239,6 +241,12 @@ final class SSLKeyExchange implements SSLKeyAgreementGenerator,
                 return SSLKeyExKRB5.KE;
             case K_KRB5_EXPORT:
                 return SSLKeyExKRB5EXPORT.KE;
+
+            // TLCP 1.1 key exchanges
+            case K_SM2:
+                return TLCPKeyExSM2.KE;
+            case K_SM2E:
+                return TLCPKeyExSM2E.KE;
         }
 
         return null;
@@ -338,6 +346,16 @@ final class SSLKeyExchange implements SSLKeyAgreementGenerator,
     private static class SSLKeyExKRB5EXPORT {
         private static SSLKeyExchange KE = new SSLKeyExchange(
                 null, T12KeyAgreement.KRB5_EXPORT);
+    }
+
+    private static class TLCPKeyExSM2 {
+        private static final SSLKeyExchange KE = new SSLKeyExchange(
+                TLCPAuthentication.SM2, TLCP11KeyAgreement.SM2);
+    }
+
+    private static class TLCPKeyExSM2E {
+        private static final SSLKeyExchange KE = new SSLKeyExchange(
+                TLCPAuthentication.SM2, TLCP11KeyAgreement.SM2E);
     }
 
     private enum T12KeyAgreement implements SSLKeyAgreement {

@@ -52,13 +52,13 @@ enum SSLHandshake implements SSLConsumer, HandshakeProducer {
         (Map.Entry<SSLConsumer, ProtocolVersion[]>[])(new Map.Entry[] {
             new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
                 ClientHello.handshakeConsumer,
-                ProtocolVersion.PROTOCOLS_TO_13
+                ProtocolVersion.PROTOCOLS_TO_13_TLCP11
             )
         }),
         (Map.Entry<HandshakeProducer, ProtocolVersion[]>[])(new Map.Entry[] {
             new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
                 ClientHello.handshakeProducer,
-                ProtocolVersion.PROTOCOLS_TO_13
+                ProtocolVersion.PROTOCOLS_TO_13_TLCP11
             )
         })),
 
@@ -67,13 +67,13 @@ enum SSLHandshake implements SSLConsumer, HandshakeProducer {
         (Map.Entry<SSLConsumer, ProtocolVersion[]>[])(new Map.Entry[] {
             new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
                 ServerHello.handshakeConsumer,
-                ProtocolVersion.PROTOCOLS_TO_13
+                ProtocolVersion.PROTOCOLS_TO_13_TLCP11
             )
         }),
         (Map.Entry<HandshakeProducer, ProtocolVersion[]>[])(new Map.Entry[] {
             new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
                 ServerHello.t12HandshakeProducer,
-                ProtocolVersion.PROTOCOLS_TO_12
+                ProtocolVersion.PROTOCOLS_TO_12_TLCP11
             ),
             new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
                 ServerHello.t13HandshakeProducer,
@@ -131,6 +131,10 @@ enum SSLHandshake implements SSLConsumer, HandshakeProducer {
     CERTIFICATE                 ((byte)0x0B, "certificate",
         (Map.Entry<SSLConsumer, ProtocolVersion[]>[])(new Map.Entry[] {
             new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
+                TLCPCertificateMessage.tlcp11HandshakeConsumer,
+                ProtocolVersion.PROTOCOLS_OF_TLCP11
+            ),
+            new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
                 CertificateMessage.t12HandshakeConsumer,
                 ProtocolVersion.PROTOCOLS_TO_12
             ),
@@ -140,6 +144,10 @@ enum SSLHandshake implements SSLConsumer, HandshakeProducer {
             )
         }),
         (Map.Entry<HandshakeProducer, ProtocolVersion[]>[])(new Map.Entry[] {
+            new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
+                TLCPCertificateMessage.tlcp11HandshakeProducer,
+                ProtocolVersion.PROTOCOLS_OF_TLCP11
+            ),
             new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
                 CertificateMessage.t12HandshakeProducer,
                 ProtocolVersion.PROTOCOLS_TO_12
@@ -155,13 +163,13 @@ enum SSLHandshake implements SSLConsumer, HandshakeProducer {
         (Map.Entry<SSLConsumer, ProtocolVersion[]>[])(new Map.Entry[] {
             new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
                 ServerKeyExchange.handshakeConsumer,
-                ProtocolVersion.PROTOCOLS_TO_12
+                ProtocolVersion.PROTOCOLS_TO_12_TLCP11
             )
         }),
         (Map.Entry<HandshakeProducer, ProtocolVersion[]>[])(new Map.Entry[] {
             new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
                 ServerKeyExchange.handshakeProducer,
-                ProtocolVersion.PROTOCOLS_TO_12
+                ProtocolVersion.PROTOCOLS_TO_12_TLCP11
             )
         })),
 
@@ -171,6 +179,10 @@ enum SSLHandshake implements SSLConsumer, HandshakeProducer {
             new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
                 CertificateRequest.t10HandshakeConsumer,
                 ProtocolVersion.PROTOCOLS_TO_11
+            ),
+            new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
+                TLCPCertificateRequest.tlcp11HandshakeConsumer,
+                ProtocolVersion.PROTOCOLS_OF_TLCP11
             ),
             new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
                 CertificateRequest.t12HandshakeConsumer,
@@ -187,6 +199,10 @@ enum SSLHandshake implements SSLConsumer, HandshakeProducer {
                 ProtocolVersion.PROTOCOLS_TO_11
             ),
             new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
+                TLCPCertificateRequest.tlcp11HandshakeProducer,
+                ProtocolVersion.PROTOCOLS_OF_TLCP11
+            ),
+            new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
                 CertificateRequest.t12HandshakeProducer,
                 ProtocolVersion.PROTOCOLS_OF_12
             ),
@@ -201,13 +217,13 @@ enum SSLHandshake implements SSLConsumer, HandshakeProducer {
         (Map.Entry<SSLConsumer, ProtocolVersion[]>[])(new Map.Entry[] {
             new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
                 ServerHelloDone.handshakeConsumer,
-                ProtocolVersion.PROTOCOLS_TO_12
+                ProtocolVersion.PROTOCOLS_TO_12_TLCP11
             )
         }),
         (Map.Entry<HandshakeProducer, ProtocolVersion[]>[])(new Map.Entry[] {
             new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
                 ServerHelloDone.handshakeProducer,
-                ProtocolVersion.PROTOCOLS_TO_12
+                ProtocolVersion.PROTOCOLS_TO_12_TLCP11
             )
         })),
 
@@ -221,6 +237,10 @@ enum SSLHandshake implements SSLConsumer, HandshakeProducer {
             new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
                 CertificateVerify.t10HandshakeConsumer,
                 ProtocolVersion.PROTOCOLS_10_11
+            ),
+            new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
+                TLCPCertificateVerify.tlcp11HandshakeConsumer,
+                ProtocolVersion.PROTOCOLS_OF_TLCP11
             ),
             new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
                 CertificateVerify.t12HandshakeConsumer,
@@ -241,6 +261,10 @@ enum SSLHandshake implements SSLConsumer, HandshakeProducer {
                 ProtocolVersion.PROTOCOLS_10_11
             ),
             new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
+                TLCPCertificateVerify.tlcp11HandshakeProducer,
+                ProtocolVersion.PROTOCOLS_OF_TLCP11
+            ),
+            new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
                 CertificateVerify.t12HandshakeProducer,
                 ProtocolVersion.PROTOCOLS_OF_12
             ),
@@ -255,13 +279,13 @@ enum SSLHandshake implements SSLConsumer, HandshakeProducer {
         (Map.Entry<SSLConsumer, ProtocolVersion[]>[])(new Map.Entry[] {
             new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
                 ClientKeyExchange.handshakeConsumer,
-                ProtocolVersion.PROTOCOLS_TO_12
+                ProtocolVersion.PROTOCOLS_TO_12_TLCP11
             )
         }),
         (Map.Entry<HandshakeProducer, ProtocolVersion[]>[])(new Map.Entry[] {
             new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
                 ClientKeyExchange.handshakeProducer,
-                ProtocolVersion.PROTOCOLS_TO_12
+                ProtocolVersion.PROTOCOLS_TO_12_TLCP11
             )
         })),
 
@@ -273,6 +297,10 @@ enum SSLHandshake implements SSLConsumer, HandshakeProducer {
                 ProtocolVersion.PROTOCOLS_TO_12
             ),
             new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
+                Finished.t12HandshakeConsumer,
+                ProtocolVersion.PROTOCOLS_OF_TLCP11
+            ),
+            new SimpleImmutableEntry<SSLConsumer, ProtocolVersion[]>(
                 Finished.t13HandshakeConsumer,
                 ProtocolVersion.PROTOCOLS_OF_13
             )
@@ -281,6 +309,10 @@ enum SSLHandshake implements SSLConsumer, HandshakeProducer {
             new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
                 Finished.t12HandshakeProducer,
                 ProtocolVersion.PROTOCOLS_TO_12
+            ),
+            new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
+                Finished.t12HandshakeProducer,
+                ProtocolVersion.PROTOCOLS_OF_TLCP11
             ),
             new SimpleImmutableEntry<HandshakeProducer, ProtocolVersion[]>(
                 Finished.t13HandshakeProducer,
