@@ -86,6 +86,9 @@ class CardTableExtension : public CardTableModRefBS {
   void inline_write_ref_field_gc(void* field, oop new_val) {
     jbyte* byte = byte_for(field);
     *byte = youngergen_card;
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+      if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
   }
 
   // Adaptive size policy support

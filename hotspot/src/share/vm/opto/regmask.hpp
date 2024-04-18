@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_OPTO_REGMASK_HPP
 #define SHARE_VM_OPTO_REGMASK_HPP
 
@@ -42,6 +48,10 @@
 # include "adfiles/adGlobals_zero.hpp"
 #elif defined TARGET_ARCH_MODEL_ppc_64
 # include "adfiles/adGlobals_ppc_64.hpp"
+#elif defined TARGET_ARCH_MODEL_mips_64
+# include "adfiles/adGlobals_mips_64.hpp"
+#elif defined TARGET_ARCH_MODEL_loongarch_64
+# include "adfiles/adGlobals_loongarch_64.hpp"
 #endif
 
 // Some fun naming (textual) substitutions:

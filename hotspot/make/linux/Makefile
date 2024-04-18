@@ -74,6 +74,10 @@ ifneq (,$(findstring $(ARCH), ppc ppc64))
     FORCE_TIERED=0
   endif
 endif
+# C1 is not ported on mips64, so we cannot build a tiered VM:
+ifeq (mips64, $(findstring mips64, $(ARCH)))
+  FORCE_TIERED=0
+endif
 
 ifdef LP64
   ifeq ("$(filter $(LP64_ARCH),$(BUILDARCH))","")

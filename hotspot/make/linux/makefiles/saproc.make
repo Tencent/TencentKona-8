@@ -21,6 +21,13 @@
 # questions.
 #  
 #
+
+#
+# This file has been modified by Loongson Technology in 2019. These
+# modifications are Copyright (c) 2018, 2019, Loongson Technology, and are made
+# available on the same license terms set forth above.
+#
+
 include $(GAMMADIR)/make/defs.make
 include $(GAMMADIR)/make/altsrc.make
 
@@ -81,7 +88,12 @@ endif
 SA_LFLAGS = $(MAPFLAG:FILENAME=$(SAMAPFILE)) $(LDFLAGS_HASH_STYLE) \
             $(LDFLAGS_NO_EXEC_STACK) $(EXTRA_LDFLAGS)
 
+ifneq (mips64, $(findstring mips64, $(BUILDARCH)))
 SAARCH ?= $(BUILDARCH)
+else
+#If -Dmips64 is used, mips64 would be conflict with "struct mips64_watch_regs mips64" in /usr/include/asm/ptrace.h.
+SAARCH ?= mips
+endif
 
 $(LIBSAPROC): $(SASRCFILES) $(SAMAPFILE)
 	$(QUIETLY) if [ "$(BOOT_JAVA_HOME)" = "" ]; then \

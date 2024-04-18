@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "classfile/dictionary.hpp"
 #include "classfile/javaClasses.hpp"
@@ -122,6 +128,12 @@
 #ifdef TARGET_ARCH_ppc
 # include "vmStructs_ppc.hpp"
 #endif
+#ifdef TARGET_ARCH_mips
+# include "vmStructs_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "vmStructs_loongarch.hpp"
+#endif
 #ifdef TARGET_OS_ARCH_linux_x86
 # include "vmStructs_linux_x86.hpp"
 #endif
@@ -148,6 +160,12 @@
 #endif
 #ifdef TARGET_OS_ARCH_linux_ppc
 # include "vmStructs_linux_ppc.hpp"
+#endif
+#ifdef TARGET_OS_ARCH_linux_mips
+# include "vmStructs_linux_mips.hpp"
+#endif
+#ifdef TARGET_OS_ARCH_linux_loongarch
+# include "vmStructs_linux_loongarch.hpp"
 #endif
 #ifdef TARGET_OS_ARCH_aix_ppc
 # include "vmStructs_aix_ppc.hpp"
@@ -208,6 +226,10 @@
 # include "adfiles/adGlobals_zero.hpp"
 #elif defined TARGET_ARCH_MODEL_ppc_64
 # include "adfiles/adGlobals_ppc_64.hpp"
+#elif defined TARGET_ARCH_MODEL_mips_64
+# include "adfiles/adGlobals_mips_64.hpp"
+#elif defined TARGET_ARCH_MODEL_loongarch_64
+# include "adfiles/adGlobals_loongarch_64.hpp"
 #endif
 #endif // COMPILER2
 

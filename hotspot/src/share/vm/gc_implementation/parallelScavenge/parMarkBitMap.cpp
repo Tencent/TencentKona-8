@@ -105,6 +105,9 @@ ParMarkBitMap::mark_obj(HeapWord* addr, size_t size)
     assert(end_bit_ok, "concurrency problem");
     DEBUG_ONLY(Atomic::inc_ptr(&mark_bitmap_count));
     DEBUG_ONLY(Atomic::add_ptr(size, &mark_bitmap_size));
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+    if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
     return true;
   }
   return false;

@@ -23,6 +23,12 @@
 # questions.
 #
 
+#
+# This file has been modified by Loongson Technology in 2021. These
+# modifications are Copyright (c) 2015, 2021, Loongson Technology, and are made
+# available on the same license terms set forth above.
+#
+
 LIBJSOUND_SRC_DIRS := \
     $(JDK_TOPDIR)/src/share/native/com/sun/media/sound \
     $(JDK_TOPDIR)/src/$(OPENJDK_TARGET_OS_API_DIR)/native/com/sun/media/sound
@@ -134,6 +140,14 @@ else
 
   ifeq ($(OPENJDK_TARGET_CPU), ppc)
     LIBJSOUND_CFLAGS += -DX_ARCH=X_PPC
+  endif
+
+  ifeq ($(OPENJDK_TARGET_CPU), mips64)
+    LIBJSOUND_CFLAGS += -DX_ARCH=X_MIPS64
+  endif
+
+  ifeq ($(OPENJDK_TARGET_CPU), loongarch64)
+    LIBJSOUND_CFLAGS += -DX_ARCH=X_LOONGARCH64
   endif
 
   ifeq ($(OPENJDK_TARGET_CPU), ppc64)

@@ -22,12 +22,21 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022. These
+ * modifications are Copyright (c) 2015, 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_C1_C1_GLOBALS_HPP
 #define SHARE_VM_C1_C1_GLOBALS_HPP
 
 #include "runtime/globals.hpp"
 #ifdef TARGET_ARCH_x86
 # include "c1_globals_x86.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "c1_globals_loongarch.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "c1_globals_aarch64.hpp"

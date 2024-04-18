@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "memory/universe.hpp"
 #include "oops/oop.inline.hpp"
@@ -43,6 +49,12 @@
 #endif
 #ifdef TARGET_ARCH_ppc
 # include "vm_version_ppc.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "vm_version_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "vm_version_loongarch.hpp"
 #endif
 
 const char* Abstract_VM_Version::_s_vm_release = Abstract_VM_Version::vm_release();
@@ -193,6 +205,14 @@ const char* Abstract_VM_Version::jre_release_version() {
 #else
 #define CPU      "ppc64"
 #endif
+#elif defined(MIPS64)
+#if defined(VM_LITTLE_ENDIAN)
+#define CPU      "mips64el"
+#else
+#define CPU      "mips64"
+#endif
+#elif defined(LOONGARCH64)
+#define CPU      "loongarch64"
 #else
 #define CPU      IA32_ONLY("x86")                \
                  IA64_ONLY("ia64")               \

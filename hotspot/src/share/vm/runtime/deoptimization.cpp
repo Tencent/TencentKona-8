@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "classfile/systemDictionary.hpp"
 #include "code/debugInfoRec.hpp"
@@ -68,6 +74,12 @@
 #ifdef TARGET_ARCH_ppc
 # include "vmreg_ppc.inline.hpp"
 #endif
+#ifdef TARGET_ARCH_mips
+# include "vmreg_mips.inline.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "vmreg_loongarch.inline.hpp"
+#endif
 #ifdef COMPILER2
 #if defined AD_MD_HPP
 # include AD_MD_HPP
@@ -83,6 +95,12 @@
 # include "adfiles/ad_zero.hpp"
 #elif defined TARGET_ARCH_MODEL_ppc_64
 # include "adfiles/ad_ppc_64.hpp"
+#endif
+#ifdef TARGET_ARCH_MODEL_mips_64
+# include "adfiles/ad_mips_64.hpp"
+#endif
+#ifdef TARGET_ARCH_MODEL_loongarch_64
+# include "adfiles/ad_loongarch_64.hpp"
 #endif
 #endif // COMPILER2
 

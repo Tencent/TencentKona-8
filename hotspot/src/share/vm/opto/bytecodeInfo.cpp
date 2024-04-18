@@ -361,9 +361,20 @@ bool InlineTree::try_to_inline(ciMethod* callee_method, ciMethod* caller_method,
     } else if (forced_inline()) {
       // Inlining was forced by CompilerOracle, ciReplay or annotation
     } else if (profile.count() == 0) {
+#ifndef MIPS
       // don't inline unreached call sites
        set_msg("call site not reached");
        return false;
+#else
+      ciMethodBlocks* blocks = caller_method->get_method_blocks();
+      // Check if the call site belongs to a start block:
+      // call sites in a start block must be reached before.
+      if (blocks->block_containing(0) != blocks->block_containing(jvms->bci())) {
+        // don't inline unreached call sites
+        set_msg("call site not reached");
+        return false;
+      }
+#endif
     }
   }
 

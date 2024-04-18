@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_RUNTIME_FRAME_HPP
 #define SHARE_VM_RUNTIME_FRAME_HPP
 
@@ -45,6 +51,10 @@
 # include "adfiles/adGlobals_zero.hpp"
 #elif defined TARGET_ARCH_MODEL_ppc_64
 # include "adfiles/adGlobals_ppc_64.hpp"
+#elif defined TARGET_ARCH_MODEL_mips_64
+# include "adfiles/adGlobals_mips_64.hpp"
+#elif defined TARGET_ARCH_MODEL_loongarch_64
+# include "adfiles/adGlobals_loongarch_64.hpp"
 #endif
 #endif // COMPILER2
 #ifdef TARGET_ARCH_zero
@@ -488,6 +498,12 @@ class frame VALUE_OBJ_CLASS_SPEC {
 
 #ifdef TARGET_ARCH_x86
 # include "frame_x86.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "frame_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "frame_loongarch.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "frame_aarch64.hpp"

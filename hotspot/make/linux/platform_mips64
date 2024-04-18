@@ -1,0 +1,17 @@
+os_family = linux
+
+arch = mips
+
+arch_model = mips_64
+
+os_arch = linux_mips
+
+os_arch_model = linux_mips_64
+
+lib_arch = mips64
+
+compiler = gcc
+
+gnu_dis_arch = mips64
+
+sysdefs = -DLINUX -D_GNU_SOURCE -DMIPS64

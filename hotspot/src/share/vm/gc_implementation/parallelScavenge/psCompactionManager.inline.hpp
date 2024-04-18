@@ -33,6 +33,9 @@ void ParCompactionManager::push_objarray(oop obj, size_t index)
   ObjArrayTask task(obj, index);
   assert(task.is_valid(), "bad ObjArrayTask");
   _objarray_stack.push(task);
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+  if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
 }
 
 void ParCompactionManager::push_region(size_t index)
@@ -44,6 +47,9 @@ void ParCompactionManager::push_region(size_t index)
   assert(region_ptr->_pushed++ == 0, "should only be pushed once");
 #endif
   region_stack()->push(index);
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+  if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
 }
 
 #endif // SHARE_VM_GC_IMPLEMENTATION_PARALLELSCAVENGE_PSCOMPACTIONMANAGER_INLINE_HPP

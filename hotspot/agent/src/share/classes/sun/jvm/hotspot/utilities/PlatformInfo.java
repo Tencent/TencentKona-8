@@ -22,6 +22,13 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2018, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ *
+ */
+
 package sun.jvm.hotspot.utilities;
 
 /** Provides canonicalized OS and CPU information for the rest of the
@@ -65,6 +72,10 @@ public class PlatformInfo {
       return cpu;
     } else if (cpu.equals("aarch64")) {
       return cpu;
+    } else if (cpu.equals("mips64") || cpu.equals("mips64el")) {
+      return "mips64";
+    } else if (cpu.equals("loongarch64")) {
+      return "loongarch64";
     } else {
       try {
         Class pic = Class.forName("sun.jvm.hotspot.utilities.PlatformInfoClosed");

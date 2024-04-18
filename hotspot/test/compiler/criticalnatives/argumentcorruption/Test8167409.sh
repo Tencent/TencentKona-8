@@ -24,6 +24,12 @@
 #  questions.
 #
 
+#
+# This file has been modified by Loongson Technology in 2023. These
+# modifications are Copyright (c) 2023, Loongson Technology, and are made
+# available on the same license terms set forth above.
+#
+
 ## @test Test8167409.sh
 ## @bug 8167409
 ## @summary Invalid value passed to critical JNI function
@@ -66,6 +72,18 @@ esac
 if [ $VM_CPU = "aarch64" ]; then
     echo "Test Passed"
     exit 0;
+fi
+
+# CriticalJNINatives is not supported for loongarch64
+if [ $VM_CPU = "loongarch64" ]; then
+     echo "Test Passed"
+     exit 0;
+fi
+
+# CriticalJNINatives is not supported for mips64
+if [ $VM_CPU = "mips64" -o $VM_CPU = "mips64el" ]; then
+     echo "Test Passed"
+     exit 0;
 fi
 
 THIS_DIR=.

@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2021. These
+ * modifications are Copyright (c) 2015, 2021, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_CODE_RELOCINFO_HPP
 #define SHARE_VM_CODE_RELOCINFO_HPP
 
@@ -261,7 +267,11 @@ class relocInfo VALUE_OBJ_CLASS_SPEC {
     poll_return_type        = 11, // polling instruction for safepoints at return
     metadata_type           = 12, // metadata that used to be oops
     trampoline_stub_type    = 13, // stub-entry for trampoline
+#if !defined MIPS64
     yet_unused_type_1       = 14, // Still unused
+#else
+    internal_pc_type        = 14, // tag for internal data,??
+#endif
     data_prefix_tag         = 15, // tag for a prefix (carries data arguments)
     type_mask               = 15  // A mask which selects only the above values
   };
@@ -288,6 +298,7 @@ class relocInfo VALUE_OBJ_CLASS_SPEC {
   ;
 #endif
 
+#if defined MIPS64 && !defined ZERO
   #define APPLY_TO_RELOCATIONS(visitor) \
     visitor(oop) \
     visitor(metadata) \
@@ -300,9 +311,26 @@ class relocInfo VALUE_OBJ_CLASS_SPEC {
     visitor(internal_word) \
     visitor(poll) \
     visitor(poll_return) \
-    visitor(section_word) \
     visitor(trampoline_stub) \
+    visitor(internal_pc) \
 
+#else
+  #define APPLY_TO_RELOCATIONS(visitor) \
+    visitor(oop) \
+    visitor(metadata) \
+    visitor(virtual_call) \
+    visitor(opt_virtual_call) \
+    visitor(static_call) \
+    visitor(static_stub) \
+    visitor(runtime_call) \
+    visitor(external_word) \
+    visitor(internal_word) \
+    visitor(poll) \
+    visitor(poll_return) \
+    visitor(trampoline_stub) \
+    visitor(section_word) \
+
+#endif
 
  public:
   enum {
@@ -432,6 +460,12 @@ class relocInfo VALUE_OBJ_CLASS_SPEC {
 #endif
 #ifdef TARGET_ARCH_ppc
 # include "relocInfo_ppc.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "relocInfo_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "relocInfo_loongarch.hpp"
 #endif
 
 
@@ -1024,6 +1058,15 @@ class metadata_Relocation : public DataRelocation {
   // Note:  metadata_value transparently converts Universe::non_metadata_word to NULL.
 };
 
+#if defined MIPS64
+// to handle the set_last_java_frame pc
+class internal_pc_Relocation : public Relocation {
+  relocInfo::relocType type() { return relocInfo::internal_pc_type; }
+ public:
+  address pc() { return pd_get_address_from_code(); }
+  void fix_relocation_after_move(const CodeBuffer* src, CodeBuffer* dest);
+};
+#endif
 
 class virtual_call_Relocation : public CallRelocation {
   relocInfo::relocType type() { return relocInfo::virtual_call_type; }

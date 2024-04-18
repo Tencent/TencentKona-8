@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "classfile/classFileStream.hpp"
 #include "classfile/javaClasses.hpp"
@@ -47,6 +53,12 @@
 #include "runtime/os.hpp"
 #ifdef TARGET_ARCH_x86
 # include "bytes_x86.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "bytes_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "bytes_loongarch.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "bytes_aarch64.hpp"

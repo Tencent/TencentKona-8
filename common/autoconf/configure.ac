@@ -23,6 +23,12 @@
 # questions.
 #
 
+#
+# This file has been modified by Loongson Technology in 2018. These
+# modifications are Copyright (c) 2018 Loongson Technology, and are made
+# available on the same license terms set forth above.
+#
+
 ###############################################################################
 #
 # Includes and boilerplate
@@ -186,6 +192,7 @@ FLAGS_SETUP_INIT_FLAGS
 # Now we can test some aspects on the target using configure macros.
 PLATFORM_SETUP_OPENJDK_TARGET_BITS
 PLATFORM_SETUP_OPENJDK_TARGET_ENDIANNESS
+GET_BUILDER_AND_HOST_DATA
 
 # Configure flags for the tools
 FLAGS_SETUP_COMPILER_FLAGS_FOR_LIBS

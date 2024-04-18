@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022, These
+ * modifications are Copyright (c) 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_OPTO_CHAITIN_HPP
 #define SHARE_VM_OPTO_CHAITIN_HPP
 
@@ -136,8 +142,12 @@ public:
 
   // Number of registers this live range uses when it colors
 private:
+#ifdef LOONGARCH64
+  uint16_t _num_regs;
+#else
   uint8 _num_regs;              // 2 for Longs and Doubles, 1 for all else
                                 // except _num_regs is kill count for fat_proj
+#endif
 public:
   int num_regs() const { return _num_regs; }
   void set_num_regs( int reg ) { assert( _num_regs == reg || !_num_regs, "" ); _num_regs = reg; }
@@ -145,7 +155,11 @@ public:
 private:
   // Number of physical registers this live range uses when it colors
   // Architecture and register-set dependent
+#ifdef LOONGARCH64
+  uint16_t _reg_pressure;
+#else
   uint8 _reg_pressure;
+#endif
 public:
   void set_reg_pressure(int i)  { _reg_pressure = i; }
   int      reg_pressure() const { return _reg_pressure; }

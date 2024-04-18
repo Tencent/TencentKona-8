@@ -316,6 +316,9 @@ public:
 
   inline void inline_write_ref_array(MemRegion mr) {
     dirty_MemRegion(mr);
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+    if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
   }
 protected:
   void write_ref_array_work(MemRegion mr) {
@@ -329,7 +332,11 @@ public:
 
   // *** Card-table-barrier-specific things.
 
-  template <class T> inline void inline_write_ref_field_pre(T* field, oop newVal) {}
+  template <class T> inline void inline_write_ref_field_pre(T* field, oop newVal) {
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+    if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
+  }
 
   template <class T> inline void inline_write_ref_field(T* field, oop newVal, bool release) {
     jbyte* byte = byte_for((void*)field);
@@ -339,6 +346,9 @@ public:
     } else {
       *byte = dirty_card;
     }
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+    if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
   }
 
   // These are used by G1, when it uses the card table as a temporary data

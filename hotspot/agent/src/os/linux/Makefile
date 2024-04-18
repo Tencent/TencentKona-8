@@ -22,7 +22,13 @@
 #  
 #
 
-ARCH := $(shell if ([ `uname -m` = "ia64" ])  ; then echo ia64 ; elif ([ `uname -m` = "x86_64" ]) ; then echo amd64; elif ([ `uname -m` = "sparc64" ]) ; then echo sparc; else echo i386 ; fi )
+#
+# This file has been modified by Loongson Technology in 2020. These
+# modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+# available on the same license terms set forth above.
+#
+
+ARCH := $(shell if ([ `uname -m` = "ia64" ])  ; then echo ia64 ; elif ([ `uname -m` = "mips64el" ]) ; then echo mips64 ; elif ([ `uname -m` = "x86_64" ]) ; then echo amd64; elif ([ `uname -m` = "sparc64" ]) ; then echo sparc; else echo i386 ; fi )
 GCC      = gcc
 
 JAVAH    = ${JAVA_HOME}/bin/javah
@@ -53,6 +59,8 @@ $(ARCH)/LinuxDebuggerLocal.o: LinuxDebuggerLocal.c
         $(JAVAH) -jni -classpath ../../../build/classes -d $(ARCH) \
 		sun.jvm.hotspot.debugger.x86.X86ThreadContext \
 		sun.jvm.hotspot.debugger.sparc.SPARCThreadContext \
+		sun.jvm.hotspot.debugger.mips64.MIPS64ThreadContext \
+		sun.jvm.hotspot.debugger.loongarch64.LOONGARCH64ThreadContext \
 		sun.jvm.hotspot.debugger.amd64.AMD64ThreadContext \
 		sun.jvm.hotspot.debugger.aarch64.AARCH64ThreadContext 
         $(GCC) $(CFLAGS) $< -o $@

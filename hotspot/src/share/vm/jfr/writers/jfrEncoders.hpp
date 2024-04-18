@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022. These
+ * modifications are Copyright (c) 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_JFR_WRITERS_JFRENCODERS_HPP
 #define SHARE_VM_JFR_WRITERS_JFRENCODERS_HPP
 
@@ -45,6 +51,12 @@
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "bytes_aarch64.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "bytes_loongarch.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "bytes_mips.hpp"
 #endif
 
 //

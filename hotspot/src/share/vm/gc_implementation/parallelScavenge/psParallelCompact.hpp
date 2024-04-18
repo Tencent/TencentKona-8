@@ -1329,6 +1329,9 @@ inline bool PSParallelCompact::mark_obj(oop obj) {
   const int obj_size = obj->size();
   if (mark_bitmap()->mark_obj(obj, obj_size)) {
     _summary_data.add_obj(obj, obj_size);
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+    if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
     return true;
   } else {
     return false;
@@ -1363,6 +1366,9 @@ inline void PSParallelCompact::mark_and_push(ParCompactionManager* cm, T* p) {
     oop obj = oopDesc::decode_heap_oop_not_null(heap_oop);
     if (mark_bitmap()->is_unmarked(obj) && mark_obj(obj)) {
       cm->push(obj);
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+      if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
     }
   }
 }

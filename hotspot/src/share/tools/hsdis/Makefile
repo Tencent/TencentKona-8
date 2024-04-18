@@ -105,12 +105,25 @@ CFLAGS/sparc	+= -m32
 endif
 CFLAGS		+= $(CFLAGS/$(ARCH))
 CFLAGS		+= -fPIC
+ifeq ($(ARCH), mips64)
+CPUINFO = $(shell cat /proc/cpuinfo)
+ifneq ($(findstring Loongson,$(CPUINFO)),)
+CFLAGS += -DLOONGSON
+endif
+endif
 OS		= linux
 LIB_EXT		= .so
 CC 		= gcc
 endif
 CFLAGS		+= -O
 DLDFLAGS	+= -shared
+ifeq ($(ARCH), mips64)
+DLDFLAGS	+= -Wl,-z,noexecstack
+endif
+ifeq ($(ARCH), loongarch64)
+DLDFLAGS        += -Wl,-z,noexecstack
+CONFIGURE_ARGS  += --disable-werror
+endif
 LDFLAGS         += -ldl
 OUTFLAGS	+= -o $@
 else

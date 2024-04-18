@@ -22,6 +22,13 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2018. These
+ * modifications are Copyright (c) 2018 Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ *
+*/
+
 #include <fcntl.h>
 #include "precompiled.hpp"
 #include "compiler/compileBroker.hpp"
@@ -488,7 +495,12 @@ void VMError::report(outputStream* st) {
                                   JDK_Version::runtime_name() : "";
      const char* runtime_version = JDK_Version::runtime_version() != NULL ?
                                   JDK_Version::runtime_version() : "";
-     st->print_cr("# JRE version: %s (%s) (build %s)", runtime_name, buf, runtime_version);
+#ifdef LOONGSON_RUNTIME_NAME
+     const char* loongson_runtime_name_and_version = LOONGSON_RUNTIME_NAME;
+#else
+     const char* loongson_runtime_name_and_version = "";
+#endif
+     st->print_cr("# JRE version: %s (%s) (build %s) (%s)", runtime_name, buf, runtime_version, loongson_runtime_name_and_version);
      st->print_cr("# Java VM: %s (%s %s %s %s)",
                    Abstract_VM_Version::vm_name(),
                    Abstract_VM_Version::vm_release(),

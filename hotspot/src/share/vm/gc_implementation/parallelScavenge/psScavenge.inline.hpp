@@ -71,14 +71,22 @@ inline void PSScavenge::copy_and_push_safe_barrier(PSPromotionManager* pm,
   assert(should_scavenge(p, true), "revisiting object?");
 
   oop o = oopDesc::load_decode_heap_oop_not_null(p);
-  oop new_obj = o->is_forwarded()
-        ? o->forwardee()
-        : pm->copy_to_survivor_space<promote_immediately>(o);
+#if defined MIPS || defined LOONGARCH
+  if (oopDesc::is_null(o)) return;
+#endif
+
+  oop new_obj;
+  markOop m = o->mark();
+  if (m->is_marked()) {
+    new_obj = (oop) m->decode_pointer();
+  } else {
+    new_obj = pm->copy_to_survivor_space<promote_immediately>(o);
+  }
 
 #ifndef PRODUCT
   // This code must come after the CAS test, or it will print incorrect
   // information.
-  if (TraceScavenge &&  o->is_forwarded()) {
+  if (TraceScavenge && m->is_marked()) {
     gclog_or_tty->print_cr("{%s %s " PTR_FORMAT " -> " PTR_FORMAT " (%d)}",
        "forwarding",
        new_obj->klass()->internal_name(), p2i((void *)o), p2i((void *)new_obj), new_obj->size());
@@ -138,8 +146,9 @@ class PSScavengeFromKlassClosure: public OopClosure {
 
       oop o = *p;
       oop new_obj;
-      if (o->is_forwarded()) {
-        new_obj = o->forwardee();
+      markOop m = o->mark();
+      if (m->is_marked()) {
+        new_obj = (oop) m->decode_pointer();
       } else {
         new_obj = _pm->copy_to_survivor_space</*promote_immediately=*/false>(o);
       }

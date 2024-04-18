@@ -72,7 +72,13 @@ class oopDesc {
   markOop  mark() const         { return _mark; }
   markOop* mark_addr() const    { return (markOop*) &_mark; }
 
-  void set_mark(volatile markOop m)      { _mark = m;   }
+  void set_mark(volatile markOop m)      {
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+    if (UseSyncLevel >= 2000) release_set_mark(m);
+    else
+#endif
+    _mark = m;
+  }
 
   void    release_set_mark(markOop m);
   markOop cas_set_mark(markOop new_mark, markOop old_mark);

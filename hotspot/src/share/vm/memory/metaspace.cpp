@@ -21,6 +21,13 @@
  * questions.
  *
  */
+
+/*
+ * This file has been modified by Loongson Technology in 2021. These
+ * modifications are Copyright (c) 2021 Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "gc_interface/collectedHeap.hpp"
 #include "memory/allocation.hpp"
@@ -3065,12 +3072,12 @@ void Metaspace::allocate_metaspace_compressed_klass_ptrs(char* requested_addr, a
   // Don't use large pages for the class space.
   bool large_pages = false;
 
-#ifndef AARCH64
+#if !defined(AARCH64) && !defined(MIPS64) && !defined(LOONGARCH)
   ReservedSpace metaspace_rs = ReservedSpace(compressed_class_space_size(),
                                              _reserve_alignment,
                                              large_pages,
                                              requested_addr, 0);
-#else // AARCH64
+#else // defined(AARCH64) || defined(MIPS64) || defined(LOONGARCH)
   ReservedSpace metaspace_rs;
 
   // Our compressed klass pointers may fit nicely into the lower 32
@@ -3107,7 +3114,7 @@ void Metaspace::allocate_metaspace_compressed_klass_ptrs(char* requested_addr, a
     }
   }
 
-#endif // AARCH64
+#endif // defined(AARCH64) || defined(MIPS64) || defined(LOONGARCH)
 
   if (!metaspace_rs.is_reserved()) {
 #if INCLUDE_CDS

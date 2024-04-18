@@ -252,6 +252,9 @@ void ClearNoncleanCardWrapper::do_MemRegion(MemRegion mr) {
 // cur_youngergen_and_prev_nonclean_card ==> no change.
 void CardTableRS::write_ref_field_gc_par(void* field, oop new_val) {
   jbyte* entry = ct_bs()->byte_for(field);
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+  if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
   do {
     jbyte entry_val = *entry;
     // We put this first because it's probably the most common case.
@@ -266,7 +269,12 @@ void CardTableRS::write_ref_field_gc_par(void* field, oop new_val) {
       jbyte new_val = cur_youngergen_and_prev_nonclean_card;
       jbyte res = Atomic::cmpxchg(new_val, entry, entry_val);
       // Did the CAS succeed?
-      if (res == entry_val) return;
+      if (res == entry_val) {
+#if (defined MIPS || defined LOONGARCH) && !defined ZERO
+         if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
+         return;
+      }
       // Otherwise, retry, to see the new value.
       continue;
     } else {

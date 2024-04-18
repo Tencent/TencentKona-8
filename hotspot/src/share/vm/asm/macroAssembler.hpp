@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_ASM_MACROASSEMBLER_HPP
 #define SHARE_VM_ASM_MACROASSEMBLER_HPP
 
@@ -45,5 +51,10 @@
 #ifdef TARGET_ARCH_aarch64
 # include "macroAssembler_aarch64.hpp"
 #endif
-
+#ifdef TARGET_ARCH_mips
+# include "macroAssembler_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "macroAssembler_loongarch.hpp"
+#endif
 #endif // SHARE_VM_ASM_MACROASSEMBLER_HPP

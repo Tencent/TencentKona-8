@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_OOPS_OOP_INLINE_HPP
 #define SHARE_VM_OOPS_OOP_INLINE_HPP
 
@@ -59,6 +65,12 @@
 #endif
 #ifdef TARGET_ARCH_ppc
 # include "bytes_ppc.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "bytes_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "bytes_loongarch.hpp"
 #endif
 
 // Implementation of all inlined member functions defined in oop.hpp

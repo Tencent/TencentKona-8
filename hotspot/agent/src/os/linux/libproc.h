@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022. These
+ * modifications are Copyright (c) 2015, 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef _LIBPROC_H_
 #define _LIBPROC_H_
 
@@ -36,7 +42,7 @@
 
 #include <sys/ptrace.h>
 
-#if defined(aarch64)
+#if defined(aarch64) || defined(loongarch64)
 #include "asm/ptrace.h"
 #endif
 
@@ -76,7 +82,12 @@ combination of ptrace and /proc calls.
 #include <asm/ptrace.h>
 #define user_regs_struct  pt_regs
 #endif
-#if defined(aarch64)
+
+#if defined(mips) || defined(mipsel) || defined(mips64) || defined(mips64el)
+#include <asm/ptrace.h>
+#define user_regs_struct  pt_regs
+#endif
+#if defined(aarch64) || defined(loongarch64)
 #define user_regs_struct user_pt_regs
 #endif
 

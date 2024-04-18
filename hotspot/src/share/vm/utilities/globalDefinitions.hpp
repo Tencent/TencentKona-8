@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_UTILITIES_GLOBALDEFINITIONS_HPP
 #define SHARE_VM_UTILITIES_GLOBALDEFINITIONS_HPP
 
@@ -454,6 +460,12 @@ enum RTMState {
 #endif
 #ifdef TARGET_ARCH_ppc
 # include "globalDefinitions_ppc.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "globalDefinitions_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "globalDefinitions_loongarch.hpp"
 #endif
 
 /*

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 1997, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2021, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -147,6 +148,15 @@ void ReservedSpace::initialize(size_t size, size_t alignment, bool large,
   bool special = large && !os::can_commit_large_page_memory();
   char* base = NULL;
 
+#if defined MIPS && !defined ZERO
+  size_t opt_reg_addr = 5 * os::Linux::page_size();
+  static int code_cache_init_flag = 1;
+  if (UseCodeCacheAllocOpt && code_cache_init_flag && executable) {
+    code_cache_init_flag = 0;
+    requested_address = (char*) opt_reg_addr;
+  }
+#endif
+
   if (requested_address != 0) {
     requested_address -= noaccess_prefix; // adjust requested address
     assert(requested_address != NULL, "huge noaccess prefix?");
@@ -193,6 +203,12 @@ void ReservedSpace::initialize(size_t size, size_t alignment, bool large,
       if (failed_to_reserve_as_requested(base, requested_address, size, false)) {
         // OS ignored requested address. Try different address.
         base = NULL;
+#if defined MIPS && !defined ZERO
+        if (UseCodeCacheAllocOpt && requested_address == (char*) opt_reg_addr) {
+          requested_address = NULL;
+          base = os::reserve_memory(size, NULL, alignment);
+        }
+#endif
       }
     } else {
       base = os::reserve_memory(size, NULL, alignment);

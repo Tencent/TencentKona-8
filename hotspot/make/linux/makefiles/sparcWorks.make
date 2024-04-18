@@ -22,6 +22,12 @@
 #  
 #
 
+#
+# This file has been modified by Loongson Technology in 2015. These
+# modifications are Copyright (c) 2015 Loongson Technology, and are made
+# available on the same license terms set forth above.
+#
+
 #------------------------------------------------------------------------
 # CC, CXX & AS
 
@@ -38,6 +44,7 @@ endif
 ARCHFLAG = $(ARCHFLAG/$(BUILDARCH))
 ARCHFLAG/i486    = -m32
 ARCHFLAG/amd64   = -m64
+ARCHFLAG/mips64  = -m64
 
 CFLAGS     += $(ARCHFLAG)
 AOUT_FLAGS += $(ARCHFLAG)

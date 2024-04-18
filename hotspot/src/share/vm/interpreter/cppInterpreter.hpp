@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2020. These
+ * modifications are Copyright (c) 2015, 2020, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_VM_INTERPRETER_CPPINTERPRETER_HPP
 #define SHARE_VM_INTERPRETER_CPPINTERPRETER_HPP
 
@@ -83,6 +89,12 @@ class CppInterpreter: public AbstractInterpreter {
 
 #ifdef TARGET_ARCH_x86
 # include "cppInterpreter_x86.hpp"
+#endif
+#ifdef TARGET_ARCH_mips
+# include "cppInterpreter_mips.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "cppInterpreter_loongarch.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "cppInterpreter_aarch64.hpp"
