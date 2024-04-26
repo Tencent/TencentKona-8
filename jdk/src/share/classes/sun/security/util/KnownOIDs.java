@@ -39,6 +39,12 @@ import java.util.function.Consumer;
  */
 public enum KnownOIDs {
 
+    // ShangMi OIDs
+    curveSM2("1.2.156.10197.1.301", "curveSM2"),
+    SM3withSM2("1.2.156.10197.1.501", "SM3withSM2"),
+    HmacSM3("1.2.156.10197.1.401.2", "HmacSM3", "SM3Hmac"),
+    SM4$CBC$NoPadding("1.2.156.10197.1.104.2", "SM4/CBC/NoPadding"),
+
     // X.500 Attributes 2.5.4.*
     CommonName("2.5.4.3"),
     Surname("2.5.4.4"),

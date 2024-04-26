@@ -278,7 +278,7 @@ final class SupportedGroupsExtension {
 
         // ShangMi curve defined by RFC 8998
         CURVESM2    (0x0029, "curvesm2",   "1.2.156.10197.1.301", false,
-                            ProtocolVersion.PROTOCOLS_TO_13),
+                            ProtocolVersion.PROTOCOLS_TO_13_TLCP11),
 
         // Elliptic Curves (RFC 4492)
         //

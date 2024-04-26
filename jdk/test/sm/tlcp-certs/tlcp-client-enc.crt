@@ -1,0 +1,47 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            4b:c0:c7:c5:57:24:00:30:c4:e9:91:5c:42:c4:90:69:28:08:d0:3a
+        Signature Algorithm: SM2-with-SM3
+        Issuer: CN = tlcp-intca
+        Validity
+            Not Before: Feb 18 14:48:00 2024 GMT
+            Not After : Feb 15 14:48:00 2034 GMT
+        Subject: CN = tlcp-client-enc
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub:
+                    04:b3:69:25:bf:72:60:7b:44:fd:60:ae:df:c7:5b:
+                    23:8f:73:c3:4e:df:66:e1:ff:33:f6:4a:7f:15:64:
+                    d9:be:9f:e0:b1:04:a3:73:f1:c4:7d:96:f4:4b:31:
+                    d2:95:b9:76:81:78:90:ac:e4:71:bc:b6:64:86:91:
+                    5c:ee:76:f4:7f
+                ASN1 OID: SM2
+        X509v3 extensions:
+            X509v3 Subject Key Identifier: 
+                C4:45:48:97:37:B7:8F:23:87:BA:DA:D2:C3:7B:E9:91:F8:5B:8B:A4
+            X509v3 Authority Key Identifier: 
+                34:4B:2B:54:8E:09:53:6B:6B:72:29:7D:B5:41:6E:DC:AF:34:69:E5
+            X509v3 Basic Constraints: critical
+                CA:FALSE
+            X509v3 Key Usage: critical
+                Key Encipherment, Data Encipherment, Key Agreement
+    Signature Algorithm: SM2-with-SM3
+    Signature Value:
+        30:45:02:21:00:f9:f9:fb:d7:41:ed:af:93:64:4f:31:17:a3:
+        c1:c9:ea:17:fe:bc:fa:41:83:ec:2d:05:c7:64:07:87:b1:42:
+        ed:02:20:64:f4:16:91:37:d1:71:59:e1:dc:cb:64:e5:6a:9d:
+        27:23:60:d9:0a:b5:78:eb:58:39:cc:97:39:77:cc:07:48
+-----BEGIN CERTIFICATE-----
+MIIBkTCCATegAwIBAgIUS8DHxVckADDE6ZFcQsSQaSgI0DowCgYIKoEcz1UBg3Uw
+FTETMBEGA1UEAwwKdGxjcC1pbnRjYTAeFw0yNDAyMTgxNDQ4MDBaFw0zNDAyMTUx
+NDQ4MDBaMBoxGDAWBgNVBAMMD3RsY3AtY2xpZW50LWVuYzBZMBMGByqGSM49AgEG
+CCqBHM9VAYItA0IABLNpJb9yYHtE/WCu38dbI49zw07fZuH/M/ZKfxVk2b6f4LEE
+o3PxxH2W9Esx0pW5doF4kKzkcby2ZIaRXO529H+jYDBeMB0GA1UdDgQWBBTERUiX
+N7ePI4e62tLDe+mR+FuLpDAfBgNVHSMEGDAWgBQ0SytUjglTa2tyKX21QW7crzRp
+5TAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIDODAKBggqgRzPVQGDdQNIADBF
+AiEA+fn710Htr5NkTzEXo8HJ6hf+vPpBg+wtBcdkB4exQu0CIGT0FpE30XFZ4dzL
+ZOVqnScjYNkKtXjrWDnMlzl3zAdI
+-----END CERTIFICATE-----

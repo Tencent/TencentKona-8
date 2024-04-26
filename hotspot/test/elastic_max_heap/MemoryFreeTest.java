@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2023, 2024 THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,7 @@ import com.oracle.java.testlibrary.Asserts;
 public class MemoryFreeTest extends TestBase {
     static Object[] root_array;
     public static void main(String[] args) throws Exception {
+        String architecture = System.getProperty("os.arch");
         int pid = ProcessTools.getProcessId();
         /*
          * Steps: start with 2G heap
@@ -63,6 +64,12 @@ public class MemoryFreeTest extends TestBase {
             "GC.elastic_max_heap (2097152K->102400K)(2097152K)",
             "GC.elastic_max_heap success"
         };
+        if (architecture.equals("aarch64")) {
+            contains1 = new String[] {
+                "GC.elastic_max_heap (2097152K->131072K)(2097152K)",
+                "GC.elastic_max_heap success"
+            };
+        }
         resizeAndCheck(pid, "100M", contains1, null);
         rss = getLinuxPidVmRSS(pid); // rss result is K
         System.out.println("RSS after resize " + rss + "K");

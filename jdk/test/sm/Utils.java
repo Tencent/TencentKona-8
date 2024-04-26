@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2023, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -18,7 +18,6 @@
  */
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -41,7 +40,6 @@ import java.security.spec.SM2PrivateKeySpec;
 import java.security.spec.SM2PublicKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -198,17 +196,6 @@ public final class Utils {
                 Base64.getMimeDecoder().decode(pkcs8KeyPEM));
         KeyFactory keyFactory = KeyFactory.getInstance("EC");
         return (ECPrivateKey) keyFactory.generatePrivate(privateKeySpec);
-    }
-
-    public static void deleteDirIfExists(Path dir) throws IOException {
-        if (!Files.exists(dir)) {
-            return;
-        }
-
-        Files.walk(dir)
-                .sorted(Comparator.reverseOrder())
-                .map(Path::toFile)
-                .forEach(File::delete);
     }
 
     private Utils() {}

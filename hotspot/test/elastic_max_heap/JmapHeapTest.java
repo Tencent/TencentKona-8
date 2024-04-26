@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2023, 2024 THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@ public class JmapHeapTest extends TestBase {
     }
 
     private static void test(String heap_type) throws Exception {
+        String architecture = System.getProperty("os.arch");
         ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(true,
                                                                   heap_type,
                                                                   "-XX:+ElasticMaxHeap",
@@ -57,6 +58,12 @@ public class JmapHeapTest extends TestBase {
                 "MaxHeapSize              = 2147483648 (2048.0MB)",
                 "CurrentElasticHeapSize   = 629145600 (600.0MB)"
             };
+            if (architecture.equals("aarch64")) {
+                contains1 = new String[] {
+                    "MaxHeapSize              = 2147483648 (2048.0MB)",
+                    "CurrentElasticHeapSize   = 637534208 (608.0MB)"
+                };
+            }
             jmapAndCheck(pid, contains1);
 
             // shrink to 500M should be fine for any GC
@@ -64,12 +71,24 @@ public class JmapHeapTest extends TestBase {
                 "GC.elastic_max_heap success",
                 "GC.elastic_max_heap (614400K->512000K)(2097152K)",
             };
+            if (architecture.equals("aarch64")) {
+                contains2 = new String[] {
+                    "GC.elastic_max_heap success",
+                    "GC.elastic_max_heap (622592K->524288K)(2097152K)",
+                };
+            }
             resizeAndCheck(pid, "500M", contains2, null);
             // check heap info after shrink
             String[] contains3 = {
                 "MaxHeapSize              = 2147483648 (2048.0MB)",
                 "CurrentElasticHeapSize   = 524288000 (500.0MB)"
             };
+            if (architecture.equals("aarch64")) {
+                contains3 = new String[] {
+                    "MaxHeapSize              = 2147483648 (2048.0MB)",
+                    "CurrentElasticHeapSize   = 536870912 (512.0MB)"
+                };
+            }
             jmapAndCheck(pid, contains3);
 
             // expand to 1G should be fine for any GC
@@ -77,6 +96,12 @@ public class JmapHeapTest extends TestBase {
                 "GC.elastic_max_heap success",
                 "GC.elastic_max_heap (512000K->1048576K)(2097152K)",
             };
+            if (architecture.equals("aarch64")) {
+                contains4 = new String[] {
+                    "GC.elastic_max_heap success",
+                    "GC.elastic_max_heap (524288K->1048576K)(2097152K)",
+                };
+            }
             resizeAndCheck(pid, "1G", contains4, null);
             // check heap info after expand
             String[] contains5 = {

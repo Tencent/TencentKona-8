@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2023, 2024 THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ public class MemoryPoolTest extends TestBase {
     static long survivorMaxSize;
     static long oldGenMaxSize;
     public static void main(String[] args) throws Exception {
+        String architecture = System.getProperty("os.arch");
         int pid = ProcessTools.getProcessId();
         /*
          * Steps: start with 2G heap
@@ -81,6 +82,12 @@ public class MemoryPoolTest extends TestBase {
             "GC.elastic_max_heap (2097152K->102400K)(2097152K)",
             "GC.elastic_max_heap success"
         };
+        if (architecture.equals("aarch64")) {
+            contains1 = new String[] {
+                "GC.elastic_max_heap (2097152K->131072K)(2097152K)",
+                "GC.elastic_max_heap success"
+            };
+        }
         resizeAndCheck(pid, "100M", contains1, null);
         mem = ManagementFactory.getMemoryMXBean();
         usage = mem.getHeapMemoryUsage();
@@ -90,7 +97,11 @@ public class MemoryPoolTest extends TestBase {
         System.out.println("After resize -- Heap Max: " + max +
                            "M, Committed: " + committed +
                            "M, Used: " + used + "M");
-        Asserts.assertLTE(max, 100L);
+        long target_size = 100L;
+        if (architecture.equals("aarch64")) {
+            target_size = 128L;
+        }
+        Asserts.assertLTE(max, target_size);
         Asserts.assertGTE(max, committed);
         Asserts.assertGTE(committed, used);
 
@@ -99,7 +110,7 @@ public class MemoryPoolTest extends TestBase {
         System.out.println("After resize -- Eden Max: " + edenMaxSize +
                            "M, Survivor Max: " + survivorMaxSize +
                            "M, Old Max: " + oldGenMaxSize + "M");
-        Asserts.assertLTE(edenMaxSize + survivorMaxSize + oldGenMaxSize, 100L);
+        Asserts.assertLTE(edenMaxSize + survivorMaxSize + oldGenMaxSize, target_size);
         Asserts.assertLT(oldGenMaxSize, orig_old);
         Asserts.assertLTE(edenMaxSize, orig_eden);
     }

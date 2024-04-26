@@ -72,9 +72,10 @@ public final class TlsMasterSecretGenerator extends KeyGeneratorSpi {
         }
         protocolVersion = (spec.getMajorVersion() << 8)
             | spec.getMinorVersion();
-        if ((protocolVersion < 0x0300) || (protocolVersion > 0x0303)) {
+        if (((protocolVersion < 0x0300) || (protocolVersion > 0x0303))
+                && protocolVersion != 0x0101) {
             throw new InvalidAlgorithmParameterException(
-                "Only SSL 3.0, TLS 1.0/1.1/1.2 supported");
+                "Only SSL 3.0, TLS 1.0/1.1/1.2, TLCP 1.1 supported");
         }
     }
 
@@ -103,7 +104,7 @@ public final class TlsMasterSecretGenerator extends KeyGeneratorSpi {
 
         try {
             byte[] master;
-            if (protocolVersion >= 0x0301) {
+            if (protocolVersion >= 0x0301 || protocolVersion == 0x0101) {
                 byte[] label;
                 byte[] seed;
                 byte[] extendedMasterSecretSessionHash =
@@ -117,7 +118,7 @@ public final class TlsMasterSecretGenerator extends KeyGeneratorSpi {
                     label = LABEL_MASTER_SECRET;
                     seed = concat(clientRandom, serverRandom);
                 }
-                master = ((protocolVersion >= 0x0303) ?
+                master = ((protocolVersion >= 0x0303 || protocolVersion == 0x0101) ?
                         doTLS12PRF(premaster, label, seed, 48,
                                 spec.getPRFHashAlg(), spec.getPRFHashLength(),
                                 spec.getPRFBlockSize()) :
@@ -202,4 +203,3 @@ public final class TlsMasterSecretGenerator extends KeyGeneratorSpi {
        }
    }
 }
-

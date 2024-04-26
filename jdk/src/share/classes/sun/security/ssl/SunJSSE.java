@@ -220,6 +220,8 @@ public abstract class SunJSSE extends java.security.Provider {
         put("SSLContext.TLS",
             "sun.security.ssl.SSLContextImpl$TLSContext");
         if (isfips == false) {
+            SMEntries.putEntries(SunJSSE.this);
+
             put("Alg.Alias.SSLContext.SSL", "TLS");
             put("Alg.Alias.SSLContext.SSLv3", "TLSv1");
         }

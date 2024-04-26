@@ -154,6 +154,12 @@ final class JsseJce {
     static final String CIPHER_AES_GCM = "AES/GCM/NoPadding";
 
     /**
+     * JCE transformation string for SM4 in CBC mode
+     * without padding.
+     */
+    static final String CIPHER_SM4 = "SM4/CBC/NoPadding";
+
+    /**
      * JCE transformation string for SM4 in GCM mode
      * without padding.
      */

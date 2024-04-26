@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2023, 2024 THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@ public class BasicTest extends TestBase {
     }
 
     private static void test(String heap_type) throws Exception {
+        String architecture = System.getProperty("os.arch");
         // Xms = 100M - 1B, Xmx = 600M - 1B, ElasticMaxHeapSize = 1G - 1B
         // unaligned arguments should be fine
         ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(true, heap_type, "-XX:+ElasticMaxHeap", "-Xms104857599", "-Xmx629145599", "-XX:ElasticMaxHeapSize=1073741823", "NotActiveHeap");
@@ -53,6 +54,12 @@ public class BasicTest extends TestBase {
                 "GC.elastic_max_heap success",
                 "GC.elastic_max_heap (614400K->512000K)(1048576K)",
             };
+            if (architecture.equals("aarch64")) {
+                contains1 = new String[] {
+                    "GC.elastic_max_heap success",
+                    "GC.elastic_max_heap (622592K->524288K)(1048576K)",
+                };
+            }
             resizeAndCheck(pid, "500M", contains1, null);
 
             // expand to 800M should be fine for any GC
@@ -60,6 +67,12 @@ public class BasicTest extends TestBase {
                 "GC.elastic_max_heap success",
                 "GC.elastic_max_heap (512000K->819200K)(1048576K)",
             };
+            if (architecture.equals("aarch64")) {
+                contains2 = new String[] {
+                    "GC.elastic_max_heap success",
+                    "GC.elastic_max_heap (524288K->819200K)(1048576K)",
+                };
+            }
             resizeAndCheck(pid, "800M", contains2, null);
 
             // expand to 2G should fail
@@ -82,6 +95,12 @@ public class BasicTest extends TestBase {
                 "GC.elastic_max_heap success",
                 "GC.elastic_max_heap (1048576K->307200K)(1048576K)",
             };
+            if (architecture.equals("aarch64")) {
+                contains5 = new String[] {
+                    "GC.elastic_max_heap success",
+                    "GC.elastic_max_heap (1048576K->327680K)(1048576K)",
+                };
+            }
             resizeAndCheck(pid, "314572799", contains5, null);
         } finally {
             p.destroy();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -15,6 +15,13 @@
  * You should have received a copy of the GNU General Public License version
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+/*
+ * @test
+ * @summary Test KeyStore on SM certificate.
+ * @compile ../Utils.java
+ * @run testng KeyStoreTest
  */
 
 import java.io.FileInputStream;
@@ -33,12 +40,6 @@ import org.testng.annotations.Test;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
-/*
- * @test
- * @summary Test KeyStore on SM certificate.
- * @compile ../Utils.java
- * @run testng KeyStoreTest
- */
 public class KeyStoreTest {
 
     private static final String TEST_BASE = System.getProperty("test.src");
