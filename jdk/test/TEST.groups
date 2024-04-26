@@ -40,6 +40,7 @@ jdk_tier1 = \
     :jdk_util \
     :jdk_math \
     :jdk_jdi \
+    :jdk_security_infra \
     -:jdk_local
 
 jdk_tier2 = \
@@ -190,6 +191,7 @@ jdk_security3 = \
     sun/security \
     -sun/security/krb5 \
     -sun/security/jgss \
+    -sun/security/lib/cacerts \
     javax/net \
     lib/security
 
@@ -206,7 +208,9 @@ jdk_security = \
     :jdk_security4
 
 jdk_security_infra = \
-    security/infra/java/security/cert/CertPathValidator/certification
+    -security/infra/java/security/cert/CertPathValidator/certification \
+    security/infra/java/security/cert/CertPathValidator/certification/CFCAEVROOT.java \
+    sun/security/lib/cacerts
 
 jdk_text = \
     java/text \
