@@ -1,12 +1,10 @@
 #
-# Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 only, as
-# published by the Free Software Foundation.  Oracle designates this
-# particular file as subject to the "Classpath" exception as provided
-# by Oracle in the LICENSE file that accompanied this code.
+# published by the Free Software Foundation.
 #
 # This code is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -23,16 +21,10 @@
 # questions.
 #
 
-JDK_MAJOR_VERSION=1
-JDK_MINOR_VERSION=8
-JDK_MICRO_VERSION=0
-JDK_UPDATE_VERSION=412
-LAUNCHER_NAME=openjdk
-PRODUCT_NAME=OpenJDK
-PRODUCT_SUFFIX="Runtime Environment"
-JDK_RC_PLATFORM_NAME=Platform
-COMPANY_NAME=N/A
-
-# Might need better names for these
-MACOSX_BUNDLE_NAME_BASE="OpenJDK"
-MACOSX_BUNDLE_ID_BASE="net.java.openjdk"
+# @test
+# @bug 8168518
+# @library ../../../../java/security/testlibrary/ /test/lib
+# @run main/othervm/timeout=300 -Dsun.net.spi.nameservice.provider.1=ns,mock -Djdk.krb5.rcache.useMD5=true ReplayCacheTestProc
+# @summary  testing jdk.krb5.rcache.useMD5. This action is put in a separate
+#           test so that ReplayCacheTestProc.java can be launched with special
+#           test.* system properties easily.
