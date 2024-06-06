@@ -1054,9 +1054,11 @@ jvmtiError VM_RedefineClasses::load_new_class_versions(TRAPS) {
 
     if (HAS_PENDING_EXCEPTION) {
       Symbol* ex_name = PENDING_EXCEPTION->klass()->name();
+      oop msg = java_lang_Throwable::message(PENDING_EXCEPTION);
       // RC_TRACE_WITH_THREAD macro has an embedded ResourceMark
-      RC_TRACE_WITH_THREAD(0x00000002, THREAD, ("parse_stream exception: '%s'",
-        ex_name->as_C_string()));
+      RC_TRACE_WITH_THREAD(0x00000002, THREAD, ("parse_stream exception: '%s %s'",
+        ex_name->as_C_string(),
+        (msg != NULL ? java_lang_String::as_utf8_string(msg) : "null")));
       CLEAR_PENDING_EXCEPTION;
 
       if (ex_name == vmSymbols::java_lang_UnsupportedClassVersionError()) {
@@ -1080,9 +1082,11 @@ jvmtiError VM_RedefineClasses::load_new_class_versions(TRAPS) {
       the_class->link_class(THREAD);
       if (HAS_PENDING_EXCEPTION) {
         Symbol* ex_name = PENDING_EXCEPTION->klass()->name();
+        oop msg = java_lang_Throwable::message(PENDING_EXCEPTION);
         // RC_TRACE_WITH_THREAD macro has an embedded ResourceMark
-        RC_TRACE_WITH_THREAD(0x00000002, THREAD, ("link_class exception: '%s'",
-          ex_name->as_C_string()));
+        RC_TRACE_WITH_THREAD(0x00000002, THREAD, ("link_class exception: '%s %s'",
+          ex_name->as_C_string(),
+          (msg != NULL ? java_lang_String::as_utf8_string(msg) : "null")));
         CLEAR_PENDING_EXCEPTION;
         if (ex_name == vmSymbols::java_lang_OutOfMemoryError()) {
           return JVMTI_ERROR_OUT_OF_MEMORY;
@@ -1118,9 +1122,11 @@ jvmtiError VM_RedefineClasses::load_new_class_versions(TRAPS) {
 
     if (HAS_PENDING_EXCEPTION) {
       Symbol* ex_name = PENDING_EXCEPTION->klass()->name();
+      oop msg = java_lang_Throwable::message(PENDING_EXCEPTION);
       // RC_TRACE_WITH_THREAD macro has an embedded ResourceMark
       RC_TRACE_WITH_THREAD(0x00000002, THREAD,
-        ("verify_byte_codes exception: '%s'", ex_name->as_C_string()));
+        ("verify_byte_codes exception: '%s %s'", ex_name->as_C_string(),
+         (msg != NULL ? java_lang_String::as_utf8_string(msg) : "null")));
       CLEAR_PENDING_EXCEPTION;
       if (ex_name == vmSymbols::java_lang_OutOfMemoryError()) {
         return JVMTI_ERROR_OUT_OF_MEMORY;
@@ -1133,9 +1139,11 @@ jvmtiError VM_RedefineClasses::load_new_class_versions(TRAPS) {
     res = merge_cp_and_rewrite(the_class, scratch_class, THREAD);
     if (HAS_PENDING_EXCEPTION) {
       Symbol* ex_name = PENDING_EXCEPTION->klass()->name();
+      oop msg = java_lang_Throwable::message(PENDING_EXCEPTION);
       // RC_TRACE_WITH_THREAD macro has an embedded ResourceMark
       RC_TRACE_WITH_THREAD(0x00000002, THREAD,
-        ("merge_cp_and_rewrite exception: '%s'", ex_name->as_C_string()));
+        ("merge_cp_and_rewrite exception: '%s %s'", ex_name->as_C_string(),
+         (msg != NULL ? java_lang_String::as_utf8_string(msg) : "null")));
       CLEAR_PENDING_EXCEPTION;
       if (ex_name == vmSymbols::java_lang_OutOfMemoryError()) {
         return JVMTI_ERROR_OUT_OF_MEMORY;
@@ -1153,10 +1161,12 @@ jvmtiError VM_RedefineClasses::load_new_class_versions(TRAPS) {
 
       if (HAS_PENDING_EXCEPTION) {
         Symbol* ex_name = PENDING_EXCEPTION->klass()->name();
+        oop msg = java_lang_Throwable::message(PENDING_EXCEPTION);
         // RC_TRACE_WITH_THREAD macro has an embedded ResourceMark
         RC_TRACE_WITH_THREAD(0x00000002, THREAD,
-          ("verify_byte_codes post merge-CP exception: '%s'",
-          ex_name->as_C_string()));
+          ("verify_byte_codes post merge-CP exception: '%s %s'",
+           ex_name->as_C_string(),
+           (msg != NULL ? java_lang_String::as_utf8_string(msg) : "null")));
         CLEAR_PENDING_EXCEPTION;
         if (ex_name == vmSymbols::java_lang_OutOfMemoryError()) {
           return JVMTI_ERROR_OUT_OF_MEMORY;
@@ -1173,9 +1183,11 @@ jvmtiError VM_RedefineClasses::load_new_class_versions(TRAPS) {
     }
     if (HAS_PENDING_EXCEPTION) {
       Symbol* ex_name = PENDING_EXCEPTION->klass()->name();
+      oop msg = java_lang_Throwable::message(PENDING_EXCEPTION);
       // RC_TRACE_WITH_THREAD macro has an embedded ResourceMark
       RC_TRACE_WITH_THREAD(0x00000002, THREAD,
-        ("Rewriter::rewrite or link_methods exception: '%s'", ex_name->as_C_string()));
+        ("Rewriter::rewrite or link_methods exception: '%s %s'", ex_name->as_C_string(),
+         (msg != NULL ? java_lang_String::as_utf8_string(msg) : "null")));
       CLEAR_PENDING_EXCEPTION;
       if (ex_name == vmSymbols::java_lang_OutOfMemoryError()) {
         return JVMTI_ERROR_OUT_OF_MEMORY;
