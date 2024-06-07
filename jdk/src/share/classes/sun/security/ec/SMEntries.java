@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2023, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
@@ -28,6 +28,7 @@ import java.util.Map;
 final class SMEntries {
 
     static void putEntries(Map<Object, Object> map) {
+        map.put("Cipher.SM2", "sun.security.ec.SM2Cipher");
         map.put("KeyFactory.SM2", "sun.security.ec.SM2KeyFactory");
         map.put("Signature.SM3withSM2", "sun.security.ec.SM2Signature");
         map.put("Alg.Alias.Signature.SM2", "SM3withSM2");

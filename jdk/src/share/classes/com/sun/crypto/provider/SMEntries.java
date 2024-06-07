@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2023, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
@@ -28,8 +28,6 @@ import java.security.Provider;
 final class SMEntries {
 
     static void putEntries(Provider p) {
-        p.put("Cipher.SM2", "com.sun.crypto.provider.SM2Cipher");
-
         p.put("Mac.HmacSM3", "com.sun.crypto.provider.HmacSM3");
         p.put("KeyGenerator.HmacSM3", "com.sun.crypto.provider.HmacSM3KeyGenerator");
 
