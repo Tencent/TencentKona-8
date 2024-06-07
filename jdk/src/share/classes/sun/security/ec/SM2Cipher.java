@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
@@ -18,32 +18,39 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-package com.sun.crypto.provider;
+package sun.security.ec;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.CipherSpi;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 import javax.crypto.ShortBufferException;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.security.AlgorithmParameters;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 
 import static java.math.BigInteger.ZERO;
 import static java.security.spec.SM2ParameterSpec.ORDER;
 
-import sun.security.ec.SM2PrivateKey;
-import sun.security.ec.SM2PublicKey;
+import sun.security.jca.JCAUtil;
 
 /**
  * SM2 cipher in compliance with GB/T 32918.4-2016.
@@ -75,7 +82,7 @@ public final class SM2Cipher extends CipherSpi {
             throws InvalidKeyException {
         buffer.reset();
 
-        SecureRandom rand = random != null ? random : SunJCE.getRandom();;
+        SecureRandom rand = random != null ? random : JCAUtil.getSecureRandom();;
 
         if (opmode == Cipher.ENCRYPT_MODE || opmode == Cipher.WRAP_MODE) {
             if (key instanceof ECPublicKey) {
@@ -245,6 +252,90 @@ public final class SM2Cipher extends CipherSpi {
         public void reset() {
             Arrays.fill(buf, (byte)0);
             super.reset();
+        }
+    }
+}
+
+final class ConstructKeys {
+    /**
+     * Construct a public key from its encoding.
+     *
+     * @param encodedKey the encoding of a public key.
+     *
+     * @param encodedKeyAlgorithm the algorithm the encodedKey is for.
+     *
+     * @return a public key constructed from the encodedKey.
+     */
+    private static final PublicKey constructPublicKey(byte[] encodedKey,
+            String encodedKeyAlgorithm)
+            throws InvalidKeyException, NoSuchAlgorithmException {
+        try {
+            KeyFactory keyFactory =
+                    KeyFactory.getInstance(encodedKeyAlgorithm);
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encodedKey);
+            return keyFactory.generatePublic(keySpec);
+        } catch (NoSuchAlgorithmException nsae) {
+            throw new NoSuchAlgorithmException("No installed providers " +
+                    "can create keys for the " +
+                    encodedKeyAlgorithm +
+                    "algorithm", nsae);
+        } catch (InvalidKeySpecException ike) {
+            throw new InvalidKeyException("Cannot construct public key", ike);
+        }
+    }
+
+    /**
+     * Construct a private key from its encoding.
+     *
+     * @param encodedKey the encoding of a private key.
+     *
+     * @param encodedKeyAlgorithm the algorithm the wrapped key is for.
+     *
+     * @return a private key constructed from the encodedKey.
+     */
+    private static final PrivateKey constructPrivateKey(byte[] encodedKey,
+            String encodedKeyAlgorithm) throws InvalidKeyException,
+            NoSuchAlgorithmException {
+        try {
+            KeyFactory keyFactory =
+                    KeyFactory.getInstance(encodedKeyAlgorithm);
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(encodedKey);
+            return keyFactory.generatePrivate(keySpec);
+        } catch (NoSuchAlgorithmException nsae) {
+            throw new NoSuchAlgorithmException("No installed providers " +
+                    "can create keys for the " +
+                    encodedKeyAlgorithm +
+                    "algorithm", nsae);
+        } catch (InvalidKeySpecException ike) {
+            throw new InvalidKeyException("Cannot construct private key", ike);
+        }
+    }
+
+    /**
+     * Construct a secret key from its encoding.
+     *
+     * @param encodedKey the encoding of a secret key.
+     *
+     * @param encodedKeyAlgorithm the algorithm the secret key is for.
+     *
+     * @return a secret key constructed from the encodedKey.
+     */
+    private static final SecretKey constructSecretKey(byte[] encodedKey,
+        String encodedKeyAlgorithm) {
+        return new SecretKeySpec(encodedKey, encodedKeyAlgorithm);
+    }
+
+    static final Key constructKey(byte[] encoding, String keyAlgorithm,
+                                  int keyType) throws InvalidKeyException, NoSuchAlgorithmException {
+        switch (keyType) {
+            case Cipher.SECRET_KEY:
+                return constructSecretKey(encoding, keyAlgorithm);
+            case Cipher.PRIVATE_KEY:
+                return constructPrivateKey(encoding, keyAlgorithm);
+            case Cipher.PUBLIC_KEY:
+                return constructPublicKey(encoding, keyAlgorithm);
+            default:
+                throw new InvalidKeyException("Unknown keytype " + keyType);
         }
     }
 }
