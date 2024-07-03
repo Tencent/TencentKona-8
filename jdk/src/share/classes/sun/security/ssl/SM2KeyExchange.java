@@ -86,7 +86,8 @@ final class SM2KeyExchange {
         @SuppressWarnings("deprecation")
         static SM2PremasterSecret createPremasterSecret(
                 ClientHandshakeContext chc) throws GeneralSecurityException {
-            String algorithm = "SunTlsRsaPremasterSecret";
+            String algorithm = chc.negotiatedProtocol.useTLS12PlusSpec() ?
+                    "SunTls12RsaPremasterSecret" : "SunTlsRsaPremasterSecret";
             KeyGenerator kg = KeyGenerator.getInstance(algorithm);
             TlsRsaPremasterSecretParameterSpec spec =
                     new TlsRsaPremasterSecretParameterSpec(
@@ -103,7 +104,7 @@ final class SM2KeyExchange {
                 throws GeneralSecurityException {
 
             byte[] encoded = null;
-            boolean needFailover = false;
+            boolean needFailover;
             Cipher cipher = Cipher.getInstance("SM2");
             try {
                 // Try UNWRAP_MODE mode firstly.
@@ -115,8 +116,8 @@ final class SM2KeyExchange {
 
                 // The provider selection can be delayed, please don't call
                 // any Cipher method before the call to Cipher.init().
-//                String providerName = cipher.getProvider().getName();
-//                needFailover = !KeyUtil.isOracleJCEProvider(providerName);
+                String providerName = cipher.getProvider().getName();
+                needFailover = !KeyUtil.isOracleJCEProvider(providerName);
             } catch (InvalidKeyException | UnsupportedOperationException iue) {
                 if (SSLLogger.isOn && SSLLogger.isOn("ssl,handshake")) {
                     SSLLogger.warning("The Cipher provider "
@@ -151,7 +152,7 @@ final class SM2KeyExchange {
             } else {
                 // the cipher should have been initialized
                 preMaster = (SecretKey)cipher.unwrap(encrypted,
-                        "Tlcp11SM2PremasterSecret", Cipher.SECRET_KEY);
+                        "TlsRsaPremasterSecret", Cipher.SECRET_KEY);
             }
 
             return new SM2PremasterSecret(preMaster);
@@ -193,11 +194,8 @@ final class SM2KeyExchange {
             }
 
             try {
-                String s = clientVersion == ProtocolVersion.TLCP11.id
-                        ? "Tlcp11PremasterSecret"
-                        : ((clientVersion >= ProtocolVersion.TLS12.id)
-                                ? "SunTls12RsaPremasterSecret"
-                                : "SunTlsRsaPremasterSecret");
+                String s = ((clientVersion >= ProtocolVersion.TLS12.id) ?
+                        "SunTls12RsaPremasterSecret" : "SunTlsRsaPremasterSecret");
                 KeyGenerator kg = KeyGenerator.getInstance(s);
                 kg.init(new TlsRsaPremasterSecretParameterSpec(
                         clientVersion, serverVersion, encodedSecret),
