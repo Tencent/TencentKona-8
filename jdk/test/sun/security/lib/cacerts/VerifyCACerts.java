@@ -29,7 +29,7 @@
  *      8223499 8225392 8232019 8234245 8233223 8225068 8225069 8243321 8243320
  *      8243559 8225072 8258630 8259312 8256421 8225081 8225082 8225083 8245654
  *      8305975 8304760 8307134 8295894 8314960 8317373 8317374 8318759 8319187
- *      8321408
+ *      8321408 8316138
  * @summary Check root CA entries in cacerts file
  */
 import java.io.ByteArrayInputStream;
@@ -55,12 +55,13 @@ public class VerifyCACerts {
             + File.separator + "security" + File.separator + "cacerts";
 
     // The numbers of certs now.
-    private static final int COUNT = 109;
+    private static final int COUNT = 111;
 
     // SHA-256 of cacerts, can be generated with
     // shasum -a 256 cacerts | sed -e 's/../&:/g' | tr '[:lower:]' '[:upper:]' | cut -c1-95
     private static final String CHECKSUM
-            = "D5:AC:7E:DE:9B:88:01:47:D6:81:AA:FF:5D:AF:B7:75:3F:6A:48:E9:B0:8D:3C:EC:92:8F:00:67:55:FE:86:C6";
+            = "C1:68:B4:AC:51:BF:B5:C6:FD:20:69:17:E1:AF:E4:5B:01:9B:AA:3F:C3:9A:80:A8:51:53:74:2C:A2:04:B0:FF";
+
     // map of cert alias to SHA-256 fingerprint
     @SuppressWarnings("serial")
     private static final Map<String, String> FINGERPRINT_MAP
@@ -284,6 +285,10 @@ public class VerifyCACerts {
                     "77:B8:2C:D8:64:4C:43:05:F7:AC:C5:CB:15:6B:45:67:50:04:03:3D:51:C6:0C:62:02:A8:E0:C3:34:67:D3:A0");
             put("certainlyroote1 [jdk]",
                     "B4:58:5F:22:E4:AC:75:6A:4E:86:12:A1:36:1C:5D:9D:03:1A:93:FD:84:FE:BB:77:8F:A3:06:8B:0F:C4:2D:C2");
+            put("globalsignr46 [jdk]",
+                    "4F:A3:12:6D:8D:3A:11:D1:C4:85:5A:4F:80:7C:BA:D6:CF:91:9D:3A:5A:88:B0:3B:EA:2C:63:72:D9:3C:40:C9");
+            put("globalsigne46 [jdk]",
+                    "CB:B9:C4:4D:84:B8:04:3E:10:50:EA:31:A6:9F:51:49:55:D7:BF:D2:E2:C6:B4:93:01:01:9A:D6:1D:9F:50:58");
         }
     };
 
