@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, 2024, THL A29 Limited, a Tencent company. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
@@ -97,7 +97,8 @@ public final class SM3Engine implements Cloneable {
         word[wordOffset++] = message;
 
         if (wordOffset >= word.length) {
-            processWord();
+            processWord(word, 0);
+            wordOffset = 0;
         }
 
         countOfBytes++;
@@ -115,7 +116,8 @@ public final class SM3Engine implements Cloneable {
             while (consumed < length) {
                 word[wordOffset++] = message[offset + consumed++];
                 if (wordOffset >= word.length) {
-                    processWord();
+                    processWord(word, 0);
+                    wordOffset = 0;
                     break;
                 }
             }
@@ -123,12 +125,8 @@ public final class SM3Engine implements Cloneable {
 
         // Process one word in each iteration
         while (consumed < length - 3) {
-            word[0] = message[offset + consumed++];
-            word[1] = message[offset + consumed++];
-            word[2] = message[offset + consumed++];
-            word[3] = message[offset + consumed++];
-
-            processWord();
+            processWord(message, offset + consumed);
+            consumed += 4;
         }
 
         // Process the remainder bytes if any
@@ -161,13 +159,12 @@ public final class SM3Engine implements Cloneable {
         return digest;
     }
 
-    private void processWord() {
+    private void processWord(byte[] word, int offset) {
         block[blockOffset]
-                = ((word[0] & 0xFF) << 24)
-                | ((word[1] & 0xFF) << 16)
-                | ((word[2] & 0xFF) << 8)
-                | ((word[3] & 0xFF));
-        wordOffset = 0;
+                = ((word[offset] & 0xFF) << 24)
+                | ((word[offset + 1] & 0xFF) << 16)
+                | ((word[offset + 2] & 0xFF) << 8)
+                | ((word[offset + 3] & 0xFF));
         blockOffset++;
 
         if (blockOffset >= SM3_BLOCK_INT_SIZE) {
