@@ -72,7 +72,7 @@ class ReviveDepRecord : public ResourceObj {
     _args_meta_idxs->append(idx);
   }
   int  compare_by_type_name_or_index(ReviveDepRecord* other);
-  void print_on(outputStream* out, int indent=0);
+  void print_on_with_indent(outputStream* out, int indent=0);
   GrowableArray<int32_t>* get_meta_array_index() { return _meta_array_index; }
   ReviveDepRecord* duplicate_in_arena(Arena* arena, GrowableArray<int32_t>* meta_array_index);
 };

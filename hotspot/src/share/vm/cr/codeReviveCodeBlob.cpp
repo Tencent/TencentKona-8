@@ -284,7 +284,7 @@ void CodeReviveCodeBlob::print_opt(char* method_name) {
   GrowableArray<ReviveDepRecord*>* depends = get_revive_deps(meta_array_names);
   depends->sort(compare_dep_records_by_name);
   for (int i = 0; i < depends->length(); i++) {
-    depends->at(i)->print_on(CodeRevive::out(), 1);
+    depends->at(i)->print_on_with_indent(CodeRevive::out(), 1);
   }
 
   // sort and print opt info
@@ -292,7 +292,7 @@ void CodeReviveCodeBlob::print_opt(char* method_name) {
     GrowableArray<OptRecord*>* opts = get_opt_records_for_dump(meta_array_names);
     opts->sort(compare_opt_records_by_name);
     for (int i = 0; i < opts->length(); i++) {
-      opts->at(i)->print_on(CodeRevive::out(), 1);
+      opts->at(i)->print_on_with_indent(CodeRevive::out(), 1);
     }
   }
 }
@@ -371,7 +371,7 @@ int CodeReviveCodeBlob::check_aot_method_opt_records(GrowableArray<ciBaseObject*
   for (OptRecord* o = stream.next(); o != NULL; o = stream.next()) {
     if (CodeRevive::is_log_on(cr_restore, cr_info)) {
       CodeRevive::out()->print("OptRecord check: ");
-      o->print_on(CodeRevive::out());
+      o->print_on_with_indent(CodeRevive::out(), 0);
     }
     int result = o->calc_opt_score();
     if (result == max_jint) {

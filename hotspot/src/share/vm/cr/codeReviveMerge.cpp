@@ -414,11 +414,11 @@ void CodeReviveMerge::print_jit_versions(GrowableArray<JitMetaInfo*>* jit_metas)
           jv->_opts->length(), jv->_deps->length());
         for (int k = 0; k < jv->_opts->length(); k++) {
           CodeRevive::out()->print("    opt record %d: ", k);
-          jv->_opts->at(k)->print_on(CodeRevive::out(), 0);
+          jv->_opts->at(k)->print_on_with_indent(CodeRevive::out(), 0);
         }
         for (int k = 0; k < jv->_deps->length(); k++) {
           CodeRevive::out()->print("    dep record %d: ", k);
-          jv->_deps->at(k)->print_on(CodeRevive::out(), 0);
+          jv->_deps->at(k)->print_on_with_indent(CodeRevive::out(), 0);
         }
       }
     }

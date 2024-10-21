@@ -92,7 +92,7 @@ public:
   }
 
   // CodeRevive
-  void print_on(outputStream* out);
+  void print_on(outputStream* out) const;
 };
 
 #endif // SHARE_VM_CI_CICALLPROFILE_HPP

@@ -569,7 +569,7 @@ void ciCallProfile::add_receiver(ciKlass* receiver, int receiver_count) {
 }
 
 // CodeRevive: print ciCallProfile
-void ciCallProfile::print_on(outputStream* out) {
+void ciCallProfile::print_on(outputStream* out) const {
   out->print_cr("ciCallProfile limit %d, morphism %d, count %d", _limit, _morphism, _count);
   for (int i = 0; i < _limit; i++) {
     out->print_cr("\t%d: %d, %s", i, _receiver_count[i], _receiver[i]->name()->as_quoted_ascii());

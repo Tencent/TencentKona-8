@@ -86,7 +86,7 @@ ReviveDepRecord* ReviveDepRecord::duplicate_in_arena(Arena* arena, GrowableArray
   return dep;
 }
 
-void ReviveDepRecord::print_on(outputStream* out, int indent) {
+void ReviveDepRecord::print_on_with_indent(outputStream* out, int indent) {
   for (int i = 0; i < indent; i++) {
     out->print("  ");
   }
