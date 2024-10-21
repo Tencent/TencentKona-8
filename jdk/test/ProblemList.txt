@@ -133,6 +133,10 @@ java/awt/FontMetrics/MaxAdvanceIsMax.java             solaris-all,macosx-all
 # 8028150
 sun/management/jmxremote/bootstrap/RmiSslBootstrapTest.sh	windows-all
 
+# 8145919
+sun/management/jmxremote/bootstrap/RmiRegistrySslTest.sh    generic-all
+sun/management/jmxremote/bootstrap/RmiSslBootstrapTest.sh   generic-all
+
 ############################################################################
 
 # jdk_jmx
