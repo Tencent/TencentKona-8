@@ -61,7 +61,7 @@ void CodeReviveOptRecords::insert(OptRecord* r) {
   _opts->append(r);
   if (CodeRevive::is_log_on(cr_opt, cr_trace)) {
     CodeRevive::out()->print("OptRecord insert: ");
-    r->print_on(CodeRevive::out());
+    r->print_on_with_indent(CodeRevive::out(), 0);
   }
 }
 
@@ -318,7 +318,7 @@ int OptRecordDeVirtual::calc_opt_score() {
     } else if (_miss_is_trap) {
       if (CodeRevive::is_log_on(cr_restore, cr_warning)) {
         CodeRevive::out()->print_cr("OptRecordDeVirtual: fail_with_trap klass not hit");
-        print_on(CodeRevive::out());
+        print_on_with_indent(CodeRevive::out(), 0);
         profile.print_on(CodeRevive::out());
       }
       return max_jint;
@@ -334,7 +334,7 @@ int OptRecordDeVirtual::calc_opt_score() {
     if (_miss_is_trap) {
       if (CodeRevive::is_log_on(cr_restore, cr_warning)) {
         CodeRevive::out()->print_cr("OptRecordDeVirtual: fail_with_trap other not hit");
-        print_on(CodeRevive::out());
+        print_on_with_indent(CodeRevive::out());
         profile.print_on(CodeRevive::out());
       }
       return max_jint;
@@ -367,7 +367,7 @@ size_t OptRecordDeVirtual::estimate_size_in_bytes() {
   return 1 + 1 + 1 + 2 * 4;
 }
 
-void OptRecordDeVirtual::print_on(outputStream* out, int indent) {
+void OptRecordDeVirtual::print_on_with_indent(outputStream* out, int indent) {
   assert(_method_idx >= 0, "must be");
   assert(_klass1_idx >= 0, "must be");
   print_indent(out, indent);
@@ -397,7 +397,7 @@ void OptProfiledReceiver::write_to_stream(CompressedWriteStream* out) {
   out->write_short(_klass_idx);
 }
 
-void OptProfiledReceiver::print_on(outputStream* out, int indent) {
+void OptProfiledReceiver::print_on_with_indent(outputStream* out, int indent) {
   assert(_method_idx >= 0, "must be");
   assert(_klass_idx >= 0, "must be");
   print_indent(out, indent);
@@ -441,7 +441,7 @@ int OptProfiledReceiver::calc_opt_score() {
     if (CodeRevive::is_log_on(cr_restore, cr_warning)) {
       ResourceMark rm;
       CodeRevive::out()->print_cr("Invalid neg count in opt profiled receiver");
-      print_on(CodeRevive::out());
+      print_on_with_indent(CodeRevive::out(), 0);
     }
     return max_jint;
   } else if (profile.count() >= 0 && profile.has_receiver(0) && profile.morphism() == 1) {
@@ -453,7 +453,7 @@ int OptProfiledReceiver::calc_opt_score() {
       if (CodeRevive::is_log_on(cr_restore, cr_warning)) {
         ResourceMark rm;
         CodeRevive::out()->print_cr("Different klass in opt profiled receiver");
-        print_on(CodeRevive::out());
+        print_on_with_indent(CodeRevive::out(), 0);
         CodeRevive::out()->print("receiver: ");
         receiver->print_name_on(CodeRevive::out());
       }
@@ -477,7 +477,7 @@ void OptProfiledUnstableIf::write_to_stream(CompressedWriteStream* out) {
   out->write_bool(_taken_branch_trap);
 }
 
-void OptProfiledUnstableIf::print_on(outputStream* out, int indent) {
+void OptProfiledUnstableIf::print_on_with_indent(outputStream* out, int indent) {
   print_indent(out, indent);
   out->print_cr("ProfiledUnstableIf at method=%s bci=%d uncommon trap: %s edge",
                 get_meta_name(_method_idx), _bci, _taken_branch_trap ? "taken" : "untaken");
@@ -524,7 +524,7 @@ int OptProfiledUnstableIf::calc_opt_score() {
         if (CodeRevive::is_log_on(cr_restore, cr_warning)) {
           ResourceMark rm;
           CodeRevive::out()->print_cr("Fail with trap in opt profiled unstable if");
-          print_on(CodeRevive::out());
+          print_on_with_indent(CodeRevive::out(), 0);
           CodeRevive::out()->print_cr("Actual taken %d not taken %d", taken, not_taken);
         }
         return max_jint;
@@ -602,7 +602,7 @@ bool OptRecordInline::equal(OptRecord* other) {
   return o->_bci == _bci && o->_method_idx == _method_idx && o->_callee_idx == _callee_idx;
 }
 
-void OptRecordInline::print_on(outputStream* out, int indent) {
+void OptRecordInline::print_on_with_indent(outputStream* out, int indent) {
   assert(_method_idx >= 0, "must be");
   assert(_callee_idx >= 0, "must be");
   print_indent(out, indent);
@@ -624,7 +624,7 @@ void OptConstantReplace::write_to_stream(CompressedWriteStream* out) {
   out->write_long(_field_val);
 }
 
-void OptConstantReplace::print_on(outputStream* out, int indent) {
+void OptConstantReplace::print_on_with_indent(outputStream* out, int indent) {
   assert(_klass_idx >= 0, "must be");
   print_indent(out, indent);
   out->print_cr("ConstantReplace at klass: %s field offset: %d",

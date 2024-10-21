@@ -99,7 +99,7 @@ class OptRecord : public ResourceObj {
   virtual int  calc_opt_score() = 0;
   virtual bool equal(OptRecord* other) = 0;
   virtual int  compare_by_type_name(OptRecord* other);
-  virtual void print_on(outputStream* out, int indent=0) = 0;
+  virtual void print_on_with_indent(outputStream* out, int indent=0) = 0;
   virtual void nm_meta_index_to_meta_space_index(GrowableArray<int32_t>* dest);
   virtual OptRecord* duplicate_in_arena(Arena* arena) = 0;
 };
@@ -133,7 +133,7 @@ class OptRecordDeVirtual : public OptRecord {
   virtual int  calc_opt_score();
   virtual bool equal(OptRecord* other);
   virtual int  compare_by_type_name(OptRecord* other);
-  virtual void print_on(outputStream* out, int indent=0);
+  virtual void print_on_with_indent(outputStream* out, int indent=0);
   virtual void nm_meta_index_to_meta_space_index(GrowableArray<int32_t>* dest);
   virtual OptRecord* duplicate_in_arena(Arena* arena) {
     return new (arena) OptRecordDeVirtual(_ctx_type, _ctx, _method_idx, _klass1_idx, _klass2_idx, _bci, _morphism, _miss_is_trap);
@@ -155,7 +155,7 @@ class OptRecordInline : public OptRecord {
   virtual int  calc_opt_score();
   virtual bool equal(OptRecord* other);
   virtual int  compare_by_type_name(OptRecord* other);
-  virtual void print_on(outputStream* out, int indent=0);
+  virtual void print_on_with_indent(outputStream* out, int indent=0);
   virtual void nm_meta_index_to_meta_space_index(GrowableArray<int32_t>* dest);
   virtual OptRecord* duplicate_in_arena(Arena* arena) {
     return new (arena) OptRecordInline(_ctx_type, _ctx, _method_idx, _callee_idx, _bci);
@@ -175,7 +175,7 @@ class OptProfiledReceiver : public OptRecord {
   virtual void read_from_stream(CompressedReadStream* in);
   virtual int  calc_opt_score();
   virtual bool equal(OptRecord* other);
-  virtual void print_on(outputStream* out, int indent=0);
+  virtual void print_on_with_indent(outputStream* out, int indent=0);
   virtual void nm_meta_index_to_meta_space_index(GrowableArray<int32_t>* dest);
   virtual OptRecord* duplicate_in_arena(Arena* arena) {
     return new (arena) OptProfiledReceiver(_ctx_type, _ctx, _method_idx, _bci, _klass_idx);
@@ -195,7 +195,7 @@ class OptProfiledUnstableIf : public OptRecord {
   virtual void read_from_stream(CompressedReadStream* in);
   virtual int  calc_opt_score();
   virtual bool equal(OptRecord* other);
-  virtual void print_on(outputStream* out, int indent=0);
+  virtual void print_on_with_indent(outputStream* out, int indent=0);
   virtual OptRecord* duplicate_in_arena(Arena* arena) {
     return new (arena) OptProfiledUnstableIf(_ctx_type, _ctx, _method_idx, _bci, _taken_branch_trap);
   }
@@ -223,7 +223,7 @@ class OptConstantReplace : public OptRecord {
   virtual int  calc_opt_score();
   virtual bool equal(OptRecord* other);
   virtual int  compare_by_type_name(OptRecord* other);
-  virtual void print_on(outputStream* out, int indent=0);
+  virtual void print_on_with_indent(outputStream* out, int indent=0);
   virtual void nm_meta_index_to_meta_space_index(GrowableArray<int32_t>* dest);
   virtual OptRecord* duplicate_in_arena(Arena* arena) {
     return new (arena) OptConstantReplace(_ctx_type, _ctx, _klass_idx, _field_offset, _field_type, _field_val);
