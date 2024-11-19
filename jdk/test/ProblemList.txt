@@ -320,8 +320,6 @@ com/sun/crypto/provider/CICO/PBEFunc/CICOPBEFuncTest.java       solaris-sparcv9
 # 8206912
 sun/security/krb5/auto/ReplayCacheTestProc.java                 solaris-sparcv9
 
-security/infra/java/security/cert/CertPathValidator/certification/ActalisCA.java  8224768 generic-all
-
 sun/security/mscapi/SignedObjectChain.java                      8176183 windows-all
 
 javax/security/auth/callback/PasswordCallback/CheckCleanerBound.java 8285785,8286045,8287596 generic-all
@@ -385,3 +383,12 @@ sun/tools/jps/TestJpsJarRelative.java				generic-all
 
 sample/mergesort/MergeSortTest.java				8178912 generic-all
 sample/chatserver/ChatTest.java					8178912 generic-all
+
+############################################################################
+
+# cacerts tests
+
+############################################################################
+security/infra/java/security/cert/CertPathValidator/certification/CAInterop.java#certignarootca         8331883 generic-all
+security/infra/java/security/cert/CertPathValidator/certification/CAInterop.java#teliasonerarootcav1    8333640 generic-all
+security/infra/java/security/cert/CertPathValidator/certification/LuxTrustCA.java                       8314509 generic-all

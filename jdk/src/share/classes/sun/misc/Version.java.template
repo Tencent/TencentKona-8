@@ -57,9 +57,6 @@ public class Version {
     private static final String java_distro_version =
         "@@java_distro_version@@";
 
-    private static final String loongson_runtime_name =
-        "@@loongson_runtime_name@@";
-
     static {
         init();
     }
