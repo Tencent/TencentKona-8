@@ -253,17 +253,19 @@ void Gen_ElasticMaxHeapOp::doit() {
   bool is_shrink = _new_max_heap < cur_max_heap;
   size_t new_young_limit = 0;
   size_t new_old_limit   = 0;
+  size_t preferred_max_new_size_unaligned = 0;
   if ((old->kind() != Generation::ConcurrentMarkSweep) || CMSIgnoreYoungGenPerWorker) {
-    new_young_limit = align_size_down_bounded(_new_max_heap / (NewRatio + 1), gen_alignment);
+    preferred_max_new_size_unaligned = _new_max_heap / (NewRatio + 1);
     EMH_LOG("Gen_ElasticMaxHeapOp cacluate new young limit with NewRatio");
   } else {
     const uintx parallel_gc_threads = (ParallelGCThreads == 0 ? 1 : ParallelGCThreads);
     size_t young_gen_per_worker = CMSYoungGenPerWorker;
-    size_t preferred_max_new_size_unaligned =
+    preferred_max_new_size_unaligned =
       MIN2((size_t)(_new_max_heap / (NewRatio + 1)), ScaleForWordSize(young_gen_per_worker * parallel_gc_threads));
-    new_young_limit = align_size_up(preferred_max_new_size_unaligned, gen_alignment);
     EMH_LOG("Gen_ElasticMaxHeapOp cacluate new young limit with fixed CMSYoungGenPerWorker and NewRatio");
   }
+  size_t preferred_max_new_size = align_size_up(preferred_max_new_size_unaligned, os::vm_page_size());
+  new_young_limit = align_size_down(preferred_max_new_size, gen_alignment);
   // keep new limit aligned with shrink/expand direction
   if ((is_shrink && (new_young_limit > cur_young_limit)) ||
       (!is_shrink && (new_young_limit < cur_young_limit))) {
