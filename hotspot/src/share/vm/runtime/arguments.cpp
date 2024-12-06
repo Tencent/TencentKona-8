@@ -1283,6 +1283,15 @@ void Arguments::set_cms_and_parnew_gc_flags() {
 
   size_t max_heap = align_size_down(MaxHeapSize,
                                     CardTableRS::ct_max_alignment_constraint());
+  // EMH
+  // CMS should use initial Xmx to calculate default NewSize and MaxNewSize,
+  // otherwise, it may be failed to shrink to small heap size like Xms.
+  if (ElasticMaxHeap && FLAG_IS_CMDLINE(ElasticMaxHeapSize)) {
+    size_t initial_max_heap_size = ElasticMaxHeapConfig::initial_max_heap_size();
+    guarantee((size_t)MaxHeapSize > initial_max_heap_size, "should be");
+    max_heap = align_size_down(initial_max_heap_size,
+                                    CardTableRS::ct_max_alignment_constraint());
+  }
 
   // Now make adjustments for CMS
   intx   tenuring_default = (intx)6;
