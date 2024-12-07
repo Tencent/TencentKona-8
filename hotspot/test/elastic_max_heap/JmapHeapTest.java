@@ -31,9 +31,16 @@ import com.oracle.java.testlibrary.OutputAnalyzer;
 import com.oracle.java.testlibrary.JDKToolFinder;
 import com.oracle.java.testlibrary.ProcessTools;
 import com.oracle.java.testlibrary.Asserts;
+import com.oracle.java.testlibrary.Platform;
 
 public class JmapHeapTest extends TestBase {
     public static void main(String[] args) throws Exception {
+        if (!Platform.shouldSAAttach()) {
+            System.out.println("SA attach not expected to work - test skipped.");
+            System.out.println("Use root or set /proc/sys/kernel/yama/ptrace_scope 0");
+            return;
+        }
+        System.out.println("can attach");
         test("-XX:+UseParallelGC");
         test("-XX:+UseG1GC");
         test("-XX:+UseConcMarkSweepGC");
@@ -118,6 +125,7 @@ public class JmapHeapTest extends TestBase {
         ProcessBuilder pb = new ProcessBuilder();
         pb.command(new String[] { JDKToolFinder.getJDKTool("jmap"), "-heap", Long.toString(pid)});
         OutputAnalyzer output = new OutputAnalyzer(pb.start());
+        System.out.println(output.getOutput());
         if (contains != null) {
             for (String s : contains) {
                 output.shouldContain(s);
