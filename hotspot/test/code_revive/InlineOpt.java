@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test inline opt
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestInlineDirect.java
  * @compile test-classes/TestInlineVirtual.java

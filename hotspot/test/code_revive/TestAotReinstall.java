@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test whether deopt method is installed again and again
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/AotCodeDeopt.java
  * @run main/othervm TestAotReinstall

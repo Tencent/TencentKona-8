@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary SharedArchiveConsistency
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/Dummy.java
  * @compile test-classes/TestInlineDummy.java

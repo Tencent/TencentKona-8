@@ -22,6 +22,7 @@
 /*
  * @test
  * @summary Test constant replace opt record
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestConstant.java
  * @run main/othervm ConstantReplaceOpt

@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test if internal word relocation is found as expect
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestSwitchTable.java
  * @run main/othervm SwitchTable

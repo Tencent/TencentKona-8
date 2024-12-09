@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary AppCDS running with WilCard classpath
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/Parent.java
  * @compile test-classes/Child1.java

@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test whether array kls is supported
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestArrayKlsReloc.java
  * @run main/othervm SimpleArrayAuxDumpTest

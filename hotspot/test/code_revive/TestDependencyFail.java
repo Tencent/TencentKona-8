@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test if dep check fail as expected
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestLeafDependency.java
  * @run main/othervm TestDependencyFail

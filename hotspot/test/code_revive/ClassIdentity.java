@@ -22,6 +22,7 @@
 /*
  * @test
  * @summary Test whether class identity is correctly generated.
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/CreateTypeArray.java
  * @run main/othervm ClassIdentity

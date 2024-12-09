@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test whether ArrayIndexOutOfBoundsException is initialized during restore
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestArrayIndexOutOfBound.java
  * @run main/othervm TestAIOOB

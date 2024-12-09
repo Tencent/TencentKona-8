@@ -33,7 +33,7 @@ import com.oracle.java.testlibrary.Asserts;
  * @test MemoryFreeTest
  * @key gc
  * @summary test if elaistc max heap free physical memory accordingly
- * @requires (os.family == "linux")
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
  * @library /testlibrary
  * @run main/othervm -Xms50M -Xmx2G -XX:+ElasticMaxHeap -XX:+UseParallelGC MemoryFreeTest
  * @run main/othervm -Xms50M -Xmx2G -XX:+ElasticMaxHeap -XX:+UseG1GC MemoryFreeTest

@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test profiled receiver for gen_cast
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestGenCast.java
  * @run main/othervm ProfiledReceiver

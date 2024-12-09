@@ -26,7 +26,7 @@ import com.oracle.java.testlibrary.Asserts;
  * @test RuntimeMemoryTest
  * @key gc
  * @summary test java.lang.Runtime max memory and total memory
- * @requires (os.family == "linux")
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
  * @library /testlibrary
  * @run main/othervm -Xms50M -Xmx2G -XX:+ElasticMaxHeap -XX:+UseParallelGC RuntimeMemoryTest
  * @run main/othervm -Xms50M -Xmx2G -XX:+ElasticMaxHeap -XX:+UseG1GC RuntimeMemoryTest

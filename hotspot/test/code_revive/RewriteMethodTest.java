@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test whether inline method is in dependency array when revive is on
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @build RedefineClassHelper
  * @run main RedefineClassHelper

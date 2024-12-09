@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test class init state when revive
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestClassOnlyLoaded.java
  * @run main/othervm ClassInit

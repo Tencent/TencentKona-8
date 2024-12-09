@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test whether load const is in the relocation when revive is on
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/LoadConstant.java
  * @run main/othervm LoadConstantTest

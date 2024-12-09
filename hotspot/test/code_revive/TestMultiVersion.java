@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test multiversion
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/MultiVersion.java
  * @run main/othervm TestMultiVersion

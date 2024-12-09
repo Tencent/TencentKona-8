@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test if class FilePathWalker works properly.
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @run main/othervm FilePathWalker
  */

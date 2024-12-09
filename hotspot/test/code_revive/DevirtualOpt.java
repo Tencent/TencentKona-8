@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test devirtual opt record
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestDevirtual.java
  * @run main/othervm DevirtualOpt

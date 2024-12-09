@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary csa with different fingerprint should be merged with different container.
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/Dummy.java
  * @compile test-classes/TestInlineDummy.java

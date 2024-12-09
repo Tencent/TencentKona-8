@@ -158,7 +158,17 @@ hotspot_all = \
 # Right now tier1 runs all hotspot tests
 hotspot_tier1 = \
   :jdk \
+  :emh \
+  :aot \
   -:needs_skip
+
+# elastic_max_heap
+emh = \
+  elastic_max_heap/
+
+# code revive 
+aot = \
+  code_revive/
 
 # Tests that require compact3 API's
 #

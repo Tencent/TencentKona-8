@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary test klass initialization
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestWrongKlassState.java
  * @run main/othervm TestKlassInit

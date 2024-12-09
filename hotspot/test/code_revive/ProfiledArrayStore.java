@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test profiled receiver for array store
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestArrayStore.java
  * @run main/othervm ProfiledArrayStore
