@@ -20,7 +20,7 @@
 /*
  * @test
  * @summary Test Basic Elastic Max Heap resize
- * @requires (os.family == "linux")
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
  * @library /testlibrary
  * @compile test_classes/NotActiveHeap.java
  * @run main/othervm BasicTest

@@ -20,6 +20,7 @@
 
 # @test @(#)RedefineStressTest.sh
 # @summary StressTest class redefine support in CodeRevive
+# @requires (os.family == "linux") & (os.arch == "amd64")
 # @run shell RedefineStressTest.sh
 
 if [ "${TESTSRC}" = "" ]

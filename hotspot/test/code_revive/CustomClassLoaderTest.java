@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test if custom classloader method meta causes emit fail
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestClassLoader.java
  * @compile test-classes/TestCustomClassLoader.java

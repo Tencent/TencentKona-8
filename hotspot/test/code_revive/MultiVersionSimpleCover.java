@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary generate multi-version and select
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestMultiVersionSelection.java
  * @run main/othervm MultiVersionSimpleCover

@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test unstable if
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestUnstableIf.java
  * @run main/othervm UnstableIf

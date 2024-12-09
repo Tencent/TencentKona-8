@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test -XX:CodeReviveOptions:percent=xx
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @run main/othervm RandomSaveCode
  */

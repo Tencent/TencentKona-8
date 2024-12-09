@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Support for field klass relocation
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestHashTableGet.java
  * @run main/othervm FieldKlassRelocTest

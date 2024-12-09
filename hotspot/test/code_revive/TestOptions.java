@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test CodeReviveOptions and CodeReviveOptionsFile behavior
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @run main/othervm TestOptions
  */

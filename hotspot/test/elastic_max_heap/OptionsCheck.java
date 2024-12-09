@@ -26,7 +26,7 @@ import com.oracle.java.testlibrary.Asserts;
  * @test OptionsCheck
  * @key gc
  * @summary test invalid options combinations with elastic max heap
- * @requires (os.family == "linux")
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
  * @library /testlibrary
  * @run main/othervm OptionsCheck
  */

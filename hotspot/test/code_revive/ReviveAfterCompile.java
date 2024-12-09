@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test if global symbol relocation info is found as expect
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestBasic.java
  * @compile test-classes/TestLeafDependency.java

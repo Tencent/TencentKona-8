@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary generate null indexed dependency
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestUniqConcreteMethod.java
  * @run main/othervm NullDepCompare

@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test state of interface
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestInterfaceKlassReviveAndRestore.java
  * @run main/othervm InterfaceStateSave

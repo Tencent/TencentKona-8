@@ -20,7 +20,7 @@
 /*
  * @test CMSShrinkTest
  * @summary Test whether exp_EMH_size can take effect when CMS shrink
- * @requires (os.family == "linux")
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
  * @library /testlibrary
  * @compile test_classes/ShrinkGCTestBasic.java
  * @run main/othervm CMSShrinkTest

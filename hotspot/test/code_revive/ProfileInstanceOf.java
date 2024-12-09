@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test profiled receiver for instanceof
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestInstanceOf.java
  * @run main/othervm ProfileInstanceOf

@@ -20,7 +20,7 @@
 /*
  * @test ShrinkGCTest
  * @summary Test if shrink can be done without full gc
- * @requires (os.family == "linux")
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
  * @library /testlibrary
  * @compile test_classes/ShrinkGCTestBasic.java
  * @run main/othervm ShrinkGCTest

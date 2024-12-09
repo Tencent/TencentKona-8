@@ -20,6 +20,7 @@
 
 # @test @(#)TestClassRedefine.sh
 # @summary Test class redefine support in CodeRevive
+# @requires (os.family == "linux") & (os.arch == "amd64")
 # @run shell TestClassRedefine.sh
 
 if [ "${TESTSRC}" = "" ]

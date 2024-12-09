@@ -22,6 +22,7 @@
 /*
  * @test
  * @summary check whether the options of CDS affect the fingerprint check of AOT
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/Parent.java
  * @compile test-classes/Child1.java

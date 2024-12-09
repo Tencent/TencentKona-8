@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Test whether un-cached method can be found
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestHashTableGet.java
  * @run main/othervm UncachedMethodRelocTest

@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary generate merge and load all versions
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/TestDevirtual.java
  * @run main/othervm MultiVersionLoadTest

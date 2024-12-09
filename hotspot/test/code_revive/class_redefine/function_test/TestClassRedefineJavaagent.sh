@@ -20,6 +20,7 @@
 
 # @test @(#)TestClassRedefineJavaagent.sh
 # @summary Test CodeRevive can work when  -javaagent triggers class redefine
+# @requires (os.family == "linux") & (os.arch == "amd64")
 # @run shell TestClassRedefineJavaagent.sh
 
 if [ "${TESTSRC}" = "" ]

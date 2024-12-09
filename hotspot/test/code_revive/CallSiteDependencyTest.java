@@ -20,6 +20,7 @@
 /*
  * @test
  * @summary Method with call site dependency shouldn't be dumped
+ * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
  * @compile test-classes/CallSiteTest.java
  * @run main/othervm CallSiteDependencyTest
