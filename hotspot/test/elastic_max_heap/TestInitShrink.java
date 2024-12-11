@@ -31,12 +31,15 @@ import com.oracle.java.testlibrary.Asserts;
  * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483648 -XX:+UseParallelGC TestInitShrink
  * @run main/othervm -Xms50M -Xmx2147483648 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseParallelGC TestInitShrink
  * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseParallelGC TestInitShrink
+ * @run main/othervm -Xms200M -Xmx200M -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=400M -XX:+UseParallelGC TestInitShrink
  * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483648 -XX:+UseG1GC TestInitShrink
  * @run main/othervm -Xms50M -Xmx2147483648 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseG1GC TestInitShrink
  * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseG1GC TestInitShrink
+ * @run main/othervm -Xms200M -Xmx200M -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=400M -XX:+UseG1GC TestInitShrink
  * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483648 -XX:+UseConcMarkSweepGC TestInitShrink
  * @run main/othervm -Xms50M -Xmx2147483648 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseConcMarkSweepGC TestInitShrink
  * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseConcMarkSweepGC TestInitShrink
+ * @run main/othervm -Xms200M -Xmx200M -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=400M -XX:+UseConcMarkSweepGC TestInitShrink
  */
 public class TestInitShrink {
     public static void main(String[] args) throws Exception {
