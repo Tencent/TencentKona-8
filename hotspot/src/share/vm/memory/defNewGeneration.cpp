@@ -409,25 +409,20 @@ void DefNewGeneration::compute_new_size() {
 
   // ElasticMaxHeap
   // setting desired_new_size as exp_EMH_size with following conditions
-  // 1. exp_EMH_size is set
-  // 2. exp_EMH_size is smaller than current young capacity(commited size)
-  // 3. exp_EMH_size is bigger than min_new_size // min_new_size might need fix
-  // 4. young is empty
-  // 5. exp_EMH_size is smaller than current desired_new_size
+  // 1. young is empty
+  // 2. exp_EMH_size is set, and bigger than min_new_size // min_new_size might need fix
+  // 3. exp_EMH_size is smaller than current desired_new_size
   // exp_size is smller than desired_new_size might increase young gc/cms frequency
-  // TODO: check if gen1's capacity is less than or equalwith gen1's exp_EMH_size
   size_t exp_size = exp_EMH_size();
   if (ElasticMaxHeap &&
       used() == 0 &&
-      exp_size > 0 &&
-      exp_size < new_size_before &&
       exp_size >= min_new_size &&
       exp_size < desired_new_size) {
     guarantee(exp_size % alignment == 0, "must be");
     guarantee(exp_size <= max_new_size, "must be");
     guarantee(to()->is_empty() && from()->is_empty() && eden()->is_empty(), "must be");
     desired_new_size = exp_size;
-    EMH_LOG("CardGeneration: shrink according to ElasticMaxHeap");
+    EMH_LOG("DefNewGeneration: shrink according to ElasticMaxHeap");
   }
 
   // Adjust new generation size

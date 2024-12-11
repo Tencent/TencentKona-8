@@ -59,7 +59,7 @@ public class MemoryFreeTest extends TestBase {
         System.out.println("RSS after alloc " + rss + "K");
         Asserts.assertGT(rss, 1024L * 1024L);
 
-        // shrink to 500M should be fine for any GC
+        // shrink to 100M should be fine for any GC
         String[] contains1 = {
             "GC.elastic_max_heap (2097152K->102400K)(2097152K)",
             "GC.elastic_max_heap success"
