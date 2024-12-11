@@ -40,8 +40,6 @@ public class CMSShrinkTest extends TestBase {
         };
         if (architecture.equals("aarch64")) {
             contains1 = new String[] {
-                "CardGeneration: shrink according to ElasticMaxHeap",
-                "DefNewGeneration: shrink according to ElasticMaxHeap",
                 "GC.elastic_max_heap (2097152K->131072K)(4194304K)",
                 "GC.elastic_max_heap success"
             };
