@@ -1683,12 +1683,13 @@ static int instruction_length(unsigned char *iptr, unsigned char *end)
     switch (instruction) {
         case JVM_OPC_tableswitch: {
             int *lpc = (int *)UCALIGN(iptr + 1);
+            int64_t low, high, index;
             if (lpc + 2 >= (int *)end) {
                 return -1; /* do not read pass the end */
             }
-            int64_t low  = _ck_ntohl(lpc[1]);
-            int64_t high = _ck_ntohl(lpc[2]);
-            int64_t index = high - low;
+            low  = _ck_ntohl(lpc[1]);
+            high = _ck_ntohl(lpc[2]);
+            index = high - low;
             // The value of low must be less than or equal to high - i.e. index >= 0
             if ((index < 0) || (index > 65535)) {
                 return -1;      /* illegal */
@@ -1730,9 +1731,14 @@ static int instruction_length(unsigned char *iptr, unsigned char *end)
             }
 
         default: {
+            if (instruction < 0 || instruction > JVM_OPC_MAX)
+                return -1;
+
             /* A length of 0 indicates an error. */
-            int length = opcode_length[instruction];
-            return (length <= 0) ? -1 : length;
+            if (opcode_length[instruction] <= 0)
+                return -1;
+
+            return opcode_length[instruction];
         }
     }
 }

@@ -53,7 +53,7 @@ CXX=cl.exe
 # improving the quality of crash log stack traces involving jvm.dll.
 
 # These are always used in all compiles
-CXX_FLAGS=$(EXTRA_CFLAGS) /nologo /W3 /WX
+CXX_FLAGS=$(EXTRA_CFLAGS) /nologo /W3 /WX /wd4800
 
 # Let's add debug information when Full Debug Symbols is enabled
 !if "$(ENABLE_FULL_DEBUG_SYMBOLS)" == "1"
@@ -171,6 +171,9 @@ COMPILER_NAME=VS2017
 !endif
 !if "$(MSC_VER)" >= "1920" && "$(MSC_VER)" <= "1929"
 COMPILER_NAME=VS2019
+!endif
+!if "$(MSC_VER)" >= "1930" && "$(MSC_VER)" <= "1938"
+COMPILER_NAME=VS2022
 !endif
 !endif
 
@@ -322,6 +325,21 @@ SAFESEH_FLAG = /SAFESEH
 !endif
 
 !if "$(COMPILER_NAME)" == "VS2019"
+PRODUCT_OPT_OPTION   = /O2 /Oy-
+FASTDEBUG_OPT_OPTION = /O2 /Oy-
+DEBUG_OPT_OPTION     = /Od
+GX_OPTION = /EHsc
+LD_FLAGS = /manifest $(LD_FLAGS)
+MP_FLAG = /MP
+# Manifest Tool - used in VS2005 and later to adjust manifests stored
+# as resources inside build artifacts.
+!if "x$(MT)" == "x"
+MT=mt.exe
+!endif
+SAFESEH_FLAG = /SAFESEH
+!endif
+
+!if "$(COMPILER_NAME)" == "VS2022"
 PRODUCT_OPT_OPTION   = /O2 /Oy-
 FASTDEBUG_OPT_OPTION = /O2 /Oy-
 DEBUG_OPT_OPTION     = /Od
