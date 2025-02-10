@@ -197,6 +197,12 @@ public class VM {
         return directMemory;
     }
 
+    // ElasticMaxDirectMemory
+    // update max direct memory size
+    public static void setMaxDirectMemory(long size) {
+        directMemory = size;
+    }
+
     // User-controllable flag that determines if direct buffers should be page
     // aligned. The "-XX:+PageAlignDirectMemory" option can be used to force
     // buffers, allocated by ByteBuffer.allocateDirect, to be page aligned.
