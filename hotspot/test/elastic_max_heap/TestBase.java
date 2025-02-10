@@ -25,8 +25,11 @@ import com.oracle.java.testlibrary.Asserts;
 public class TestBase {
     // start jcmd and check output string
     public static void resizeAndCheck(long pid, String new_size, String[] contains, String[] not_contains) throws Exception {
+        resizeAndCheck(pid, new_size, contains, not_contains, "GC.elastic_max_heap");
+    }
+    public static void resizeAndCheck(long pid, String new_size, String[] contains, String[] not_contains, String type) throws Exception {
         ProcessBuilder pb = new ProcessBuilder();
-        pb.command(new String[] { JDKToolFinder.getJDKTool("jcmd"), Long.toString(pid), "GC.elastic_max_heap", new_size});
+        pb.command(new String[] { JDKToolFinder.getJDKTool("jcmd"), Long.toString(pid), type, new_size});
         OutputAnalyzer output = new OutputAnalyzer(pb.start());
         System.out.println(output.getOutput());
         if (contains != null) {

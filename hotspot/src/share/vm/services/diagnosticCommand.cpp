@@ -56,6 +56,7 @@ void DCmdRegistrant::register_dcmds(){
   DCmdFactory::register_DCmdFactory(new DCmdFactoryImpl<HeapInfoDCmd>(full_export, true, false));
   DCmdFactory::register_DCmdFactory(new DCmdFactoryImpl<FinalizerInfoDCmd>(full_export, true, false));
   DCmdFactory::register_DCmdFactory(new DCmdFactoryImpl<ElasticMaxHeapDCmd>(full_export, true, false));
+  DCmdFactory::register_DCmdFactory(new DCmdFactoryImpl<ElasticMaxDirectMemoryDCmd>(full_export, true, false));
 #if INCLUDE_SERVICES // Heap dumping/inspection supported
   DCmdFactory::register_DCmdFactory(new DCmdFactoryImpl<HeapDumpDCmd>(DCmd_Source_Internal | DCmd_Source_AttachAPI, true, false));
   DCmdFactory::register_DCmdFactory(new DCmdFactoryImpl<ClassHistogramDCmd>(full_export, true, false));
@@ -364,6 +365,53 @@ void ElasticMaxHeapDCmd::execute(DCmdSource source, TRAPS) {
     output()->print_cr("GC.elastic_max_heap success");
   } else {
     output()->print_cr("GC.elastic_max_heap fail");
+  }
+}
+
+ElasticMaxDirectMemoryDCmd::ElasticMaxDirectMemoryDCmd(outputStream* output, bool heap) :
+  DCmdWithParser(output, heap),
+  _new_max_direct_memory("elastic_max_direct_memory", "New max size of direct memory", "MEMORY SIZE", true) {
+  _dcmdparser.add_dcmd_argument(&_new_max_direct_memory);
+}
+
+int ElasticMaxDirectMemoryDCmd::num_arguments() {
+  ResourceMark rm;
+  ElasticMaxDirectMemoryDCmd* dcmd = new ElasticMaxDirectMemoryDCmd(NULL, false);
+  if (dcmd != NULL) {
+    DCmdMark mark(dcmd);
+    return dcmd->_dcmdparser.num_arguments();
+  } else {
+    return 0;
+  }
+}
+
+void ElasticMaxDirectMemoryDCmd::execute(DCmdSource source, TRAPS) {
+  if (!ElasticMaxDirectMemory) {
+    output()->print_cr("not supported because -XX:+ElasticMaxDirectMemory was not specified");
+    return;
+  }
+
+  jlong new_max_direct_memory = _new_max_direct_memory.value()._size;
+  Symbol* klass = vmSymbols::java_nio_Bits();
+  Klass* k = SystemDictionary::resolve_or_fail(klass, true, CHECK);
+  instanceKlassHandle ik (THREAD, k);
+
+  // invoke the updateMaxMemory method
+  JavaValue result(T_OBJECT);
+  JavaCallArguments args;
+  args.push_long(new_max_direct_memory);
+  JavaCalls::call_static(&result,
+                         ik,
+                         vmSymbols::updateMaxMemory_name(),
+                         vmSymbols::updateMaxMemory_signature(),
+                         &args,
+                         THREAD);
+  oop msg = (oop) result.get_jobject();
+  if (msg != NULL) {
+    char* text = java_lang_String::as_utf8_string(msg);
+    if (text != NULL) {
+      output()->print_cr("%s", text);
+    }
   }
 }
 

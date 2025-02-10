@@ -4119,6 +4119,9 @@ class CommandLineFlags {
   product(bool, ElasticMaxHeap, false,                                      \
           "Allow change max heap size during runtime with jcmd")            \
                                                                             \
+  product(bool, ElasticMaxDirectMemory, false,                              \
+          "Allow change max direct memory size during runtime with jcmd")   \
+                                                                            \
   product(bool, TraceElasticMaxHeap, false,                                 \
           "Trace Elastic Max Heap adjustion logs and failure reasons")      \
                                                                             \
