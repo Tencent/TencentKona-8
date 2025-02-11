@@ -137,6 +137,9 @@ sun/management/jmxremote/bootstrap/RmiSslBootstrapTest.sh	windows-all
 sun/management/jmxremote/bootstrap/RmiRegistrySslTest.sh    generic-all
 sun/management/jmxremote/bootstrap/RmiSslBootstrapTest.sh   generic-all
 
+# These failed cases are also hanging on Openjdk-8u442
+sun/management/jmxremote/startstop/JMXStartStopTest.java    generic-all
+
 ############################################################################
 
 # jdk_jmx
@@ -368,6 +371,10 @@ javax/sound/sampled/Mixers/DisabledAssertionCrash.java 7067310 generic-all
 
 # 8172782, 8007410
 tools/launcher/FXLauncherTest.java                     windows-all,linux-all
+
+# 8346140
+tools/jar/ExtractFilesTest.java                                  generic-all
+tools/jar/MultipleManifestTest.java                              generic-all
 
 ############################################################################
 
