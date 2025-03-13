@@ -37,13 +37,15 @@ public class BasicTest extends TestBase {
         test("-XX:+UseParallelGC");
         test("-XX:+UseConcMarkSweepGC");
         test("-XX:+UseG1GC");
+        // EMH uses PS by default when no GC option is specified in command line
+        test("-XX:ActiveProcessorCount=1");
     }
 
-    private static void test(String heap_type) throws Exception {
+    private static void test(String heap_type_or_process_count) throws Exception {
         String architecture = System.getProperty("os.arch");
         // Xms = 100M - 1B, Xmx = 600M - 1B, ElasticMaxHeapSize = 1G - 1B
         // unaligned arguments should be fine
-        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(true, heap_type, "-XX:+ElasticMaxHeap", "-Xms104857599", "-Xmx629145599", "-XX:ElasticMaxHeapSize=1073741823", "NotActiveHeap");
+        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(true, heap_type_or_process_count, "-XX:+ElasticMaxHeap", "-Xms104857599", "-Xmx629145599", "-XX:ElasticMaxHeapSize=1073741823", "NotActiveHeap");
         Process p = pb.start();
         try {
             long pid = getPidOfProcess(p);

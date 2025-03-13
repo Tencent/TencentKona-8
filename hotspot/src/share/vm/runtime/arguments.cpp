@@ -1618,6 +1618,11 @@ void Arguments::select_gc_ergonomically() {
       FLAG_SET_ERGO(bool, UseParallelGC, true);
     }
   }
+  else if (ElasticMaxHeap) {
+    // TODO: EMH does not support default GenCollectedHeap now,
+    // use PS as default when GC is not set in command line
+    FLAG_SET_ERGO(bool, UseParallelGC, true);
+  }
 }
 
 void Arguments::select_gc() {
