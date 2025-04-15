@@ -685,7 +685,9 @@ bool CodeRevive::is_save_candidate(CodeBlob* cb) {
   if (nm->has_call_site_target_value()) {
     return false;
   }
-
+  if (nm->is_marked_for_deoptimization()) {
+    return false;
+  }
   // skip nm for methods in custom class loader
   if (CodeRevive::nmethod_loader_type(nm) == custom_loader) {
     return false;
