@@ -24,12 +24,12 @@
  * @summary check the identity from shared archive
  * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
- * @compile test-classes/Parent.java
- * @compile test-classes/Child1.java
- * @compile test-classes/Child2.java
- * @compile test-classes/GrandChild1.java
- * @compile test-classes/ProfiledConfig.java
- * @compile test-classes/TestProfiledReceiver.java
+ * @compile test-classes/ParentC.java
+ * @compile test-classes/ChildC1.java
+ * @compile test-classes/ChildC2.java
+ * @compile test-classes/GrandChildC1.java
+ * @compile test-classes/ProfiledConfigC.java
+ * @compile test-classes/TestProfiledReceiverC.java
  * @run main/othervm CheckCDSIdentity
  */
 
@@ -39,11 +39,11 @@ import com.oracle.java.testlibrary.ProcessTools;
 public class CheckCDSIdentity {
     public static void main(String[] args) throws Exception {
         String wildcard = System.getProperty("user.dir") + "/*";
-        String appJar1 = ClassFileInstaller.writeJar("recevier.jar", "Parent", "Child1", "Child2", "GrandChild1", "ProfiledConfig");
-        String appJar2 = ClassFileInstaller.writeJar("config.jar", "TestProfiledReceiver");
+        String appJar1 = ClassFileInstaller.writeJar("recevier.jar", "ParentC", "ChildC1", "ChildC2", "GrandChildC1", "ProfiledConfigC");
+        String appJar2 = ClassFileInstaller.writeJar("config.jar", "TestProfiledReceiverC");
         String filePath = CheckCDSIdentity.class.getResource("/").getPath();
         // build The app
-        String[] appClass = new String[] {"TestProfiledReceiver"};
+        String[] appClass = new String[] {"TestProfiledReceiverC"};
 
         // dump class list
         OutputAnalyzer output = Test("-cp",
@@ -52,7 +52,7 @@ public class CheckCDSIdentity {
                                      "-XX:+RelaxCheckForAppCDS",
                                      "-Xshare:off",
                                      "-XX:DumpLoadedClassList=check_cds.list", 
-                                     "TestProfiledReceiver");
+                                     "TestProfiledReceiverC");
 
         System.out.println(output.getOutput());
         output.shouldHaveExitValue(0);
@@ -90,13 +90,13 @@ public class CheckCDSIdentity {
                        "-XX:+RelaxCheckForAppCDS",
                        "-Xshare:on",
                        "-XX:SharedArchiveFile=receiver.jsa", 
-                       "-XX:CodeReviveOptions=save,file=classInDirCheck.csa,log=save=trace",
+                       "-XX:CodeReviveOptions=save,file=cdsCheckIdentity.csa,log=save=trace",
                        "-XX:-TieredCompilation",
-                       "-XX:CompileCommand=compileonly,TestProfiledReceiver::foo",
+                       "-XX:CompileCommand=compileonly,TestProfiledReceiverC::foo",
                        "-XX:CompileCommand=inline,*.hi",
                        "-XX:CompileCommand=compileonly,*.hi",
                        "-XX:CompileCommand=inline,java.lang.Object::getClass",
-                       "TestProfiledReceiver");
+                       "TestProfiledReceiverC");
 
         System.out.println(output.getOutput());
         output.shouldHaveExitValue(0);
@@ -107,17 +107,17 @@ public class CheckCDSIdentity {
                       "-XX:+RelaxCheckForAppCDS",
                       "-Xshare:on",  
                       "-XX:SharedArchiveFile=receiver.jsa",
-                      "-XX:CodeReviveOptions=restore,file=classInDirCheck.csa,log=restore=trace",
+                      "-XX:CodeReviveOptions=restore,file=cdsCheckIdentity.csa,log=restore=trace",
                       "-XX:-TieredCompilation",
-                      "-XX:CompileCommand=compileonly,TestProfiledReceiver::foo",
+                      "-XX:CompileCommand=compileonly,TestProfiledReceiverC::foo",
                       "-XX:CompileCommand=inline,*.hi",
                       "-XX:CompileCommand=compileonly,*.hi",
                       "-XX:CompileCommand=inline,java.lang.Object::getClass",
-                      "TestProfiledReceiver");
+                      "TestProfiledReceiverC");
 
         // revive success with the same aot and cds file
         System.out.println(output.getOutput());
-        output.shouldContain("revive success: Child1.hi()Ljava/lang/String");
+        output.shouldContain("revive success: ChildC1.hi()Ljava/lang/String");
         output.shouldHaveExitValue(0);
 
 
@@ -127,17 +127,17 @@ public class CheckCDSIdentity {
                       "-XX:+RelaxCheckForAppCDS",
                       "-Xshare:on",  
                       "-XX:SharedArchiveFile=config.jsa",
-                      "-XX:CodeReviveOptions=restore,file=classInDirCheck.csa,log=restore=trace",
+                      "-XX:CodeReviveOptions=restore,file=cdsCheckIdentity.csa,log=restore=trace",
                       "-XX:-TieredCompilation",
-                      "-XX:CompileCommand=compileonly,TestProfiledReceiver::foo",
+                      "-XX:CompileCommand=compileonly,TestProfiledReceiverC::foo",
                       "-XX:CompileCommand=inline,*.hi",
                       "-XX:CompileCommand=compileonly,*.hi",
                       "-XX:CompileCommand=inline,java.lang.Object::getClass",
-                      "TestProfiledReceiver");
+                      "TestProfiledReceiverC");
 
         // Expect: load aot successfully, and fail to revive method 
         System.out.println(output.getOutput());
-        output.shouldNotContain("revive success: Child1.hi()Ljava/lang/String");
+        output.shouldNotContain("revive success: ChildC1.hi()Ljava/lang/String");
         output.shouldHaveExitValue(0);
 
         // save aot with shared archive config.jsa 
@@ -147,20 +147,20 @@ public class CheckCDSIdentity {
                        "-XX:+RelaxCheckForAppCDS",
                        "-Xshare:on",
                        "-XX:SharedArchiveFile=config.jsa", 
-                       "-XX:CodeReviveOptions=save,file=classInDirCheck_config.csa,log=save=trace",
+                       "-XX:CodeReviveOptions=save,file=cdsCheckIdentity_config.csa,log=save=trace",
                        "-XX:-TieredCompilation",
-                       "-XX:CompileCommand=compileonly,TestProfiledReceiver::foo",
+                       "-XX:CompileCommand=compileonly,TestProfiledReceiverC::foo",
                        "-XX:CompileCommand=inline,*.hi",
                        "-XX:CompileCommand=compileonly,*.hi",
                        "-XX:CompileCommand=inline,java.lang.Object::getClass",
-                       "TestProfiledReceiver");
+                       "TestProfiledReceiverC");
 
         System.out.println(output.getOutput());
         output.shouldHaveExitValue(0);
 
         // merge the aot files
         output = Test("-cp", appJar1 + ":" + appJar2,
-                      "-XX:CodeReviveOptions=merge,input_files=.,file=classInDirCheck_merge.csa,log=merge=trace",
+                      "-XX:CodeReviveOptions=merge,input_files=.,file=cdsCheckIdentity_merge.csa,log=merge=trace",
                       "-version");
         System.out.println(output.getOutput());
                       
@@ -170,17 +170,17 @@ public class CheckCDSIdentity {
                       "-XX:+RelaxCheckForAppCDS",
                       "-Xshare:on",  
                       "-XX:SharedArchiveFile=receiver.jsa",
-                      "-XX:CodeReviveOptions=restore,file=classInDirCheck_merge.csa,log=restore=trace",
+                      "-XX:CodeReviveOptions=restore,file=cdsCheckIdentity_merge.csa,log=restore=trace",
                       "-XX:-TieredCompilation",
-                      "-XX:CompileCommand=compileonly,TestProfiledReceiver::foo",
+                      "-XX:CompileCommand=compileonly,TestProfiledReceiverC::foo",
                       "-XX:CompileCommand=inline,*.hi",
                       "-XX:CompileCommand=compileonly,*.hi",
                       "-XX:CompileCommand=inline,java.lang.Object::getClass",
-                      "TestProfiledReceiver");
+                      "TestProfiledReceiverC");
 
         // revive success
         System.out.println(output.getOutput());
-        output.shouldContain("revive success: Child1.hi()Ljava/lang/String");
+        output.shouldContain("revive success: ChildC1.hi()Ljava/lang/String");
         output.shouldHaveExitValue(0);
 
 
@@ -190,17 +190,17 @@ public class CheckCDSIdentity {
                       "-XX:+RelaxCheckForAppCDS",
                       "-Xshare:on",  
                       "-XX:SharedArchiveFile=config.jsa",
-                      "-XX:CodeReviveOptions=restore,file=classInDirCheck_merge.csa,log=restore=trace",
+                      "-XX:CodeReviveOptions=restore,file=cdsCheckIdentity_merge.csa,log=restore=trace",
                       "-XX:-TieredCompilation",
-                      "-XX:CompileCommand=compileonly,TestProfiledReceiver::foo",
+                      "-XX:CompileCommand=compileonly,TestProfiledReceiverC::foo",
                       "-XX:CompileCommand=inline,*.hi",
                       "-XX:CompileCommand=compileonly,*.hi",
                       "-XX:CompileCommand=inline,java.lang.Object::getClass",
-                      "TestProfiledReceiver");
+                      "TestProfiledReceiverC");
 
         // Expect: load aot successfully, and revive successfully.
         System.out.println(output.getOutput());
-        output.shouldContain("revive success: Child1.hi()Ljava/lang/String");
+        output.shouldContain("revive success: ChildC1.hi()Ljava/lang/String");
         output.shouldHaveExitValue(0);
     }
 
