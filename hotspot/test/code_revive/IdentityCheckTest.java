@@ -24,12 +24,11 @@
  * @summary Test the check for the change of klass identity
  * @requires (os.family == "linux") & (os.arch == "amd64")
  * @library /testlibrary
- * @compile test-classes/Parent.java
- * @compile test-classes/Child1.java
- * @compile test-classes/Child2.java
- * @compile test-classes/GrandChild1.java
- * @compile test-classes/ProfiledConfig.java
- * @compile test-classes/TestProfiledReceiver.java
+ * @compile test-classes/Parent2.java
+ * @compile test-classes/Child3.java
+ * @compile test-classes/GrandChild3.java
+ * @compile test-classes/ProfiledConfig2.java
+ * @compile test-classes/TestProfiledReceiver2.java
  * @run main/othervm IdentityCheckTest
  */
 
@@ -40,39 +39,39 @@ import java.io.FileWriter;
 
 public class IdentityCheckTest {
     public static void main(String[] args) throws Exception {
-        String[] save_outputs = {"unresolved GrandChild1 class"};
+        String[] save_outputs = {"unresolved GrandChild3 class"};
         Test(save_outputs,
              "-XX:CodeReviveOptions=save,log=archive=trace,file=identitycheck.csa",
              "-XX:-TieredCompilation",
-             "-XX:CompileCommand=compileonly,TestProfiledReceiver::foo",
+             "-XX:CompileCommand=compileonly,TestProfiledReceiver2::foo",
              "-XX:CompileCommand=inline,*.hi",
              "-XX:CompileCommand=compileonly,*.hi",
              "-XX:CompileCommand=inline,java.lang.Object::getClass",
-             "TestProfiledReceiver");
+             "TestProfiledReceiver2");
 
-        String[] success_outputs = {"revive success: TestProfiledReceiver.foo",
-                                    "revive success: Child1.hi()Ljava/lang/String"}; 
+        String[] success_outputs = {"revive success: TestProfiledReceiver2.foo",
+                                    "revive success: Child3.hi()Ljava/lang/String"}; 
         Test(success_outputs,
              "-XX:CodeReviveOptions=restore,log=restore=trace,file=identitycheck.csa",
              "-XX:-TieredCompilation",
-             "-XX:CompileCommand=compileonly,TestProfiledReceiver::foo",
+             "-XX:CompileCommand=compileonly,TestProfiledReceiver2::foo",
              "-XX:CompileCommand=inline,*.hi",
              "-XX:CompileCommand=compileonly,*.hi",
              "-XX:CompileCommand=inline,java.lang.Object::getClass",
-             "TestProfiledReceiver");
+             "TestProfiledReceiver2");
 
-        // modify class GrandChild1
+        // modify class GrandChild3
         compileClass();
-        String[] failure_outputs = {"Identity for klass GrandChild1 is different", 
-                                    "revive fail: No usable or valid aot code version, TestProfiledReceiver.foo"};
+        String[] failure_outputs = {"Identity for klass GrandChild3 is different", 
+                                    "revive fail: No usable or valid aot code version, TestProfiledReceiver2.foo"};
         Test(failure_outputs,
              "-XX:CodeReviveOptions=restore,log=restore=trace,file=identitycheck.csa",
              "-XX:-TieredCompilation",
-             "-XX:CompileCommand=compileonly,TestProfiledReceiver::foo",
+             "-XX:CompileCommand=compileonly,TestProfiledReceiver2::foo",
              "-XX:CompileCommand=inline,*.hi",
              "-XX:CompileCommand=compileonly,*.hi",
              "-XX:CompileCommand=inline,java.lang.Object::getClass",
-             "TestProfiledReceiver");
+             "TestProfiledReceiver2");
     }
 
     static void Test(String[] expect_outputs, String... command) throws Exception {
@@ -88,7 +87,7 @@ public class IdentityCheckTest {
 
     private static String generateClass() {
         StringBuilder sb = new StringBuilder();
-        sb.append("public class GrandChild1 extends Child1 {");
+        sb.append("public class GrandChild3 extends Child3 {");
         sb.append("    static String g;");
         sb.append("}");
         return sb.toString();
@@ -98,13 +97,13 @@ public class IdentityCheckTest {
         String code;
         code = generateClass();
 
-        File file = new File("GrandChild1.java");
+        File file = new File("GrandChild3.java");
         FileWriter fw = new FileWriter(file);
         fw.write(code);
         fw.close();
 
         String[] cmd = { System.getProperty("test.jdk") + "/bin/javac", "-d", System.getProperty("test.classes"), 
-                         "-cp", System.getProperty("test.classes") + ":.", "GrandChild1.java" };
+                         "-cp", System.getProperty("test.classes") + ":.", "GrandChild3.java" };
         Process process = Runtime.getRuntime().exec(cmd);
         if (process.waitFor() != 0) {
              throw new RuntimeException("Error in compile");
