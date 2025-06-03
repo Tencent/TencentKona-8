@@ -20,7 +20,7 @@
 /*
  * @test
  * @summary Test Basic Elastic Max Heap resize
- * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64") | (os.arch == "aarch64" | (os.arch == "loongarch64")))
  * @library /testlibrary
  * @compile test_classes/NotActiveHeap.java
  * @run main/othervm BasicTest
@@ -61,6 +61,11 @@ public class BasicTest extends TestBase {
                     "GC.elastic_max_heap success",
                     "GC.elastic_max_heap (622592K->524288K)(1048576K)",
                 };
+            } else if (architecture.equals("loongarch64")) {
+                contains1 = new String[] {
+                    "GC.elastic_max_heap success",
+                    "GC.elastic_max_heap (614400K->516096K)(1048576K)",
+                };
             }
             resizeAndCheck(pid, "500M", contains1, null);
 
@@ -74,7 +79,12 @@ public class BasicTest extends TestBase {
                     "GC.elastic_max_heap success",
                     "GC.elastic_max_heap (524288K->819200K)(1048576K)",
                 };
-            }
+            } else if (architecture.equals("loongarch64")) {
+                contains2 = new String[] {
+                    "GC.elastic_max_heap success",
+                    "GC.elastic_max_heap (516096K->819200K)(1048576K)",
+                };
+	    }
             resizeAndCheck(pid, "800M", contains2, null);
 
             // expand to 2G should fail
@@ -102,7 +112,12 @@ public class BasicTest extends TestBase {
                     "GC.elastic_max_heap success",
                     "GC.elastic_max_heap (1048576K->327680K)(1048576K)",
                 };
-            }
+            } else if (architecture.equals("loongarch64")) {
+                contains5 = new String[] {
+                    "GC.elastic_max_heap success",
+                    "GC.elastic_max_heap (1048576K->311296K)(1048576K)",
+                };
+	    }
             resizeAndCheck(pid, "314572799", contains5, null);
         } finally {
             p.destroy();

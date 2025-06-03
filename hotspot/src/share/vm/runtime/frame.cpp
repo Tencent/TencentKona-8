@@ -64,6 +64,10 @@
 #ifdef TARGET_ARCH_ppc
 # include "nativeInst_ppc.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "nativeInst_loongarch.hpp"
+#endif
+
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
