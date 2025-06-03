@@ -34,10 +34,12 @@ import sun.jvm.hotspot.debugger.proc.amd64.*;
 import sun.jvm.hotspot.debugger.proc.aarch64.*;
 import sun.jvm.hotspot.debugger.proc.sparc.*;
 import sun.jvm.hotspot.debugger.proc.x86.*;
+import sun.jvm.hotspot.debugger.proc.loongarch64.*;
 import sun.jvm.hotspot.debugger.amd64.*;
 import sun.jvm.hotspot.debugger.aarch64.*;
 import sun.jvm.hotspot.debugger.sparc.*;
 import sun.jvm.hotspot.debugger.x86.*;
+import sun.jvm.hotspot.debugger.loongarch64.*;
 import sun.jvm.hotspot.utilities.*;
 
 /** <P> An implementation of the JVMDebugger interface which sits on
@@ -92,6 +94,10 @@ public class ProcDebuggerLocal extends DebuggerBase implements ProcDebugger {
             threadFactory = new ProcAARCH64ThreadFactory(this);
             pcRegIndex = AARCH64ThreadContext.PC;
             fpRegIndex = AARCH64ThreadContext.FP;
+        } else if (cpu.equals("loongarch64")) {
+            threadFactory = new ProcLOONGARCH64ThreadFactory(this);
+            pcRegIndex = LOONGARCH64ThreadContext.PC;
+            fpRegIndex = LOONGARCH64ThreadContext.FP;
         } else {
           try {
             Class tfc = Class.forName("sun.jvm.hotspot.debugger.proc." +

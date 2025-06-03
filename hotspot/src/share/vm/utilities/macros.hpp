@@ -381,6 +381,18 @@
 #define NOT_SPARC(code) code
 #endif
 
+#ifdef LOONGARCH64
+#ifndef LOONGARCH
+#define LOONGARCH
+#endif
+#define LOONGARCH64_ONLY(code) code
+#define NOT_LOONGARCH64(code)
+#else
+#undef LOONGARCH
+#define LOONGARCH64_ONLY(code)
+#define NOT_LOONGARCH64(code) code
+#endif
+
 #if defined(PPC32) || defined(PPC64)
 #ifndef PPC
 #define PPC

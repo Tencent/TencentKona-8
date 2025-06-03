@@ -89,6 +89,9 @@ class TemplateInterpreterGenerator: public AbstractInterpreterGenerator {
 #ifdef TARGET_ARCH_x86
 # include "templateInterpreterGenerator_x86.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "templateInterpreterGenerator_loongarch.hpp"
+#endif
 #ifdef TARGET_ARCH_aarch64
 # include "templateInterpreterGenerator_aarch64.hpp"
 #endif

@@ -177,6 +177,7 @@ ARCHFLAG/aarch64 =
 ARCHFLAG/ia64    =
 ARCHFLAG/sparc   = -m32 -mcpu=v9
 ARCHFLAG/sparcv9 = -m64 -mcpu=v9
+ARCHFLAG/loongarch64  =
 ARCHFLAG/zero    = $(ZERO_ARCHFLAG)
 ARCHFLAG/ppc64   =  -m64
 

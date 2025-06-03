@@ -47,6 +47,9 @@
 #elif defined TARGET_ARCH_MODEL_ppc_64
 # include "adfiles/adGlobals_ppc_64.hpp"
 #endif
+#ifdef TARGET_ARCH_MODEL_loongarch_64
+# include "adfiles/adGlobals_loongarch_64.hpp"
+#endif
 #endif
 
 //------------------------------VMReg------------------------------------------
@@ -157,6 +160,9 @@ public:
 
 #ifdef TARGET_ARCH_x86
 # include "vmreg_x86.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "vmreg_loongarch.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "vmreg_aarch64.hpp"

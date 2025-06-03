@@ -44,6 +44,9 @@
 #ifdef TARGET_ARCH_ppc
 # include "nativeInst_ppc.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "nativeInst_loongarch.hpp"
+#endif
 
 class RegisteredProbes;
 typedef jlong OpaqueProbes;
