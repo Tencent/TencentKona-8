@@ -50,6 +50,9 @@ class C1_MacroAssembler: public MacroAssembler {
 #ifdef TARGET_ARCH_x86
 # include "c1_MacroAssembler_x86.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "c1_MacroAssembler_loongarch.hpp"
+#endif
 #ifdef TARGET_ARCH_aarch64
 # include "c1_MacroAssembler_aarch64.hpp"
 #endif

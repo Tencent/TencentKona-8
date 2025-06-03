@@ -53,6 +53,10 @@
 # include "register_ppc.hpp"
 # include "vm_version_ppc.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "register_loongarch.hpp"
+# include "vm_version_loongarch.hpp"
+#endif
 #ifdef TARGET_ARCH_aarch64
 # include "register_aarch64.hpp"
 # include "vm_version_aarch64.hpp"
@@ -467,6 +471,9 @@ class AbstractAssembler : public ResourceObj  {
 #endif
 #ifdef TARGET_ARCH_ppc
 # include "assembler_ppc.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "assembler_loongarch.hpp"
 #endif
 
 

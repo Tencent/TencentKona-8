@@ -75,7 +75,11 @@ inline oop oopDesc::forward_to_atomic(oop p) {
     // forwarding pointer.
     oldMark = curMark;
   }
+#ifdef LOONGARCH64
+  return (oop) oldMark->decode_pointer();
+#else
   return forwardee();
+#endif
 }
 
 #endif // SHARE_VM_OOPS_OOP_PCGC_INLINE_HPP

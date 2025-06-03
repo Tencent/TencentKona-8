@@ -34,6 +34,10 @@
 # include "nativeInst_x86.hpp"
 # include "vmreg_x86.inline.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "nativeInst_loongarch.hpp"
+# include "vmreg_loongarch.inline.hpp"
+#endif
 #ifdef TARGET_ARCH_aarch64
 # include "nativeInst_aarch64.hpp"
 # include "vmreg_aarch64.inline.hpp"
@@ -810,6 +814,18 @@ void LIR_Assembler::emit_op2(LIR_Op2* op) {
   }
 }
 
+
+void LIR_Assembler::emit_op4(LIR_Op4* op) {
+  switch (op->code()) {
+    case lir_cmp_cmove:
+      cmp_cmove(op->condition(), op->in_opr1(), op->in_opr2(), op->in_opr3(), op->in_opr4(), op->result_opr(), op->type());
+      break;
+
+    default:
+      Unimplemented();
+      break;
+  }
+}
 
 void LIR_Assembler::build_frame() {
   _masm->build_frame(initial_frame_size_in_bytes(), bang_size_in_bytes());

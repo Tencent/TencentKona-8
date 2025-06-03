@@ -20,7 +20,7 @@
 /*
  * @test ShrinkGCTest
  * @summary Test if shrink can be done without full gc
- * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64") | (os.arch == "loongarch64"))
  * @library /testlibrary
  * @compile test_classes/ShrinkGCTestBasic.java
  * @run main/othervm ShrinkGCTest
@@ -52,7 +52,13 @@ public class ShrinkGCTest extends TestBase {
                 "GC.elastic_max_heap (4194304K->524288K)(4194304K)",
                 "GC.elastic_max_heap success"
             };
-        }
+        } else if (architecture.equals("loongarch64")) {
+            contains2 = new String[] {
+                "PS_ElasticMaxHeapOp heap after Full GC",
+                "GC.elastic_max_heap (4194304K->516096K)(4194304K)",
+                "GC.elastic_max_heap success"
+            };
+	}
         Test("-XX:+UseParallelGC", "500M", "false", contains2, null);
 
         // CMS
@@ -71,7 +77,13 @@ public class ShrinkGCTest extends TestBase {
                 "GC.elastic_max_heap (4194304K->524288K)(4194304K)",
                 "GC.elastic_max_heap success"
             };
-        }
+        } else if (architecture.equals("loongarch64")) {
+            contains4 = new String[] {
+                "Gen_ElasticMaxHeapOp heap after Full GC",
+                "GC.elastic_max_heap (4194304K->516096K)(4194304K)",
+                "GC.elastic_max_heap success"
+            };
+	}
         Test("-XX:+UseConcMarkSweepGC", "500M", "false", contains4, null);
 
         // G1GC
@@ -93,7 +105,14 @@ public class ShrinkGCTest extends TestBase {
                 "GC.elastic_max_heap (4194304K->65536K)(4194304K)",
                 "GC.elastic_max_heap success"
             };
-        }
+        } else if (architecture.equals("loongarch64")) {
+            contains6 = new String[] {
+                "G1_ElasticMaxHeapOp heap after Young GC",
+                "G1_ElasticMaxHeapOp heap after Full GC",
+                "GC.elastic_max_heap (4194304K->57344K)(4194304K)",
+                "GC.elastic_max_heap success"
+            };
+	}
         Test("-XX:+UseG1GC", "50M", "false", contains6, null);
         String[] contains7 = {
             "G1_ElasticMaxHeapOp heap after Young GC",
@@ -106,7 +125,13 @@ public class ShrinkGCTest extends TestBase {
                 "GC.elastic_max_heap (4194304K->65536K)(4194304K)",
                 "GC.elastic_max_heap success"
             };
-        }
+        } else if (architecture.equals("loongarch64")) {
+            contains7 = new String[] {
+                "G1_ElasticMaxHeapOp heap after Young GC",
+                "GC.elastic_max_heap (4194304K->57344K)(4194304K)",
+                "GC.elastic_max_heap success"
+            };
+	}
         String[] not_contains7 = {
             "G1_ElasticMaxHeapOp heap after Full GC"
         };

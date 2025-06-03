@@ -20,7 +20,7 @@
 /*
  * @test
  * @summary Test Basic Elastic Max Direct Memory resize
- * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64") | (os.arch == "loongarch64"))
  * @library /testlibrary
  * @compile test_classes/NotActiveDirectMemory.java
  * @run main/othervm DirectMemoryBasicTest

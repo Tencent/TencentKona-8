@@ -41,8 +41,14 @@ template <class T>
 inline void PSPromotionManager::claim_or_forward_internal_depth(T* p) {
   if (p != NULL) { // XXX: error if p != NULL here
     oop o = oopDesc::load_decode_heap_oop_not_null(p);
+#ifndef LOONGARCH
     if (o->is_forwarded()) {
       o = o->forwardee();
+#else
+    markOop m = o->mark();
+    if (m->is_marked()) {
+      o = (oop) m->decode_pointer();
+#endif
       // Card mark
       if (PSScavenge::is_obj_in_young(o)) {
         PSScavenge::card_table()->inline_write_ref_field_gc(p, o);
@@ -102,10 +108,18 @@ oop PSPromotionManager::copy_to_survivor_space(oop o) {
 
   oop new_obj = NULL;
 
+#if defined LOONGARCH && !defined ZERO
+  if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
+
   // NOTE! We must be very careful with any methods that access the mark
   // in o. There may be multiple threads racing on it, and it may be forwarded
   // at any time. Do not use oop methods for accessing the mark!
   markOop test_mark = o->mark();
+
+#if defined LOONGARCH && !defined ZERO
+  if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
 
   // The same test as "o->is_forwarded()"
   if (!test_mark->is_marked()) {
@@ -141,6 +155,10 @@ oop PSPromotionManager::copy_to_survivor_space(oop o) {
             }
           }
         }
+
+#if defined LOONGARCH && !defined ZERO
+        if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
       }
     }
 
@@ -200,6 +218,9 @@ oop PSPromotionManager::copy_to_survivor_space(oop o) {
 
     // Copy obj
     Copy::aligned_disjoint_words((HeapWord*)o, (HeapWord*)new_obj, new_obj_size);
+#if defined LOONGARCH && !defined ZERO
+    if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
 
     // Now we have to CAS in the header.
     if (o->cas_forward_to(new_obj, test_mark)) {
@@ -247,6 +268,10 @@ oop PSPromotionManager::copy_to_survivor_space(oop o) {
       // don't update this before the unallocation!
       new_obj = o->forwardee();
     }
+
+#if defined LOONGARCH && !defined ZERO
+    if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
   } else {
     assert(o->is_forwarded(), "Sanity");
     new_obj = o->forwardee();

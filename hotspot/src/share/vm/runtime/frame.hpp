@@ -45,6 +45,8 @@
 # include "adfiles/adGlobals_zero.hpp"
 #elif defined TARGET_ARCH_MODEL_ppc_64
 # include "adfiles/adGlobals_ppc_64.hpp"
+#elif defined TARGET_ARCH_MODEL_loongarch_64
+# include "adfiles/adGlobals_loongarch_64.hpp"
 #endif
 #endif // COMPILER2
 #ifdef TARGET_ARCH_zero
@@ -488,6 +490,9 @@ class frame VALUE_OBJ_CLASS_SPEC {
 
 #ifdef TARGET_ARCH_x86
 # include "frame_x86.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "frame_loongarch.hpp"
 #endif
 #ifdef TARGET_ARCH_aarch64
 # include "frame_aarch64.hpp"

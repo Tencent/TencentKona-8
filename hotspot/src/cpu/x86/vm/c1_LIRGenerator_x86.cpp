@@ -242,20 +242,27 @@ void LIRGenerator::increment_counter(LIR_Address* addr, int step) {
   __ add((LIR_Opr)addr, LIR_OprFact::intConst(step), (LIR_Opr)addr);
 }
 
-void LIRGenerator::cmp_mem_int(LIR_Condition condition, LIR_Opr base, int disp, int c, CodeEmitInfo* info) {
+template<typename T>
+void LIRGenerator::cmp_mem_int_branch(LIR_Condition condition, LIR_Opr base, int disp, int c, T tgt, CodeEmitInfo* info) {
   __ cmp_mem_int(condition, base, disp, c, info);
+  __ branch(condition, T_INT, tgt);
 }
 
+// Explicit instantiation for all supported types.
+template void LIRGenerator::cmp_mem_int_branch(LIR_Condition, LIR_Opr, int, int, Label*, CodeEmitInfo*);
+template void LIRGenerator::cmp_mem_int_branch(LIR_Condition, LIR_Opr, int, int, BlockBegin*, CodeEmitInfo*);
+template void LIRGenerator::cmp_mem_int_branch(LIR_Condition, LIR_Opr, int, int, CodeStub*, CodeEmitInfo*);
 
-void LIRGenerator::cmp_reg_mem(LIR_Condition condition, LIR_Opr reg, LIR_Opr base, int disp, BasicType type, CodeEmitInfo* info) {
+template<typename T>
+void LIRGenerator::cmp_reg_mem_branch(LIR_Condition condition, LIR_Opr reg, LIR_Opr base, int disp, BasicType type, T tgt, CodeEmitInfo* info) {
   __ cmp_reg_mem(condition, reg, new LIR_Address(base, disp, type), info);
+  __ branch(condition, type, tgt);
 }
 
-
-void LIRGenerator::cmp_reg_mem(LIR_Condition condition, LIR_Opr reg, LIR_Opr base, LIR_Opr disp, BasicType type, CodeEmitInfo* info) {
-  __ cmp_reg_mem(condition, reg, new LIR_Address(base, disp, type), info);
-}
-
+// Explicit instantiation for all supported types.
+template void LIRGenerator::cmp_reg_mem_branch(LIR_Condition, LIR_Opr, LIR_Opr, int, BasicType, Label*, CodeEmitInfo*);
+template void LIRGenerator::cmp_reg_mem_branch(LIR_Condition, LIR_Opr, LIR_Opr, int, BasicType, BlockBegin*, CodeEmitInfo*);
+template void LIRGenerator::cmp_reg_mem_branch(LIR_Condition, LIR_Opr, LIR_Opr, int, BasicType, CodeStub*, CodeEmitInfo*);
 
 bool LIRGenerator::strength_reduce_multiply(LIR_Opr left, jint c, LIR_Opr result, LIR_Opr tmp) {
   if (tmp->is_valid() && c > 0 && c < max_jint) {
