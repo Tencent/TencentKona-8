@@ -50,6 +50,9 @@
 #ifdef TARGET_ARCH_ppc
 # include "vm_version_ext_ppc.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "vm_version_ext_loongarch.hpp"
+#endif
 
 #include <stdio.h>
 #include <stdarg.h>

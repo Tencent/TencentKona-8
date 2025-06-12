@@ -86,7 +86,9 @@ class AbstractICache : AllStatic {
 #ifdef TARGET_ARCH_ppc
 # include "icache_ppc.hpp"
 #endif
-
+#ifdef TARGET_ARCH_loongarch
+# include "icache_loongarch.hpp"
+#endif
 
 
 class ICacheStubGenerator : public StubCodeGenerator {

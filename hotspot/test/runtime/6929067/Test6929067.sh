@@ -97,6 +97,10 @@ case "$ARCH" in
   i686)
     ARCH=i386
     ;;
+  loongarch64)
+    COMP_FLAG=""
+    ARCH=loongarch64
+    ;;
   # Assuming other ARCH values need no translation
 esac
 

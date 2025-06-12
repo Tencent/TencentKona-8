@@ -44,6 +44,9 @@
 #ifdef TARGET_ARCH_ppc
 # include "vm_version_ppc.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "vm_version_loongarch.hpp"
+#endif
 
 const char* Abstract_VM_Version::_s_vm_release = Abstract_VM_Version::vm_release();
 const char* Abstract_VM_Version::_s_internal_vm_info_string = Abstract_VM_Version::internal_vm_info_string();
@@ -193,6 +196,8 @@ const char* Abstract_VM_Version::jre_release_version() {
 #else
 #define CPU      "ppc64"
 #endif
+#elif defined(LOONGARCH64)
+#define CPU      "loongarch64"
 #else
 #define CPU      IA32_ONLY("x86")                \
                  IA64_ONLY("ia64")               \

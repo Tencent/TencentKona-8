@@ -62,18 +62,24 @@ public class IntrinsicPredicates {
             = new OrPredicate(
                     new CPUSpecificPredicate("sparc.*", new String[] { "sha1" },
                             null),
+              // Basic instructions are used to implement SHA1 Intrinsics on LA, so "sha1" feature is not needed.
+              new OrPredicate(new CPUSpecificPredicate("loongarch64.*", null,
+                            null),
                     new CPUSpecificPredicate("aarch64", new String[] { "sha1" },
-                            null));
+                            null)));
 
     public static final BooleanSupplier SHA256_INSTRUCTION_AVAILABLE
             = new OrPredicate(new CPUSpecificPredicate("aarch64", new String[] { "sha256" },
                                                        null),
               new OrPredicate(new CPUSpecificPredicate("sparc.*",   new String[] { "sha256" },
                                                        null),
+              // Basic instructions are used to implement SHA256 Intrinsics on LA, so "sha256" feature is not needed.
+              new OrPredicate(new CPUSpecificPredicate("loongarch64.*", null,
+                                                       null),
               new OrPredicate(new CPUSpecificPredicate("ppc64.*",   new String[] { "sha"    },
                                                        null),
                               new CPUSpecificPredicate("ppc64le.*", new String[] { "sha"    },
-                                                       null))));
+                                                       null)))));
 
     public static final BooleanSupplier SHA512_INSTRUCTION_AVAILABLE
             = new OrPredicate(

@@ -63,6 +63,8 @@ public interface ELFHeader {
     public static final int ARCH_i860 = 7;
     /** MIPS architecture type. */
     public static final int ARCH_MIPS = 8;
+    /** LOONGARCH architecture type. */
+    public static final int ARCH_LOONGARCH = 9;
 
     /** Returns a file type which is defined by the file type constants. */
     public short getFileType();

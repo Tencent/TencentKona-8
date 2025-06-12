@@ -1,0 +1,17 @@
+os_family = linux
+
+arch = loongarch
+
+arch_model = loongarch_64
+
+os_arch = linux_loongarch
+
+os_arch_model = linux_loongarch_64
+
+lib_arch = loongarch64
+
+compiler = gcc
+
+gnu_dis_arch = loongarch64
+
+sysdefs = -DLINUX -D_GNU_SOURCE -DLOONGARCH64

@@ -42,6 +42,9 @@
 #ifdef TARGET_ARCH_ppc
 # include "assembler_ppc.inline.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "assembler_loongarch.inline.hpp"
+#endif
 #ifdef TARGET_ARCH_aarch64
 # include "assembler_aarch64.inline.hpp"
 #endif
