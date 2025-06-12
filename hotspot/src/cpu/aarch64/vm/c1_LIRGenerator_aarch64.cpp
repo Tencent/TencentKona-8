@@ -279,29 +279,18 @@ void LIRGenerator::increment_counter(LIR_Address* addr, int step) {
   __ store(reg, addr);
 }
 
-template<typename T>
-void LIRGenerator::cmp_mem_int_branch(LIR_Condition condition, LIR_Opr base, int disp, int c, T tgt, CodeEmitInfo* info) {
+void LIRGenerator::cmp_mem_int(LIR_Condition condition, LIR_Opr base, int disp, int c, CodeEmitInfo* info) {
   LIR_Opr reg = new_register(T_INT);
   __ load(generate_address(base, disp, T_INT), reg, info);
-  __ cmp_branch(condition, reg, LIR_OprFact::intConst(c), T_INT, tgt);
+  __ cmp(condition, reg, LIR_OprFact::intConst(c));
 }
 
-// Explicit instantiation for all supported types.
-template void LIRGenerator::cmp_mem_int_branch(LIR_Condition, LIR_Opr, int, int, Label*, CodeEmitInfo*);
-template void LIRGenerator::cmp_mem_int_branch(LIR_Condition, LIR_Opr, int, int, BlockBegin*, CodeEmitInfo*);
-template void LIRGenerator::cmp_mem_int_branch(LIR_Condition, LIR_Opr, int, int, CodeStub*, CodeEmitInfo*);
-
-template<typename T>
-void LIRGenerator::cmp_reg_mem_branch(LIR_Condition condition, LIR_Opr reg, LIR_Opr base, int disp, BasicType type, T tgt, CodeEmitInfo* info) {
+void LIRGenerator::cmp_reg_mem(LIR_Condition condition, LIR_Opr reg, LIR_Opr base, int disp, BasicType type, CodeEmitInfo* info) {
   LIR_Opr reg1 = new_register(T_INT);
   __ load(generate_address(base, disp, type), reg1, info);
-  __ cmp_branch(condition, reg, reg1, type, tgt);
+  __ cmp(condition, reg, reg1);
 }
 
-// Explicit instantiation for all supported types.
-template void LIRGenerator::cmp_reg_mem_branch(LIR_Condition, LIR_Opr, LIR_Opr, int, BasicType, Label*, CodeEmitInfo*);
-template void LIRGenerator::cmp_reg_mem_branch(LIR_Condition, LIR_Opr, LIR_Opr, int, BasicType, BlockBegin*, CodeEmitInfo*);
-template void LIRGenerator::cmp_reg_mem_branch(LIR_Condition, LIR_Opr, LIR_Opr, int, BasicType, CodeStub*, CodeEmitInfo*);
 
 bool LIRGenerator::strength_reduce_multiply(LIR_Opr left, int c, LIR_Opr result, LIR_Opr tmp) {
 
