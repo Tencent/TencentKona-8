@@ -165,12 +165,12 @@ void LIR_Address::verify0() const {
 #else
   assert(index()->is_illegal() || index()->is_double_cpu() || index()->is_single_cpu(), "wrong index operand");
 #endif
-#ifdef LOONGARCH64
-  assert(base()->type() == T_ADDRESS || base()->type() == T_OBJECT ||
-         base()->type() == T_LONG || base()->type() == T_METADATA,
+#ifndef LOONGARCH64
+  assert(base()->type() == T_OBJECT || base()->type() == T_LONG || base()->type() == T_METADATA,
          "wrong type for addresses");
 #else
-  assert(base()->type() == T_OBJECT || base()->type() == T_LONG || base()->type() == T_METADATA,
+  assert(base()->type() == T_ADDRESS || base()->type() == T_OBJECT ||
+         base()->type() == T_LONG || base()->type() == T_METADATA,
          "wrong type for addresses");
 #endif
 #else
@@ -275,6 +275,8 @@ bool LIR_OprDesc::is_oop() const {
   }
 }
 
+
+
 void LIR_Op2::verify() const {
 #ifdef ASSERT
   switch (code()) {
@@ -316,6 +318,7 @@ void LIR_Op2::verify() const {
 #endif
 }
 
+#ifdef LOONGARCH64
 void LIR_Op4::verify() const {
 #ifdef ASSERT
   switch (code()) {
@@ -328,6 +331,7 @@ void LIR_Op4::verify() const {
   }
 #endif
 }
+#endif
 
 LIR_OpBranch::LIR_OpBranch(LIR_Condition cond, BasicType type, BlockBegin* block)
   : LIR_Op(lir_branch, LIR_OprFact::illegalOpr, (CodeEmitInfo*)NULL)
@@ -385,6 +389,7 @@ void LIR_OpBranch::negate_cond() {
   }
 }
 
+#ifdef LOONGARCH64
 LIR_OpCmpBranch::LIR_OpCmpBranch(LIR_Condition cond, LIR_Opr left, LIR_Opr right, CodeStub* stub, CodeEmitInfo* info)
   : LIR_Op2(lir_cmp_branch, cond, left, right, info)
   , _label(stub->entry())
@@ -434,6 +439,7 @@ void LIR_OpCmpBranch::negate_cond() {
     default: ShouldNotReachHere();
   }
 }
+#endif
 
 LIR_OpTypeCheck::LIR_OpTypeCheck(LIR_Code code, LIR_Opr result, LIR_Opr object, ciKlass* klass,
                                  LIR_Opr tmp1, LIR_Opr tmp2, LIR_Opr tmp3,
@@ -636,7 +642,12 @@ void LIR_OpVisitState::visit(LIR_Op* op) {
       assert(opConvert->_info == NULL, "must be");
       if (opConvert->_opr->is_valid())       do_input(opConvert->_opr);
       if (opConvert->_result->is_valid())    do_output(opConvert->_result);
+#if defined(PPC) || defined(AARCH64)
+      if (opConvert->_tmp1->is_valid())      do_temp(opConvert->_tmp1);
+      if (opConvert->_tmp2->is_valid())      do_temp(opConvert->_tmp2);
+#elif defined(LOONGARCH)
       if (opConvert->_tmp->is_valid())       do_temp(opConvert->_tmp);
+#endif
       do_stub(opConvert->_stub);
 
       break;
@@ -734,6 +745,7 @@ void LIR_OpVisitState::visit(LIR_Op* op) {
       break;
     }
 
+#ifdef LOONGARCH64
 // LIR_OpCmpBranch;
     case lir_cmp_branch:               // may have info, input and result register always invalid
     case lir_cmp_float_branch:         // may have info, input and result register always invalid
@@ -752,6 +764,7 @@ void LIR_OpVisitState::visit(LIR_Op* op) {
 
       break;
     }
+#endif
 
     // special handling for cmove: right input operand must not be equal
     // to the result operand, otherwise the backend fails
@@ -898,6 +911,7 @@ void LIR_OpVisitState::visit(LIR_Op* op) {
       break;
     }
 
+#ifdef LOONGARCH64
 // LIR_Op4
     // special handling for cmp cmove: src2(opr4) operand must not be equal
     // to the result operand, otherwise the backend fails
@@ -920,7 +934,7 @@ void LIR_OpVisitState::visit(LIR_Op* op) {
 
       break;
     }
-
+#endif
 
 // LIR_OpJavaCall
     case lir_static_call:
@@ -1236,12 +1250,14 @@ void LIR_Op2::emit_code(LIR_Assembler* masm) {
   masm->emit_op2(this);
 }
 
+#ifdef LOONGARCH64
 void LIR_OpCmpBranch::emit_code(LIR_Assembler* masm) {
   masm->emit_opCmpBranch(this);
   if (stub()) {
     masm->append_code_stub(stub());
   }
 }
+#endif
 
 void LIR_OpAllocArray::emit_code(LIR_Assembler* masm) {
   masm->emit_alloc_array(this);
@@ -1263,9 +1279,11 @@ void LIR_Op3::emit_code(LIR_Assembler* masm) {
   masm->emit_op3(this);
 }
 
+#ifdef LOONGARCH64
 void LIR_Op4::emit_code(LIR_Assembler* masm) {
   masm->emit_op4(this);
 }
+#endif
 
 void LIR_OpLock::emit_code(LIR_Assembler* masm) {
   masm->emit_lock(this);
@@ -1507,6 +1525,7 @@ void LIR_List::cmp_mem_int(LIR_Condition condition, LIR_Opr base, int disp, int 
                     info));
 }
 
+
 void LIR_List::cmp_reg_mem(LIR_Condition condition, LIR_Opr reg, LIR_Address* addr, CodeEmitInfo* info) {
   append(new LIR_Op2(
                     lir_cmp,
@@ -1514,17 +1533,6 @@ void LIR_List::cmp_reg_mem(LIR_Condition condition, LIR_Opr reg, LIR_Address* ad
                     reg,
                     LIR_OprFact::address(addr),
                     info));
-}
-
-void LIR_List::null_check(LIR_Opr opr, CodeEmitInfo* info, bool deoptimize_on_null) {
-  if (deoptimize_on_null) {
-    // Emit an explicit null check and deoptimize if opr is null
-    CodeStub* deopt = new DeoptimizeStub(info);
-    cmp_branch(lir_cond_equal, opr, LIR_OprFact::oopConst(NULL), T_OBJECT, deopt);
-  } else {
-    // Emit an implicit null check
-    append(new LIR_Op1(lir_null_check, opr, info));
-  }
 }
 
 void LIR_List::allocate_object(LIR_Opr dst, LIR_Opr t1, LIR_Opr t2, LIR_Opr t3, LIR_Opr t4,
@@ -1655,6 +1663,31 @@ void LIR_List::store_check(LIR_Opr object, LIR_Opr array, LIR_Opr tmp1, LIR_Opr 
   }
   append(c);
 }
+
+#ifndef LOONGARCH64
+void LIR_List::null_check(LIR_Opr opr, CodeEmitInfo* info, bool deoptimize_on_null) {
+  if (deoptimize_on_null) {
+    // Emit an explicit null check and deoptimize if opr is null
+    CodeStub* deopt = new DeoptimizeStub(info);
+    cmp(lir_cond_equal, opr, LIR_OprFact::oopConst(NULL));
+    branch(lir_cond_equal, T_OBJECT, deopt);
+  } else {
+    // Emit an implicit null check
+    append(new LIR_Op1(lir_null_check, opr, info));
+  }
+}
+#else
+void LIR_List::null_check(LIR_Opr opr, CodeEmitInfo* info, bool deoptimize_on_null) {
+  if (deoptimize_on_null) {
+    // Emit an explicit null check and deoptimize if opr is null
+    CodeStub* deopt = new DeoptimizeStub(info);
+    cmp_branch(lir_cond_equal, opr, LIR_OprFact::oopConst(NULL), T_OBJECT, deopt);
+  } else {
+    // Emit an implicit null check
+    append(new LIR_Op1(lir_null_check, opr, info));
+  }
+}
+#endif
 
 void LIR_List::cas_long(LIR_Opr addr, LIR_Opr cmp_value, LIR_Opr new_value,
                         LIR_Opr t1, LIR_Opr t2, LIR_Opr result) {
@@ -1904,8 +1937,10 @@ const char * LIR_Op::name() const {
      case lir_cmp_l2i:               s = "cmp_l2i";       break;
      case lir_ucmp_fd2i:             s = "ucomp_fd2i";    break;
      case lir_cmp_fd2i:              s = "comp_fd2i";     break;
+#ifdef LOONGARCH64
      case lir_cmp_branch:            s = "cmp_branch";    break;
      case lir_cmp_float_branch:      s = "cmp_fbranch";   break;
+#endif
      case lir_cmove:                 s = "cmove";         break;
      case lir_add:                   s = "add";           break;
      case lir_sub:                   s = "sub";           break;
@@ -1935,8 +1970,10 @@ const char * LIR_Op::name() const {
      // LIR_Op3
      case lir_idiv:                  s = "idiv";          break;
      case lir_irem:                  s = "irem";          break;
+#ifdef LOONGARCH64
      // LIR_Op4
      case lir_cmp_cmove:             s = "cmp_cmove";     break;
+#endif
      // LIR_OpJavaCall
      case lir_static_call:           s = "static";        break;
      case lir_optvirtual_call:       s = "optvirtual";    break;
@@ -2088,6 +2125,7 @@ void LIR_OpBranch::print_instr(outputStream* out) const {
   }
 }
 
+#ifdef LOONGARCH64
 // LIR_OpCmpBranch
 void LIR_OpCmpBranch::print_instr(outputStream* out) const {
   print_condition(out, condition());        out->print(" ");
@@ -2107,6 +2145,7 @@ void LIR_OpCmpBranch::print_instr(outputStream* out) const {
     out->print("unordered: [B%d] ", ublock()->block_id());
   }
 }
+#endif
 
 void LIR_Op::print_condition(outputStream* out, LIR_Condition cond) {
   switch(cond) {
@@ -2128,9 +2167,16 @@ void LIR_OpConvert::print_instr(outputStream* out) const {
   print_bytecode(out, bytecode());
   in_opr()->print(out);                  out->print(" ");
   result_opr()->print(out);              out->print(" ");
+#if defined(PPC) || defined(AARCH64)
+  if(tmp1()->is_valid()) {
+    tmp1()->print(out); out->print(" ");
+    tmp2()->print(out); out->print(" ");
+  }
+#elif defined(LOONGARCH)
   if(tmp()->is_valid()) {
     tmp()->print(out);                   out->print(" ");
   }
+#endif
 }
 
 void LIR_OpConvert::print_bytecode(outputStream* out, Bytecodes::Code code) {
@@ -2176,6 +2222,11 @@ void LIR_OpRoundFP::print_instr(outputStream* out) const {
 
 // LIR_Op2
 void LIR_Op2::print_instr(outputStream* out) const {
+#ifndef LOONGARCH64
+  if (code() == lir_cmove) {
+    print_condition(out, condition());         out->print(" ");
+  }
+#endif
   in_opr1()->print(out);    out->print(" ");
   in_opr2()->print(out);    out->print(" ");
   if (tmp1_opr()->is_valid()) { tmp1_opr()->print(out);    out->print(" "); }
@@ -2224,6 +2275,7 @@ void LIR_Op3::print_instr(outputStream* out) const {
   result_opr()->print(out);
 }
 
+#ifdef LOONGARCH64
 // LIR_Op4
 void LIR_Op4::print_instr(outputStream* out) const {
   if (code() == lir_cmp_cmove) {
@@ -2235,6 +2287,7 @@ void LIR_Op4::print_instr(outputStream* out) const {
   in_opr4()->print(out);    out->print(" ");
   result_opr()->print(out);
 }
+#endif
 
 
 void LIR_OpLock::print_instr(outputStream* out) const {
@@ -2249,14 +2302,15 @@ void LIR_OpLock::print_instr(outputStream* out) const {
 
 #ifdef ASSERT
 void LIR_OpAssert::print_instr(outputStream* out) const {
+#ifdef LOONGARCH64
   tty->print_cr("function LIR_OpAssert::print_instr unimplemented yet! ");
   Unimplemented();
-  /*
+#else
   print_condition(out, condition()); out->print(" ");
   in_opr1()->print(out);             out->print(" ");
   in_opr2()->print(out);             out->print(", \"");
   out->print("%s", msg());          out->print("\"");
-  */
+#endif
 }
 #endif
 

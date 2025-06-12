@@ -814,7 +814,7 @@ void LIR_Assembler::emit_op2(LIR_Op2* op) {
   }
 }
 
-
+#ifdef LOONGARCH64
 void LIR_Assembler::emit_op4(LIR_Op4* op) {
   switch (op->code()) {
     case lir_cmp_cmove:
@@ -826,6 +826,7 @@ void LIR_Assembler::emit_op4(LIR_Op4* op) {
       break;
   }
 }
+#endif
 
 void LIR_Assembler::build_frame() {
   _masm->build_frame(initial_frame_size_in_bytes(), bang_size_in_bytes());
