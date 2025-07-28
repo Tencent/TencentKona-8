@@ -133,13 +133,6 @@ java/awt/FontMetrics/MaxAdvanceIsMax.java             solaris-all,macosx-all
 # 8028150
 sun/management/jmxremote/bootstrap/RmiSslBootstrapTest.sh	windows-all
 
-# 8145919
-sun/management/jmxremote/bootstrap/RmiRegistrySslTest.sh    generic-all
-sun/management/jmxremote/bootstrap/RmiSslBootstrapTest.sh   generic-all
-
-# These failed cases are also hanging on Openjdk-8u442
-sun/management/jmxremote/startstop/JMXStartStopTest.java    generic-all
-
 ############################################################################
 
 # jdk_jmx
@@ -286,14 +279,6 @@ sun/rmi/transport/tcp/DisableRMIOverHttp/DisableRMIOverHTTPTest.java    windows-
 
 # jdk_security
 
-# 8296480
-java/security/cert/pkix/policyChanges/TestPolicy.java generic-all
-
-# 8296485
-java/security/cert/CertPathBuilder/targetConstraints/BuildEEBasicConstraints.java generic-all
-
-# 8026976
-sun/security/pkcs11/ec/TestKeyFactory.java                      generic-all
 # 8180837
 sun/security/pkcs11/Secmod/AddTrustedCert.java                  generic-all
 sun/security/pkcs11/tls/TestKeyMaterial.java                    generic-all
@@ -333,14 +318,17 @@ sun/security/ssl/com/sun/net/ssl/internal/ssl/X509KeyManager/PreferredKey.java  
 com/sun/crypto/provider/CICO/PBEFunc/CICOPBEFuncTest.java       solaris-sparcv9
 
 # 8206912
-sun/security/krb5/auto/ReplayCacheTestProc.java                 solaris-sparcv9
+sun/security/krb5/auto/ReplayCacheTestProc.java                 solaris-sparcv9,linux-aarch64
 
 sun/security/mscapi/SignedObjectChain.java                      8176183 windows-all
 
 javax/security/auth/callback/PasswordCallback/CheckCleanerBound.java 8285785,8286045,8287596 generic-all
 
-sun/security/krb5/auto/ReplayCacheTestProc.java                 linux-aarch64
+sun/security/krb5/auto/ReplayCacheTestProc.java                 generic-all
 sun/security/pkcs11/Secmod/TestNssDbSqlite.java                 linux-aarch64
+
+# 8292998
+sun/security/pkcs11/Secmod/TrustAnchors.java                    generic-all
 
 ############################################################################
 
@@ -371,10 +359,6 @@ javax/sound/sampled/Mixers/DisabledAssertionCrash.java 7067310 generic-all
 
 # 8172782, 8007410
 tools/launcher/FXLauncherTest.java                     windows-all,linux-all
-
-# 8346140
-tools/jar/ExtractFilesTest.java                                  generic-all
-tools/jar/MultipleManifestTest.java                              generic-all
 
 ############################################################################
 
@@ -434,6 +418,10 @@ javax/management/remote/mandatory/connection/RMIConnector_NPETest.java    linux-
 
 # This test could failed because of the hostname configuration
 sun/rmi/transport/tcp/DisableRMIOverHttp/DisableRMIOverHTTPTest.java      linux-all
+
+# 8205653
+sun/management/jmxremote/bootstrap/RmiRegistrySslTest.sh     generic-all
+sun/management/jmxremote/bootstrap/RmiSslBootstrapTest.sh    generic-all
 ############################################################################
 
 # 8141370
