@@ -68,6 +68,12 @@ if [ $VM_CPU = "aarch64" ]; then
     exit 0;
 fi
 
+# CriticalJNINatives is not supported for loongarch64
+if [ $VM_CPU = "loongarch64" ]; then
+     echo "Test Passed"
+     exit 0;
+fi
+
 THIS_DIR=.
 
 cp ${TESTSRC}${FS}*.java ${THIS_DIR}

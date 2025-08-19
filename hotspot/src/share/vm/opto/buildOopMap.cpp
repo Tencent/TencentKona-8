@@ -50,6 +50,9 @@
 #ifdef TARGET_ARCH_ppc
 # include "vmreg_ppc.inline.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "vmreg_loongarch.inline.hpp"
+#endif
 
 // The functions in this file builds OopMaps after all scheduling is done.
 //

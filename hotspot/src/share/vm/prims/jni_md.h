@@ -42,6 +42,9 @@
 #ifdef TARGET_ARCH_ppc
 # include "jni_ppc.h"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "jni_loongarch.h"
+#endif
 
 
 /*

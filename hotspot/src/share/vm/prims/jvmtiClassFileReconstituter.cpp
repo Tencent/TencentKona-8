@@ -46,6 +46,9 @@
 #ifdef TARGET_ARCH_ppc
 # include "bytes_ppc.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "bytes_loongarch.hpp"
+#endif
 // FIXME: add Deprecated attribute
 // FIXME: fix Synthetic attribute
 // FIXME: per Serguei, add error return handling for ConstantPool::copy_cpool_bytes()

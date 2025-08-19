@@ -69,6 +69,9 @@
 #ifdef TARGET_ARCH_ppc
 # include "vmreg_ppc.inline.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "vmreg_loongarch.inline.hpp"
+#endif
 #ifdef COMPILER2
 #if defined AD_MD_HPP
 # include AD_MD_HPP
@@ -84,6 +87,9 @@
 # include "adfiles/ad_zero.hpp"
 #elif defined TARGET_ARCH_MODEL_ppc_64
 # include "adfiles/ad_ppc_64.hpp"
+#endif
+#ifdef TARGET_ARCH_MODEL_loongarch_64
+# include "adfiles/ad_loongarch_64.hpp"
 #endif
 #endif // COMPILER2
 

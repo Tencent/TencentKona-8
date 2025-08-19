@@ -211,6 +211,9 @@ endif
 ifeq ($(Platform_arch_model), x86_64)
 Src_Files_EXCLUDE += \*x86_32\*
 endif
+ifeq ($(Platform_arch_model), loongarch_64)
+Src_Files_EXCLUDE += \*loongarch_32\*
+endif
 
 # Alternate vm.make
 # This has to be included here to allow changes to the source

@@ -246,6 +246,9 @@ class LIRGenerator: public InstructionVisitor, public BlockClosure {
   void do_getClass(Intrinsic* x);
   void do_currentThread(Intrinsic* x);
   void do_MathIntrinsic(Intrinsic* x);
+#if defined(LOONGARCH64)
+  void do_LibmIntrinsic(Intrinsic* x);
+#endif
   void do_ArrayCopy(Intrinsic* x);
   void do_CompareAndSwap(Intrinsic* x, ValueType* type);
   void do_NIOCheckIndex(Intrinsic* x);
@@ -338,8 +341,15 @@ class LIRGenerator: public InstructionVisitor, public BlockClosure {
   void new_instance    (LIR_Opr  dst, ciInstanceKlass* klass, bool is_unresolved, LIR_Opr  scratch1, LIR_Opr  scratch2, LIR_Opr  scratch3,  LIR_Opr scratch4, LIR_Opr  klass_reg, CodeEmitInfo* info);
 
   // machine dependent
+#ifndef LOONGARCH64
   void cmp_mem_int(LIR_Condition condition, LIR_Opr base, int disp, int c, CodeEmitInfo* info);
   void cmp_reg_mem(LIR_Condition condition, LIR_Opr reg, LIR_Opr base, int disp, BasicType type, CodeEmitInfo* info);
+#else
+  template<typename T>
+  void cmp_mem_int_branch(LIR_Condition condition, LIR_Opr base, int disp, int c, T tgt, CodeEmitInfo* info);
+  template<typename T>
+  void cmp_reg_mem_branch(LIR_Condition condition, LIR_Opr reg, LIR_Opr base, int disp, BasicType type, T tgt, CodeEmitInfo* info);
+#endif
   void cmp_reg_mem(LIR_Condition condition, LIR_Opr reg, LIR_Opr base, LIR_Opr disp, BasicType type, CodeEmitInfo* info);
 
   void arraycopy_helper(Intrinsic* x, int* flags, ciArrayKlass** expected_type);
@@ -367,7 +377,11 @@ class LIRGenerator: public InstructionVisitor, public BlockClosure {
 
   LIR_Opr safepoint_poll_register();
 
+#ifndef LOONGARCH64
   void profile_branch(If* if_instr, If::Condition cond);
+#else
+  void profile_branch(If* if_instr, If::Condition cond, LIR_Opr left = LIR_OprFact::illegalOpr, LIR_Opr right = LIR_OprFact::illegalOpr);
+#endif
   void increment_event_counter_impl(CodeEmitInfo* info,
                                     ciMethod *method, int frequency,
                                     int bci, bool backedge, bool notify);

@@ -3524,7 +3524,7 @@ size_t os::Linux::find_large_page_size() {
 
 #ifndef ZERO
   large_page_size = IA32_ONLY(4 * M) AMD64_ONLY(2 * M) IA64_ONLY(256 * M) SPARC_ONLY(4 * M)
-                     ARM_ONLY(2 * M) PPC_ONLY(4 * M) AARCH64_ONLY(2 * M);
+                     ARM_ONLY(2 * M) PPC_ONLY(4 * M) AARCH64_ONLY(2 * M) LOONGARCH64_ONLY(4 * M);
 #endif // ZERO
 
   FILE *fp = fopen("/proc/meminfo", "r");
@@ -5133,7 +5133,12 @@ jint os::init_2(void)
   Linux::fast_thread_clock_init();
 
   // Allocate a single page and mark it as readable for safepoint polling
+#ifdef OPT_SAFEPOINT
+  void * p = (void *)(0x10000);
+  address polling_page = (address) ::mmap(p, Linux::page_size(), PROT_READ, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+#else
   address polling_page = (address) ::mmap(NULL, Linux::page_size(), PROT_READ, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+#endif
   guarantee( polling_page != MAP_FAILED, "os::init_2: failed to allocate polling page" );
 
   os::set_polling_page( polling_page );
@@ -5168,6 +5173,7 @@ jint os::init_2(void)
   // size.  Add a page for compiler2 recursion in main thread.
   // Add in 2*BytesPerWord times page size to account for VM stack during
   // class initialization depending on 32 or 64 bit VM.
+
   os::Linux::min_stack_allowed = MAX2(os::Linux::min_stack_allowed,
             (size_t)(StackYellowPages+StackRedPages+StackShadowPages) * Linux::page_size() +
                     (2*BytesPerWord COMPILER2_PRESENT(+1)) * Linux::vm_default_page_size());
