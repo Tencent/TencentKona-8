@@ -1,11 +1,10 @@
 /*
- *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
+ * published by the Free Software Foundation. Tencent designates
  * this particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
@@ -17,7 +16,6 @@
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
  */
 /*
  * @test
@@ -50,7 +48,7 @@ public class FilterCDSOption {
                                      "-XX:+UseAppCDS",
                                      "-XX:+RelaxCheckForAppCDS",
                                      "-Xshare:off",
-                                     "-XX:DumpLoadedClassList=filter_cds.list", 
+                                     "-XX:DumpLoadedClassList=filter_cds.list",
                                      "TestProfiledReceiver");
 
         System.out.println(output.getOutput());
@@ -76,7 +74,7 @@ public class FilterCDSOption {
                        "-XX:+RelaxCheckForAppCDS",
                        "-XX:-VerifySharedSpaces",
                        "-Xshare:on",
-                       "-XX:SharedArchiveFile=receiver.jsa", 
+                       "-XX:SharedArchiveFile=receiver.jsa",
                        "-XX:CodeReviveOptions=save,file=classInDirCheck.csa,log=save=trace",
                        "-XX:-TieredCompilation",
                        "-XX:CompileCommand=compileonly,TestProfiledReceiver::foo",
@@ -93,7 +91,7 @@ public class FilterCDSOption {
                       "-XX:+UseAppCDS",
                       "-XX:+RelaxCheckForAppCDS",
                       "-XX:+VerifySharedSpaces",
-                      "-Xshare:on",  
+                      "-Xshare:on",
                       "-XX:SharedArchiveFile=receiver.jsa",
                       "-XX:CodeReviveOptions=restore,file=classInDirCheck.csa,log=restore=trace",
                       "-XX:-TieredCompilation",
@@ -112,7 +110,7 @@ public class FilterCDSOption {
         // load with aot and cds without -XX:+RelaxCheckForAppCDS
         output = Test("-cp", appJar1,
                       "-XX:+UseAppCDS",
-                      "-Xshare:on",  
+                      "-Xshare:on",
                       "-XX:SharedArchiveFile=receiver.jsa",
                       "-XX:CodeReviveOptions=restore,file=classInDirCheck.csa,log=restore=trace",
                       "-XX:-TieredCompilation",

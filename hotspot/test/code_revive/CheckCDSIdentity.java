@@ -1,11 +1,10 @@
 /*
- *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
+ * published by the Free Software Foundation. Tencent designates
  * this particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
@@ -51,7 +50,7 @@ public class CheckCDSIdentity {
                                      "-XX:+UseAppCDS",
                                      "-XX:+RelaxCheckForAppCDS",
                                      "-Xshare:off",
-                                     "-XX:DumpLoadedClassList=check_cds.list", 
+                                     "-XX:DumpLoadedClassList=check_cds.list",
                                      "TestProfiledReceiverC");
 
         System.out.println(output.getOutput());
@@ -83,13 +82,13 @@ public class CheckCDSIdentity {
         System.out.println(output.getOutput());
         output.shouldHaveExitValue(0);
 
-        // save aot with shared archive receiver.jsa 
+        // save aot with shared archive receiver.jsa
         output = Test("-cp",
                        appJar1 + ":" + appJar2,
                        "-XX:+UseAppCDS",
                        "-XX:+RelaxCheckForAppCDS",
                        "-Xshare:on",
-                       "-XX:SharedArchiveFile=receiver.jsa", 
+                       "-XX:SharedArchiveFile=receiver.jsa",
                        "-XX:CodeReviveOptions=save,file=cdsCheckIdentity.csa,log=save=trace",
                        "-XX:-TieredCompilation",
                        "-XX:CompileCommand=compileonly,TestProfiledReceiverC::foo",
@@ -105,7 +104,7 @@ public class CheckCDSIdentity {
         output = Test("-cp", appJar1 + ":" + appJar2,
                       "-XX:+UseAppCDS",
                       "-XX:+RelaxCheckForAppCDS",
-                      "-Xshare:on",  
+                      "-Xshare:on",
                       "-XX:SharedArchiveFile=receiver.jsa",
                       "-XX:CodeReviveOptions=restore,file=cdsCheckIdentity.csa,log=restore=trace",
                       "-XX:-TieredCompilation",
@@ -125,7 +124,7 @@ public class CheckCDSIdentity {
         output = Test("-cp", appJar1 + ":" + appJar2,
                       "-XX:+UseAppCDS",
                       "-XX:+RelaxCheckForAppCDS",
-                      "-Xshare:on",  
+                      "-Xshare:on",
                       "-XX:SharedArchiveFile=config.jsa",
                       "-XX:CodeReviveOptions=restore,file=cdsCheckIdentity.csa,log=restore=trace",
                       "-XX:-TieredCompilation",
@@ -135,18 +134,18 @@ public class CheckCDSIdentity {
                       "-XX:CompileCommand=inline,java.lang.Object::getClass",
                       "TestProfiledReceiverC");
 
-        // Expect: load aot successfully, and fail to revive method 
+        // Expect: load aot successfully, and fail to revive method
         System.out.println(output.getOutput());
         output.shouldNotContain("revive success: ChildC1.hi()Ljava/lang/String");
         output.shouldHaveExitValue(0);
 
-        // save aot with shared archive config.jsa 
+        // save aot with shared archive config.jsa
         output = Test("-cp",
                        appJar1 + ":" + appJar2,
                        "-XX:+UseAppCDS",
                        "-XX:+RelaxCheckForAppCDS",
                        "-Xshare:on",
-                       "-XX:SharedArchiveFile=config.jsa", 
+                       "-XX:SharedArchiveFile=config.jsa",
                        "-XX:CodeReviveOptions=save,file=cdsCheckIdentity_config.csa,log=save=trace",
                        "-XX:-TieredCompilation",
                        "-XX:CompileCommand=compileonly,TestProfiledReceiverC::foo",
@@ -163,12 +162,12 @@ public class CheckCDSIdentity {
                       "-XX:CodeReviveOptions=merge,input_files=.,file=cdsCheckIdentity_merge.csa,log=merge=trace",
                       "-version");
         System.out.println(output.getOutput());
-                      
+
         // load with merged aot and shared archive receiver.jsa
         output = Test("-cp", appJar1 + ":" + appJar2,
                       "-XX:+UseAppCDS",
                       "-XX:+RelaxCheckForAppCDS",
-                      "-Xshare:on",  
+                      "-Xshare:on",
                       "-XX:SharedArchiveFile=receiver.jsa",
                       "-XX:CodeReviveOptions=restore,file=cdsCheckIdentity_merge.csa,log=restore=trace",
                       "-XX:-TieredCompilation",
@@ -188,7 +187,7 @@ public class CheckCDSIdentity {
         output = Test("-cp", appJar1 + ":" + appJar2,
                       "-XX:+UseAppCDS",
                       "-XX:+RelaxCheckForAppCDS",
-                      "-Xshare:on",  
+                      "-Xshare:on",
                       "-XX:SharedArchiveFile=config.jsa",
                       "-XX:CodeReviveOptions=restore,file=cdsCheckIdentity_merge.csa,log=restore=trace",
                       "-XX:-TieredCompilation",

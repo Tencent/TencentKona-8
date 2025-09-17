@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2023, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,7 @@ public class LimitDirectMemoryTestBasic {
             System.out.println(e);
             throw e;
         }
-        System.out.println("allocation finish!");   
+        System.out.println("allocation finish!");
     }
 
     static void resize(int pid, String new_size) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023, 2024 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2023, 2024, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,7 +45,7 @@ public class LimitDirectMemoryTest extends TestBase {
         Test("-XX:+UseParallelGC", "300M", "300", contains1, not_contains1);
         Test("-XX:+UseConcMarkSweepGC", "300M", "300", contains1, not_contains1);
         Test("-XX:+UseG1GC", "300M", "300", contains1, not_contains1);
-        
+
         // Test2
         // init max direct memory is 200M
         // shrink to 50M and alloc 100M direct memory should oom
@@ -59,7 +59,7 @@ public class LimitDirectMemoryTest extends TestBase {
         };
         Test("-XX:+UseParallelGC", "50M", "100", contains2, not_contains2);
         Test("-XX:+UseConcMarkSweepGC", "50M", "100", contains2, not_contains2);
-        Test("-XX:+UseG1GC", "50M", "100", contains2, not_contains2); 
+        Test("-XX:+UseG1GC", "50M", "100", contains2, not_contains2);
     }
 
     private static void Test(String heap_type, String new_size, String alloc_size, String[] contains, String[] not_contains) throws Exception {
@@ -90,5 +90,3 @@ public class LimitDirectMemoryTest extends TestBase {
         }
     }
 }
-
-    
