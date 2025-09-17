@@ -197,6 +197,9 @@ sun/net/www/protocol/http/B6299712.java                          macosx-x64
 # 8166362
 sun/net/www/http/HttpClient/B8025710.java			generic-all
 
+# 8365811
+java/net/CookieHandler/B6644726.java                             generic-all
+
 ############################################################################
 
 # jdk_io

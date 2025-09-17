@@ -1,11 +1,10 @@
 /*
- *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
+ * published by the Free Software Foundation. Tencent designates
  * this particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
@@ -17,7 +16,6 @@
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
  */
 /*
  * @test
@@ -95,7 +93,7 @@ public class ConstantReplaceOpt {
              "-XX:CompileOnly=TestConstant.func1,TestConstant.func2,TestConstant.func3,TestConstant.func4,TestConstant.func5",
              "-XX:CodeReviveOptions=restore,file=1.csa,log=restore=info,opt=trace",
              "TestConstant");
-        
+
         // two type not match
         String[] expect_outputs_two_not_match = {
             "Check opt records negative, score is -1",
@@ -116,7 +114,7 @@ public class ConstantReplaceOpt {
              "-XX:CompileOnly=TestConstant.func1,TestConstant.func2,TestConstant.func3,TestConstant.func4,TestConstant.func5",
              "-XX:CodeReviveOptions=restore,file=1.csa,log=restore=info,opt=trace",
              "TestConstant");
-        
+
         // all type not match
         String[] expect_outputs_all_not_match = {
             "revive fail: No usable or valid aot code version, TestConstant.func1()I",
@@ -159,7 +157,7 @@ public class ConstantReplaceOpt {
              "-XX:CompileOnly=TestConstant.func1,TestConstant.func2,TestConstant.func3,TestConstant.func4,TestConstant.func5",
              "-XX:CodeReviveOptions=save,file=1.csa,log=save=trace,disable_constant_opt",
              "TestConstant");
-        
+
         // same constant, match with disable_constant_opt
         String[] expect_opt_outputs_same_cons_match = {
             "revive success: TestConstant.func1()I",

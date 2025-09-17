@@ -1,11 +1,10 @@
 /*
- *
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
+ * published by the Free Software Foundation. Tencent designates
  * this particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
@@ -17,7 +16,6 @@
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
  */
 /*
  * @test
@@ -50,7 +48,7 @@ public class IdentityCheckTest {
              "TestProfiledReceiver2");
 
         String[] success_outputs = {"revive success: TestProfiledReceiver2.foo",
-                                    "revive success: Child3.hi()Ljava/lang/String"}; 
+                                    "revive success: Child3.hi()Ljava/lang/String"};
         Test(success_outputs,
              "-XX:CodeReviveOptions=restore,log=restore=trace,file=identitycheck.csa",
              "-XX:-TieredCompilation",
@@ -62,7 +60,7 @@ public class IdentityCheckTest {
 
         // modify class GrandChild3
         compileClass();
-        String[] failure_outputs = {"Identity for klass GrandChild3 is different", 
+        String[] failure_outputs = {"Identity for klass GrandChild3 is different",
                                     "revive fail: No usable or valid aot code version, TestProfiledReceiver2.foo"};
         Test(failure_outputs,
              "-XX:CodeReviveOptions=restore,log=restore=trace,file=identitycheck.csa",
@@ -102,7 +100,7 @@ public class IdentityCheckTest {
         fw.write(code);
         fw.close();
 
-        String[] cmd = { System.getProperty("test.jdk") + "/bin/javac", "-d", System.getProperty("test.classes"), 
+        String[] cmd = { System.getProperty("test.jdk") + "/bin/javac", "-d", System.getProperty("test.classes"),
                          "-cp", System.getProperty("test.classes") + ":.", "GrandChild3.java" };
         Process process = Runtime.getRuntime().exec(cmd);
         if (process.waitFor() != 0) {
