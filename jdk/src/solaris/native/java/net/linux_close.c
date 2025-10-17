@@ -121,14 +121,14 @@ static void __attribute((constructor)) init() {
         fdLimit = INT_MAX;
     }
 
-    char* table_max_size = getenv("kona.net.fdtable.maxsize");
+    char* table_max_size = getenv("KONA_NET_FDTABLE_MAX_SIZE");
     if (table_max_size != NULL) {
         int value = atoi(table_max_size);
         if (value > fdTableMaxSize) {
             fdTableMaxSize = value;
         } else {
             fprintf(stderr, "library initialization failed - "
-                    "unable to reset fdTableMaxSize - invalid value with kona.net.fdtable.maxsize");
+                    "unable to reset fdTableMaxSize - invalid value with KONA_NET_FDTABLE_MAX_SIZE");
         }
     }
     /* Allocate table for low value file descriptors. */
