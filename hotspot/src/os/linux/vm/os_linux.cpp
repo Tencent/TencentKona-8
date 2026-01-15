@@ -2292,19 +2292,6 @@ void os::Linux::print_full_memory_info(outputStream* st) {
    st->cr();
 }
 
-static void print_container_helper(outputStream* st, jlong j, const char* metrics) {
-  st->print("%s: ", metrics);
-  if (j > 0) {
-    if (j >= 1024) {
-      st->print_cr(UINT64_FORMAT " k", uint64_t(j) / 1024);
-    } else {
-      st->print_cr(UINT64_FORMAT, uint64_t(j));
-    }
-  } else {
-    st->print_cr("%s", j == OSCONTAINER_ERROR ? "not supported" : "unlimited");
-  }
-}
-
 void os::Linux::print_container_info(outputStream* st) {
   if (!OSContainer::is_containerized()) {
     return;
@@ -2360,11 +2347,14 @@ void os::Linux::print_container_info(outputStream* st) {
     st->print("cpu_shares scale limit: %d\n", (int)CPUShareScaleLimit);
   }
 
-  print_container_helper(st, OSContainer::memory_limit_in_bytes(), "memory_limit_in_bytes");
-  print_container_helper(st, OSContainer::memory_and_swap_limit_in_bytes(), "memory_and_swap_limit_in_bytes");
-  print_container_helper(st, OSContainer::memory_soft_limit_in_bytes(), "memory_soft_limit_in_bytes");
-  print_container_helper(st, OSContainer::memory_usage_in_bytes(), "memory_usage_in_bytes");
-  print_container_helper(st, OSContainer::memory_max_usage_in_bytes(), "memory_max_usage_in_bytes");
+  OSContainer::print_container_helper(st, OSContainer::memory_limit_in_bytes(), "memory_limit_in_bytes");
+  OSContainer::print_container_helper(st, OSContainer::memory_and_swap_limit_in_bytes(), "memory_and_swap_limit_in_bytes");
+  OSContainer::print_container_helper(st, OSContainer::memory_soft_limit_in_bytes(), "memory_soft_limit_in_bytes");
+  OSContainer::print_container_helper(st, OSContainer::memory_usage_in_bytes(), "memory_usage_in_bytes");
+  OSContainer::print_container_helper(st, OSContainer::memory_max_usage_in_bytes(), "memory_max_usage_in_bytes");
+
+  OSContainer::print_version_specific_info(st);
+
   st->cr();
 }
 
