@@ -47,7 +47,7 @@ runtime/SharedArchiveFile/SharedBaseAddress.java               linux-all
 # The RTM related tests fail possibly related to this issue and its patch:
 # https://bugs.openjdk.java.net/browse/JDK-8223660,
 # http://hg.openjdk.java.net/jdk/jdk/rev/82fe7292ca5c.
-# In addition, notice that this patch will introduce JNI calls, and since 
+# In addition, notice that this patch will introduce JNI calls, and since
 # jdk8 has no auto-build function for JNI calls, the following patch might
 # be helpful to solve this problem. Or the native libraries should be compiled
 # manually.
@@ -94,3 +94,5 @@ compiler/rtm/method_options/TestUseRTMLockElidingOption.java 8183263 generic-x64
 # Random failed because gclog_or_tty is used after free
 # See http://tapd.oa.com/20417984/bugtrace/bugs/view/1020417984086238891 for details.
 gc/ergonomics/TestDynamicNumberOfGCThreads.java generic-all
+
+gc/g1/TestShrinkAuxiliaryData30.java 8280016 generic-all
