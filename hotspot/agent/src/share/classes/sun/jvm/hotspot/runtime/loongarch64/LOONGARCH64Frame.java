@@ -357,7 +357,7 @@ public class LOONGARCH64Frame extends Frame {
     // On Intel the return_address is always the word on the stack
     Address senderPC = senderSP.getAddressAt(-1 * VM.getVM().getAddressSize());
 
-    // This is the saved value of EBP which may or may not really be an FP.
+    // This is the saved value of FP which may or may not really be an FP.
     // It is only an FP if the sender is an interpreter frame (or C1?).
     Address savedFPAddr = senderSP.addOffsetTo(- JAVA_FRAME_SENDER_SP_OFFSET * VM.getVM().getAddressSize());
 
@@ -371,7 +371,7 @@ public class LOONGARCH64Frame extends Frame {
         OopMapSet.updateRegisterMap(this, cb, map, true);
       }
 
-      // Since the prolog does the save and restore of EBP there is no oopmap
+      // Since the prolog does the save and restore of FP there is no oopmap
       // for it so we must fill in its location as if there was an oopmap entry
       // since if our caller was compiled code there could be live jvm state in it.
       updateMapWithSavedLink(map, savedFPAddr);

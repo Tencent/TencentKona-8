@@ -37,8 +37,8 @@ public abstract class LOONGARCH64ThreadContext implements ThreadContext {
   // NOTE: the indices for the various registers must be maintained as
   // listed across various operating systems. However, only a small
   // subset of the registers' values are guaranteed to be present (and
-  // must be present for the SA's stack walking to work): EAX, EBX,
-  // ECX, EDX, ESI, EDI, EBP, ESP, and EIP.
+  // must be present for the SA's stack walking to work)
+
 
   public static final int ZERO = 0;
   public static final int RA = 1;

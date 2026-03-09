@@ -33,11 +33,9 @@ OPT_CFLAGS/sharedRuntimeTrans.o = $(OPT_CFLAGS/NOOPT)
 # Must also specify if CPU is little endian
 CFLAGS += -DVM_LITTLE_ENDIAN
 
-CFLAGS += -DSICORTEX_ERRATA
-
 CFLAGS += -D_LP64=1
 
-# The serviceability agent relies on frame pointer (%rbp) to walk thread stack
+# The serviceability agent relies on frame pointer ($fp/$r22) to walk thread stack
 CFLAGS += -fno-omit-frame-pointer
 
 OPT_CFLAGS/compactingPermGenGen.o = -O1

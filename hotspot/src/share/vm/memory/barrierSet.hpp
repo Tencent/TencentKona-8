@@ -27,7 +27,9 @@
 
 #include "memory/memRegion.hpp"
 #include "oops/oopsHierarchy.hpp"
+#if defined LOONGARCH
 #include "runtime/orderAccess.hpp"
+#endif
 
 // This class provides the interface between a barrier implementation and
 // the rest of the system.

@@ -91,7 +91,7 @@ public class LOONGARCH64CurrentFrameGuess {
         // hard since it's easy to misinterpret inter-frame stack
         // pointers as base-of-frame pointers; we also don't know the
         // sizes of C1 frames (not registered in the nmethod) so can't
-        // derive them from ESP.
+        // derive them from SP.
 
         setValues(sp, fp, pc);
         return true;
@@ -183,7 +183,7 @@ public class LOONGARCH64CurrentFrameGuess {
     } else {
       // If the current program counter was not known to us as a Java
       // PC, we currently assume that we are in the run-time system
-      // and attempt to look to thread-local storage for saved ESP and
+      // and attempt to look to thread-local storage for saved SP and
       // EBP. Note that if these are null (because we were, in fact,
       // in Java code, i.e., vtable stubs or similar, and the SA
       // didn't have enough insight into the target VM to understand

@@ -483,7 +483,7 @@ JNIEXPORT jlongArray JNICALL Java_sun_jvm_hotspot_debugger_linux_LinuxDebuggerLo
 
   {
     int i;
-    for (i = 0; i < 31; i++)
+    for (i = 0; i < 32; i++)
       regs[i] = gregs.regs[i];
     regs[REG_INDEX(PC)] = gregs.csr_era;
   }
