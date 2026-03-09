@@ -42,6 +42,9 @@
 #ifdef TARGET_ARCH_ppc
 # include "jniTypes_ppc.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "jniTypes_loongarch.hpp"
+#endif
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 

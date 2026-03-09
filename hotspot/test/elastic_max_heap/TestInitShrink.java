@@ -26,7 +26,7 @@ import com.oracle.java.testlibrary.Asserts;
  * @test TestInitShrink
  * @key gc
  * @summary test init shrink for ElasticMaxHeapSize with unaligned arguments
- * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64") | (os.arch == "loongarch64"))
  * @library /testlibrary
  * @run main/othervm -Xms50M -Xmx2147483647 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483648 -XX:+UseParallelGC TestInitShrink
  * @run main/othervm -Xms50M -Xmx2147483648 -XX:+ElasticMaxHeap -XX:ElasticMaxHeapSize=2147483649 -XX:+UseParallelGC TestInitShrink

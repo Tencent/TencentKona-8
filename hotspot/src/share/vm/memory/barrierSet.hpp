@@ -27,6 +27,9 @@
 
 #include "memory/memRegion.hpp"
 #include "oops/oopsHierarchy.hpp"
+#if defined LOONGARCH
+#include "runtime/orderAccess.hpp"
+#endif
 
 // This class provides the interface between a barrier implementation and
 // the rest of the system.
@@ -95,8 +98,16 @@ private:
   // Keep this private so as to catch violations at build time.
   virtual void write_ref_field_pre_work(     void* field, oop new_val) { guarantee(false, "Not needed"); };
 protected:
-  virtual void write_ref_field_pre_work(      oop* field, oop new_val) {};
-  virtual void write_ref_field_pre_work(narrowOop* field, oop new_val) {};
+  virtual void write_ref_field_pre_work(      oop* field, oop new_val) {
+#if defined LOONGARCH && !defined ZERO
+      if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
+  };
+  virtual void write_ref_field_pre_work(narrowOop* field, oop new_val) {
+#if defined LOONGARCH && !defined ZERO
+      if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
+  };
 public:
 
   // ...then the post-write version.
@@ -132,9 +143,17 @@ public:
 
   // Below length is the # array elements being written
   virtual void write_ref_array_pre(oop* dst, int length,
-                                   bool dest_uninitialized = false) {}
+                                   bool dest_uninitialized = false) {
+#if defined LOONGARCH && !defined ZERO
+      if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
+  }
   virtual void write_ref_array_pre(narrowOop* dst, int length,
-                                   bool dest_uninitialized = false) {}
+                                   bool dest_uninitialized = false) {
+#if defined LOONGARCH && !defined ZERO
+      if (UseSyncLevel >= 2000) OrderAccess::fence();
+#endif
+}
   // Below count is the # array elements being written, starting
   // at the address "start", which may not necessarily be HeapWord-aligned
   inline void write_ref_array(HeapWord* start, size_t count);

@@ -60,6 +60,9 @@
 #ifdef TARGET_ARCH_ppc
 # include "bytes_ppc.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "bytes_loongarch.hpp"
+#endif
 
 // Implementation of all inlined member functions defined in oop.hpp
 // We need a separate file to avoid circular references

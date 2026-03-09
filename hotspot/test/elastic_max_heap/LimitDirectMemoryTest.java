@@ -20,7 +20,7 @@
 /*
  * @test
  * @summary Test max direct memory can take effect after resize
- * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64") | (os.arch == "loongarch64"))
  * @library /testlibrary
  * @compile test_classes/LimitDirectMemoryTestBasic.java
  * @run main/othervm LimitDirectMemoryTest

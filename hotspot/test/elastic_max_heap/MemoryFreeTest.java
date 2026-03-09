@@ -33,7 +33,7 @@ import com.oracle.java.testlibrary.Asserts;
  * @test MemoryFreeTest
  * @key gc
  * @summary test if elaistc max heap free physical memory accordingly
- * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64") | (os.arch == "loongarch64"))
  * @library /testlibrary
  * @run main/othervm -Xms50M -Xmx2G -XX:+ElasticMaxHeap -XX:+UseParallelGC MemoryFreeTest
  * @run main/othervm -Xms50M -Xmx2G -XX:+ElasticMaxHeap -XX:+UseG1GC MemoryFreeTest
@@ -69,7 +69,12 @@ public class MemoryFreeTest extends TestBase {
                 "GC.elastic_max_heap (2097152K->131072K)(2097152K)",
                 "GC.elastic_max_heap success"
             };
-        }
+        } else if (architecture.equals("loongarch64")) {
+            contains1 = new String[] {
+                "GC.elastic_max_heap (2097152K->106496K)(2097152K)",
+                "GC.elastic_max_heap success"
+            };
+	}
         resizeAndCheck(pid, "100M", contains1, null);
         rss = getLinuxPidVmRSS(pid); // rss result is K
         System.out.println("RSS after resize " + rss + "K");

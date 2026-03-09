@@ -42,6 +42,10 @@ if [ "$OS" = "Linux" ]; then
      SA_LIBPATH=$STARTDIR/../src/os/linux/amd64:$STARTDIR/linux/amd64
      OPTIONS="-Dsa.library.path=$SA_LIBPATH"
      CPU=amd64
+   elif [ "$ARCH" = "loongarch64" ] ; then
+     SA_LIBPATH=$STARTDIR/../src/os/linux/loongarch64:$STARTDIR/linux/loongarch64
+     OPTIONS="-Dsa.library.path=$SA_LIBPATH"
+     CPU=loongarch64
    else
      SA_LIBPATH=$STARTDIR/../src/os/linux/i386:$STARTDIR/linux/i386
      OPTIONS="-Dsa.library.path=$SA_LIBPATH"

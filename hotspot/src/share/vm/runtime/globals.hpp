@@ -55,6 +55,9 @@
 #ifdef TARGET_ARCH_ppc
 # include "globals_ppc.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "globals_loongarch.hpp"
+#endif
 #ifdef TARGET_OS_FAMILY_linux
 # include "globals_linux.hpp"
 #endif
@@ -78,6 +81,9 @@
 #endif
 #ifdef TARGET_OS_ARCH_linux_sparc
 # include "globals_linux_sparc.hpp"
+#endif
+#ifdef TARGET_OS_ARCH_linux_loongarch
+# include "globals_linux_loongarch.hpp"
 #endif
 #ifdef TARGET_OS_ARCH_linux_zero
 # include "globals_linux_zero.hpp"
@@ -116,6 +122,9 @@
 #ifdef TARGET_ARCH_sparc
 # include "c1_globals_sparc.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "c1_globals_loongarch.hpp"
+#endif
 #ifdef TARGET_ARCH_arm
 # include "c1_globals_arm.hpp"
 #endif
@@ -147,6 +156,9 @@
 #endif
 #ifdef TARGET_ARCH_sparc
 # include "c2_globals_sparc.hpp"
+#endif
+#ifdef TARGET_ARCH_loongarch
+# include "c2_globals_loongarch.hpp"
 #endif
 #ifdef TARGET_ARCH_arm
 # include "c2_globals_arm.hpp"
