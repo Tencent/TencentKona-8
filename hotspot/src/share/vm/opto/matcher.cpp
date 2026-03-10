@@ -52,6 +52,8 @@
 # include "adfiles/ad_zero.hpp"
 #elif defined TARGET_ARCH_MODEL_ppc_64
 # include "adfiles/ad_ppc_64.hpp"
+#elif defined TARGET_ARCH_MODEL_loongarch_64
+# include "adfiles/ad_loongarch_64.hpp"
 #endif
 
 OptoReg::Name OptoReg::c_frame_pointer;

@@ -84,6 +84,9 @@ class CppInterpreter: public AbstractInterpreter {
 #ifdef TARGET_ARCH_x86
 # include "cppInterpreter_x86.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "cppInterpreter_loongarch.hpp"
+#endif
 #ifdef TARGET_ARCH_aarch64
 # include "cppInterpreter_aarch64.hpp"
 #endif

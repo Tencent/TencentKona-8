@@ -79,6 +79,10 @@
 # include "nativeInst_ppc.hpp"
 # include "vmreg_ppc.inline.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "nativeInst_loongarch.hpp"
+# include "vmreg_loongarch.inline.hpp"
+#endif
 #if INCLUDE_ALL_GCS
 #include "gc_implementation/concurrentMarkSweep/concurrentMarkSweepThread.hpp"
 #include "gc_implementation/shared/suspendibleThreadSet.hpp"

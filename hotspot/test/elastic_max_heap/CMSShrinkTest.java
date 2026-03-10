@@ -20,7 +20,7 @@
 /*
  * @test CMSShrinkTest
  * @summary Test whether exp_EMH_size can take effect when CMS shrink
- * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64") | (os.arch == "loongarch64"))
  * @library /testlibrary
  * @compile test_classes/ShrinkGCTestBasic.java
  * @run main/othervm CMSShrinkTest
@@ -43,7 +43,12 @@ public class CMSShrinkTest extends TestBase {
                 "GC.elastic_max_heap (2097152K->131072K)(4194304K)",
                 "GC.elastic_max_heap success"
             };
-        }
+        } else if (architecture.equals("loongarch64")) {
+            contains1 = new String[] {
+                "GC.elastic_max_heap (2097152K->106496K)(4194304K)",
+                "GC.elastic_max_heap success"
+            };
+	}
         Test("-XX:+UseConcMarkSweepGC", "100M", contains1, null);
     }
 

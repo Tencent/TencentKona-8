@@ -65,6 +65,8 @@ public class PlatformInfo {
       return cpu;
     } else if (cpu.equals("aarch64")) {
       return cpu;
+    } else if (cpu.equals("loongarch64")) {
+      return "loongarch64";
     } else {
       try {
         Class pic = Class.forName("sun.jvm.hotspot.utilities.PlatformInfoClosed");

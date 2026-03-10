@@ -46,6 +46,9 @@
 #ifdef TARGET_ARCH_aarch64
 # include "bytes_aarch64.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "bytes_loongarch.hpp"
+#endif
 
 //
 // The Encoding policy prescribes a template

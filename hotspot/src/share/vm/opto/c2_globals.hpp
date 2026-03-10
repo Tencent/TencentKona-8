@@ -35,6 +35,9 @@
 #ifdef TARGET_ARCH_sparc
 # include "c2_globals_sparc.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "c2_globals_loongarch.hpp"
+#endif
 #ifdef TARGET_ARCH_arm
 # include "c2_globals_arm.hpp"
 #endif

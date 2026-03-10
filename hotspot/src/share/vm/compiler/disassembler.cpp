@@ -50,6 +50,9 @@
 #ifdef TARGET_ARCH_ppc
 # include "depChecker_ppc.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "depChecker_loongarch.hpp"
+#endif
 #ifdef SHARK
 #include "shark/sharkEntry.hpp"
 #endif

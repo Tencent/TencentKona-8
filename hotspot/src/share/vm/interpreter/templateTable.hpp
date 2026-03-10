@@ -40,6 +40,8 @@
 # include "interp_masm_zero.hpp"
 #elif defined TARGET_ARCH_MODEL_ppc_64
 # include "interp_masm_ppc_64.hpp"
+#elif defined TARGET_ARCH_MODEL_loongarch_64
+# include "interp_masm_loongarch_64.hpp"
 #endif
 
 #ifndef CC_INTERP
@@ -375,6 +377,8 @@ class TemplateTable: AllStatic {
 # include "templateTable_zero.hpp"
 #elif defined TARGET_ARCH_MODEL_ppc_64
 # include "templateTable_ppc_64.hpp"
+#elif defined TARGET_ARCH_MODEL_loongarch_64
+# include "templateTable_loongarch_64.hpp"
 #endif
 
 };

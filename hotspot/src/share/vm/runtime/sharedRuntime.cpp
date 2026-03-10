@@ -82,6 +82,11 @@
 # include "nativeInst_ppc.hpp"
 # include "vmreg_ppc.inline.hpp"
 #endif
+#ifdef TARGET_ARCH_loongarch
+# include "nativeInst_loongarch.hpp"
+# include "vmreg_loongarch.inline.hpp"
+#endif
+
 #ifdef COMPILER1
 #include "c1/c1_Runtime1.hpp"
 #endif
@@ -220,7 +225,6 @@ void SharedRuntime::print_ic_miss_histogram() {
   }
 }
 #endif // PRODUCT
-
 #if INCLUDE_ALL_GCS
 
 // G1 write-barrier pre: executed before a pointer store.

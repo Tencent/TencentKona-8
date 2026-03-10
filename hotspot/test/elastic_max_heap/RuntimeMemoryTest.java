@@ -26,7 +26,7 @@ import com.oracle.java.testlibrary.Asserts;
  * @test RuntimeMemoryTest
  * @key gc
  * @summary test java.lang.Runtime max memory and total memory
- * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64") | (os.arch == "loongarch64"))
  * @library /testlibrary
  * @run main/othervm -Xms50M -Xmx2G -XX:+ElasticMaxHeap -XX:+UseParallelGC RuntimeMemoryTest
  * @run main/othervm -Xms50M -Xmx2G -XX:+ElasticMaxHeap -XX:+UseG1GC RuntimeMemoryTest
@@ -72,14 +72,19 @@ public class RuntimeMemoryTest extends TestBase {
                 "GC.elastic_max_heap (2097152K->131072K)(2097152K)",
                 "GC.elastic_max_heap success"
             };
-        }
+        } else if (architecture.equals("loongarch64")) {
+            contains1 = new String[] {
+                "GC.elastic_max_heap (2097152K->106496K)(2097152K)",
+                "GC.elastic_max_heap success"
+            };
+	}
         resizeAndCheck(pid, "100M", contains1, null);
         max = r.maxMemory() / M;
         total = r.totalMemory() / M;
         free = r.freeMemory() / M;
         System.out.println("After resize -- Max: " + max + "M, Total: " + total + "M, Free: " + free + "M");
         long target_size = 101L;
-        if (architecture.equals("aarch64")) {
+        if (architecture.equals("aarch64") || architecture.equals("loongarch64")) {
             target_size = 129L;
         }
         Asserts.assertLT(max, target_size);

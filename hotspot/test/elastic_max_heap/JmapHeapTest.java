@@ -20,7 +20,7 @@
 /*
  * @test
  * @summary Test jmap -heap result
- * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64"))
+ * @requires (os.family == "linux") & ((os.arch == "amd64") | (os.arch == "aarch64") | (os.arch == "loongarch64"))
  * @library /testlibrary
  * @compile test_classes/NotActiveHeap.java
  * @run main/othervm JmapHeapTest
@@ -83,7 +83,12 @@ public class JmapHeapTest extends TestBase {
                     "GC.elastic_max_heap success",
                     "GC.elastic_max_heap (622592K->524288K)(2097152K)",
                 };
-            }
+            } else if (architecture.equals("loongarch64")) {
+                contains2 = new String[] {
+                    "GC.elastic_max_heap success",
+                    "GC.elastic_max_heap (614400K->516096K)(2097152K)",
+                };
+	    }
             resizeAndCheck(pid, "500M", contains2, null);
             // check heap info after shrink
             String[] contains3 = {
@@ -95,7 +100,12 @@ public class JmapHeapTest extends TestBase {
                     "MaxHeapSize              = 2147483648 (2048.0MB)",
                     "CurrentElasticHeapSize   = 536870912 (512.0MB)"
                 };
-            }
+            } else if (architecture.equals("loongarch64")) {
+                contains3 = new String[] {
+                    "MaxHeapSize              = 2147483648 (2048.0MB)",
+                    "CurrentElasticHeapSize   = 528482304 (504.0MB)"
+                };
+	    }
             jmapAndCheck(pid, contains3);
 
             // expand to 1G should be fine for any GC
@@ -108,7 +118,12 @@ public class JmapHeapTest extends TestBase {
                     "GC.elastic_max_heap success",
                     "GC.elastic_max_heap (524288K->1048576K)(2097152K)",
                 };
-            }
+            } else if (architecture.equals("loongarch64")) {
+                contains4 = new String[] {
+                    "GC.elastic_max_heap success",
+                    "GC.elastic_max_heap (516096K->1048576K)(2097152K)",
+                };
+	    }
             resizeAndCheck(pid, "1G", contains4, null);
             // check heap info after expand
             String[] contains5 = {

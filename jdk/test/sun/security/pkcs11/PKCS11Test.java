@@ -595,6 +595,8 @@ public abstract class PKCS11Test {
             PKCS11_BASE + "/nss/lib/linux-amd64/"});
         osMap.put("Linux-ppc64-64", new String[]{"/usr/lib64/"});
         osMap.put("Linux-ppc64le-64", new String[]{"/usr/lib64/"});
+        osMap.put("Linux-loongarch64-64", new String[]{"/usr/lib/loongarch64-linux-gnu/",
+                "/usr/lib64/" });
         osMap.put("Windows-x86-32", new String[]{
             PKCS11_BASE + "/nss/lib/windows-i586/".replace('/', SEP)});
         osMap.put("Windows-amd64-64", new String[]{
