@@ -289,6 +289,9 @@ sun/security/pkcs11/tls/TestKeyMaterial.java                    generic-all
 # 7164518
 sun/security/krb5/auto/Unreachable.java                         macosx-all
 
+# 8382876
+sun/security/krb5/auto/UserIterCount.java                       generic-all
+
 # 8160071
 sun/security/pkcs11/sslecc/ClientJSSEServerJSSE.java            linux-all
 
@@ -444,4 +447,5 @@ security/infra/java/security/cert/CertPathValidator/certification/CAInterop.java
 security/infra/java/security/cert/CertPathValidator/certification/CAInterop.java#certignarootca         8331883 generic-all
 security/infra/java/security/cert/CertPathValidator/certification/CAInterop.java#entrustrootcag4        8367256 generic-all
 security/infra/java/security/cert/CertPathValidator/certification/CAInterop.java#teliasonerarootcav1    8333640 generic-all
+security/infra/java/security/cert/CertPathValidator/certification/CAInterop.java#microsoftrsa2017       8374886 generic-all
 security/infra/java/security/cert/CertPathValidator/certification/LuxTrustCA.java                       8314509 generic-all
