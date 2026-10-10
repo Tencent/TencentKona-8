@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023, 2024, Tencent. All rights reserved.
+ * Copyright (C) 2023, 2026, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
@@ -21,7 +21,9 @@
 package sun.security.util;
 
 import java.math.BigInteger;
+import java.security.AccessController;
 import java.security.InvalidKeyException;
+import java.security.PrivilegedAction;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECField;
@@ -204,6 +206,115 @@ public final class SMUtil {
 
         boolean[] keyUsage = certificate.getKeyUsage();
         return keyUsage == null || keyUsage[2] || keyUsage[3] || keyUsage[4];
+    }
+
+    // KeyUsage bit indices (RFC 5280 4.2.1.3):
+    //   0 digitalSignature, 1 nonRepudiation, 2 keyEncipherment,
+    //   3 dataEncipherment, 4 keyAgreement.
+
+    // Role-exclusive sign-cert check for peer-certificate role validation.
+    // When exclusive is false, delegates to the legacy lenient check. When
+    // exclusive is true, the keyUsage extension MUST be present, assert
+    // digitalSignature, and NOT assert any encryption/agreement usage, so that
+    // an encryption certificate cannot be used in the signing (identity) slot.
+    public static boolean isSignCert(X509Certificate certificate, boolean exclusive) {
+        if (!exclusive) {
+            return isSignCert(certificate);
+        }
+        if (certificate == null) {
+            return false;
+        }
+        boolean[] ku = certificate.getKeyUsage();
+        return ku != null && ku.length >= 5
+                && ku[0] && !ku[2] && !ku[3] && !ku[4];
+    }
+
+    // Role-exclusive enc-cert check for peer-certificate role validation.
+    // When exclusive is false, delegates to the legacy lenient check. When
+    // exclusive is true, the keyUsage extension MUST be present, assert one of
+    // keyEncipherment/dataEncipherment/keyAgreement, and NOT assert any
+    // signature/non-repudiation usage.
+    public static boolean isEncCert(X509Certificate certificate, boolean exclusive) {
+        if (!exclusive) {
+            return isEncCert(certificate);
+        }
+        if (certificate == null) {
+            return false;
+        }
+        boolean[] ku = certificate.getKeyUsage();
+        return ku != null && ku.length >= 5
+                && (ku[2] || ku[3] || ku[4]) && !ku[0] && !ku[1];
+    }
+
+    // The result of the strict TLCP double-certificate pair validation;
+    // anything other than OK is the first failed rule.
+    public enum TlcpDualCertPairCheck {
+        OK, SIGN_KEY_USAGE, ENC_KEY_USAGE, SAME_KEY, DIFFERENT_IDENTITY
+    }
+
+    // Stable "same key" test: compare the encoded key material rather than
+    // relying on whether the provider overrides PublicKey.equals(). Fails
+    // closed on null certificates or missing encodings (cannot prove the keys
+    // differ -> treat as the same).
+    public static boolean hasSamePublicKey(X509Certificate a, X509Certificate b) {
+        if (a == null || b == null) {
+            return true;
+        }
+        byte[] ea = a.getPublicKey().getEncoded();
+        byte[] eb = b.getPublicKey().getEncoded();
+        return ea == null || eb == null || java.util.Arrays.equals(ea, eb);
+    }
+
+    // TLCP double-certificate same-identity test: requires the subject and the
+    // issuer to be identical.
+    public static boolean isTlcpPairSameIdentity(
+            X509Certificate sign, X509Certificate enc) {
+        return sign.getSubjectX500Principal().equals(enc.getSubjectX500Principal())
+                && sign.getIssuerX500Principal().equals(enc.getIssuerX500Principal());
+    }
+
+    // The single source of truth for the strict TLCP sign/enc pairing rule.
+    public static TlcpDualCertPairCheck checkTlcpDualCertPair(
+            X509Certificate sign, X509Certificate enc) {
+        if (!isSignCert(sign, true)) {
+            return TlcpDualCertPairCheck.SIGN_KEY_USAGE;
+        }
+        if (!isEncCert(enc, true)) {
+            return TlcpDualCertPairCheck.ENC_KEY_USAGE;
+        }
+        if (hasSamePublicKey(sign, enc)) {
+            return TlcpDualCertPairCheck.SAME_KEY;
+        }
+        if (!isTlcpPairSameIdentity(sign, enc)) {
+            return TlcpDualCertPairCheck.DIFFERENT_IDENTITY;
+        }
+        return TlcpDualCertPairCheck.OK;
+    }
+
+    // Boolean wrapper over checkTlcpDualCertPair for the producer-side pair
+    // search. Strict-only by name, to avoid being misread as "valid in lenient
+    // mode too".
+    public static boolean isValidTlcpDualCertPairStrict(
+            X509Certificate sign, X509Certificate enc) {
+        return checkTlcpDualCertPair(sign, enc) == TlcpDualCertPairCheck.OK;
+    }
+
+    // Whether the legacy TLCP dual-certificate compat mode is enabled. When
+    // true, the sign/enc role keyUsage checks are relaxed and the
+    // same-identity binding is not enforced. A single certificate serving both
+    // roles is NEVER accepted, even in this mode.
+    //
+    // SECURITY: enabling this weakens peer-certificate role validation; use
+    // only as an interop break-glass. Opt in with:
+    //   -Djdk.tlcp.dualCertCompat=true
+    public static boolean isDualCertCompat() {
+        return Boolean.parseBoolean(AccessController.doPrivileged(
+                new PrivilegedAction<String>() {
+                    public String run() {
+                        return System.getProperty(
+                                "jdk.tlcp.dualCertCompat", "false");
+                    }
+                }));
     }
 
     private SMUtil() { }

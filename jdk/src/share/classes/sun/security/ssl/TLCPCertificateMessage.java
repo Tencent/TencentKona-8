@@ -529,17 +529,23 @@ public class TLCPCertificateMessage {
             X509Certificate[] signCertChain = null;
             X509Certificate[] encCertChain = null;
 
-            if (certs.length == 1) {
-                signCert = certs[0];
-                encCert = certs[0];
-                signCertChain = new X509Certificate[] { signCert };
-                encCertChain = new X509Certificate[] { encCert };
-            } else if (certs.length == 2) {
+            boolean compat = SMUtil.isDualCertCompat();
+
+            // A TLCP certificate message must always carry both a sign
+            // certificate and an enc certificate, regardless of compat mode.
+            // A single certificate serving both roles is never accepted.
+            if (certs.length < 2) {
+                throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                        "The TLCP certificate message must contain both a " +
+                        "sign certificate and an enc certificate");
+            }
+
+            if (certs.length == 2) {
                 signCert = certs[0];
                 encCert = certs[1];
                 signCertChain = new X509Certificate[] { signCert };
                 encCertChain = new X509Certificate[] { encCert };
-            } else if (certs.length > 2) {
+            } else { // certs.length > 2
                 CertListFormat format = null;
                 if (SMUtil.isCA(certs[certs.length - 1])) {
                     format = CertListFormat.SIGN_ENC_CA;
@@ -570,17 +576,49 @@ public class TLCPCertificateMessage {
                 }
             }
 
-            // Check sign cert
-            if (!SMUtil.isSignCert(signCert)) {
+            // The sign and enc certificates must always be two distinct keys,
+            // so that a single certificate cannot serve both roles even in
+            // compat mode.
+            if (SMUtil.hasSamePublicKey(signCert, encCert)) {
                 throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
-                        "The sign cert doesn't contain key usage digitalSignature");
+                        "The sign cert and enc cert must be two distinct keys");
             }
 
-            // Check enc cert
-            if (!SMUtil.isEncCert(encCert)) {
-                throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
-                        "The enc cert doesn't contain key usages in " +
-                        "keyEncipherment, dataEncipherment and keyAgreement.");
+            if (compat) {
+                // Legacy lenient, position-based keyUsage role checks.
+                if (!SMUtil.isSignCert(signCert)) {
+                    throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                            "The sign cert doesn't contain key usage digitalSignature");
+                }
+                if (!SMUtil.isEncCert(encCert)) {
+                    throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                            "The enc cert doesn't contain key usages in " +
+                            "keyEncipherment, dataEncipherment and keyAgreement.");
+                }
+            } else {
+                // Strict TLCP double-certificate pairing. The single source of
+                // truth is SMUtil.checkTlcpDualCertPair; map its result to a
+                // distinguishable fatal alert.
+                switch (SMUtil.checkTlcpDualCertPair(signCert, encCert)) {
+                    case SIGN_KEY_USAGE:
+                        throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                                "The sign cert must assert the digitalSignature " +
+                                "key usage only (no encryption key usage)");
+                    case ENC_KEY_USAGE:
+                        throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                                "The enc cert must assert a keyEncipherment, " +
+                                "dataEncipherment or keyAgreement key usage only " +
+                                "(no signature key usage)");
+                    case SAME_KEY:
+                        throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                                "The sign cert and enc cert must be two distinct keys");
+                    case DIFFERENT_IDENTITY:
+                        throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                                "The sign cert and enc cert must represent the " +
+                                "same identity");
+                    case OK:
+                        break;
+                }
             }
 
             return new TLCP11Credentials(
