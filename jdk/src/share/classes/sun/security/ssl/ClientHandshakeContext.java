@@ -95,6 +95,16 @@ class ClientHandshakeContext extends HandshakeContext {
     // the handshakeConsumers Map will always have it present there.
     boolean receivedCertReq = false;
 
+    // Set by the ServerKeyExchange consumer only after the message has
+    // been fully consumed and whatever verification the negotiated key
+    // exchange requires has completed (for K_SM2 that necessarily includes
+    // the SKE signature verification).  In TLCP ECC static suites (K_SM2)
+    // the SKE signature is the only cryptographic binding between the sign
+    // cert and the enc cert; its absence lets an attacker substitute the
+    // enc cert and impersonate the server, so ServerHelloDone enforces its
+    // presence for that key exchange.
+    boolean receivedServerKeyExchange = false;
+
     // PSK identity is selected in first Hello and used again after HRR
     byte[] pskIdentity;
 
