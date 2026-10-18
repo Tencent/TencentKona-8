@@ -170,6 +170,11 @@ public final class SMUtil {
         }
     }
 
+    // TLCP encryption certificate authType. It selects the encryption
+    // certificate key usage rule in EndEntityChecker, so it is used only by
+    // the TLCP encryption certificate path validation.
+    public static final String SM2_ENC = "SM2_ENC";
+
     // An SM certificate must use curveSM2 as ECC curve
     // and SM2withSM3 as signature scheme.
     public static boolean isSMCert(X509Certificate cert) {

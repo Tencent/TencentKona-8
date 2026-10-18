@@ -1,0 +1,45 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 1 (0x1)
+        Signature Algorithm: SM2-with-SM3
+        Issuer: CN = tlcp-intca
+        Validity
+            Not Before: Jan  1 00:00:00 2020 GMT
+            Not After : Jan  2 00:00:00 2020 GMT
+        Subject: CN = tlcp-server
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub:
+                    04:f4:5c:1a:68:e4:c4:4a:d7:bc:97:96:8a:58:36:
+                    f5:d6:d8:70:de:c0:3a:52:30:75:a0:a3:3f:dc:e7:
+                    99:3a:17:bb:e9:f3:2d:be:43:69:6f:3f:ad:12:f5:
+                    67:d3:62:e6:4a:e5:05:0b:5a:7d:ce:18:27:80:be:
+                    97:a8:a4:11:01
+                ASN1 OID: SM2
+        X509v3 extensions:
+            X509v3 Subject Key Identifier:
+                C9:37:D6:E0:43:6A:8F:52:D4:65:B9:DF:C3:B5:EA:66:FB:6B:6B:EA
+            X509v3 Authority Key Identifier:
+                34:4B:2B:54:8E:09:53:6B:6B:72:29:7D:B5:41:6E:DC:AF:34:69:E5
+            X509v3 Basic Constraints: critical
+                CA:FALSE
+            X509v3 Key Usage: critical
+                Key Encipherment, Data Encipherment, Key Agreement
+    Signature Algorithm: SM2-with-SM3
+    Signature Value:
+        30:44:02:20:35:50:e6:01:01:57:36:e0:52:04:ec:c3:d8:3f:
+        80:ec:d2:bf:7e:6f:20:cf:ae:71:7d:7c:8e:32:14:c3:5d:b9:
+        02:20:60:87:d7:59:74:b1:5a:d1:1a:a0:6b:bb:82:a4:a0:72:
+        58:ff:be:29:6d:50:a0:a9:7e:7a:e2:d4:0a:ba:66:ab
+-----BEGIN CERTIFICATE-----
+MIIBeTCCASCgAwIBAgIBATAKBggqgRzPVQGDdTAVMRMwEQYDVQQDDAp0bGNwLWlu
+dGNhMB4XDTIwMDEwMTAwMDAwMFoXDTIwMDEwMjAwMDAwMFowFjEUMBIGA1UEAwwL
+dGxjcC1zZXJ2ZXIwWTATBgcqhkjOPQIBBggqgRzPVQGCLQNCAAT0XBpo5MRK17yX
+lopYNvXW2HDewDpSMHWgoz/c55k6F7vp8y2+Q2lvP60S9WfTYuZK5QULWn3OGCeA
+vpeopBEBo2AwXjAdBgNVHQ4EFgQUyTfW4ENqj1LUZbnfw7XqZvtra+owHwYDVR0j
+BBgwFoAUNEsrVI4JU2trcil9tUFu3K80aeUwDAYDVR0TAQH/BAIwADAOBgNVHQ8B
+Af8EBAMCAzgwCgYIKoEcz1UBg3UDRwAwRAIgNVDmAQFXNuBSBOzD2D+A7NK/fm8g
+z65xfXyOMhTDXbkCIGCH11l0sVrRGqBru4KkoHJY/74pbVCgqX564tQKumar
+-----END CERTIFICATE-----
