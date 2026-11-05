@@ -1,0 +1,4 @@
+basicConstraints = critical, CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment, dataEncipherment, keyAgreement
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid, issuer

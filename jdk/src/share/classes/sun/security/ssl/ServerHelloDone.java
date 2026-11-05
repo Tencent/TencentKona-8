@@ -155,7 +155,23 @@ final class ServerHelloDone {
             //
             // validate
             //
-            // blank
+            // TLCP ECC static suites (K_SM2) require a ServerKeyExchange: its
+            // signature is the only cryptographic binding between the sign
+            // cert and the enc cert.  GB/T 38636-2020 6.4.5.4 mandates a
+            // digitally-signed struct for every key exchange method, so the
+            // SKE is never absent in TLCP (unlike TLS 1.2 RSA).  ECDHE
+            // (K_SM2E) already fails naturally when the SKE is missing (no
+            // key-exchange credentials are produced), so only the static-ECC
+            // case needs this explicit guard.  The check runs before the
+            // ClientKeyExchange producer below, so a missing SKE aborts the
+            // handshake without ever encrypting the premaster secret.
+            if (chc.negotiatedCipherSuite.keyExchange
+                    == CipherSuite.KeyExchange.K_SM2
+                    && !chc.receivedServerKeyExchange) {
+                throw chc.conContext.fatal(Alert.UNEXPECTED_MESSAGE,
+                        "ServerKeyExchange is required for TLCP ECC static "
+                        + "cipher suites but was not received");
+            }
 
             //
             // update
