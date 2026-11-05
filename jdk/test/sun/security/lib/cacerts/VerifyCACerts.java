@@ -48,12 +48,12 @@ public class VerifyCACerts {
             + File.separator + "security" + File.separator + "cacerts";
 
     // The numbers of certs now.
-    private static final int COUNT = 112;
+    private static final int COUNT = 107;
 
     // SHA-256 of cacerts, can be generated with
     // shasum -a 256 cacerts | sed -e 's/../&:/g' | tr '[:lower:]' '[:upper:]' | cut -c1-95
     private static final String CHECKSUM
-            = "FC:D9:7A:51:B7:EF:4F:AF:B2:F7:29:E3:17:83:41:F4:32:ED:C6:B6:CD:4A:3E:DF:F3:93:E5:C7:88:50:5B:5D";
+            = "59:B5:F8:81:44:16:C3:38:C9:20:E3:E5:70:EE:C7:BC:1E:4E:BD:A5:D3:9C:C5:2B:77:E5:34:88:7E:E5:3A:0C";
 
     // map of cert alias to SHA-256 fingerprint
     @SuppressWarnings("serial")
