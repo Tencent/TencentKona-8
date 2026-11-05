@@ -33,7 +33,9 @@ import java.security.interfaces.ECKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECParameterSpec;
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import sun.security.ssl.SupportedGroupsExtension.NamedGroup;
@@ -231,29 +233,17 @@ enum TLCPAuthentication implements SSLAuthentication {
                 return null;
             }
 
-            PossessionEntry signPossEntry = null;
-            PossessionEntry encPossEntry = null;
+            List<PossessionEntry> candidates = new ArrayList<>();
             for (String clientAlias : clientAliases) {
                 PossessionEntry bufPossEntry = clientPossEntry(
                         chc, keyType, km, clientAlias);
-                if (bufPossEntry == null) {
-                    continue;
-                }
-
-                if (signPossEntry == null
-                        && SMUtil.isSignCert(bufPossEntry.popCert)) {
-                    signPossEntry = bufPossEntry;
-                } else if (SMUtil.isEncCert(bufPossEntry.popCert)) {
-                    encPossEntry = bufPossEntry;
-                }
-
-                if (signPossEntry != null && encPossEntry != null) {
-                    break;
+                if (bufPossEntry != null) {
+                    candidates.add(bufPossEntry);
                 }
             }
 
-            TLCP11Possession tlcpPossession
-                    = createPossession(signPossEntry, encPossEntry);
+            TLCP11Possession tlcpPossession = selectTlcpPossession(
+                    candidates, SMUtil.isDualCertCompat());
             if (tlcpPossession != null) {
                 return tlcpPossession;
             }
@@ -328,15 +318,38 @@ enum TLCPAuthentication implements SSLAuthentication {
                 continue;
             }
 
-            PossessionEntry signPossEntry = null;
-            PossessionEntry encPossEntry = null;
+            List<PossessionEntry> candidates = new ArrayList<>();
             for (String serverAlias : serverAliases) {
                 PossessionEntry bufPossEntry = serverPossEntry(
                         shc, keyType, km, serverAlias);
-                if (bufPossEntry == null) {
-                    continue;
+                if (bufPossEntry != null) {
+                    candidates.add(bufPossEntry);
                 }
+            }
 
+            TLCP11Possession tlcpPossession = selectTlcpPossession(
+                    candidates, SMUtil.isDualCertCompat());
+            if (tlcpPossession != null) {
+                return tlcpPossession;
+            }
+        }
+
+        return null;
+    }
+
+    // Select a TLCP sign/enc possession from the candidate entries. In compat
+    // mode this keeps the legacy behaviour (first signing-capable cert and
+    // first encryption-capable cert). In strict mode it searches the
+    // candidates for a (sign, enc) pair satisfying the strict pairing rule
+    // (role-exclusive keyUsage, distinct keys, same identity), so the producer
+    // never emits a pair the hardened consumer would reject. A single
+    // certificate is never reused for both roles.
+    private static TLCP11Possession selectTlcpPossession(
+            List<PossessionEntry> candidates, boolean compat) {
+        if (compat) {
+            PossessionEntry signPossEntry = null;
+            PossessionEntry encPossEntry = null;
+            for (PossessionEntry bufPossEntry : candidates) {
                 if (signPossEntry == null
                         && SMUtil.isSignCert(bufPossEntry.popCert)) {
                     signPossEntry = bufPossEntry;
@@ -349,13 +362,22 @@ enum TLCPAuthentication implements SSLAuthentication {
                 }
             }
 
-            TLCP11Possession tlcpPossession
-                    = createPossession(signPossEntry, encPossEntry);
-            if (tlcpPossession != null) {
-                return tlcpPossession;
+            return createPossession(signPossEntry, encPossEntry);
+        }
+
+        for (PossessionEntry signCand : candidates) {
+            for (PossessionEntry encCand : candidates) {
+                if (SMUtil.isValidTlcpDualCertPairStrict(
+                        signCand.popCert, encCand.popCert)) {
+                    return createPossession(signCand, encCand);
+                }
             }
         }
 
+        if (SSLLogger.isOn && SSLLogger.isOn("ssl")) {
+            SSLLogger.warning(
+                    "No valid TLCP sign/enc certificate pair selected");
+        }
         return null;
     }
 
@@ -369,12 +391,8 @@ enum TLCPAuthentication implements SSLAuthentication {
             return null;
         }
 
-        // Use sign cert as enc cert if possible
-        if (encPossEntry == null
-                && SMUtil.isEncCert(signPossEntry.popCert)) {
-            encPossEntry = signPossEntry;
-        }
-
+        // A single certificate must never serve both roles: a separate enc
+        // certificate is always required (no "sign cert as enc cert" fallback).
         if (encPossEntry == null) {
             if (SSLLogger.isOn && SSLLogger.isOn("ssl")) {
                 SSLLogger.warning("No X.509 enc cert selected");

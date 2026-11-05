@@ -20,9 +20,9 @@ Certificate:
                     93:57:59:ae:e5
                 ASN1 OID: SM2
         X509v3 extensions:
-            X509v3 Subject Key Identifier: 
+            X509v3 Subject Key Identifier:
                 DF:37:41:A6:65:54:7E:59:CC:64:36:71:47:57:E6:39:6F:7D:75:20
-            X509v3 Authority Key Identifier: 
+            X509v3 Authority Key Identifier:
                 DirName:/CN=tlcp-ca
                 serial:5A:E5:9B:89:D5:9B:D7:CF:F7:E8:A0:4C:69:0E:C9:DC:DA:1A:13:6F
             X509v3 Basic Constraints: critical

@@ -120,6 +120,11 @@ final class ServerKeyExchange {
                         ke.getHandshakeConsumers(chc)) {
                     if (hc.getKey() == SSLHandshake.SERVER_KEY_EXCHANGE.id) {
                         hc.getValue().consume(context, message);
+                        // The specific consumer completed the parsing and the
+                        // verification required by the negotiated key exchange
+                        // (for K_SM2 this includes the SKE signature check,
+                        // which throws a fatal on failure before reaching here).
+                        chc.receivedServerKeyExchange = true;
                         return;
                     }
                 }

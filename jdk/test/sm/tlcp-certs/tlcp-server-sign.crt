@@ -2,13 +2,13 @@ Certificate:
     Data:
         Version: 3 (0x2)
         Serial Number:
-            77:de:85:77:a9:80:06:40:e7:99:1a:49:85:84:ee:d0:92:31:dd:55
+            28:b5:b0:df:ed:29:29:a9:9c:b5:07:a4:65:e5:a1:33:b2:bb:a1:08
         Signature Algorithm: SM2-with-SM3
         Issuer: CN = tlcp-intca
         Validity
-            Not Before: Feb 18 14:48:00 2024 GMT
-            Not After : Feb 15 14:48:00 2034 GMT
-        Subject: CN = tlcp-server-sign
+            Not Before: Oct  9 04:41:56 2026 GMT
+            Not After : Oct  6 04:41:56 2036 GMT
+        Subject: CN = tlcp-server
         Subject Public Key Info:
             Public Key Algorithm: id-ecPublicKey
                 Public-Key: (256 bit)
@@ -20,9 +20,9 @@ Certificate:
                     f6:92:1b:93:99
                 ASN1 OID: SM2
         X509v3 extensions:
-            X509v3 Subject Key Identifier: 
+            X509v3 Subject Key Identifier:
                 EA:18:7E:17:B7:61:95:68:42:0C:45:06:A5:40:5D:DB:58:87:2C:92
-            X509v3 Authority Key Identifier: 
+            X509v3 Authority Key Identifier:
                 34:4B:2B:54:8E:09:53:6B:6B:72:29:7D:B5:41:6E:DC:AF:34:69:E5
             X509v3 Basic Constraints: critical
                 CA:FALSE
@@ -30,18 +30,18 @@ Certificate:
                 Digital Signature
     Signature Algorithm: SM2-with-SM3
     Signature Value:
-        30:45:02:21:00:9f:ff:32:de:e2:2a:1d:87:73:5a:bb:89:81:
-        89:41:c3:59:47:f3:b0:65:c9:d1:ed:fe:5a:ba:45:e7:c4:b6:
-        59:02:20:06:e7:8b:8a:ac:51:d6:8e:e0:f0:ff:4a:1f:b7:33:
-        fa:4d:b3:53:de:e9:4e:c1:e0:89:20:dd:b8:80:bb:7d:32
+        30:45:02:21:00:cd:84:3d:59:06:02:c0:9c:ef:8e:9a:85:2d:
+        8b:34:2b:36:ee:4b:ee:37:26:b2:ba:e7:72:e5:80:6d:4e:84:
+        00:02:20:63:26:aa:da:ae:3e:a9:8b:ca:89:63:0b:9e:4a:27:
+        5e:c4:3d:93:1f:65:45:6b:b1:cc:2b:ae:f6:c0:27:55:4e
 -----BEGIN CERTIFICATE-----
-MIIBkjCCATigAwIBAgIUd96Fd6mABkDnmRpJhYTu0JIx3VUwCgYIKoEcz1UBg3Uw
-FTETMBEGA1UEAwwKdGxjcC1pbnRjYTAeFw0yNDAyMTgxNDQ4MDBaFw0zNDAyMTUx
-NDQ4MDBaMBsxGTAXBgNVBAMMEHRsY3Atc2VydmVyLXNpZ24wWTATBgcqhkjOPQIB
-BggqgRzPVQGCLQNCAAQjhG1nnND498qr3FA6u8HUnGAsgvPyhDZ83BroqW532Gry
-yP46kk2usKyo50nznjmg/vxtGMzxbnxULPaSG5OZo2AwXjAdBgNVHQ4EFgQU6hh+
-F7dhlWhCDEUGpUBd21iHLJIwHwYDVR0jBBgwFoAUNEsrVI4JU2trcil9tUFu3K80
-aeUwDAYDVR0TAQH/BAIwADAOBgNVHQ8BAf8EBAMCB4AwCgYIKoEcz1UBg3UDSAAw
-RQIhAJ//Mt7iKh2Hc1q7iYGJQcNZR/OwZcnR7f5aukXnxLZZAiAG54uKrFHWjuDw
-/0oftzP6TbNT3ulOweCJIN24gLt9Mg==
+MIIBjTCCATOgAwIBAgIUKLWw3+0pKamctQekZeWhM7K7oQgwCgYIKoEcz1UBg3Uw
+FTETMBEGA1UEAwwKdGxjcC1pbnRjYTAeFw0yNjEwMDkwNDQxNTZaFw0zNjEwMDYw
+NDQxNTZaMBYxFDASBgNVBAMMC3RsY3Atc2VydmVyMFkwEwYHKoZIzj0CAQYIKoEc
+z1UBgi0DQgAEI4RtZ5zQ+PfKq9xQOrvB1JxgLILz8oQ2fNwa6Klud9hq8sj+OpJN
+rrCsqOdJ8545oP78bRjM8W58VCz2khuTmaNgMF4wHQYDVR0OBBYEFOoYfhe3YZVo
+QgxFBqVAXdtYhyySMB8GA1UdIwQYMBaAFDRLK1SOCVNra3IpfbVBbtyvNGnlMAwG
+A1UdEwEB/wQCMAAwDgYDVR0PAQH/BAQDAgeAMAoGCCqBHM9VAYN1A0gAMEUCIQDN
+hD1ZBgLAnO+OmoUtizQrNu5L7jcmsrrncuWAbU6EAAIgYyaq2q4+qYvKiWMLnkon
+XsQ9kx9lRWuxzCuu9sAnVU4=
 -----END CERTIFICATE-----
