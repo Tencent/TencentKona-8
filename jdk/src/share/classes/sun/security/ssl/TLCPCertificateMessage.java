@@ -36,7 +36,9 @@ import java.security.cert.CertPathValidatorException.BasicReason;
 import java.security.cert.CertPathValidatorException.Reason;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateFactory;
+import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
 import java.text.MessageFormat;
@@ -58,6 +60,7 @@ import sun.security.ssl.SSLHandshake.HandshakeMessage;
 import sun.security.ssl.TLCPAuthentication.TLCP11Credentials;
 import sun.security.ssl.TLCPAuthentication.TLCP11Possession;
 import sun.security.util.SMUtil;
+import sun.security.validator.ValidatorException;
 
 public class TLCPCertificateMessage {
 
@@ -439,12 +442,13 @@ public class TLCPCertificateMessage {
                         "Failed to parse server certificates", ce);
             }
 
-            checkClientCerts(shc, x509Certs);
+            TLCP11Credentials credentials = createCredentials(x509Certs, shc);
+            checkClientCerts(shc, x509Certs, credentials);
 
             //
             // update
             //
-            shc.handshakeCredentials.add(createCredentials(x509Certs, shc));
+            shc.handshakeCredentials.add(credentials);
             shc.handshakeSession.setPeerCertificates(x509Certs);
         }
 
@@ -497,22 +501,20 @@ public class TLCPCertificateMessage {
                 }
             }
 
-            // ask the trust manager to verify the chain
-            if (chc.staplingActive) {
-                // Defer the certificate check until after we've received the
-                // CertificateStatus message.  If that message doesn't come in
-                // immediately following this message we will execute the
-                // check from CertificateStatus' absent handler.
-                chc.deferredCerts = x509Certs;
-            } else {
-                // We're not doing stapling, so perform the check right now
-                checkServerCerts(chc, x509Certs);
-            }
+            // The TLCP certificate message carries both the sign certificate
+            // and the enc certificate. Build the credentials first so that
+            // the derived sign chain and enc certificate are available to
+            // the trust manager.
+            TLCP11Credentials credentials = createCredentials(x509Certs, chc);
+
+            // TLCP 1.1 does not negotiate status_request, so OCSP stapling is
+            // not supported and the certificates are always checked here.
+            checkServerCerts(chc, x509Certs, credentials);
 
             //
             // update
             //
-            chc.handshakeCredentials.add(createCredentials(x509Certs, chc));
+            chc.handshakeCredentials.add(credentials);
             chc.handshakeSession.setPeerCertificates(x509Certs);
         }
 
@@ -529,17 +531,23 @@ public class TLCPCertificateMessage {
             X509Certificate[] signCertChain = null;
             X509Certificate[] encCertChain = null;
 
-            if (certs.length == 1) {
-                signCert = certs[0];
-                encCert = certs[0];
-                signCertChain = new X509Certificate[] { signCert };
-                encCertChain = new X509Certificate[] { encCert };
-            } else if (certs.length == 2) {
+            boolean compat = SMUtil.isDualCertCompat();
+
+            // A TLCP certificate message must always carry both a sign
+            // certificate and an enc certificate, regardless of compat mode.
+            // A single certificate serving both roles is never accepted.
+            if (certs.length < 2) {
+                throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                        "The TLCP certificate message must contain both a " +
+                        "sign certificate and an enc certificate");
+            }
+
+            if (certs.length == 2) {
                 signCert = certs[0];
                 encCert = certs[1];
                 signCertChain = new X509Certificate[] { signCert };
                 encCertChain = new X509Certificate[] { encCert };
-            } else if (certs.length > 2) {
+            } else { // certs.length > 2
                 CertListFormat format = null;
                 if (SMUtil.isCA(certs[certs.length - 1])) {
                     format = CertListFormat.SIGN_ENC_CA;
@@ -570,17 +578,59 @@ public class TLCPCertificateMessage {
                 }
             }
 
-            // Check sign cert
-            if (!SMUtil.isSignCert(signCert)) {
+            // The sign and enc certificates must always be two distinct keys,
+            // so that a single certificate cannot serve both roles even in
+            // compat mode.
+            if (SMUtil.hasSamePublicKey(signCert, encCert)) {
                 throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
-                        "The sign cert doesn't contain key usage digitalSignature");
+                        "The sign cert and enc cert must be two distinct keys");
             }
 
-            // Check enc cert
-            if (!SMUtil.isEncCert(encCert)) {
-                throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
-                        "The enc cert doesn't contain key usages in " +
-                        "keyEncipherment, dataEncipherment and keyAgreement.");
+            if (compat) {
+                // Legacy lenient, position-based keyUsage role checks.
+                if (!SMUtil.isSignCert(signCert)) {
+                    throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                            "The sign cert doesn't contain key usage digitalSignature");
+                }
+                if (!SMUtil.isEncCert(encCert)) {
+                    throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                            "The enc cert doesn't contain key usages in " +
+                            "keyEncipherment, dataEncipherment and keyAgreement.");
+                }
+            } else {
+                // Strict TLCP double-certificate pairing. The single source of
+                // truth is SMUtil.checkTlcpDualCertPair; map its result to a
+                // distinguishable fatal alert.
+                // Only the built-in trust managers get the new non-CA rule;
+                // a custom trust manager keeps the previous behavior.
+                if (hc.sslContext.getX509TrustManager()
+                            instanceof X509TrustManagerImpl
+                        && (SMUtil.isCA(signCert) || SMUtil.isCA(encCert))) {
+                    throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                            "The TLCP sign and enc certificates must not be " +
+                            "CA certificates");
+                }
+
+                switch (SMUtil.checkTlcpDualCertPair(signCert, encCert)) {
+                    case SIGN_KEY_USAGE:
+                        throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                                "The sign cert must assert the digitalSignature " +
+                                "key usage only (no encryption key usage)");
+                    case ENC_KEY_USAGE:
+                        throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                                "The enc cert must assert a keyEncipherment, " +
+                                "dataEncipherment or keyAgreement key usage only " +
+                                "(no signature key usage)");
+                    case SAME_KEY:
+                        throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                                "The sign cert and enc cert must be two distinct keys");
+                    case DIFFERENT_IDENTITY:
+                        throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                                "The sign cert and enc cert must represent the " +
+                                "same identity");
+                    case OK:
+                        break;
+                }
             }
 
             return new TLCP11Credentials(
@@ -710,13 +760,15 @@ public class TLCPCertificateMessage {
          *
          * @param certs an array of {@code X509Certificate} objects presented
          *      by the server in the ServerCertificate message.
+         * @param credentials the sign/enc certificates derived from certs
          *
          * @throws IOException if a failure occurs during validation or
          *      the trust manager associated with the {@code SSLContext} is not
          *      an {@code X509ExtendedTrustManager}.
          */
         static void checkServerCerts(ClientHandshakeContext chc,
-                X509Certificate[] certs) throws IOException {
+                X509Certificate[] certs, TLCP11Credentials credentials)
+                throws IOException {
 
             X509TrustManager tm = chc.sslContext.getX509TrustManager();
 
@@ -732,38 +784,46 @@ public class TLCPCertificateMessage {
                 keyExchangeString = chc.negotiatedCipherSuite.keyExchange.name;
             }
 
+            X509Certificate[] signTrusted;
             try {
-                if (tm instanceof X509ExtendedTrustManager) {
-                    if (chc.conContext.transport instanceof SSLEngine) {
-                        SSLEngine engine = (SSLEngine)chc.conContext.transport;
-                        ((X509ExtendedTrustManager)tm).checkServerTrusted(
-                            certs.clone(),
-                            keyExchangeString,
-                            engine);
-                    } else {
-                        SSLSocket socket = (SSLSocket)chc.conContext.transport;
-                        ((X509ExtendedTrustManager)tm).checkServerTrusted(
-                            certs.clone(),
-                            keyExchangeString,
-                            socket);
-                    }
-                } else {
+                if (!(tm instanceof X509ExtendedTrustManager)) {
                     // Unlikely to happen, because we have wrapped the old
                     // X509TrustManager with the new X509ExtendedTrustManager.
                     throw new CertificateException(
                             "Improper X509TrustManager implementation");
                 }
 
-                // Once the server certificate chain has been validated, set
-                // the certificate chain in the TLS session.
-                chc.handshakeSession.setPeerCertificates(certs);
+                X509ExtendedTrustManager xtm = (X509ExtendedTrustManager)tm;
+                if (xtm instanceof X509TrustManagerImpl) {
+                    X509TrustManagerImpl impl = (X509TrustManagerImpl)xtm;
+                    signTrusted = impl.validateServerChain(
+                            signChainInput(impl, certs, credentials),
+                            keyExchangeString, chc.conContext.transport);
+                } else if (chc.conContext.transport instanceof SSLEngine) {
+                    SSLEngine engine = (SSLEngine)chc.conContext.transport;
+                    xtm.checkServerTrusted(
+                            certs.clone(), keyExchangeString, engine);
+                    signTrusted = null;
+                } else {
+                    SSLSocket socket = (SSLSocket)chc.conContext.transport;
+                    xtm.checkServerTrusted(
+                            certs.clone(), keyExchangeString, socket);
+                    signTrusted = null;
+                }
+
+                checkEncCert(chc, tm, signTrusted, credentials);
             } catch (CertificateException ce) {
                 throw chc.conContext.fatal(getCertificateAlert(chc, ce), ce);
             }
+
+            // Once the server certificate chain has been validated, set
+            // the certificate chain in the TLS session.
+            chc.handshakeSession.setPeerCertificates(certs);
         }
 
         private static void checkClientCerts(ServerHandshakeContext shc,
-                X509Certificate[] certs) throws IOException {
+                X509Certificate[] certs, TLCP11Credentials credentials)
+                throws IOException {
             X509TrustManager tm = shc.sslContext.getX509TrustManager();
 
             // find out the types of client authentication used
@@ -782,29 +842,129 @@ public class TLCPCertificateMessage {
                     authType = "UNKNOWN";
             }
 
+            X509Certificate[] signTrusted;
             try {
-                if (tm instanceof X509ExtendedTrustManager) {
-                    if (shc.conContext.transport instanceof SSLEngine) {
-                        SSLEngine engine = (SSLEngine)shc.conContext.transport;
-                        ((X509ExtendedTrustManager)tm).checkClientTrusted(
-                            certs.clone(),
-                            authType,
-                            engine);
-                    } else {
-                        SSLSocket socket = (SSLSocket)shc.conContext.transport;
-                        ((X509ExtendedTrustManager)tm).checkClientTrusted(
-                            certs.clone(),
-                            authType,
-                            socket);
-                    }
-                } else {
+                if (!(tm instanceof X509ExtendedTrustManager)) {
                     // Unlikely to happen, because we have wrapped the old
                     // X509TrustManager with the new X509ExtendedTrustManager.
                     throw new CertificateException(
                             "Improper X509TrustManager implementation");
                 }
+
+                X509ExtendedTrustManager xtm = (X509ExtendedTrustManager)tm;
+                if (xtm instanceof X509TrustManagerImpl) {
+                    X509TrustManagerImpl impl = (X509TrustManagerImpl)xtm;
+                    signTrusted = impl.validateClientChain(
+                            signChainInput(impl, certs, credentials),
+                            authType, shc.conContext.transport);
+                } else if (shc.conContext.transport instanceof SSLEngine) {
+                    SSLEngine engine = (SSLEngine)shc.conContext.transport;
+                    xtm.checkClientTrusted(certs.clone(), authType, engine);
+                    signTrusted = null;
+                } else {
+                    SSLSocket socket = (SSLSocket)shc.conContext.transport;
+                    xtm.checkClientTrusted(certs.clone(), authType, socket);
+                    signTrusted = null;
+                }
+
+                checkEncCert(shc, tm, signTrusted, credentials);
             } catch (CertificateException ce) {
                 throw shc.conContext.fatal(Alert.CERTIFICATE_UNKNOWN, ce);
+            }
+        }
+
+        // The sign chain input depends on the validator type. PKIXValidator
+        // selects between direct path validation and path building based on
+        // the position of the certificates, so it keeps the original list.
+        // SimpleValidator has no path building and needs the ordered
+        // [sign, CA...] chain.
+        private static X509Certificate[] signChainInput(
+                X509TrustManagerImpl impl, X509Certificate[] certs,
+                TLCP11Credentials credentials) {
+            if (SMUtil.isDualCertCompat()) {
+                return certs;
+            }
+
+            return impl.usesSimpleValidator() ?
+                    credentials.popSignCerts : certs;
+        }
+
+        // Validate the encryption certificate against the CA path that has
+        // already been selected and validated for the sign certificate. Only
+        // built-in trust managers are handled; a custom trust manager only
+        // validates the sign chain.
+        private static void checkEncCert(HandshakeContext hc,
+                X509TrustManager tm, X509Certificate[] signTrusted,
+                TLCP11Credentials credentials)
+                throws CertificateException, SSLException {
+            if (!(tm instanceof X509TrustManagerImpl)) {
+                if (SSLLogger.isOn && SSLLogger.isOn("ssl,handshake")) {
+                    SSLLogger.fine(
+                            "Skip TLCP enc certificate verification " +
+                            "with a custom trust manager");
+                }
+                return;
+            }
+
+            X509TrustManagerImpl impl = (X509TrustManagerImpl)tm;
+
+            if (SMUtil.isDualCertCompat()) {
+                return;
+            }
+
+            X509Certificate signCert = credentials.popSignCert;
+            X509Certificate encCert = credentials.popEncCert;
+            X509Certificate[] encTrusted;
+
+            if (signTrusted.length < 2) {
+                // The sign certificate is directly trusted: it is itself
+                // the trust anchor, so no CA path is available for the
+                // encryption certificate.
+                throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                        "The TLCP sign certificate must not be a trust anchor");
+            }
+
+            X509Certificate issuer = signTrusted[1];
+            if (!encCert.getIssuerX500Principal().equals(
+                        signCert.getIssuerX500Principal())
+                    || !encCert.getIssuerX500Principal().equals(
+                        issuer.getSubjectX500Principal())) {
+                throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                        "The TLCP sign and enc certificates must be issued " +
+                        "by the same CA");
+            }
+
+            if (hc.sslConfig.isClientMode) {
+                encTrusted = impl.validateEncPath(signTrusted, encCert, false,
+                        hc.conContext.transport);
+            } else {
+                encTrusted = impl.validateEncPath(signTrusted, encCert, true,
+                        hc.conContext.transport);
+            }
+
+            if (encTrusted.length < 2) {
+                throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                        "The TLCP enc certificate must not be a trust anchor");
+            }
+
+            // PKIXValidator removes the anchor from the given path and picks
+            // an anchor again from all the configured ones, so the anchor of
+            // the sign path is not guaranteed to be kept. Require that the
+            // enc certificate is verified by the same direct issuer key.
+            byte[] signIssuerKey = signTrusted[1].getPublicKey().getEncoded();
+            byte[] encIssuerKey = encTrusted[1].getPublicKey().getEncoded();
+            if (signIssuerKey == null || encIssuerKey == null
+                    || !java.util.Arrays.equals(signIssuerKey, encIssuerKey)
+                    || !signTrusted[1].getSubjectX500Principal().equals(
+                            encTrusted[1].getSubjectX500Principal())) {
+                throw hc.conContext.fatal(Alert.BAD_CERTIFICATE,
+                        "The TLCP sign and enc certificates must be issued " +
+                        "by the same CA key");
+            }
+
+            if (SSLLogger.isOn && SSLLogger.isOn("ssl,handshake")) {
+                SSLLogger.fine(
+                        "Verified TLCP enc certificate", encCert);
             }
         }
 
@@ -812,6 +972,11 @@ public class TLCPCertificateMessage {
          * When a failure happens during certificate checking from an
          * {@link X509TrustManager}, determine what TLS alert description
          * to use.
+         *
+         * <p>TLCP does not support OCSP stapling, so the stapling specific
+         * alerts are not used. The exception forms differ between
+         * PKIXValidator and SimpleValidator, so the whole cause chain is
+         * inspected.
          *
          * @param cexc The exception thrown by the {@link X509TrustManager}
          *
@@ -823,27 +988,43 @@ public class TLCPCertificateMessage {
             // set the alert description value
             Alert alert = Alert.CERTIFICATE_UNKNOWN;
 
-            Throwable baseCause = cexc.getCause();
-            if (baseCause instanceof CertPathValidatorException) {
-                CertPathValidatorException cpve =
-                        (CertPathValidatorException)baseCause;
-                Reason reason = cpve.getReason();
-                if (reason == BasicReason.REVOKED) {
-                    alert = chc.staplingActive ?
-                            Alert.BAD_CERT_STATUS_RESPONSE :
-                            Alert.CERTIFICATE_REVOKED;
-                } else if (
-                        reason == BasicReason.UNDETERMINED_REVOCATION_STATUS) {
-                    alert = chc.staplingActive ?
-                            Alert.BAD_CERT_STATUS_RESPONSE :
-                            Alert.CERTIFICATE_UNKNOWN;
-                } else if (reason == BasicReason.ALGORITHM_CONSTRAINED) {
-                    alert = Alert.UNSUPPORTED_CERTIFICATE;
-                } else if (reason == BasicReason.EXPIRED) {
-                    alert = Alert.CERTIFICATE_EXPIRED;
-                } else if (reason == BasicReason.INVALID_SIGNATURE ||
-                        reason == BasicReason.NOT_YET_VALID) {
-                    alert = Alert.BAD_CERTIFICATE;
+            for (Throwable baseCause = cexc; baseCause != null;
+                    baseCause = baseCause.getCause()) {
+                if (baseCause instanceof CertPathValidatorException) {
+                    Reason reason =
+                            ((CertPathValidatorException)baseCause).getReason();
+                    if (reason == BasicReason.REVOKED) {
+                        return Alert.CERTIFICATE_REVOKED;
+                    } else if (reason ==
+                            BasicReason.UNDETERMINED_REVOCATION_STATUS) {
+                        return Alert.CERTIFICATE_UNKNOWN;
+                    } else if (reason == BasicReason.ALGORITHM_CONSTRAINED) {
+                        return Alert.UNSUPPORTED_CERTIFICATE;
+                    } else if (reason == BasicReason.EXPIRED) {
+                        return Alert.CERTIFICATE_EXPIRED;
+                    } else if (reason == BasicReason.INVALID_SIGNATURE ||
+                            reason == BasicReason.NOT_YET_VALID) {
+                        return Alert.BAD_CERTIFICATE;
+                    }
+                } else if (baseCause instanceof CertificateExpiredException) {
+                    return Alert.CERTIFICATE_EXPIRED;
+                } else if (baseCause instanceof
+                        CertificateNotYetValidException) {
+                    return Alert.BAD_CERTIFICATE;
+                } else if (baseCause instanceof ValidatorException) {
+                    Object errorType =
+                            ((ValidatorException)baseCause).getErrorType();
+                    if (errorType == ValidatorException.T_CERT_EXPIRED) {
+                        return Alert.CERTIFICATE_EXPIRED;
+                    } else if (errorType ==
+                            ValidatorException.T_ALGORITHM_DISABLED) {
+                        return Alert.UNSUPPORTED_CERTIFICATE;
+                    } else if (errorType ==
+                            ValidatorException.T_SIGNATURE_ERROR) {
+                        return Alert.BAD_CERTIFICATE;
+                    } else if (errorType != null) {
+                        return Alert.CERTIFICATE_UNKNOWN;
+                    }
                 }
             }
 

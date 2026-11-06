@@ -443,7 +443,11 @@ public class SSLEngineTest {
         SERVER_SIGN_CERT("tlcp-server-sign.crt", "tlcp-server-sign.key"),
         SERVER_ENC_CERT("tlcp-server-enc.crt", "tlcp-server-enc.key"),
         CLIENT_SIGN_CERT("tlcp-client-sign.crt", "tlcp-client-sign.key"),
-        CLIENT_ENC_CERT("tlcp-client-enc.crt", "tlcp-client-enc.key");
+        CLIENT_ENC_CERT("tlcp-client-enc.crt", "tlcp-client-enc.key"),
+        // Dual-keyUsage (DS+KE+DE+KA) certificates, used only by negative
+        // tests to exercise the strict role/pairing rejection.
+        SERVER_DUAL_CERT("tlcp-server-dual.crt", "tlcp-server-dual.key"),
+        CLIENT_DUAL_CERT("tlcp-client-dual.crt", "tlcp-client-dual.key");
 
         final String keyAlgo = "EC";
         final String certStr;

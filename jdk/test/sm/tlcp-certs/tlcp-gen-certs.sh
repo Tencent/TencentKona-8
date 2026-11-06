@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2022, 2024, Tencent. All rights reserved.
+# Copyright (C) 2022, 2026, Tencent. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,13 @@ basicConstraints=critical,CA:FALSE
 keyUsage=critical,keyEncipherment,dataEncipherment,keyAgreement
 EOF
 
+cat > ee-dual.ext << EOF
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=critical,CA:FALSE
+keyUsage=critical,digitalSignature,keyEncipherment,dataEncipherment,keyAgreement
+EOF
+
 OPENSSL=tongsuo
 
 ##### CA
@@ -60,30 +67,48 @@ $OPENSSL x509 -text -in tlcp-intca.crt.tmp > tlcp-intca.crt
 
 ##### Sign EE (Server)
 $OPENSSL genpkey -algorithm ec -pkeyopt ec_paramgen_curve:SM2 -pkeyopt ec_param_enc:named_curve -out tlcp-server-sign.key
-$OPENSSL req -new -key tlcp-server-sign.key -subj "/CN=tlcp-server-sign" -sm3 -out tlcp-server-sign.csr
+$OPENSSL req -new -key tlcp-server-sign.key -subj "/CN=tlcp-server" -sm3 -out tlcp-server-sign.csr
 $OPENSSL x509 -extfile ee-sign.ext -req -CAcreateserial -days 3650 -in tlcp-server-sign.csr -sm3 \
     -CA tlcp-intca.crt -CAkey tlcp-intca.key -out tlcp-server-sign.crt.tmp
 $OPENSSL x509 -text -in tlcp-server-sign.crt.tmp > tlcp-server-sign.crt
 
 ##### Sign EE (Client)
 $OPENSSL genpkey -algorithm ec -pkeyopt ec_paramgen_curve:SM2 -pkeyopt ec_param_enc:named_curve -out tlcp-client-sign.key
-$OPENSSL req -new -key tlcp-client-sign.key -subj "/CN=tlcp-client-sign" -sm3 -out tlcp-client-sign.csr
+$OPENSSL req -new -key tlcp-client-sign.key -subj "/CN=tlcp-client" -sm3 -out tlcp-client-sign.csr
 $OPENSSL x509 -extfile ee-sign.ext -req -CAcreateserial -days 3650 -in tlcp-client-sign.csr -sm3 \
     -CA tlcp-intca.crt -CAkey tlcp-intca.key -out tlcp-client-sign.crt.tmp
 $OPENSSL x509 -text -in tlcp-client-sign.crt.tmp > tlcp-client-sign.crt
 
 ##### Enc EE (Server)
 $OPENSSL genpkey -algorithm ec -pkeyopt ec_paramgen_curve:SM2 -pkeyopt ec_param_enc:named_curve -out tlcp-server-enc.key
-$OPENSSL req -new -key tlcp-server-enc.key -subj "/CN=tlcp-server-enc" -sm3 -out tlcp-server-enc.csr
+$OPENSSL req -new -key tlcp-server-enc.key -subj "/CN=tlcp-server" -sm3 -out tlcp-server-enc.csr
 $OPENSSL x509 -extfile ee-enc.ext -req -CAcreateserial -days 3650 -in tlcp-server-enc.csr -sm3 \
     -CA tlcp-intca.crt -CAkey tlcp-intca.key -out tlcp-server-enc.crt.tmp
 $OPENSSL x509 -text -in tlcp-server-enc.crt.tmp > tlcp-server-enc.crt
 
 ##### Enc EE (Client)
 $OPENSSL genpkey -algorithm ec -pkeyopt ec_paramgen_curve:SM2 -pkeyopt ec_param_enc:named_curve -out tlcp-client-enc.key
-$OPENSSL req -new -key tlcp-client-enc.key -subj "/CN=tlcp-client-enc" -sm3 -out tlcp-client-enc.csr
+$OPENSSL req -new -key tlcp-client-enc.key -subj "/CN=tlcp-client" -sm3 -out tlcp-client-enc.csr
 $OPENSSL x509 -extfile ee-enc.ext -req -CAcreateserial -days 3650 -in tlcp-client-enc.csr -sm3 \
     -CA tlcp-intca.crt -CAkey tlcp-intca.key -out tlcp-client-enc.crt.tmp
 $OPENSSL x509 -text -in tlcp-client-enc.crt.tmp > tlcp-client-enc.crt
 
+##### Dual-keyUsage EE (Server) -- DS+KE+DE+KA, for negative tests only
+$OPENSSL genpkey -algorithm ec -pkeyopt ec_paramgen_curve:SM2 -pkeyopt ec_param_enc:named_curve -out tlcp-server-dual.key
+$OPENSSL req -new -key tlcp-server-dual.key -subj "/CN=tlcp-server" -sm3 -out tlcp-server-dual.csr
+$OPENSSL x509 -extfile ee-dual.ext -req -CAcreateserial -days 3650 -in tlcp-server-dual.csr -sm3 \
+    -CA tlcp-intca.crt -CAkey tlcp-intca.key -out tlcp-server-dual.crt.tmp
+$OPENSSL x509 -text -in tlcp-server-dual.crt.tmp > tlcp-server-dual.crt
+
+##### Dual-keyUsage EE (Client) -- DS+KE+DE+KA, for negative tests only
+$OPENSSL genpkey -algorithm ec -pkeyopt ec_paramgen_curve:SM2 -pkeyopt ec_param_enc:named_curve -out tlcp-client-dual.key
+$OPENSSL req -new -key tlcp-client-dual.key -subj "/CN=tlcp-client" -sm3 -out tlcp-client-dual.csr
+$OPENSSL x509 -extfile ee-dual.ext -req -CAcreateserial -days 3650 -in tlcp-client-dual.csr -sm3 \
+    -CA tlcp-intca.crt -CAkey tlcp-intca.key -out tlcp-client-dual.crt.tmp
+$OPENSSL x509 -text -in tlcp-client-dual.crt.tmp > tlcp-client-dual.crt
+
 rm *.tmp *.csr
+
+# The "openssl x509 -text" dump can leave trailing whitespace on some
+# extension header lines; strip it so the generated certs stay clean.
+sed -i 's/[[:space:]]*$//' *.crt

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1997, 2014, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2017, 2022, Loongson Technology. All rights reserved.
+ * Copyright (c) 2017, 2026, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2204,11 +2204,14 @@ void MacroAssembler::fast_lock(Register objReg, Register boxReg, Register resReg
       // at [FETCH], below, will never observe a biased encoding (*101b).
       // If this invariant is not held we risk exclusion (safety) failure.
       if (UseBiasedLocking && !UseOptoBiasInlining) {
-        Label succ, fail;
-        biased_locking_enter(boxReg, objReg, tmpReg, scrReg, false, succ, NULL);
+        Label succ, fail, fail_slow;
+        biased_locking_enter(boxReg, objReg, tmpReg, scrReg, false, succ, &fail_slow);
         b(fail);
         bind(succ);
         li(resReg, 1);
+        b(DONE);
+        bind(fail_slow);
+        move(resReg, R0);
         b(DONE);
         bind(fail);
       }

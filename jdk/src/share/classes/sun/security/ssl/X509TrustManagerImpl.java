@@ -32,6 +32,7 @@ import java.util.*;
 import javax.net.ssl.*;
 import sun.security.util.AnchorCertificates;
 import sun.security.util.HostnameChecker;
+import sun.security.util.SMUtil;
 import sun.security.validator.*;
 
 /**
@@ -183,7 +184,7 @@ final class X509TrustManagerImpl extends X509ExtendedTrustManager
         return v;
     }
 
-    private void checkTrusted(X509Certificate[] chain,
+    private X509Certificate[] checkTrusted(X509Certificate[] chain,
             String authType, Socket socket,
             boolean checkClientTrusted) throws CertificateException {
         Validator v = checkTrustedInit(chain, authType, checkClientTrusted);
@@ -239,9 +240,11 @@ final class X509TrustManagerImpl extends X509ExtendedTrustManager
             SSLLogger.fine("Found trusted certificate",
                     trustedChain[trustedChain.length - 1]);
         }
+
+        return trustedChain;
     }
 
-    private void checkTrusted(X509Certificate[] chain,
+    private X509Certificate[] checkTrusted(X509Certificate[] chain,
             String authType, SSLEngine engine,
             boolean checkClientTrusted) throws CertificateException {
         Validator v = checkTrustedInit(chain, authType, checkClientTrusted);
@@ -294,6 +297,107 @@ final class X509TrustManagerImpl extends X509ExtendedTrustManager
             SSLLogger.fine("Found trusted certificate",
                     trustedChain[trustedChain.length - 1]);
         }
+
+        return trustedChain;
+    }
+
+    // Whether this trust manager uses SimpleValidator rather than
+    // PKIXValidator. The two validators need different input chains.
+    boolean usesSimpleValidator() {
+        return Validator.TYPE_SIMPLE.equals(validatorType);
+    }
+
+    // The TLCP sign-chain validation entry points. They behave exactly like
+    // checkServerTrusted/checkClientTrusted, but return the trusted chain.
+    X509Certificate[] validateServerChain(X509Certificate[] chain,
+            String authType, Object transport) throws CertificateException {
+        if (transport instanceof SSLEngine) {
+            return checkTrusted(chain, authType, (SSLEngine)transport, false);
+        } else {
+            return checkTrusted(chain, authType, (Socket)transport, false);
+        }
+    }
+
+    X509Certificate[] validateClientChain(X509Certificate[] chain,
+            String authType, Object transport) throws CertificateException {
+        if (transport instanceof SSLEngine) {
+            return checkTrusted(chain, authType, (SSLEngine)transport, true);
+        } else {
+            return checkTrusted(chain, authType, (Socket)transport, true);
+        }
+    }
+
+    // Validate the TLCP encryption certificate against the CA path already
+    // selected and validated for the sign certificate. The leaf is replaced
+    // with the encryption certificate; no path building is performed here, so
+    // the same CA path and trust anchor are reused.
+    X509Certificate[] validateEncPath(X509Certificate[] signTrusted,
+            X509Certificate enc, boolean checkClientTrusted, Object transport)
+            throws CertificateException {
+        AlgorithmConstraints constraints = null;
+        if (transport instanceof SSLEngine) {
+            SSLEngine engine = (SSLEngine)transport;
+            SSLSession session = engine.getHandshakeSession();
+            if (session == null) {
+                throw new CertificateException("No handshake session");
+            }
+
+            boolean isExtSession = (session instanceof ExtendedSSLSession);
+            if (isExtSession &&
+                    ProtocolVersion.useTLS12PlusSpec(session.getProtocol())) {
+                ExtendedSSLSession extSession = (ExtendedSSLSession)session;
+                String[] localSupportedSignAlgs =
+                        extSession.getLocalSupportedSignatureAlgorithms();
+                constraints = new SSLAlgorithmConstraints(
+                        engine, localSupportedSignAlgs, false);
+            } else {
+                constraints = new SSLAlgorithmConstraints(engine, false);
+            }
+        } else {
+            Socket socket = (Socket)transport;
+            if ((socket != null) && socket.isConnected() &&
+                    (socket instanceof SSLSocket)) {
+                SSLSocket sslSocket = (SSLSocket)socket;
+                SSLSession session = sslSocket.getHandshakeSession();
+                if (session == null) {
+                    throw new CertificateException("No handshake session");
+                }
+
+                boolean isExtSession = (session instanceof ExtendedSSLSession);
+                if (isExtSession &&
+                        ProtocolVersion.useTLS12PlusSpec(
+                                session.getProtocol())) {
+                    ExtendedSSLSession extSession =
+                            (ExtendedSSLSession)session;
+                    String[] localSupportedSignAlgs =
+                            extSession.getLocalSupportedSignatureAlgorithms();
+                    constraints = new SSLAlgorithmConstraints(
+                            sslSocket, localSupportedSignAlgs, false);
+                } else {
+                    constraints = new SSLAlgorithmConstraints(
+                            sslSocket, false);
+                }
+            }
+        }
+
+        X509Certificate[] encChain = new X509Certificate[signTrusted.length];
+        encChain[0] = enc;
+        System.arraycopy(signTrusted, 1, encChain, 1, signTrusted.length - 1);
+
+        Validator v = checkTrustedInit(encChain, SMUtil.SM2_ENC,
+                checkClientTrusted);
+
+        // No stapled responses and no endpoint identity check: the identity
+        // of the peer is established by the sign certificate only.
+        X509Certificate[] trustedChain = validate(v, encChain,
+                Collections.<byte[]>emptyList(), constraints, SMUtil.SM2_ENC);
+
+        if (SSLLogger.isOn && SSLLogger.isOn("ssl,trustmanager")) {
+            SSLLogger.fine("Found trusted encryption certificate",
+                    trustedChain[trustedChain.length - 1]);
+        }
+
+        return trustedChain;
     }
 
     private Validator getValidator(String variant) {

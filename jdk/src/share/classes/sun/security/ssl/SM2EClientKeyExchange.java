@@ -29,9 +29,11 @@ import javax.crypto.SecretKey;
 import javax.net.ssl.SSLHandshakeException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.security.AccessController;
 import java.security.CryptoPrimitive;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
+import java.security.PrivilegedAction;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.SM2KeyAgreementParamSpec;
@@ -61,6 +63,28 @@ public class SM2EClientKeyExchange {
     private static final class SM2EClientKeyExchangeMessage
             extends HandshakeMessage {
         private static final byte CURVE_NAMED_CURVE = (byte)0x03;
+
+        // GB/T 38636-2020 6.4.5.8 requires the ClientECDHEParams to be a
+        // u16 length-prefixed vector.  Historically Kona has omitted that
+        // prefix and written the parameters bare, which matches what most
+        // deployed TLCP peers still expect on the wire.
+        //
+        // Opt in to the strict, standards-compliant framing with:
+        //   -Djdk.tlcp.strictClientKeyExchange=true
+        //
+        // The server-side parser accepts both framings regardless of this
+        // setting, so a Kona server can talk to both formats out of the
+        // box.
+        private static final boolean STRICT_CKE_FORMAT
+                = Boolean.parseBoolean(AccessController.doPrivileged(
+                        new PrivilegedAction<String>() {
+                            public String run() {
+                                return System.getProperty(
+                                        "jdk.tlcp.strictClientKeyExchange",
+                                        "false");
+                            }
+                        }));
+
         private final byte[] encodedPoint;
 
         SM2EClientKeyExchangeMessage(HandshakeContext handshakeContext,
@@ -74,10 +98,24 @@ public class SM2EClientKeyExchange {
                                      ByteBuffer m) throws IOException {
             super(handshakeContext);
 
-            Record.getInt8(m);
-            Record.getInt16(m);
-
             if (m.remaining() != 0) {       // explicit PublicValueEncoding
+                // Accept both framings for interoperability:
+                //   - Legacy (what Kona has historically emitted, and
+                //     what most deployed TLCP peers still expect):
+                //         curve_type(1) | named_curve(2) | u8-len point
+                //   - GB/T 38636-2020 6.4.5.8 compliant:
+                //         u16 len | curve_type(1) | named_curve(2)
+                //                 | u8-len point
+                // The first byte disambiguates: a legacy message starts
+                // with curve_type = 0x03 (named_curve), while a compliant
+                // message starts with the high byte of a u16 length whose
+                // value is always well under 256 for an SM2 point, i.e.
+                // 0x00.
+                if (m.get(m.position()) == 0) {
+                    Record.getInt16(m);     // ClientECDHEParams length
+                }
+                Record.getInt8(m);          // curve_type (named_curve)
+                Record.getInt16(m);         // named_curve id
                 this.encodedPoint = Record.getBytes8(m);
             } else {
                 this.encodedPoint = new byte[0];
@@ -93,17 +131,27 @@ public class SM2EClientKeyExchange {
         public int messageLength() {
             if (encodedPoint == null || encodedPoint.length == 0) {
                 return 0;
-            } else {
-                return 1 + encodedPoint.length + 3;
             }
+            // curve_type (1) + named_curve (2)
+            //   + u8 point length (1) + point (N)
+            int paramsLength = 1 + 2 + 1 + encodedPoint.length;
+            // Prepend the u16 ClientECDHEParams length when strict
+            // GB/T 38636-2020 framing is requested.
+            return STRICT_CKE_FORMAT ? 2 + paramsLength : paramsLength;
         }
 
         @Override
         public void send(HandshakeOutStream hos) throws IOException {
-            hos.putInt8(CURVE_NAMED_CURVE);
-            hos.putInt16(NamedGroup.CURVESM2.id);
-
             if (encodedPoint != null && encodedPoint.length != 0) {
+                if (STRICT_CKE_FORMAT) {
+                    // GB/T 38636-2020 6.4.5.8: wrap ClientECDHEParams in
+                    // a u16 length-prefixed vector.  The wrapped content
+                    // is curve_type(1) + named_curve(2)
+                    //     + u8-prefixed ECPoint(1 + encodedPoint.length).
+                    hos.putInt16(1 + 2 + 1 + encodedPoint.length);
+                }
+                hos.putInt8(CURVE_NAMED_CURVE);
+                hos.putInt16(NamedGroup.CURVESM2.id);
                 hos.putBytes8(encodedPoint);
             }
         }

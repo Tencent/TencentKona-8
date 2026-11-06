@@ -20,9 +20,9 @@ Certificate:
                     da:40:42:d4:ed
                 ASN1 OID: SM2
         X509v3 extensions:
-            X509v3 Subject Key Identifier: 
+            X509v3 Subject Key Identifier:
                 34:4B:2B:54:8E:09:53:6B:6B:72:29:7D:B5:41:6E:DC:AF:34:69:E5
-            X509v3 Authority Key Identifier: 
+            X509v3 Authority Key Identifier:
                 DF:37:41:A6:65:54:7E:59:CC:64:36:71:47:57:E6:39:6F:7D:75:20
             X509v3 Basic Constraints: critical
                 CA:TRUE

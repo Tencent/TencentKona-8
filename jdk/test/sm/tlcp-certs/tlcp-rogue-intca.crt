@@ -1,0 +1,48 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            78:67:e7:3f:dc:db:05:6b:cc:c6:96:b8:1b:86:22:0a:4c:4e:27:03
+        Signature Algorithm: SM2-with-SM3
+        Issuer: CN = tlcp-intca
+        Validity
+            Not Before: Oct 18 09:56:13 2026 GMT
+            Not After : Oct 15 09:56:13 2036 GMT
+        Subject: CN = tlcp-intca
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub:
+                    04:ff:c3:8e:db:09:dd:b5:fc:d3:ca:49:79:9b:ce:
+                    b2:fa:1f:a4:b9:c7:4b:94:a7:35:db:16:7e:93:38:
+                    19:28:0e:7f:38:13:96:91:fa:5e:80:3f:f6:da:f2:
+                    39:3b:ce:c0:61:39:b0:97:c0:05:7b:24:31:90:c8:
+                    1a:9d:06:ee:9a
+                ASN1 OID: SM2
+        X509v3 extensions:
+            X509v3 Subject Key Identifier:
+                AA:CF:9C:47:40:68:43:37:90:08:03:5C:25:E4:96:FF:A3:36:F7:E7
+            X509v3 Authority Key Identifier:
+                DirName:/CN=tlcp-intca
+                serial:78:67:E7:3F:DC:DB:05:6B:CC:C6:96:B8:1B:86:22:0A:4C:4E:27:03
+            X509v3 Basic Constraints: critical
+                CA:TRUE
+            X509v3 Key Usage: critical
+                Digital Signature, Certificate Sign, CRL Sign
+    Signature Algorithm: SM2-with-SM3
+    Signature Value:
+        30:44:02:20:0a:0d:3f:89:5e:7b:4e:60:04:e8:49:56:f7:69:
+        e2:69:d5:83:fd:7a:72:f8:bb:73:b1:12:0c:c8:3a:37:54:aa:
+        02:20:2a:1f:db:64:d5:40:d5:6d:60:72:bd:5f:82:3c:17:99:
+        5e:6f:32:1d:0b:1a:4a:38:53:0e:73:31:12:6f:ed:4d
+-----BEGIN CERTIFICATE-----
+MIIBqTCCAVCgAwIBAgIUeGfnP9zbBWvMxpa4G4YiCkxOJwMwCgYIKoEcz1UBg3Uw
+FTETMBEGA1UEAwwKdGxjcC1pbnRjYTAeFw0yNjEwMTgwOTU2MTNaFw0zNjEwMTUw
+OTU2MTNaMBUxEzARBgNVBAMMCnRsY3AtaW50Y2EwWTATBgcqhkjOPQIBBggqgRzP
+VQGCLQNCAAT/w47bCd21/NPKSXmbzrL6H6S5x0uUpzXbFn6TOBkoDn84E5aR+l6A
+P/ba8jk7zsBhObCXwAV7JDGQyBqdBu6ao34wfDAdBgNVHQ4EFgQUqs+cR0BoQzeQ
+CANcJeSW/6M29+cwOgYDVR0jBDMwMaEZpBcwFTETMBEGA1UEAwwKdGxjcC1pbnRj
+YYIUeGfnP9zbBWvMxpa4G4YiCkxOJwMwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8B
+Af8EBAMCAYYwCgYIKoEcz1UBg3UDRwAwRAIgCg0/iV57TmAE6ElW92niadWD/Xpy
++LtzsRIMyDo3VKoCICof22TVQNVtYHK9X4I8F5lebzIdCxpKOFMOczESb+1N
+-----END CERTIFICATE-----
