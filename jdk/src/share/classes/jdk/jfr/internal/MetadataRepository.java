@@ -78,7 +78,7 @@ public final class MetadataRepository {
                 // annotations, such as Period and Threshold.
                 if (pEventType.hasPeriod()) {
                     pEventType.setEventHook(true);
-                    if (!(Type.EVENT_NAME_PREFIX + "ExecutionSample").equals(type.getName())) {
+                    if (!pEventType.isMethodSampling()) {
                         requestHooks.add(new RequestHook(pEventType));
                     }
                 }
@@ -224,7 +224,7 @@ public final class MetadataRepository {
         }
     }
 
-    synchronized boolean isEnabled(String eventName) {
+    boolean isEnabled(String eventName) {
         return settingsManager.isEnabled(eventName);
     }
 
